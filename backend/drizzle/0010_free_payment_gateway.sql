@@ -1,0 +1,1 @@
+ALTER TYPE "payment_gateway" ADD VALUE 'FREE';

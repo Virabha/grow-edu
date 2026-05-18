@@ -1,0 +1,591 @@
+import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
+import { Inject } from '@nestjs/common';
+import { eq, and, or, ilike, desc, asc, sql, inArray } from 'drizzle-orm';
+import { enrollments, courses, users, companies, categories, sectionAccess, courseSections } from '../database/schema';
+import { DATABASE_CONNECTION } from '../database/database.module';
+import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import * as schema from '../database/schema';
+import { CreateEnrollmentDto } from './dto/create-enrollment.dto';
+import { BulkEnrollmentDto } from './dto/bulk-enrollment.dto';
+import { EmailService } from '../email/email.service';
+import { FilesService } from '../files/files.service';
+
+const MAX_PAGE_LIMIT = 50;
+
+@Injectable()
+export class EnrollmentsService {
+  constructor(
+    @Inject(DATABASE_CONNECTION)
+    private readonly db: PostgresJsDatabase<typeof schema>,
+    private emailService: EmailService,
+    private filesService: FilesService,
+  ) {}
+
+  private ensureThumbnailUrl(thumbnail: string | null | undefined): string | null {
+    if (!thumbnail) return null;
+    if (thumbnail.startsWith('http')) return thumbnail;
+    return this.filesService.getDownloadUrl(thumbnail);
+  }
+
+  async findAll(filters?: {
+    userId?: string;
+    courseId?: string;
+    companyId?: string;
+    status?: string;
+    search?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{ data: any[]; pagination: any }> {
+    const page = filters?.page || 1;
+    const limit = Math.min(filters?.limit || 10, MAX_PAGE_LIMIT);
+    const offset = (page - 1) * limit;
+
+    // Build conditions for enrollments query - including search in SQL
+    const enrollmentConditions = [];
+    if (filters?.userId) {
+      enrollmentConditions.push(eq(enrollments.userId, filters.userId));
+    }
+    if (filters?.courseId) {
+      enrollmentConditions.push(eq(enrollments.courseId, filters.courseId));
+    }
+    if (filters?.companyId) {
+      enrollmentConditions.push(eq(enrollments.companyId, filters.companyId));
+    }
+    if (filters?.status) {
+      enrollmentConditions.push(eq(enrollments.status, filters.status as 'ACTIVE' | 'COMPLETED' | 'REVOKED'));
+    }
+    // Move search to SQL with ILIKE
+    if (filters?.search) {
+      const searchPattern = `%${filters.search}%`;
+      enrollmentConditions.push(
+        or(
+          ilike(courses.title, searchPattern),
+          ilike(users.firstName, searchPattern),
+          ilike(users.lastName, searchPattern),
+          ilike(users.email, searchPattern)
+        )!
+      );
+    }
+
+    const enrollmentWhereClause = enrollmentConditions.length > 0 ? and(...enrollmentConditions) : undefined;
+
+    // Get count and paginated enrollments in parallel using SQL LIMIT/OFFSET
+    const [countResult, fullEnrollments] = await Promise.all([
+      this.db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(enrollments)
+        .leftJoin(users, eq(enrollments.userId, users.userId))
+        .leftJoin(courses, eq(enrollments.courseId, courses.courseId))
+        .where(enrollmentWhereClause),
+      this.db
+        .select({
+          enrollmentId: enrollments.enrollmentId,
+          userId: enrollments.userId,
+          courseId: enrollments.courseId,
+          companyId: enrollments.companyId,
+          status: enrollments.status,
+          enrolledAt: enrollments.enrolledAt,
+          completedAt: enrollments.completedAt,
+          userInfo: {
+            id: users.userId,
+            email: users.email,
+            firstName: users.firstName,
+            lastName: users.lastName,
+          },
+          courseInfo: {
+            id: courses.courseId,
+            title: courses.title,
+            slug: courses.slug,
+            description: courses.description,
+            thumbnail: courses.thumbnail,
+            price: courses.price,
+            currency: courses.currency,
+            categoryId: courses.categoryId,
+            categoryName: sql<string>`${categories.name}`,
+            categorySlug: categories.slug,
+            categoryDescription: categories.description,
+          },
+          companyInfo: {
+            id: companies.companyId,
+            name: companies.name,
+          },
+        })
+        .from(enrollments)
+        .leftJoin(users, eq(enrollments.userId, users.userId))
+        .leftJoin(courses, eq(enrollments.courseId, courses.courseId))
+        .leftJoin(categories, eq(courses.categoryId, categories.categoryId))
+        .leftJoin(companies, eq(enrollments.companyId, companies.companyId))
+        .where(enrollmentWhereClause)
+        .orderBy(desc(enrollments.enrolledAt))
+        .limit(limit)
+        .offset(offset)
+    ]);
+
+    const fullEnrollmentCount = Number(countResult[0]?.count || 0);
+
+    // Define type for section access records
+    type SectionAccessRecord = {
+      enrollmentId: string;
+      userId: string;
+      courseId: string;
+      companyId: null;
+      status: 'ACTIVE';
+      enrolledAt: Date;
+      completedAt: null;
+      accessType: 'SECTION';
+      accessedSections: Array<{ sectionId: string; title: string }>;
+      userInfo: any;
+      courseInfo: any;
+      companyInfo: { id: null; name: null };
+    };
+
+    // Get courses with section access (but not full enrollment)
+    let sectionAccessCourses: SectionAccessRecord[] = [];
+    let sectionAccessCount = 0;
+
+    if (filters?.userId && (!filters?.status || filters?.status === 'ACTIVE')) {
+      const sectionAccessConditions = [eq(sectionAccess.userId, filters.userId)];
+      if (filters?.courseId) {
+        sectionAccessConditions.push(eq(sectionAccess.courseId, filters.courseId));
+      }
+
+      // Get all enrolled course IDs for this user (not just current page) to exclude from section access
+      const allEnrolledCourseIds = await this.db
+        .select({ courseId: enrollments.courseId })
+        .from(enrollments)
+        .where(eq(enrollments.userId, filters.userId));
+      const enrolledCourseIdSet = new Set(allEnrolledCourseIds.map(e => e.courseId));
+
+      // Get unique course IDs with section access that don't have full enrollment
+      // Apply deterministic ordering by courseId for stable pagination
+      const sectionAccessCoursesQuery = await this.db
+        .selectDistinct({ courseId: sectionAccess.courseId })
+        .from(sectionAccess)
+        .where(and(...sectionAccessConditions))
+        .orderBy(asc(sectionAccess.courseId));
+
+      const sectionAccessCourseIds = sectionAccessCoursesQuery
+        .map(sa => sa.courseId)
+        .filter(cId => !enrolledCourseIdSet.has(cId));
+
+      sectionAccessCount = sectionAccessCourseIds.length;
+
+      // Only process section access if we need it for current page
+      // Calculate if current page might include section access records
+      const fullEnrollmentPages = Math.ceil(fullEnrollmentCount / limit);
+      const currentPageNeedsSectionAccess = page > fullEnrollmentPages ||
+        (page === fullEnrollmentPages && fullEnrollments.length < limit);
+
+      if (sectionAccessCourseIds.length > 0 && currentPageNeedsSectionAccess) {
+        // Calculate offset for section access records
+        const sectionAccessOffset = Math.max(0, offset - fullEnrollmentCount);
+        const sectionAccessLimit = limit - fullEnrollments.length;
+
+        if (sectionAccessLimit > 0) {
+          // Get paginated course IDs for section access
+          const paginatedSectionAccessCourseIds = sectionAccessCourseIds.slice(
+            sectionAccessOffset,
+            sectionAccessOffset + sectionAccessLimit
+          );
+
+          if (paginatedSectionAccessCourseIds.length > 0) {
+            // Batch fetch: course details, user info, and all section access records in parallel
+            const [courseDetails, userInfo, allSectionAccessRecords] = await Promise.all([
+              this.db
+                .select({
+                  id: courses.courseId,
+                  title: courses.title,
+                  slug: courses.slug,
+                  description: courses.description,
+                  thumbnail: courses.thumbnail,
+                  price: courses.price,
+                  currency: courses.currency,
+                  categoryId: courses.categoryId,
+                  categoryName: sql<string>`${categories.name}`,
+                  categorySlug: categories.slug,
+                  categoryDescription: categories.description,
+                })
+                .from(courses)
+                .leftJoin(categories, eq(courses.categoryId, categories.categoryId))
+                .where(inArray(courses.courseId, paginatedSectionAccessCourseIds)),
+              this.db
+                .select({
+                  id: users.userId,
+                  email: users.email,
+                  firstName: users.firstName,
+                  lastName: users.lastName,
+                })
+                .from(users)
+                .where(eq(users.userId, filters.userId))
+                .limit(1),
+              this.db
+                .select({
+                  courseId: sectionAccess.courseId,
+                  sectionId: sectionAccess.sectionId,
+                  createdAt: sectionAccess.createdAt,
+                })
+                .from(sectionAccess)
+                .where(and(
+                  eq(sectionAccess.userId, filters.userId),
+                  inArray(sectionAccess.courseId, paginatedSectionAccessCourseIds)
+                ))
+            ]);
+
+            // Get all section IDs from section access records
+            const allSectionIds = [...new Set(allSectionAccessRecords.map(sa => sa.sectionId))];
+
+            // Batch fetch all sections at once
+            const allSections = allSectionIds.length > 0
+              ? await this.db
+                  .select({
+                    sectionId: courseSections.sectionId,
+                    title: courseSections.title,
+                    courseId: courseSections.courseId,
+                  })
+                  .from(courseSections)
+                  .where(inArray(courseSections.sectionId, allSectionIds))
+              : [];
+
+            // Create a map for quick section lookup
+            const sectionsByCourse = new Map<string, Array<{ sectionId: string; title: string }>>();
+            for (const section of allSections) {
+              if (!sectionsByCourse.has(section.courseId)) {
+                sectionsByCourse.set(section.courseId, []);
+              }
+              sectionsByCourse.get(section.courseId)!.push({
+                sectionId: section.sectionId,
+                title: section.title,
+              });
+            }
+
+            // Build section access records
+            for (const course of courseDetails) {
+              const courseAccessRecords = allSectionAccessRecords.filter(
+                sa => sa.courseId === course.id
+              );
+
+              const earliestAccess = courseAccessRecords.reduce(
+                (earliest, record) =>
+                  record.createdAt < earliest ? record.createdAt : earliest,
+                courseAccessRecords[0]?.createdAt || new Date()
+              );
+
+              const sectionAccessRecord: SectionAccessRecord = {
+                enrollmentId: `section-access-${course.id}`,
+                userId: filters.userId,
+                courseId: course.id,
+                companyId: null,
+                status: 'ACTIVE' as const,
+                enrolledAt: earliestAccess,
+                completedAt: null,
+                accessType: 'SECTION' as const,
+                accessedSections: sectionsByCourse.get(course.id) || [],
+                userInfo: userInfo[0] || null,
+                courseInfo: course,
+                companyInfo: { id: null, name: null },
+              };
+
+              sectionAccessCourses.push(sectionAccessRecord);
+            }
+          }
+        }
+      }
+    }
+
+    // Combine full enrollments and section access courses
+    const allRecords: Array<{
+      enrollmentId: string;
+      userId: string;
+      courseId: string;
+      companyId: string | null;
+      status: string;
+      enrolledAt: Date;
+      completedAt: Date | null;
+      accessType: 'FULL' | 'SECTION';
+      accessedSections: Array<{ sectionId: string; title: string }> | null;
+      userInfo: any;
+      courseInfo: any;
+      companyInfo: any;
+    }> = [
+      ...fullEnrollments.map(e => ({
+        ...e,
+        accessType: 'FULL' as const,
+        accessedSections: null as Array<{ sectionId: string; title: string }> | null,
+      })),
+      ...sectionAccessCourses,
+    ];
+
+    const totalCount = fullEnrollmentCount + sectionAccessCount;
+
+    // Map to final structure (resolve thumbnail to full URL for images)
+    const mappedData = allRecords.map(e => ({
+      ...e,
+      user: e.userInfo,
+      course: {
+        ...e.courseInfo,
+        thumbnail: this.ensureThumbnailUrl(e.courseInfo?.thumbnail),
+        category: e.courseInfo ? {
+          id: e.courseInfo.categoryId,
+          name: e.courseInfo.categoryName,
+          slug: e.courseInfo.categorySlug,
+          description: e.courseInfo.categoryDescription,
+        } : null,
+      },
+      company: e.companyInfo,
+    }));
+
+    return {
+      data: mappedData,
+      pagination: {
+        page,
+        limit,
+        total: totalCount,
+        totalPages: Math.ceil(totalCount / limit),
+      },
+    };
+  }
+
+  async findOne(id: string) {
+    const [enrollment] = await this.db
+      .select()
+      .from(enrollments)
+      .where(eq(enrollments.enrollmentId, id))
+      .limit(1);
+
+    if (!enrollment) {
+      throw new NotFoundException(`Enrollment with ID ${id} not found`);
+    }
+
+    return enrollment;
+  }
+
+  async create(dto: CreateEnrollmentDto, userId: string, userRole: string) {
+    // Check if course exists
+    const [course] = await this.db
+      .select()
+      .from(courses)
+      .where(eq(courses.courseId, dto.courseId))
+      .limit(1);
+
+    if (!course) {
+      throw new NotFoundException(`Course with ID ${dto.courseId} not found`);
+    }
+
+    // Check if already enrolled
+    const [existing] = await this.db
+      .select()
+      .from(enrollments)
+      .where(and(eq(enrollments.userId, dto.userId || userId), eq(enrollments.courseId, dto.courseId)))
+      .limit(1);
+
+    if (existing) {
+      throw new ConflictException('User is already enrolled in this course');
+    }
+
+    // Permission check: users can only enroll themselves unless admin
+    if (userRole !== 'PLATFORM_ADMIN' && userRole !== 'CORPORATE_ADMIN' && dto.userId && dto.userId !== userId) {
+      throw new ForbiddenException('You can only enroll yourself');
+    }
+
+    try {
+      const [newEnrollment] = await this.db
+        .insert(enrollments)
+        .values({
+          userId: dto.userId || userId,
+          courseId: dto.courseId,
+          companyId: dto.companyId || null,
+          status: 'ACTIVE',
+        })
+        .onConflictDoNothing()
+        .returning({ enrollmentId: enrollments.enrollmentId });
+
+      if (!newEnrollment) {
+        const [existingEnrollment] = await this.db
+          .select()
+          .from(enrollments)
+          .where(and(eq(enrollments.userId, dto.userId || userId), eq(enrollments.courseId, dto.courseId)))
+          .limit(1);
+          
+        return existingEnrollment;
+      }
+
+      const enrollment = await this.findOne(newEnrollment.enrollmentId);
+
+      try {
+        const [user] = await this.db
+          .select()
+          .from(users)
+          .where(eq(users.userId, dto.userId || userId))
+          .limit(1);
+
+        if (user && course) {
+          await this.emailService.sendEnrollmentConfirmationEmail({
+            firstName: user.firstName,
+            email: user.email,
+            courseTitle: course.title,
+            courseSlug: course.slug,
+            enrollmentDate: enrollment.enrolledAt,
+          });
+        }
+      } catch {}
+
+      return enrollment;
+    } catch (error) {
+      // Fallback if onConflictDoNothing isn't supported or other error
+      const [existing] = await this.db
+        .select()
+        .from(enrollments)
+        .where(
+          and(
+            eq(enrollments.userId, dto.userId || userId),
+            eq(enrollments.courseId, dto.courseId)
+          )
+        )
+        .limit(1);
+
+      if (existing) {
+        return existing;
+      }
+      throw error;
+    }
+  }
+
+  async bulkCreate(dto: BulkEnrollmentDto, companyId: string, userRole: string) {
+    if (userRole !== 'CORPORATE_ADMIN' && userRole !== 'PLATFORM_ADMIN') {
+      throw new ForbiddenException('Only corporate admins can perform bulk enrollments');
+    }
+
+    // Verify course exists
+    const [course] = await this.db
+      .select()
+      .from(courses)
+      .where(eq(courses.courseId, dto.courseId))
+      .limit(1);
+
+    if (!course) {
+      throw new NotFoundException(`Course with ID ${dto.courseId} not found`);
+    }
+
+    const results = [];
+    const errors = [];
+
+    for (const userId of dto.userIds) {
+      try {
+        const [existing] = await this.db
+          .select()
+          .from(enrollments)
+          .where(and(eq(enrollments.userId, userId), eq(enrollments.courseId, dto.courseId)))
+          .limit(1);
+
+        if (existing) {
+          errors.push({ userId, error: 'Already enrolled' });
+          continue;
+        }
+
+        const [enrollment] = await this.db
+          .insert(enrollments)
+          .values({
+            userId,
+            courseId: dto.courseId,
+            companyId,
+            status: 'ACTIVE',
+          })
+          .returning({ enrollmentId: enrollments.enrollmentId });
+
+        results.push(enrollment);
+      } catch (error) {
+        errors.push({ userId, error: error instanceof Error ? error.message : 'Unknown error' });
+      }
+    }
+
+    return {
+      success: results.length,
+      failed: errors.length,
+      results,
+      errors,
+    };
+  }
+
+  async updateStatus(id: string, status: 'ACTIVE' | 'COMPLETED' | 'REVOKED', userRole: string) {
+    const [enrollment] = await this.db
+      .select()
+      .from(enrollments)
+      .where(eq(enrollments.enrollmentId, id))
+      .limit(1);
+
+    if (!enrollment) {
+      throw new NotFoundException(`Enrollment with ID ${id} not found`);
+    }
+
+    if (status === 'REVOKED' && userRole !== 'PLATFORM_ADMIN' && userRole !== 'CORPORATE_ADMIN') {
+      throw new ForbiddenException('Only admins can revoke enrollments');
+    }
+
+    const wasCompleted = enrollment.status === 'COMPLETED';
+    const completedAt = status === 'COMPLETED' ? new Date() : null;
+
+    const [updated] = await this.db
+      .update(enrollments)
+      .set({
+        status,
+        completedAt,
+      })
+      .where(eq(enrollments.enrollmentId, id))
+      .returning({ enrollmentId: enrollments.enrollmentId });
+
+    if (status === 'COMPLETED' && !wasCompleted) {
+      try {
+        const [user] = await this.db
+          .select()
+          .from(users)
+          .where(eq(users.userId, enrollment.userId))
+          .limit(1);
+
+        const [course] = await this.db
+          .select()
+          .from(courses)
+          .where(eq(courses.courseId, enrollment.courseId))
+          .limit(1);
+
+        if (user && course) {
+          await this.emailService.sendCourseCompletionEmail({
+            firstName: user.firstName,
+            email: user.email,
+            courseTitle: course.title,
+            courseSlug: course.slug,
+            completedDate: completedAt || new Date(),
+          });
+        }
+      } catch {}
+    }
+
+    return updated;
+  }
+
+  async delete(id: string, userRole: string) {
+    if (userRole !== 'PLATFORM_ADMIN' && userRole !== 'CORPORATE_ADMIN') {
+      throw new ForbiddenException('Only admins can delete enrollments');
+    }
+
+    const [enrollment] = await this.db
+      .select()
+      .from(enrollments)
+      .where(eq(enrollments.enrollmentId, id))
+      .limit(1);
+
+    if (!enrollment) {
+      throw new NotFoundException(`Enrollment with ID ${id} not found`);
+    }
+
+    // Soft-delete: set status to REVOKED instead of deleting the row
+    await this.db
+      .update(enrollments)
+      .set({
+        status: 'REVOKED',
+      })
+      .where(eq(enrollments.enrollmentId, id));
+
+    return { message: 'Enrollment revoked successfully' };
+  }
+}
+

@@ -1,0 +1,26 @@
+{{> header}}
+
+<tr>
+  <td style="padding: 40px 20px; text-align: center;">
+    <h1 style="color: #dc3545; font-size: 28px; margin: 0 0 20px 0;">Video Encoding Failed</h1>
+    <p style="color: #666; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+      Hi {{firstName}},
+    </p>
+    <p style="color: #666; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+      We encountered an issue while encoding your video lesson "<strong>{{lessonTitle}}</strong>" in the course "<strong>{{courseTitle}}</strong>".
+    </p>
+    <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px; padding: 15px; margin: 30px 0; text-align: left;">
+      <p style="color: #856404; font-size: 14px; margin: 0 0 10px 0;"><strong>Error Details:</strong></p>
+      <p style="color: #856404; font-size: 14px; margin: 0;">{{errorMessage}}</p>
+    </div>
+    <p style="color: #666; font-size: 16px; line-height: 1.6; margin: 20px 0;">
+      Please check your video file and try uploading it again. If the problem persists, please contact support.
+    </p>
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="{{frontendUrl}}/instructor/courses/{{courseSlug}}/lessons/{{lessonId}}" style="display: inline-block; background-color: #dc3545; color: #ffffff; text-decoration: none; padding: 12px 30px; border-radius: 5px; font-weight: 600; font-size: 16px;">Retry Upload</a>
+    </div>
+  </td>
+</tr>
+
+{{> footer}}
+

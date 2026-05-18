@@ -1,0 +1,104 @@
+{
+  "version": "5",
+  "dialect": "pg",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1765969261359,
+      "tag": "0000_productive_stardust",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1766852713048,
+      "tag": "0001_foamy_mother_askani",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1767235200000,
+      "tag": "0002_add_coupons_and_enhance_categories",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1769846400000,
+      "tag": "0003_coupon_usage_reservations",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1769900000000,
+      "tag": "0004_course_pricing_aed_compare_at",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1769950000000,
+      "tag": "0005_cms_landing_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1772073998762,
+      "tag": "0006_motionless_lake",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1772160000000,
+      "tag": "0007_banner_customization",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "5",
+      "when": 1772250000000,
+      "tag": "0008_categories_parent",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "5",
+      "when": 1772731652984,
+      "tag": "0009_slippery_lilandra",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "5",
+      "when": 1772870400000,
+      "tag": "0010_free_payment_gateway",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "5",
+      "when": 1772756160060,
+      "tag": "0011_tough_electro",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "5",
+      "when": 1773132864990,
+      "tag": "0012_curly_moonstone",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "5",
+      "when": 1773648949655,
+      "tag": "0013_foamy_avengers",
+      "breakpoints": true
+    }
+  ]
+}

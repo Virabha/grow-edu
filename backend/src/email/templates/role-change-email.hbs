@@ -1,0 +1,52 @@
+{{> header title="Your Account Role Has Been Updated"}}
+              <h2 style="margin: 0 0 20px; color: #f8fafc; font-size: 24px; font-weight: 600;">Hello, {{firstName}}!</h2>
+              <p style="margin: 0 0 20px; color: #94a3b8; font-size: 16px; line-height: 1.6;">
+                We're writing to inform you that your account role on Loshi Edu has been updated by an administrator.
+              </p>
+              <table role="presentation" style="width: 100%; margin: 20px 0; background-color: rgba(224, 180, 88, 0.1); border-radius: 8px; padding: 20px;">
+                <tr>
+                  <td>
+                    <p style="margin: 0 0 10px; color: #cbd5e1; font-size: 14px;">
+                      <strong style="color: #f8fafc;">Previous Role:</strong> {{oldRole}}
+                    </p>
+                    <p style="margin: 0; color: #cbd5e1; font-size: 14px;">
+                      <strong style="color: #f8fafc;">New Role:</strong> <span style="color: #e0b458; font-weight: 600;">{{newRole}}</span>
+                    </p>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin: 0 0 30px; color: #94a3b8; font-size: 16px; line-height: 1.6;">
+                {{#eq newRole "Instructor"}}
+                  Congratulations! You now have access to instructor features. You can create and manage courses, upload video lessons, and track your students' progress. Start building your first course and share your expertise with learners worldwide!
+                {{else}}
+                  {{#eq newRole "Learner"}}
+                    Your account has been changed to Learner role. You can now browse and enroll in courses, track your learning progress, and earn certificates upon course completion.
+                  {{else}}
+                    {{#eq newRole "Corporate Admin"}}
+                      You now have Corporate Admin privileges. You can manage company enrollments, view analytics, and oversee your organization's learning initiatives.
+                    {{else}}
+                      {{#eq newRole "Platform Admin"}}
+                        You now have Platform Admin access. You have full control over the platform, including user management, course moderation, and system configuration.
+                      {{else}}
+                        Your role has been updated to {{newRole}}. Please log in to explore your new permissions and features.
+                      {{/eq}}
+                    {{/eq}}
+                  {{/eq}}
+                {{/eq}}
+              </p>
+              <table role="presentation" style="width: 100%; margin: 30px 0;">
+                <tr>
+                  <td align="center">
+                    {{#eq newRole "Instructor"}}
+                      <a href="{{frontendUrl}}/instructor/dashboard" style="display: inline-block; padding: 14px 32px; background-color: #e0b458; color: #0a192f; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px; letter-spacing: 0.5px;">Go to Instructor Dashboard</a>
+                    {{else}}
+                      <a href="{{frontendUrl}}/login" style="display: inline-block; padding: 14px 32px; background-color: #e0b458; color: #0a192f; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px; letter-spacing: 0.5px;">Log In to Your Account</a>
+                    {{/eq}}
+                  </td>
+                </tr>
+              </table>
+              <p style="margin: 30px 0 0; color: #94a3b8; font-size: 14px; line-height: 1.6;">
+                If you believe this change was made in error or if you have any questions, please contact our support team immediately.
+              </p>
+{{> footer}}
+

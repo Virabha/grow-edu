@@ -1,0 +1,50 @@
+{{> header title="Payment Confirmation"}}
+              <div style="text-align: center; margin-bottom: 30px;">
+                <div style="width: 64px; height: 64px; background-color: #10b981; border-radius: 50%; display: inline-block; line-height: 64px; font-size: 32px; color: #ffffff;">✓</div>
+              </div>
+              <h2 style="margin: 0 0 20px; color: #f8fafc; font-size: 24px; font-weight: 600; text-align: center;">Payment Confirmed</h2>
+              <p style="margin: 0 0 20px; color: #94a3b8; font-size: 16px; line-height: 1.6;">
+                Hi {{firstName}},
+              </p>
+              <p style="margin: 0 0 30px; color: #94a3b8; font-size: 16px; line-height: 1.6;">
+                Thank you for your purchase! Your payment has been successfully processed. You now have access to the following:
+              </p>
+              <table role="presentation" style="width: 100%; background-color: #112240; border-radius: 6px; padding: 20px; margin-bottom: 30px;">
+                <tr>
+                  <td>
+                    <p style="margin: 0 0 15px; color: #e0b458; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Items Purchased</p>
+                    <ul style="margin: 0; padding-left: 20px; color: #94a3b8; font-size: 16px; line-height: 1.8;">
+                      {{#each items}}
+                      <li>{{this.name}} <span style="color: #78716c; font-size: 14px;">({{this.type}})</span></li>
+                      {{/each}}
+                    </ul>
+                  </td>
+                </tr>
+              </table>
+              <table role="presentation" style="width: 100%; background-color: #112240; border-radius: 6px; padding: 20px; margin-bottom: 30px;">
+                <tr>
+                  <td>
+                    <table role="presentation" style="width: 100%;">
+                      <tr>
+                        <td style="color: #94a3b8; font-size: 14px; padding: 5px 0;">Payment ID:</td>
+                        <td style="color: #f8fafc; font-size: 14px; font-weight: 600; text-align: right; padding: 5px 0;">{{paymentId}}</td>
+                      </tr>
+                      <tr>
+                        <td style="color: #94a3b8; font-size: 14px; padding: 5px 0;">Amount:</td>
+                        <td style="color: #e0b458; font-size: 18px; font-weight: 700; text-align: right; padding: 5px 0;">{{currency}} {{amount}}</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+              <table role="presentation" style="width: 100%; margin: 30px 0;">
+                <tr>
+                  <td align="center">
+                    <a href="{{frontendUrl}}/courses" style="display: inline-block; padding: 14px 32px; background-color: #e0b458; color: #0a192f; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px; letter-spacing: 0.5px;">Start Learning</a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin: 30px 0 0; color: #78716c; font-size: 14px; line-height: 1.6;">
+                A receipt has been sent to this email address. If you have any questions, please contact our support team.
+              </p>
+{{> footer}}

@@ -1,0 +1,44 @@
+{{> header title="Changes Requested for Your Course"}}
+  <h2 style="margin: 0 0 20px; color: #f8fafc; font-size: 24px; font-weight: 600;">Hello, {{firstName}}!</h2>
+  
+  <p style="margin: 0 0 20px; color: #94a3b8; font-size: 16px; line-height: 1.6;">
+    Thank you for submitting your course <strong style="color: #e0b458;">"{{courseTitle}}"</strong> for review.
+  </p>
+
+  <p style="margin: 0 0 20px; color: #94a3b8; font-size: 16px; line-height: 1.6;">
+    Our admin team has reviewed your course and would like to request some changes before approval.
+  </p>
+
+  {{#if reviewNotes}}
+    <div style="background-color: #1e293b; border-left: 4px solid #f59e0b; padding: 16px; margin: 20px 0; border-radius: 4px;">
+      <p style="margin: 0 0 10px; color: #f59e0b; font-weight: 600; font-size: 14px;">Requested Changes:</p>
+      <p style="margin: 0; color: #cbd5e1; font-size: 14px; line-height: 1.6; white-space: pre-wrap;">{{reviewNotes}}</p>
+    </div>
+  {{/if}}
+
+  <p style="margin: 0 0 20px; color: #94a3b8; font-size: 16px; line-height: 1.6;">
+    Don't worry! This is a normal part of our quality assurance process. Here's what to do next:
+  </p>
+
+  <div style="background-color: #1e293b; padding: 20px; margin: 20px 0; border-radius: 8px;">
+    <ul style="margin: 0; padding-left: 20px; color: #94a3b8; font-size: 15px; line-height: 1.8;">
+      <li style="margin-bottom: 10px;">Review the feedback carefully</li>
+      <li style="margin-bottom: 10px;">Make the requested changes to your course</li>
+      <li style="margin-bottom: 10px;">Resubmit your course for review</li>
+      <li style="margin-bottom: 10px;">Our team will review it again promptly</li>
+    </ul>
+  </div>
+
+  <table role="presentation" style="width: 100%; margin: 30px 0;">
+    <tr>
+      <td align="center">
+        <a href="{{frontendUrl}}/instructor/courses/{{courseId}}/edit" style="display: inline-block; padding: 14px 32px; background-color: #e0b458; color: #0a192f; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px; letter-spacing: 0.5px;">Edit Your Course</a>
+      </td>
+    </tr>
+  </table>
+
+  <p style="margin: 30px 0 0; color: #94a3b8; font-size: 14px; line-height: 1.6;">
+    We appreciate your dedication to creating quality content. If you have any questions about the requested changes, feel free to reach out to our support team.
+  </p>
+{{> footer}}
+

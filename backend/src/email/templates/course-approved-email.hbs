@@ -1,0 +1,46 @@
+{{> header title="Your Course Has Been Approved! 🎉"}}
+  <h2 style="margin: 0 0 20px; color: #f8fafc; font-size: 24px; font-weight: 600;">Congratulations, {{firstName}}!</h2>
+  
+  <p style="margin: 0 0 20px; color: #94a3b8; font-size: 16px; line-height: 1.6;">
+    Great news! Your course <strong style="color: #e0b458;">"{{courseTitle}}"</strong> has been approved by our admin team{{#if publish}} and is now published{{/if}}!
+  </p>
+
+  {{#if reviewNotes}}
+    <div style="background-color: #1e293b; border-left: 4px solid #e0b458; padding: 16px; margin: 20px 0; border-radius: 4px;">
+      <p style="margin: 0 0 10px; color: #e0b458; font-weight: 600; font-size: 14px;">Review Notes:</p>
+      <p style="margin: 0; color: #cbd5e1; font-size: 14px; line-height: 1.6;">{{reviewNotes}}</p>
+    </div>
+  {{/if}}
+
+  {{#if publish}}
+    <p style="margin: 0 0 20px; color: #94a3b8; font-size: 16px; line-height: 1.6;">
+      Your course is now live on the platform and students can start enrolling. Here's what you can do next:
+    </p>
+
+    <div style="background-color: #1e293b; padding: 20px; margin: 20px 0; border-radius: 8px;">
+      <ul style="margin: 0; padding-left: 20px; color: #94a3b8; font-size: 15px; line-height: 1.8;">
+        <li style="margin-bottom: 10px;">Track your course analytics and student progress</li>
+        <li style="margin-bottom: 10px;">Engage with students through course discussions</li>
+        <li style="margin-bottom: 10px;">Keep your course content updated regularly</li>
+        <li style="margin-bottom: 10px;">Monitor reviews and feedback from your students</li>
+      </ul>
+    </div>
+  {{else}}
+    <p style="margin: 0 0 20px; color: #94a3b8; font-size: 16px; line-height: 1.6;">
+      Your course has been approved but is currently in draft status. You can publish it whenever you're ready from your instructor dashboard.
+    </p>
+  {{/if}}
+
+  <table role="presentation" style="width: 100%; margin: 30px 0;">
+    <tr>
+      <td align="center">
+        <a href="{{frontendUrl}}/instructor/courses/{{courseId}}/edit" style="display: inline-block; padding: 14px 32px; background-color: #e0b458; color: #0a192f; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px; letter-spacing: 0.5px;">View Your Course</a>
+      </td>
+    </tr>
+  </table>
+
+  <p style="margin: 30px 0 0; color: #94a3b8; font-size: 14px; line-height: 1.6;">
+    Thank you for contributing quality content to our platform. We're excited to see your students succeed!
+  </p>
+{{> footer}}
+

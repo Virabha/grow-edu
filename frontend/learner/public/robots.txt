@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /checkout
+Disallow: /cart
+Disallow: /payment/
+Disallow: /my-courses
+Disallow: /dashboard
+Disallow: /profile
+
+Sitemap: https://loshiedu.com/sitemap.xml

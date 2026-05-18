@@ -1,0 +1,31 @@
+{{> header title="Course Enrollment Confirmation"}}
+              <div style="text-align: center; margin-bottom: 30px;">
+                <div style="width: 64px; height: 64px; background-color: #2563eb; border-radius: 50%; display: inline-block; line-height: 64px; font-size: 32px; color: #ffffff;">📚</div>
+              </div>
+              <h2 style="margin: 0 0 20px; color: #f8fafc; font-size: 24px; font-weight: 600; text-align: center;">You're Enrolled!</h2>
+              <p style="margin: 0 0 20px; color: #94a3b8; font-size: 16px; line-height: 1.6;">
+                Hi {{firstName}},
+              </p>
+              <p style="margin: 0 0 30px; color: #94a3b8; font-size: 16px; line-height: 1.6;">
+                Congratulations! You've successfully enrolled in <strong style="color: #e0b458;">{{courseTitle}}</strong>. Your learning journey starts now!
+              </p>
+              <table role="presentation" style="width: 100%; background-color: #112240; border-radius: 6px; padding: 20px; margin-bottom: 30px;">
+                <tr>
+                  <td>
+                    <p style="margin: 0 0 10px; color: #e0b458; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Course Details</p>
+                    <p style="margin: 0 0 5px; color: #f8fafc; font-size: 18px; font-weight: 600;">{{courseTitle}}</p>
+                    <p style="margin: 0; color: #94a3b8; font-size: 14px;">Enrolled on {{enrollmentDate}}</p>
+                  </td>
+                </tr>
+              </table>
+              <table role="presentation" style="width: 100%; margin: 30px 0;">
+                <tr>
+                  <td align="center">
+                    <a href="{{frontendUrl}}/courses/{{courseSlug}}" style="display: inline-block; padding: 14px 32px; background-color: #e0b458; color: #0a192f; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px; letter-spacing: 0.5px;">Start Learning</a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin: 30px 0 0; color: #94a3b8; font-size: 14px; line-height: 1.6;">
+                We're excited to have you on this learning journey. If you need any assistance, our support team is here to help.
+              </p>
+{{> footer}}

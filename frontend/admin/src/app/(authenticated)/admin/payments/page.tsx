@@ -97,7 +97,9 @@ export default function PaymentManagementPage() {
                         <SelectContent>
                             <SelectItem value="all">All Status</SelectItem>
                             <SelectItem value="PENDING">Pending</SelectItem>
+                            <SelectItem value="PROOF_UPLOADED">Proof Uploaded</SelectItem>
                             <SelectItem value="COMPLETED">Completed</SelectItem>
+                            <SelectItem value="REJECTED">Rejected</SelectItem>
                             <SelectItem value="FAILED">Failed</SelectItem>
                             <SelectItem value="REFUNDED">Refunded</SelectItem>
                         </SelectContent>
@@ -108,9 +110,9 @@ export default function PaymentManagementPage() {
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">All Gateways</SelectItem>
+                            <SelectItem value="MANUAL_QR">Manual QR</SelectItem>
                             <SelectItem value="RAZORPAY">Razorpay</SelectItem>
-                            <SelectItem value="STRIPE_US">Stripe US</SelectItem>
-                            <SelectItem value="STRIPE_UAE">Stripe UAE</SelectItem>
+                            <SelectItem value="FREE">Free</SelectItem>
                         </SelectContent>
                     </Select>
                 </PageFilters>

@@ -30,14 +30,15 @@ export const enrollmentStatusEnum = pgEnum("enrollment_status", [
 ]);
 export const paymentStatusEnum = pgEnum("payment_status", [
   "PENDING",
+  "PROOF_UPLOADED",
   "COMPLETED",
   "FAILED",
+  "REJECTED",
   "REFUNDED",
 ]);
 export const paymentGatewayEnum = pgEnum("payment_gateway", [
   "RAZORPAY",
-  "STRIPE_US",
-  "STRIPE_UAE",
+  "MANUAL_QR",
   "FREE",
 ]);
 export const courseLevelEnum = pgEnum("course_level", [
@@ -454,6 +455,11 @@ export const payments = pgTable(
     gateway: paymentGatewayEnum("gateway").notNull(),
     gatewayId: text("gateway_id"),
     status: paymentStatusEnum("status").notNull().default("PENDING"),
+    paymentProofUrl: text("payment_proof_url"),
+    proofUploadedAt: timestamp("proof_uploaded_at"),
+    reviewedAt: timestamp("reviewed_at"),
+    reviewedBy: text("reviewed_by"),
+    reviewNotes: text("review_notes"),
     metadata: jsonb("metadata"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),

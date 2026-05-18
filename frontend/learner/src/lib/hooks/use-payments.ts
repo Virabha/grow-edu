@@ -1,46 +1,40 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
-import { queryKeys } from "@/lib/query-keys";
+
+export interface QRPaymentSettings {
+  qrImageUrl: string | null;
+  upiId: string | null;
+  bankName: string | null;
+  bankAccountNumber: string | null;
+  bankIfsc: string | null;
+  bankAccountHolder: string | null;
+  instructions: string | null;
+}
 
 interface CreatePaymentParams {
   courseId?: string;
   sectionId?: string;
   itemType: "COURSE" | "SECTION";
-  gateway: string;
-  billingInfo?: Record<string, string>;
   couponCode?: string;
-  successUrl?: string;
-  cancelUrl?: string;
 }
 
-interface PaymentResponse {
+export interface CreateManualQRResponse {
   paymentId: string;
-  checkoutUrl?: string;
-}
-
-function createPayment(params: CreatePaymentParams): Promise<PaymentResponse> {
-  return apiClient.post("/payments/create", params).then((r) => r.data as PaymentResponse);
-}
-
-interface VerifyPaymentParams {
-  sessionId: string;
-}
-
-interface VerifyPaymentResponse {
+  amount: number;
+  currency: string;
   status: string;
-  paymentId: string;
-}
-
-function verifyPayment(params: VerifyPaymentParams): Promise<VerifyPaymentResponse> {
-  return apiClient.post("/payments/verify", params).then((r) => r.data as VerifyPaymentResponse);
+  qrSettings: QRPaymentSettings;
 }
 
 export function useCreatePayment() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: createPayment,
+    mutationFn: (params: CreatePaymentParams) =>
+      apiClient
+        .post<CreateManualQRResponse>("/payments", params)
+        .then((r) => r.data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["enrollments"] });
     },
@@ -65,12 +59,29 @@ export function useFreeEnroll() {
   });
 }
 
-export function useVerifyPayment() {
+export function useUploadProof() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: verifyPayment,
+    mutationFn: ({ paymentId, proofUrl }: { paymentId: string; proofUrl: string }) =>
+      apiClient.post(`/payments/${paymentId}/upload-proof`, { proofUrl }).then((r) => r.data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["enrollments"] });
+      queryClient.invalidateQueries({ queryKey: ["payments"] });
     },
+  });
+}
+
+export function useQRSettings() {
+  return useQuery<QRPaymentSettings>({
+    queryKey: ["payments", "qr-settings"],
+    queryFn: () => apiClient.get<QRPaymentSettings>("/payments/qr-settings").then((r) => r.data),
+  });
+}
+
+export function useMyPayment(paymentId: string | null) {
+  return useQuery({
+    queryKey: ["payments", "mine", paymentId],
+    enabled: !!paymentId,
+    queryFn: () =>
+      apiClient.get(`/payments/my/${paymentId}`).then((r) => r.data),
   });
 }

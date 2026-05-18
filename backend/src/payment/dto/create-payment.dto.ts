@@ -1,12 +1,7 @@
-import { IsEnum, IsString, IsObject, IsOptional } from 'class-validator';
+import { IsEnum, IsString, IsOptional } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { PaymentGateway } from '../payment.service';
 
 export class CreatePaymentDto {
-  @ApiProperty({ enum: PaymentGateway, example: PaymentGateway.RAZORPAY })
-  @IsEnum(PaymentGateway)
-  gateway: PaymentGateway;
-
   @ApiProperty({ enum: ['COURSE', 'SECTION'] })
   @IsEnum(['COURSE', 'SECTION'])
   itemType: 'COURSE' | 'SECTION';
@@ -25,20 +20,4 @@ export class CreatePaymentDto {
   @IsOptional()
   @IsString()
   couponCode?: string;
-
-  @ApiProperty({ required: false })
-  @IsOptional()
-  @IsString()
-  successUrl?: string;
-
-  @ApiProperty({ required: false })
-  @IsOptional()
-  @IsString()
-  cancelUrl?: string;
-
-  @ApiProperty({ example: { courseId: 'course-id', userId: 'user-id' }, required: false })
-  @IsOptional()
-  @IsObject()
-  metadata?: Record<string, string>;
 }
-

@@ -16,27 +16,19 @@ import { FilterBooksDto } from './dto/filter-books.dto';
 import { CacheService } from '../cache/cache.service';
 import { StorageService } from '../storage/storage.service';
 import { AppConfigService } from '../config';
-import Stripe from 'stripe';
 
 const CACHE_TTL = 300;
 const MAX_PAGE_LIMIT = 50;
 
 @Injectable()
 export class BooksService {
-  private stripeUAE: Stripe | undefined;
-
   constructor(
     @Inject(DATABASE_CONNECTION)
     private readonly db: PostgresJsDatabase<typeof schema>,
     private readonly cache: CacheService,
     private readonly storageService: StorageService,
     private readonly configService: AppConfigService,
-  ) {
-    const stripeUaeKey = this.configService.stripeUaeSecretKey;
-    if (stripeUaeKey) {
-      this.stripeUAE = new Stripe(stripeUaeKey, { apiVersion: '2023-10-16' });
-    }
-  }
+  ) {}
 
   private resolveUrl(url: string | null): string | null {
     if (!url) return null;
@@ -258,7 +250,8 @@ export class BooksService {
     return { deleted: true, bookId: id };
   }
 
-  async purchaseBook(userId: string, bookId: string, successUrl?: string, cancelUrl?: string) {
+  async purchaseBook(userId: string, bookId: string, _successUrl?: string, _cancelUrl?: string) {
+    void _successUrl; void _cancelUrl;
     const book = await this.findById(bookId);
     if (book.status !== 'PUBLISHED') {
       throw new BadRequestException('Book is not available for purchase');
@@ -295,10 +288,7 @@ export class BooksService {
       return { success: true, purchaseId: purchase.purchaseId, free: true };
     }
 
-    if (!this.stripeUAE) {
-      throw new BadRequestException('Stripe is not configured');
-    }
-
+    // Manual-QR flow: create pending purchase. Learner uploads proof; admin approves.
     const [purchase] = await this.db
       .insert(bookPurchases)
       .values({
@@ -306,48 +296,17 @@ export class BooksService {
         bookId,
         amount: String(amount),
         currency: book.currency,
-        gateway: 'STRIPE_UAE',
+        gateway: 'MANUAL_QR',
         status: 'PENDING',
       })
       .returning();
 
-    const frontendUrl = this.configService.frontendUrl;
-    const sUrl = successUrl || `${frontendUrl}/payment/success`;
-    const cUrl = cancelUrl || `${frontendUrl}/payment/failure`;
-
-    const separator = sUrl.includes('?') ? '&' : '?';
-    const session = await this.stripeUAE.checkout.sessions.create({
-      mode: 'payment',
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          price_data: {
-            currency: book.currency.toLowerCase(),
-            product_data: { name: book.title },
-            unit_amount: Math.round(amount * 100),
-          },
-          quantity: 1,
-        },
-      ],
-      success_url: `${sUrl}${separator}bookPurchaseId=${purchase.purchaseId}&sessionId={CHECKOUT_SESSION_ID}`,
-      cancel_url: cUrl,
-      metadata: {
-        purchaseId: purchase.purchaseId,
-        userId,
-        bookId,
-        type: 'book',
-      },
-    });
-
-    await this.db
-      .update(bookPurchases)
-      .set({ gatewayId: session.id })
-      .where(eq(bookPurchases.purchaseId, purchase.purchaseId));
-
     return {
       purchaseId: purchase.purchaseId,
-      checkoutUrl: session.url,
-      sessionId: session.id,
+      amount,
+      currency: book.currency,
+      status: 'PENDING',
+      message: 'Pay via QR/bank and upload proof through /payments to complete.',
     };
   }
 
@@ -366,19 +325,9 @@ export class BooksService {
       return { success: true, message: 'Purchase already completed' };
     }
 
-    if (purchase.gatewayId && this.stripeUAE) {
-      const session = await this.stripeUAE.checkout.sessions.retrieve(purchase.gatewayId);
-      if (session.payment_status !== 'paid') {
-        throw new BadRequestException('Payment not completed');
-      }
-    }
-
-    await this.db
-      .update(bookPurchases)
-      .set({ status: 'COMPLETED', updatedAt: new Date() })
-      .where(eq(bookPurchases.purchaseId, purchaseId));
-
-    return { success: true, message: 'Book purchase verified' };
+    // Manual-QR flow: admin approves via payments endpoints.
+    // Self-verify is a no-op for non-COMPLETED states.
+    return { success: false, message: 'Awaiting admin approval' };
   }
 
   async getUserPurchases(userId: string) {

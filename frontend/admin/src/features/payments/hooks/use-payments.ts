@@ -1,9 +1,8 @@
 "use client";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/query-keys';
-import { axiosGet, axiosPost } from '@/lib/api/client';
-import { paymentsApi, type PaymentsResponse, type PaymentDetail } from '../api/payments.api';
-import { CreatePaymentDto, CreateBulkPaymentDto, PaymentResponse, VerifyPaymentDto, VerifyPaymentResponse } from '../types';
+import { axiosGet } from '@/lib/api/client';
+import { paymentsApi, type PaymentsResponse, type QRPaymentSettings } from '../api/payments.api';
 
 interface UsePaymentsFilters {
     search?: string;
@@ -49,62 +48,50 @@ export function usePaymentById(id: string | null, enabled = true) {
     });
 }
 
-export const useCreatePayment = () => {
-    const queryClient = useQueryClient();
-    const fetchCreatePaymentMutationFunction = async (data: CreatePaymentDto): Promise<PaymentResponse> => {
-        const res = await axiosPost<PaymentResponse>("payments", data);
-        return res.data;
-    };
-    return useMutation({
-        mutationKey: ["createPayment"],
-        mutationFn: fetchCreatePaymentMutationFunction,
-        onSuccess: () => {
-            queryClient.invalidateQueries({
-                queryKey: queryKeys.payments.all(),
-            });
-        },
+export function usePendingPayments(page = 1, limit = 50) {
+    return useQuery({
+        queryKey: ['payments', 'pending-review', page, limit],
+        queryFn: () => paymentsApi.getPendingReview(page, limit),
     });
-};
+}
 
-export const useCreateBulkPayment = () => {
-    const queryClient = useQueryClient();
-    const fetchCreateBulkPaymentMutationFunction = async (data: CreateBulkPaymentDto): Promise<PaymentResponse> => {
-        const res = await axiosPost<PaymentResponse>("payments/bulk", data);
-        return res.data;
-    };
+export function useApprovePayment() {
+    const qc = useQueryClient();
     return useMutation({
-        mutationKey: ["createBulkPayment"],
-        mutationFn: fetchCreateBulkPaymentMutationFunction,
+        mutationFn: ({ paymentId, notes }: { paymentId: string; notes?: string }) =>
+            paymentsApi.approve(paymentId, notes),
         onSuccess: () => {
-            queryClient.invalidateQueries({
-                queryKey: queryKeys.payments.all(),
-            });
-            queryClient.invalidateQueries({
-                queryKey: queryKeys.cart.all(),
-            });
+            qc.invalidateQueries({ queryKey: queryKeys.payments.all() });
+            qc.invalidateQueries({ queryKey: ['payments', 'pending-review'] });
         },
     });
-};
+}
 
-export const useVerifyPayment = () => {
-    const queryClient = useQueryClient();
-    const fetchVerifyPaymentMutationFunction = async (data: VerifyPaymentDto): Promise<VerifyPaymentResponse> => {
-        const res = await axiosPost<VerifyPaymentResponse>("payments/verify", data);
-        return res.data;
-    };
+export function useRejectPayment() {
+    const qc = useQueryClient();
     return useMutation({
-        mutationKey: ["verifyPayment"],
-        mutationFn: fetchVerifyPaymentMutationFunction,
+        mutationFn: ({ paymentId, notes }: { paymentId: string; notes: string }) =>
+            paymentsApi.reject(paymentId, notes),
         onSuccess: () => {
-            queryClient.invalidateQueries({
-                queryKey: queryKeys.payments.all(),
-            });
-            queryClient.invalidateQueries({
-                queryKey: queryKeys.cart.all(),
-            });
-            queryClient.invalidateQueries({
-                queryKey: queryKeys.enrollments.all(),
-            });
+            qc.invalidateQueries({ queryKey: queryKeys.payments.all() });
+            qc.invalidateQueries({ queryKey: ['payments', 'pending-review'] });
         },
     });
-};
+}
+
+export function useQRSettings() {
+    return useQuery<QRPaymentSettings>({
+        queryKey: ['payments', 'qr-settings'],
+        queryFn: () => paymentsApi.getQRSettings(),
+    });
+}
+
+export function useUpdateQRSettings() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (input: Partial<QRPaymentSettings>) => paymentsApi.updateQRSettings(input),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ['payments', 'qr-settings'] });
+        },
+    });
+}

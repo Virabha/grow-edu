@@ -1,5 +1,4 @@
 import { apiClient } from '@/lib/api/client';
-import { CreatePaymentDto, CreateBulkPaymentDto, PaymentResponse, VerifyPaymentDto, VerifyPaymentResponse } from '../types';
 
 export interface Payment {
     paymentId: string;
@@ -18,6 +17,11 @@ export interface Payment {
     discountAmount?: number;
     couponId?: string;
     metadata?: Record<string, string>;
+    paymentProofUrl?: string | null;
+    proofUploadedAt?: string | null;
+    reviewedAt?: string | null;
+    reviewedBy?: string | null;
+    reviewNotes?: string | null;
 }
 
 export interface PaymentDetail extends Payment {
@@ -29,27 +33,20 @@ export interface PaymentDetail extends Payment {
 
 export interface PaymentsResponse {
     data: Payment[];
-    pagination?: {
-        page: number;
-        limit: number;
-        total: number;
-        totalPages?: number;
-    };
+    pagination?: { page: number; limit: number; total: number; totalPages?: number };
+}
+
+export interface QRPaymentSettings {
+    qrImageUrl: string | null;
+    upiId: string | null;
+    bankName: string | null;
+    bankAccountNumber: string | null;
+    bankIfsc: string | null;
+    bankAccountHolder: string | null;
+    instructions: string | null;
 }
 
 export const paymentsApi = {
-    async create(dto: CreatePaymentDto): Promise<PaymentResponse> {
-        const { data } = await apiClient.post<PaymentResponse>('/payments', dto);
-        return data as PaymentResponse;
-    },
-    async createBulk(dto: CreateBulkPaymentDto): Promise<PaymentResponse> {
-        const { data } = await apiClient.post<PaymentResponse>('/payments/bulk', dto);
-        return data as PaymentResponse;
-    },
-    async verify(dto: VerifyPaymentDto): Promise<VerifyPaymentResponse> {
-        const { data } = await apiClient.post<VerifyPaymentResponse>('/payments/verify', dto);
-        return data as VerifyPaymentResponse;
-    },
     async getAll(filters?: {
         search?: string;
         page?: number;
@@ -68,13 +65,31 @@ export const paymentsApi = {
         if (filters?.dateFrom) params.set('dateFrom', filters.dateFrom);
         if (filters?.dateTo) params.set('dateTo', filters.dateTo);
         const { data } = await apiClient.get<Payment[] | PaymentsResponse>(`/payments?${params.toString()}`);
-        if (Array.isArray(data)) {
-            return { data };
-        }
+        if (Array.isArray(data)) return { data };
         return data as PaymentsResponse;
     },
     async getById(id: string): Promise<PaymentDetail> {
         const { data } = await apiClient.get<PaymentDetail>(`/payments/${id}`);
         return data as PaymentDetail;
+    },
+    async getPendingReview(page = 1, limit = 50): Promise<PaymentsResponse> {
+        const { data } = await apiClient.get<PaymentsResponse>(`/payments/pending-review?page=${page}&limit=${limit}`);
+        return data as PaymentsResponse;
+    },
+    async approve(paymentId: string, notes?: string) {
+        const { data } = await apiClient.post(`/payments/${paymentId}/approve`, { notes });
+        return data;
+    },
+    async reject(paymentId: string, notes: string) {
+        const { data } = await apiClient.post(`/payments/${paymentId}/reject`, { notes });
+        return data;
+    },
+    async getQRSettings(): Promise<QRPaymentSettings> {
+        const { data } = await apiClient.get<QRPaymentSettings>('/payments/qr-settings');
+        return data as QRPaymentSettings;
+    },
+    async updateQRSettings(input: Partial<QRPaymentSettings>): Promise<QRPaymentSettings> {
+        const { data } = await apiClient.patch<QRPaymentSettings>('/payments/qr-settings', input);
+        return data as QRPaymentSettings;
     },
 };

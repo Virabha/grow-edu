@@ -1,12 +1,25 @@
-import { Injectable, BadRequestException, NotFoundException, ConflictException } from '@nestjs/common';
-import { Inject } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+  ConflictException,
+  Inject,
+} from '@nestjs/common';
 import { AppConfigService } from '../config';
-import Stripe from 'stripe';
 import type RazorpayType from 'razorpay';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { DATABASE_CONNECTION } from '../database/database.module';
 import * as schema from '../database/schema';
-import { courses, courseSections, payments, enrollments, sectionAccess, cartItems, users } from '../database/schema';
+import {
+  courses,
+  courseSections,
+  payments,
+  enrollments,
+  sectionAccess,
+  cartItems,
+  users,
+  siteSettings,
+} from '../database/schema';
 import { eq, and, inArray, desc, like, sql } from 'drizzle-orm';
 import { EmailService } from '../email/email.service';
 import { CouponsService } from '../coupons/coupons.service';
@@ -14,23 +27,39 @@ import { CouponsService } from '../coupons/coupons.service';
 const MAX_PAGE_LIMIT = 50;
 const PLATFORM_CURRENCY = 'INR';
 
-// Use require for razorpay to handle CommonJS/ESM compatibility
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const RazorpayLib = require('razorpay');
 const Razorpay = (RazorpayLib.default || RazorpayLib) as typeof RazorpayType;
 
 export enum PaymentGateway {
   RAZORPAY = 'RAZORPAY',
-  STRIPE_US = 'STRIPE_US',
-  STRIPE_UAE = 'STRIPE_UAE',
+  MANUAL_QR = 'MANUAL_QR',
   FREE = 'FREE',
+}
+
+const QR_SETTING_KEYS = {
+  qrImageUrl: 'payment.qr.image_url',
+  upiId: 'payment.qr.upi_id',
+  bankName: 'payment.qr.bank_name',
+  bankAccountNumber: 'payment.qr.bank_account_number',
+  bankIfsc: 'payment.qr.bank_ifsc',
+  bankAccountHolder: 'payment.qr.bank_account_holder',
+  instructions: 'payment.qr.instructions',
+} as const;
+
+export interface QRPaymentSettings {
+  qrImageUrl: string | null;
+  upiId: string | null;
+  bankName: string | null;
+  bankAccountNumber: string | null;
+  bankIfsc: string | null;
+  bankAccountHolder: string | null;
+  instructions: string | null;
 }
 
 @Injectable()
 export class PaymentService {
   private razorpay: InstanceType<typeof Razorpay> | null = null;
-  private stripeUS: Stripe | undefined;
-  private stripeUAE: Stripe | undefined;
 
   constructor(
     private configService: AppConfigService,
@@ -39,7 +68,6 @@ export class PaymentService {
     private emailService: EmailService,
     private couponsService: CouponsService,
   ) {
-    // Initialize Razorpay for India
     const razorpayKeyId = this.configService.razorpayKeyId;
     const razorpayKeySecret = this.configService.razorpayKeySecret;
     if (razorpayKeyId && razorpayKeySecret) {
@@ -48,23 +76,11 @@ export class PaymentService {
         key_secret: razorpayKeySecret,
       });
     }
-
-    // Initialize Stripe for USA
-    const stripeUsKey = this.configService.stripeUsSecretKey;
-    if (stripeUsKey) {
-      this.stripeUS = new Stripe(stripeUsKey, { apiVersion: '2023-10-16' });
-    }
-
-    // Initialize Stripe for UAE
-    const stripeUaeKey = this.configService.stripeUaeSecretKey;
-    if (stripeUaeKey) {
-      this.stripeUAE = new Stripe(stripeUaeKey, { apiVersion: '2023-10-16' });
-    }
   }
 
   /**
    * Shared validation: resolves course/section, validates it exists and is published,
-   * and optionally applies a coupon. Used by both enrollFree() and createCheckoutSession().
+   * and optionally applies a coupon.
    */
   private async resolveItemAndCoupon(payload: {
     userId: string;
@@ -110,7 +126,6 @@ export class PaymentService {
       itemName = `${section.course.title} - ${section.title}`;
     }
 
-    // Apply coupon if provided
     let amount = originalAmount;
     let couponId: string | null = null;
     let discountAmount = 0;
@@ -152,7 +167,6 @@ export class PaymentService {
       throw new BadRequestException('This item requires payment. Use checkout instead.');
     }
 
-    // Check if already enrolled
     if (payload.itemType === 'COURSE' && courseId) {
       const [existingEnrollment] = await this.db
         .select({ id: enrollments.enrollmentId })
@@ -177,7 +191,6 @@ export class PaymentService {
       }
     }
 
-    // Create payment record for audit trail
     const [payment] = await this.db
       .insert(payments)
       .values({
@@ -200,7 +213,6 @@ export class PaymentService {
       })
       .returning();
 
-    // Record coupon usage if applicable
     if (couponId && courseId) {
       try {
         await this.couponsService.recordConsumedUsageLegacy({
@@ -215,7 +227,6 @@ export class PaymentService {
       } catch {}
     }
 
-    // Grant access
     await this.grantAccessForPayment(
       payment.paymentId,
       payload.itemType,
@@ -224,7 +235,6 @@ export class PaymentService {
       sectionId || undefined,
     );
 
-    // Send confirmation email
     try {
       const [user] = await this.db
         .select()
@@ -247,24 +257,22 @@ export class PaymentService {
     return { success: true, paymentId: payment.paymentId, message: 'Enrolled successfully' };
   }
 
-  async createCheckoutSession(payload: {
+  /**
+   * Create a manual-QR pending payment.
+   * Learner is shown QR code/bank details, then uploads proof. Admin reviews and approves.
+   */
+  async createManualQRPayment(payload: {
     userId: string;
     itemType: 'COURSE' | 'SECTION';
     courseId?: string;
     sectionId?: string;
     couponCode?: string;
-    successUrl?: string;
-    cancelUrl?: string;
-    metadata?: Record<string, string>;
   }) {
-    const { courseId, sectionId, originalAmount, amount, couponId, discountAmount, itemName } =
+    const { courseId, sectionId, originalAmount, amount, couponId, discountAmount } =
       await this.resolveItemAndCoupon(payload);
 
-    const successUrl = payload.successUrl || `${this.configService.frontendUrl}/payment/success`;
-    const cancelUrl = payload.cancelUrl || `${this.configService.frontendUrl}/payment/failure`;
-
-    if (!this.stripeUAE) {
-      throw new BadRequestException('Stripe is not configured for UAE gateway');
+    if (amount <= 0) {
+      throw new BadRequestException('Item is free. Use the free-enroll endpoint instead.');
     }
 
     const [payment] = await this.db
@@ -279,18 +287,15 @@ export class PaymentService {
         discountAmount: String(discountAmount),
         couponId,
         currency: PLATFORM_CURRENCY,
-        gateway: PaymentGateway.STRIPE_UAE,
+        gateway: PaymentGateway.MANUAL_QR,
         status: 'PENDING',
         metadata: {
           mode: payload.itemType,
           couponCode: payload.couponCode || null,
-          ...payload.metadata,
         },
       })
       .returning();
 
-    // Reserve coupon usage atomically for this payment (prevents races).
-    // If reservation fails, mark payment failed and stop.
     if (couponId && courseId) {
       try {
         await this.couponsService.reserveUsageForPayment({
@@ -302,7 +307,7 @@ export class PaymentService {
           discountAmount,
           finalAmount: amount,
         });
-      } catch (e: any) {
+      } catch (e) {
         await this.db
           .update(payments)
           .set({ status: 'FAILED', updatedAt: new Date() })
@@ -311,135 +316,330 @@ export class PaymentService {
       }
     }
 
-    const separator = successUrl.includes('?') ? '&' : '?';
-    let session: Stripe.Checkout.Session;
-    try {
-      session = await this.stripeUAE.checkout.sessions.create({
-        mode: 'payment',
-        payment_method_types: ['card'],
-        line_items: [
-          {
-            price_data: {
-              currency: PLATFORM_CURRENCY.toLowerCase(),
-              product_data: {
-                name: itemName,
-              },
-              unit_amount: Math.round(amount * 100),
-            },
-            quantity: 1,
-          },
-        ],
-        success_url: `${successUrl}${separator}paymentId=${payment.paymentId}&sessionId={CHECKOUT_SESSION_ID}`,
-        cancel_url: cancelUrl,
-        metadata: {
-          paymentId: payment.paymentId,
-          userId: payload.userId,
-          courseId: courseId || '',
-          sectionId: sectionId || '',
-          itemType: payload.itemType,
-          ...payload.metadata,
-        },
-      });
-    } catch (error) {
-      // Cancel reservation so it doesn't block limits until TTL
-      if (couponId) {
-        try {
-          await this.couponsService.cancelReservationByPayment(payment.paymentId);
-        } catch {}
-      }
-      await this.db
-        .update(payments)
-        .set({ status: 'FAILED', updatedAt: new Date() })
-        .where(eq(payments.paymentId, payment.paymentId));
-      throw error;
+    return {
+      paymentId: payment.paymentId,
+      amount,
+      currency: PLATFORM_CURRENCY,
+      status: payment.status,
+      qrSettings: await this.getQRSettings(),
+    };
+  }
+
+  /**
+   * Learner uploads proof of QR payment (screenshot URL).
+   */
+  async uploadPaymentProof(payload: {
+    paymentId: string;
+    userId: string;
+    proofUrl: string;
+  }) {
+    const payment = await this.db.query.payments.findFirst({
+      where: and(
+        eq(payments.paymentId, payload.paymentId),
+        eq(payments.userId, payload.userId),
+      ),
+    });
+
+    if (!payment) {
+      throw new NotFoundException('Payment not found');
     }
 
+    if (payment.gateway !== 'MANUAL_QR') {
+      throw new BadRequestException('Proof upload only applies to manual QR payments');
+    }
+
+    if (payment.status !== 'PENDING' && payment.status !== 'PROOF_UPLOADED') {
+      throw new BadRequestException(`Cannot upload proof for ${payment.status} payment`);
+    }
+
+    const now = new Date();
+    const [updated] = await this.db
+      .update(payments)
+      .set({
+        paymentProofUrl: payload.proofUrl,
+        proofUploadedAt: now,
+        status: 'PROOF_UPLOADED',
+        updatedAt: now,
+      })
+      .where(eq(payments.paymentId, payload.paymentId))
+      .returning();
+
+    return updated;
+  }
+
+  /**
+   * Admin approves a manual-QR payment after reviewing proof.
+   */
+  async approvePayment(paymentId: string, reviewerId: string, notes?: string) {
+    const payment = await this.db.query.payments.findFirst({
+      where: eq(payments.paymentId, paymentId),
+    });
+
+    if (!payment) throw new NotFoundException('Payment not found');
+    if (payment.status === 'COMPLETED') {
+      return { success: true, message: 'Payment already completed' };
+    }
+    if (payment.status !== 'PROOF_UPLOADED' && payment.status !== 'PENDING') {
+      throw new BadRequestException(`Cannot approve a ${payment.status} payment`);
+    }
+
+    const now = new Date();
     await this.db
       .update(payments)
       .set({
-        gatewayId: session.id,
+        status: 'COMPLETED',
+        reviewedAt: now,
+        reviewedBy: reviewerId,
+        reviewNotes: notes || null,
+        updatedAt: now,
       })
+      .where(eq(payments.paymentId, paymentId));
+
+    await this.grantAccessForPayment(
+      paymentId,
+      payment.itemType,
+      payment.userId,
+      payment.courseId || undefined,
+      payment.sectionId || undefined,
+    );
+
+    // Consume coupon reservation if any
+    if (payment.couponId) {
+      try {
+        await this.couponsService.consumeReservationByPayment(paymentId);
+      } catch {}
+    }
+
+    // Clean up cart items linked to this payment
+    const meta = payment.metadata as any;
+    if (meta?.cartItemId) {
+      await this.db.delete(cartItems).where(eq(cartItems.cartItemId, meta.cartItemId));
+    }
+
+    // Confirmation email
+    try {
+      const [user] = await this.db
+        .select()
+        .from(users)
+        .where(eq(users.userId, payment.userId))
+        .limit(1);
+
+      if (user) {
+        const items: Array<{ name: string; type: 'COURSE' | 'SECTION' }> = [];
+        if (payment.itemType === 'COURSE' && payment.courseId) {
+          const [course] = await this.db
+            .select()
+            .from(courses)
+            .where(eq(courses.courseId, payment.courseId))
+            .limit(1);
+          if (course) items.push({ name: course.title, type: 'COURSE' });
+        } else if (payment.itemType === 'SECTION' && payment.sectionId) {
+          const [section] = await this.db
+            .select()
+            .from(courseSections)
+            .where(eq(courseSections.sectionId, payment.sectionId))
+            .limit(1);
+          if (section) items.push({ name: section.title, type: 'SECTION' });
+        }
+        if (items.length > 0) {
+          await this.emailService.sendPaymentConfirmationEmail({
+            firstName: user.firstName,
+            email: user.email,
+            paymentId: payment.paymentId,
+            amount: payment.amount,
+            currency: payment.currency,
+            items,
+          });
+        }
+      }
+    } catch {}
+
+    return { success: true, message: 'Payment approved and access granted' };
+  }
+
+  /**
+   * Admin rejects a manual-QR payment.
+   */
+  async rejectPayment(paymentId: string, reviewerId: string, notes: string) {
+    const payment = await this.db.query.payments.findFirst({
+      where: eq(payments.paymentId, paymentId),
+    });
+    if (!payment) throw new NotFoundException('Payment not found');
+    if (payment.status === 'COMPLETED') {
+      throw new BadRequestException('Cannot reject a completed payment');
+    }
+
+    const now = new Date();
+    await this.db
+      .update(payments)
+      .set({
+        status: 'REJECTED',
+        reviewedAt: now,
+        reviewedBy: reviewerId,
+        reviewNotes: notes,
+        updatedAt: now,
+      })
+      .where(eq(payments.paymentId, paymentId));
+
+    // Cancel coupon reservation
+    if (payment.couponId) {
+      try {
+        await this.couponsService.cancelReservationByPayment(paymentId);
+      } catch {}
+    }
+
+    return { success: true, message: 'Payment rejected' };
+  }
+
+  /**
+   * Admin lists payments awaiting review (status = PROOF_UPLOADED).
+   */
+  async getPendingReviewPayments(filters?: { page?: number; limit?: number }) {
+    const limit = Math.min(filters?.limit ?? 50, MAX_PAGE_LIMIT);
+    const page = filters?.page ?? 1;
+    const offset = (page - 1) * limit;
+
+    const [rows, countRes] = await Promise.all([
+      this.db.query.payments.findMany({
+        where: eq(payments.status, 'PROOF_UPLOADED'),
+        with: { user: true, course: true, section: true },
+        orderBy: [desc(payments.proofUploadedAt)],
+        limit,
+        offset,
+      }),
+      this.db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(payments)
+        .where(eq(payments.status, 'PROOF_UPLOADED')),
+    ]);
+
+    const total = Number(countRes[0]?.count ?? 0);
+    return {
+      data: rows,
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    };
+  }
+
+  /**
+   * QR/Bank settings stored in site_settings table (key-value).
+   */
+  async getQRSettings(): Promise<QRPaymentSettings> {
+    const keys = Object.values(QR_SETTING_KEYS);
+    const rows = await this.db
+      .select()
+      .from(siteSettings)
+      .where(inArray(siteSettings.key, keys));
+
+    const map = new Map(rows.map((r) => [r.key, r.value]));
+    return {
+      qrImageUrl: (map.get(QR_SETTING_KEYS.qrImageUrl) as string) ?? null,
+      upiId: (map.get(QR_SETTING_KEYS.upiId) as string) ?? null,
+      bankName: (map.get(QR_SETTING_KEYS.bankName) as string) ?? null,
+      bankAccountNumber: (map.get(QR_SETTING_KEYS.bankAccountNumber) as string) ?? null,
+      bankIfsc: (map.get(QR_SETTING_KEYS.bankIfsc) as string) ?? null,
+      bankAccountHolder: (map.get(QR_SETTING_KEYS.bankAccountHolder) as string) ?? null,
+      instructions: (map.get(QR_SETTING_KEYS.instructions) as string) ?? null,
+    };
+  }
+
+  async updateQRSettings(input: Partial<QRPaymentSettings>): Promise<QRPaymentSettings> {
+    const entries: Array<[string, string | null]> = [
+      [QR_SETTING_KEYS.qrImageUrl, input.qrImageUrl ?? null],
+      [QR_SETTING_KEYS.upiId, input.upiId ?? null],
+      [QR_SETTING_KEYS.bankName, input.bankName ?? null],
+      [QR_SETTING_KEYS.bankAccountNumber, input.bankAccountNumber ?? null],
+      [QR_SETTING_KEYS.bankIfsc, input.bankIfsc ?? null],
+      [QR_SETTING_KEYS.bankAccountHolder, input.bankAccountHolder ?? null],
+      [QR_SETTING_KEYS.instructions, input.instructions ?? null],
+    ];
+
+    for (const [key, value] of entries) {
+      if (value === undefined) continue;
+      await this.db
+        .insert(siteSettings)
+        .values({
+          key,
+          value,
+        })
+        .onConflictDoUpdate({
+          target: siteSettings.key,
+          set: { value, updatedAt: new Date() },
+        });
+    }
+
+    return this.getQRSettings();
+  }
+
+  /**
+   * Razorpay (kept for future re-enable; not used by checkout currently).
+   */
+  async createRazorpayOrder(payload: {
+    userId: string;
+    itemType: 'COURSE' | 'SECTION';
+    courseId?: string;
+    sectionId?: string;
+    couponCode?: string;
+  }) {
+    if (!this.razorpay) {
+      throw new BadRequestException('Razorpay is not configured');
+    }
+    const { courseId, sectionId, originalAmount, amount, couponId, discountAmount, itemName } =
+      await this.resolveItemAndCoupon(payload);
+    void itemName;
+
+    const [payment] = await this.db
+      .insert(payments)
+      .values({
+        userId: payload.userId,
+        courseId,
+        sectionId,
+        itemType: payload.itemType,
+        amount: String(amount),
+        originalAmount: String(originalAmount),
+        discountAmount: String(discountAmount),
+        couponId,
+        currency: PLATFORM_CURRENCY,
+        gateway: PaymentGateway.RAZORPAY,
+        status: 'PENDING',
+      })
+      .returning();
+
+    const order = await this.razorpay.orders.create({
+      amount: Math.round(amount * 100),
+      currency: PLATFORM_CURRENCY,
+      receipt: payment.paymentId,
+    });
+
+    await this.db
+      .update(payments)
+      .set({ gatewayId: order.id })
       .where(eq(payments.paymentId, payment.paymentId));
 
     return {
       paymentId: payment.paymentId,
-      checkoutUrl: session.url,
-      sessionId: session.id,
-      clientReferenceId: session.client_reference_id,
+      orderId: order.id,
+      amount,
+      currency: PLATFORM_CURRENCY,
+      razorpayKeyId: this.configService.razorpayKeyId,
     };
   }
 
-  async createPayment(
-    gateway: PaymentGateway,
-    amount: number,
-    currency: string,
-    metadata: Record<string, string>,
-  ) {
-    switch (gateway) {
-      case PaymentGateway.RAZORPAY:
-        return this.createRazorpayPayment(amount, currency, metadata);
-      case PaymentGateway.STRIPE_US:
-        return this.createStripePayment(this.stripeUS, amount, currency, metadata);
-      case PaymentGateway.STRIPE_UAE:
-        return this.createStripePayment(this.stripeUAE, amount, currency, metadata);
-      default:
-        throw new Error('Invalid payment gateway');
-    }
-  }
-
-  private async createRazorpayPayment(
-    amount: number,
-    currency: string,
-    metadata: Record<string, string>,
-  ) {
-    if (!this.razorpay) {
-      throw new Error('Razorpay is not configured. Please set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in environment variables.');
-    }
-    const order = await this.razorpay.orders.create({
-      amount: amount * 100, // Convert to paise
-      currency: currency,
-      receipt: metadata.receiptId,
-    });
-    return order;
-  }
-
-  private async createStripePayment(
-    stripe: Stripe | undefined,
-    amount: number,
-    currency: string,
-    metadata: Record<string, string>,
-  ) {
-    if (!stripe) {
-      throw new Error('Stripe is not configured. Please set STRIPE_SECRET_KEY in environment variables.');
-    }
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(amount * 100), // Convert to cents
-      currency: currency.toLowerCase(),
-      metadata,
-    });
-    return paymentIntent;
-  }
-
   async markPaymentCompleted(paymentId: string, gatewayPaymentId?: string) {
-    // Note: We intentionally do NOT overwrite gatewayId here.
-    // gatewayId stores the Stripe session ID which is needed for session-based verification.
-    // The payment_intent can be passed but we store it in metadata instead of overwriting gatewayId.
-    const updateData: { status: 'COMPLETED'; updatedAt: Date; metadata?: any } = {
+    const updateData: { status: 'COMPLETED'; updatedAt: Date; metadata?: any; gatewayId?: string } = {
       status: 'COMPLETED',
       updatedAt: new Date(),
     };
 
-    // If gatewayPaymentId (payment_intent) is provided, store it in metadata
     if (gatewayPaymentId) {
-      const [existingPayment] = await this.db
+      const [existing] = await this.db
         .select({ metadata: payments.metadata })
         .from(payments)
         .where(eq(payments.paymentId, paymentId))
         .limit(1);
 
       updateData.metadata = {
-        ...(existingPayment?.metadata as Record<string, any> || {}),
-        stripePaymentIntentId: gatewayPaymentId,
+        ...((existing?.metadata as Record<string, any>) || {}),
+        gatewayPaymentId,
       };
     }
 
@@ -449,496 +649,61 @@ export class PaymentService {
       .where(eq(payments.paymentId, paymentId))
       .returning();
 
-    if (payment) {
+    if (payment && payment.couponId) {
       try {
-        const [user] = await this.db
-          .select()
-          .from(users)
-          .where(eq(users.userId, payment.userId))
-          .limit(1);
-
-        if (user) {
-          const items: Array<{ name: string; type: 'COURSE' | 'SECTION' }> = [];
-
-          if (payment.itemType === 'COURSE' && payment.courseId) {
-            const [course] = await this.db
-              .select()
-              .from(courses)
-              .where(eq(courses.courseId, payment.courseId))
-              .limit(1);
-            if (course) {
-              items.push({ name: course.title, type: 'COURSE' });
-            }
-          } else if (payment.itemType === 'SECTION' && payment.sectionId) {
-            const [section] = await this.db
-              .select()
-              .from(courseSections)
-              .where(eq(courseSections.sectionId, payment.sectionId))
-              .limit(1);
-            if (section) {
-              items.push({ name: section.title, type: 'SECTION' });
-            }
-          }
-
-          if (items.length > 0) {
-            await this.emailService.sendPaymentConfirmationEmail({
-              firstName: user.firstName,
-              email: user.email,
-              paymentId: payment.paymentId,
-              amount: payment.amount,
-              currency: payment.currency,
-              items,
-            });
-          }
+        const consumed = await this.couponsService.consumeReservationByPayment(payment.paymentId);
+        if (!consumed && payment.courseId) {
+          await this.couponsService.recordConsumedUsageLegacy({
+            couponId: payment.couponId,
+            userId: payment.userId,
+            courseId: payment.courseId,
+            paymentId: payment.paymentId,
+            originalAmount: Number(payment.originalAmount || payment.amount),
+            discountAmount: Number(payment.discountAmount || 0),
+            finalAmount: Number(payment.amount),
+          });
         }
       } catch {}
-
-      // Record coupon usage if a coupon was applied
-      if (payment.couponId && payment.courseId) {
-        try {
-          // Prefer consuming a prior reservation; fallback to legacy insert if missing.
-          const consumed = await this.couponsService.consumeReservationByPayment(
-            payment.paymentId,
-          );
-          if (!consumed) {
-            await this.couponsService.recordConsumedUsageLegacy({
-              couponId: payment.couponId,
-              userId: payment.userId,
-              courseId: payment.courseId,
-              paymentId: payment.paymentId,
-              originalAmount: Number(payment.originalAmount || payment.amount),
-              discountAmount: Number(payment.discountAmount || 0),
-              finalAmount: Number(payment.amount),
-            });
-          }
-        } catch {}
-      }
     }
 
     return payment;
   }
 
-  async createBulkCheckoutSession(payload: {
-    userId: string;
-    cartItemIds: string[];
-    couponCode?: string;
-    successUrl?: string;
-    cancelUrl?: string;
-  }) {
-    if (!payload.cartItemIds || payload.cartItemIds.length === 0) {
-      throw new BadRequestException('cartItemIds array is required and cannot be empty');
-    }
-
-    const successUrl = payload.successUrl || `${this.configService.frontendUrl}/payment/success`;
-    const cancelUrl = payload.cancelUrl || `${this.configService.frontendUrl}/payment/failure`;
-
-    const items = await this.db.query.cartItems.findMany({
-      where: and(
-        eq(cartItems.userId, payload.userId),
-        inArray(cartItems.cartItemId, payload.cartItemIds)
-      ),
-      with: {
-        course: true,
-        section: {
-          with: {
-            course: true,
-          },
-        },
-      },
-    });
-
-    if (items.length === 0) {
-      throw new NotFoundException('No cart items found');
-    }
-
-    if (items.length !== payload.cartItemIds.length) {
-      throw new BadRequestException('Some cart items were not found');
-    }
-
-    // Optional bulk coupon application (apply only to eligible items)
-    const bulkCoupon =
-      payload.couponCode?.trim()
-        ? await this.couponsService.validateCouponForCartItems(
-            { couponCode: payload.couponCode, cartItemIds: payload.cartItemIds },
-            payload.userId,
-          )
-        : null;
-
-    const byCartId = new Map(
-      (bulkCoupon?.items || []).map((r) => [r.cartItemId, r]),
-    );
-
-    const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
-    const insertedPayments: Array<{
-      paymentId: string;
-      cartItemId: string;
-      itemType: 'COURSE' | 'SECTION';
-      courseId: string | null;
-      sectionId: string | null;
-      amount: number;
-      originalAmount: number;
-      discountAmount: number;
-      couponId: string | null;
-      currency: string;
-      itemName: string;
-    }> = [];
-
-    for (const item of items) {
-      const originalAmount = Number(item.price || 0);
-      const currency = PLATFORM_CURRENCY;
-
-      let itemName = 'Course purchase';
-      if (item.itemType === 'COURSE' && item.course) {
-        itemName = item.course.title || 'Course';
-      } else if (item.itemType === 'SECTION' && item.section) {
-        itemName = `${item.section.course?.title || 'Course'} - ${item.section.title || 'Section'}`;
-      }
-
-      const couponItem = byCartId.get(item.cartItemId);
-      const shouldDiscount = !!(bulkCoupon?.valid && couponItem?.valid);
-
-      let amount = originalAmount;
-      let discountAmount = 0;
-      let couponId: string | null = null;
-
-      if (shouldDiscount && bulkCoupon?.couponId) {
-        amount = Number(couponItem!.finalAmount);
-        discountAmount = Number(couponItem!.discountAmount);
-        couponId = bulkCoupon.couponId;
-      }
-
-      const [payment] = await this.db
-        .insert(payments)
-        .values({
-          userId: payload.userId,
-          courseId: item.courseId,
-          sectionId: item.sectionId,
-          itemType: item.itemType,
-          amount: String(amount),
-          originalAmount: String(originalAmount),
-          discountAmount: String(discountAmount),
-          couponId,
-          currency: PLATFORM_CURRENCY,
-          gateway: PaymentGateway.STRIPE_UAE,
-          status: 'PENDING',
-          metadata: {
-            mode: item.itemType,
-            cartItemId: item.cartItemId,
-            couponCode: payload.couponCode || null,
-            bulkCouponApplied: Boolean(couponId),
-          },
-        })
-        .returning();
-
-      // If we intended to apply coupon, reserve usage. If reservation fails, fall back to no-coupon.
-      if (couponId && payment.courseId) {
-        try {
-          await this.couponsService.reserveUsageForPayment({
-            couponId,
-            userId: payload.userId,
-            courseId: payment.courseId,
-            paymentId: payment.paymentId,
-            originalAmount,
-            discountAmount,
-            finalAmount: amount,
-          });
-        } catch (e) {
-          // Fallback: remove coupon and restore original price for this payment
-          await this.db
-            .update(payments)
-            .set({
-              couponId: null,
-              discountAmount: '0',
-              amount: String(originalAmount),
-              updatedAt: new Date(),
-            })
-            .where(eq(payments.paymentId, payment.paymentId));
-
-          couponId = null;
-          discountAmount = 0;
-          amount = originalAmount;
-        }
-      }
-
-      insertedPayments.push({
-        paymentId: payment.paymentId,
-        cartItemId: item.cartItemId,
-        itemType: item.itemType,
-        courseId: item.courseId,
-        sectionId: item.sectionId,
-        amount,
-        originalAmount,
-        discountAmount,
-        couponId,
-        currency,
-        itemName,
-      });
-
-      lineItems.push({
-        price_data: {
-          currency: PLATFORM_CURRENCY.toLowerCase(),
-          product_data: { name: itemName },
-          unit_amount: Math.round(amount * 100),
-        },
-        quantity: 1,
-      });
-    }
-
-    if (!this.stripeUAE) {
-      throw new BadRequestException('Stripe is not configured for UAE gateway');
-    }
-    const paymentIds = insertedPayments.map((p) => p.paymentId);
-
-    const separator = successUrl.includes('?') ? '&' : '?';
-    const session = await this.stripeUAE.checkout.sessions.create({
-      mode: 'payment',
-      payment_method_types: ['card'],
-      line_items: lineItems,
-      success_url: `${successUrl}${separator}paymentId=${paymentIds[0]}&bulk=true&sessionId={CHECKOUT_SESSION_ID}`,
-      cancel_url: cancelUrl,
-      metadata: {
-        paymentIds: JSON.stringify(paymentIds),
-        userId: payload.userId,
-        cartItemIds: JSON.stringify(payload.cartItemIds),
-        bulk: 'true',
-        couponCode: payload.couponCode || '',
-      },
-    });
-
-    // Batch update all payments with session ID in a single query
-    await this.db
-      .update(payments)
-      .set({ gatewayId: session.id })
-      .where(inArray(payments.paymentId, paymentIds));
-
-    return {
-      paymentId: paymentIds[0],
-      paymentIds,
-      checkoutUrl: session.url,
-      sessionId: session.id,
-      clientReferenceId: session.client_reference_id,
-    };
-  }
-
-  async verifyAndCompletePayment(paymentId: string, userId: string) {
-    const payment = await this.db.query.payments.findFirst({
-      where: and(
-        eq(payments.paymentId, paymentId),
-        eq(payments.userId, userId)
-      ),
-    });
-
-    if (!payment) {
-      throw new NotFoundException('Payment not found');
-    }
-
-    if (payment.status === 'COMPLETED') {
-      return { success: true, message: 'Payment already processed' };
-    }
-
-    await this.markPaymentCompleted(paymentId);
-
-    await this.grantAccessForPayment(
-      paymentId,
-      payment.itemType,
-      userId,
-      payment.courseId || undefined,
-      payment.sectionId || undefined
-    );
-
-    const cartItemMetadata = payment.metadata as any;
-    if (cartItemMetadata?.cartItemId) {
-      await this.db
-        .delete(cartItems)
-        .where(eq(cartItems.cartItemId, cartItemMetadata.cartItemId));
-    }
-
-    return { success: true, message: 'Payment verified and access granted' };
-  }
-
-  async verifyAndCompleteBulkPayment(paymentIds: string[], userId: string) {
-    if (!paymentIds || paymentIds.length === 0) {
-      return { success: true, message: 'No payments to process', processedCount: 0 };
-    }
-
-    // Batch fetch all payments in a single query
-    const allPayments = await this.db.query.payments.findMany({
-      where: and(
-        inArray(payments.paymentId, paymentIds),
-        eq(payments.userId, userId)
-      ),
-    });
-
-    if (allPayments.length === 0) {
-      return { success: true, message: 'No payments found', processedCount: 0 };
-    }
-
-    // Filter payments that need processing (not already completed)
-    const paymentsToComplete = allPayments.filter(p => p.status !== 'COMPLETED');
-    const alreadyCompletedPayments = allPayments.filter(p => p.status === 'COMPLETED');
-
-    // Batch mark pending payments as completed
-    if (paymentsToComplete.length > 0) {
-      await this.db
-        .update(payments)
-        .set({ status: 'COMPLETED', updatedAt: new Date() })
-        .where(inArray(payments.paymentId, paymentsToComplete.map(p => p.paymentId)));
-    }
-
-    // Grant access for all payments
-    for (const payment of allPayments) {
-      await this.grantAccessForPayment(
-        payment.paymentId,
-        payment.itemType,
-        userId,
-        payment.courseId || undefined,
-        payment.sectionId || undefined
-      );
-    }
-
-    // Collect cart item IDs to delete in batch
-    const cartItemIdsToDelete: string[] = [];
-    for (const payment of allPayments) {
-      const cartItemMetadata = payment.metadata as any;
-      if (cartItemMetadata?.cartItemId) {
-        cartItemIdsToDelete.push(cartItemMetadata.cartItemId);
-      }
-    }
-
-    // Batch delete cart items
-    if (cartItemIdsToDelete.length > 0) {
-      await this.db
-        .delete(cartItems)
-        .where(inArray(cartItems.cartItemId, cartItemIdsToDelete));
-    }
-
-    return {
-      success: true,
-      message: 'All payments verified and access granted',
-      processedCount: allPayments.length,
-      alreadyProcessed: alreadyCompletedPayments.length,
-    };
-  }
-
-  async verifyAndCompletePaymentBySession(sessionId: string, userId: string) {
-    // Require Stripe client for session-based verification
-    if (!this.stripeUAE) {
-      throw new BadRequestException(
-        'Stripe is not configured. Cannot verify session-based payments.'
-      );
-    }
-
-    // Find all payments associated with this session ID
-    const sessionPayments = await this.db.query.payments.findMany({
-      where: and(
-        eq(payments.gatewayId, sessionId),
-        eq(payments.userId, userId)
-      ),
-    });
-
-    if (sessionPayments.length === 0) {
-      throw new NotFoundException('No payments found for this session');
-    }
-
-    // Idempotency check: if all payments are already completed, return early
-    const allCompleted = sessionPayments.every(p => p.status === 'COMPLETED');
-    if (allCompleted) {
-      return {
-        success: true,
-        message: 'Payments already processed',
-        processedCount: sessionPayments.length,
-        alreadyProcessed: true,
-      };
-    }
-
-    // Verify with Stripe before proceeding
-    const session = await this.stripeUAE.checkout.sessions.retrieve(sessionId);
-    if (session.payment_status !== 'paid') {
-      throw new BadRequestException('Payment not completed');
-    }
-
-    // Batch update: mark as completed (do NOT overwrite gatewayId - it stores the session ID)
-    const paymentIdsToUpdate = sessionPayments
-      .filter(p => p.status !== 'COMPLETED')
-      .map(p => p.paymentId);
-
-    if (paymentIdsToUpdate.length > 0) {
-      await this.db
-        .update(payments)
-        .set({
-          status: 'COMPLETED',
-          updatedAt: new Date(),
-        })
-        .where(inArray(payments.paymentId, paymentIdsToUpdate));
-    }
-
-    // Grant access for all payments
-    for (const payment of sessionPayments) {
-      await this.grantAccessForPayment(
-        payment.paymentId,
-        payment.itemType,
-        userId,
-        payment.courseId || undefined,
-        payment.sectionId || undefined
-      );
-    }
-
-    // Collect cart item IDs to delete in batch
-    const cartItemIdsToDelete: string[] = [];
-    for (const payment of sessionPayments) {
-      const cartItemMetadata = payment.metadata as any;
-      if (cartItemMetadata?.cartItemId) {
-        cartItemIdsToDelete.push(cartItemMetadata.cartItemId);
-      }
-    }
-
-    // Batch delete cart items
-    if (cartItemIdsToDelete.length > 0) {
-      await this.db
-        .delete(cartItems)
-        .where(inArray(cartItems.cartItemId, cartItemIdsToDelete));
-    }
-
-    return {
-      success: true,
-      message: 'Payment verified and access granted',
-      processedCount: sessionPayments.length,
-    };
-  }
-
-  async grantAccessForPayment(paymentId: string, itemType: 'COURSE' | 'SECTION', userId: string, courseId?: string, sectionId?: string) {
+  async grantAccessForPayment(
+    paymentId: string,
+    itemType: 'COURSE' | 'SECTION',
+    userId: string,
+    courseId?: string,
+    sectionId?: string,
+  ) {
     if (itemType === 'COURSE' && courseId) {
-      // Check for existing ACTIVE or COMPLETED enrollment
       const [existingActive] = await this.db
         .select({ id: enrollments.enrollmentId })
         .from(enrollments)
         .where(and(
           eq(enrollments.courseId, courseId),
           eq(enrollments.userId, userId),
-          inArray(enrollments.status, ['ACTIVE', 'COMPLETED'])
+          inArray(enrollments.status, ['ACTIVE', 'COMPLETED']),
         ))
         .limit(1);
 
       if (!existingActive) {
-        // Check if there's a REVOKED enrollment to reactivate
         const [existingRevoked] = await this.db
           .select({ id: enrollments.enrollmentId })
           .from(enrollments)
           .where(and(
             eq(enrollments.courseId, courseId),
             eq(enrollments.userId, userId),
-            eq(enrollments.status, 'REVOKED')
+            eq(enrollments.status, 'REVOKED'),
           ))
           .limit(1);
 
         if (existingRevoked) {
-          // Reactivate the revoked enrollment
           await this.db
             .update(enrollments)
             .set({ status: 'ACTIVE' })
             .where(eq(enrollments.enrollmentId, existingRevoked.id));
         } else {
-          // Create new enrollment
           await this.db.insert(enrollments).values({
             userId,
             courseId,
@@ -985,12 +750,28 @@ export class PaymentService {
     return payment;
   }
 
-  async getAllPayments(filters?: { search?: string; limit?: number; page?: number; status?: string; gateway?: string; dateFrom?: string; dateTo?: string }) {
+  async getMyPayment(id: string, userId: string) {
+    const payment = await this.db.query.payments.findFirst({
+      where: and(eq(payments.paymentId, id), eq(payments.userId, userId)),
+      with: { course: true, section: true },
+    });
+    if (!payment) throw new NotFoundException('Payment not found');
+    return payment;
+  }
+
+  async getAllPayments(filters?: {
+    search?: string;
+    limit?: number;
+    page?: number;
+    status?: string;
+    gateway?: string;
+    dateFrom?: string;
+    dateTo?: string;
+  }) {
     const limit = Math.min(filters?.limit || 100, MAX_PAGE_LIMIT);
     const page = filters?.page || 1;
     const offset = (page - 1) * limit;
 
-    // Build where clause for both data and count queries
     const conditions: ReturnType<typeof eq>[] = [];
     if (filters?.search) {
       conditions.push(like(payments.paymentId, `%${filters.search}%`));
@@ -1011,7 +792,6 @@ export class PaymentService {
       ? conditions.length === 1 ? conditions[0] : and(...conditions)
       : undefined;
 
-    // Execute data query and count query in parallel
     const [results, countResult] = await Promise.all([
       this.db
         .select({
@@ -1026,6 +806,9 @@ export class PaymentService {
           itemType: payments.itemType,
           courseId: payments.courseId,
           sectionId: payments.sectionId,
+          paymentProofUrl: payments.paymentProofUrl,
+          proofUploadedAt: payments.proofUploadedAt,
+          reviewedAt: payments.reviewedAt,
         })
         .from(payments)
         .where(whereClause)
@@ -1039,16 +822,9 @@ export class PaymentService {
     ]);
 
     const total = Number(countResult[0]?.count || 0);
-
     return {
       data: results,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      },
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
     };
   }
 }
-

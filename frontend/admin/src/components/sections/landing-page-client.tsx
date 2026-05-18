@@ -52,14 +52,14 @@ export function LandingPageClient() {
         <TrustStats />
 
         
-        <section id="courses" className="py-16" aria-labelledby="skills-to-transform-heading">
+        <section id="courses" className="py-10" aria-labelledby="skills-to-transform-heading">
           <div className="container mx-auto px-4">
             <header className="max-w-4xl">
               <h2 id="skills-to-transform-heading" className="text-3xl font-bold">
                 Skills to transform your career and life
               </h2>
               <p className="mt-2 text-muted-foreground">
-                From critical skills to technical topics, Loshi Edu supports your professional development.
+                From critical skills to technical topics, grotutor supports your professional development.
               </p>
             </header>
 
@@ -113,20 +113,20 @@ export function LandingPageClient() {
         </section>
 
         
-        <section id="why-loshi-edu" className="py-16" aria-labelledby="why-loshi-edu-heading">
+        <section id="why-grotutor" className="py-10" aria-labelledby="why-grotutor-heading">
           <div className="container mx-auto px-4">
-            <motion.header initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }} className="text-center mb-12 max-w-3xl mx-auto">
-              <h2 id="why-loshi-edu-heading" className="text-3xl font-bold mb-4">
+            <motion.header initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }} className="text-center mb-8 max-w-3xl mx-auto">
+              <h2 id="why-grotutor-heading" className="text-3xl font-bold mb-4">
                 A Modern Learning Platform Built for Results
               </h2>
               <p className="text-muted-foreground">
-                Loshi Edu is a premium, outcomes-driven learning ecosystem that
+                grotutor is a premium, outcomes-driven learning ecosystem that
                 blends academic rigor with practical application. Every course is
                 designed to deliver skills you can use immediately.
               </p>
             </motion.header>
 
-            <ul className="grid gap-10 md:grid-cols-2 lg:grid-cols-4 list-none p-0" role="list">
+            <ul className="grid gap-8 md:grid-cols-2 lg:grid-cols-4 list-none p-0" role="list">
               {[
             {
                 icon: <Users className="h-5 w-5"/>,
@@ -162,9 +162,9 @@ export function LandingPageClient() {
         </section>
 
         
-        <section id="categories" className="py-16 bg-muted/50" aria-labelledby="categories-heading">
+        <section id="categories" className="py-10 bg-muted/50" aria-labelledby="categories-heading">
           <div className="container mx-auto px-4">
-            <motion.header initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }} className="text-center mb-12 max-w-3xl mx-auto">
+            <motion.header initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }} className="text-center mb-8 max-w-3xl mx-auto">
               <h2 id="categories-heading" className="text-3xl font-bold mb-4">
                 Explore Learning Categories
               </h2>
@@ -175,7 +175,7 @@ export function LandingPageClient() {
             </motion.header>
 
             <div className="max-w-5xl mx-auto">
-              <div className="grid gap-x-10 gap-y-8 md:grid-cols-2">
+              <div className="grid gap-x-8 gap-y-8 md:grid-cols-2">
               {(() => {
             const items = [
                 {
@@ -246,18 +246,18 @@ export function LandingPageClient() {
         </section>
 
         
-        <section className="py-16" aria-labelledby="designed-for-results-heading">
+        <section className="py-10" aria-labelledby="designed-for-results-heading">
           <div className="container mx-auto px-4">
-            <motion.header initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }} className="text-center mb-12 max-w-3xl mx-auto">
+            <motion.header initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }} className="text-center mb-8 max-w-3xl mx-auto">
               <h2 id="designed-for-results-heading" className="text-3xl font-bold mb-4">
                 Designed for Learners Who Want Results
               </h2>
               <p className="text-muted-foreground">
-                Loshi Edu is built to support every stage of your growth.
+                grotutor is built to support every stage of your growth.
               </p>
             </motion.header>
 
-            <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
+            <div className="grid gap-8 lg:grid-cols-2 lg:items-center">
               <div className="max-w-xl">
                 <ul className="space-y-4" role="list">
                   {[
@@ -302,7 +302,7 @@ export function LandingPageClient() {
         </section>
 
         
-        <section className="py-18 sm:py-20 relative" aria-labelledby="plans-heading">
+        <section className="py-18 sm:py-14 relative" aria-labelledby="plans-heading">
           <div className="absolute inset-0 -z-10 bg-gradient-to-b from-transparent via-muted/20 to-transparent" aria-hidden="true"/>
           <div className="container mx-auto px-4">
             <header className="max-w-4xl">
@@ -413,13 +413,13 @@ export function LandingPageClient() {
         </section>
 
         
-        <section className="py-16 bg-muted/50" aria-labelledby="popular-skills-heading">
+        <section className="py-10 bg-muted/50" aria-labelledby="popular-skills-heading">
           <div className="container mx-auto px-4">
             <h2 id="popular-skills-heading" className="text-3xl font-bold">
               Popular Skills
             </h2>
 
-            <div className="mt-8 grid gap-10 lg:grid-cols-4">
+            <div className="mt-8 grid gap-8 lg:grid-cols-4">
               <div className="lg:col-span-1">
                 <div className="flex items-center gap-3">
                   <Image src="/illustrations/focused.svg" alt="" width={36} height={36} className="opacity-80" aria-hidden="true"/>
@@ -476,16 +476,16 @@ export function LandingPageClient() {
         </section>
 
         
-        <section id="how-it-works" className="py-16" aria-labelledby="how-it-works-heading">
+        <section id="how-it-works" className="py-10" aria-labelledby="how-it-works-heading">
           <div className="container mx-auto px-4">
-            <motion.header initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }} className="text-center mb-12 max-w-3xl mx-auto">
+            <motion.header initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }} className="text-center mb-8 max-w-3xl mx-auto">
               <h2 id="how-it-works-heading" className="text-3xl font-bold mb-4">
                 How It Works
               </h2>
               <p className="text-muted-foreground">Getting started is simple.</p>
             </motion.header>
 
-            <ol className="relative grid gap-10 md:grid-cols-3" aria-label="Getting started steps">
+            <ol className="relative grid gap-8 md:grid-cols-3" aria-label="Getting started steps">
               {[
             {
                 step: "1",
@@ -516,7 +516,7 @@ export function LandingPageClient() {
             </ol>
 
             <div className="text-center mt-10">
-              <Link href="/signup" aria-label="Get started with Loshi Edu">
+              <Link href="/signup" aria-label="Get started with grotutor">
                 <Button>Get Started</Button>
               </Link>
             </div>
@@ -524,18 +524,18 @@ export function LandingPageClient() {
         </section>
 
         
-        <section className="py-16 bg-muted/50" aria-labelledby="who-we-serve-heading">
+        <section className="py-10 bg-muted/50" aria-labelledby="who-we-serve-heading">
           <div className="container mx-auto px-4">
-            <motion.header initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }} className="text-center mb-12 max-w-3xl mx-auto">
+            <motion.header initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }} className="text-center mb-8 max-w-3xl mx-auto">
               <h2 id="who-we-serve-heading" className="text-3xl font-bold mb-4">
                 Who We Serve
               </h2>
               <p className="text-muted-foreground">
-                Loshi Edu supports individuals and organisations.
+                grotutor supports individuals and organisations.
               </p>
             </motion.header>
 
-            <div className="grid gap-10 md:grid-cols-3">
+            <div className="grid gap-8 md:grid-cols-3">
               {[
             {
                 icon: <GraduationCap className="h-5 w-5"/>,

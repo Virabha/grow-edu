@@ -8,4 +8,4 @@ Disallow: /my-courses
 Disallow: /dashboard
 Disallow: /profile
 
-Sitemap: https://loshiedu.com/sitemap.xml
+Sitemap: https://grotutor.com/sitemap.xml

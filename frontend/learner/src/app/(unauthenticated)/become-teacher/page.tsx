@@ -32,7 +32,7 @@ const fadeUp = {
 };
 
 const benefits = [
-  { icon: Users, title: "Reach 50,000+ Students", desc: "Get instant access to our growing community of motivated learners across India looking to upskill.", color: "#6366f1" },
+  { icon: Users, title: "Reach 50,000+ Students", desc: "Get instant access to our growing community of motivated learners across India looking to upskill.", color: "#3b82f6" },
   { icon: Clock, title: "Flexible Schedule", desc: "Teach on your own time. Create recorded courses or host live sessions — you decide when and how.", color: "#f97316" },
   { icon: IndianRupee, title: "Earn Competitive Revenue", desc: "Earn up to 70% revenue share on every enrollment. Get paid monthly with transparent earnings dashboards.", color: "#10b981" },
   { icon: Wrench, title: "World-Class Tools", desc: "Access our studio-grade recording tools, analytics dashboard, student management, and marketing support.", color: "#ec4899" },
@@ -42,7 +42,7 @@ const steps = [
   { icon: UserPlus, step: "01", title: "Apply & Get Approved", desc: "Fill out the application form below. Our team reviews your profile, expertise, and teaching experience within 48 hours." },
   { icon: BookOpen, step: "02", title: "Create Your Course", desc: "Use our intuitive course builder to upload videos, create quizzes, add resources, and structure your curriculum." },
   { icon: FileCheck, step: "03", title: "Quality Review", desc: "Our content team reviews your course for quality, accuracy, and production standards before publishing." },
-  { icon: Rocket, step: "04", title: "Go Live & Earn", desc: "Your course goes live on Loshi Edu. Start reaching students, track analytics, and earn revenue from day one." },
+  { icon: Rocket, step: "04", title: "Go Live & Earn", desc: "Your course goes live on grotutor. Start reaching students, track analytics, and earn revenue from day one." },
 ];
 
 const teacherSchema = z.object({
@@ -158,7 +158,7 @@ export default function BecomeTeacherPage() {
 
   if (submitted) {
     return (
-      <main className="container mx-auto px-4 py-16 text-center">
+      <main className="container mx-auto px-4 py-10 text-center">
         <h1 className="text-2xl font-bold text-foreground">Application submitted</h1>
         <p className="mt-2 text-muted-foreground">
           Thank you! We&apos;ll get back to you within 48 hours.
@@ -172,7 +172,7 @@ export default function BecomeTeacherPage() {
 
   return (
     <main>
-        <section className="border-b border-border bg-linear-to-br from-primary/5 via-background to-[#6366f1]/5 py-12 md:py-16">
+        <section className="border-b border-border bg-linear-to-br from-primary/5 via-background to-[#3b82f6]/5 py-12 md:py-10">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <motion.div initial="hidden" animate="show" variants={fadeUp} className="mx-auto max-w-2xl text-center">
               <p className="text-xs font-semibold uppercase tracking-widest text-primary">Join Our Team</p>
@@ -180,7 +180,7 @@ export default function BecomeTeacherPage() {
                 Become an <span className="text-primary">Instructor</span>
               </h1>
               <p className="mt-3 text-sm leading-relaxed text-muted-foreground md:text-base">
-                Share your expertise with thousands of learners. Join Loshi Edu&apos;s community of instructors and make an impact while earning on your own terms.
+                Share your expertise with thousands of learners. Join grotutor&apos;s community of instructors and make an impact while earning on your own terms.
               </p>
             </motion.div>
           </div>
@@ -190,7 +190,7 @@ export default function BecomeTeacherPage() {
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={fadeUp} className="mb-6 text-center">
               <p className="text-xs font-semibold uppercase tracking-widest text-primary">Why Teach With Us</p>
-              <h2 className="mt-1 text-xl font-bold text-foreground sm:text-2xl md:text-3xl">Benefits of Teaching on Loshi Edu</h2>
+              <h2 className="mt-1 text-xl font-bold text-foreground sm:text-2xl md:text-3xl">Benefits of Teaching on grotutor</h2>
             </motion.div>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {benefits.map((b, i) => (
@@ -372,7 +372,7 @@ export default function BecomeTeacherPage() {
                     id="whyJoin"
                     {...register("whyJoin")}
                     rows={4}
-                    placeholder="Tell us why you want to teach on Loshi Edu..."
+                    placeholder="Tell us why you want to teach on grotutor..."
                     className="w-full resize-none rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-primary/50 focus:ring-2 focus:ring-primary/15"
                   />
                 </div>

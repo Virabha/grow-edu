@@ -18,7 +18,7 @@ export default function AdminCourseReviewsPage() {
       <div className="space-y-2.5">
         {isLoading ? (<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {[1, 2, 3].map((i) => (<Skeleton key={i} className="h-48 rounded-lg" />))}
-            </div>) : pendingCourses.length === 0 ? (<div className="text-center py-20 border rounded-lg bg-muted/10">
+            </div>) : pendingCourses.length === 0 ? (<div className="text-center py-14 border rounded-lg bg-muted/10">
                 <h3 className="text-lg font-medium">No Pending Reviews</h3>
                 <p className="text-muted-foreground">All caught up! No courses are waiting for approval.</p>
             </div>) : (<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">

@@ -25,9 +25,9 @@ export function TrustSection() {
   const { data: features = [], isLoading } = useWhyChooseUs();
 
   return (
-    <section className="py-12 md:py-16 bg-white">
+    <section className="py-12 md:py-10 bg-white">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-2">
+        <div className="grid grid-cols-1 items-center gap-8 lg:grid-cols-2">
           <motion.div
             initial={{ opacity: 0, x: -30 }}
             whileInView={{ opacity: 1, x: 0 }}
@@ -83,7 +83,7 @@ export function TrustSection() {
           </motion.div>
         </div>
 
-        <div className="mt-12 grid grid-cols-1 items-start gap-10 lg:grid-cols-2">
+        <div className="mt-8 grid grid-cols-1 items-start gap-8 lg:grid-cols-2">
           <motion.div
             initial={{ opacity: 0, y: 24 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -153,8 +153,8 @@ export function TrustSection() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {features.map((f, i) => {
                 const Icon = getLucideIcon(f.iconName);
-                const color = f.iconColor ?? "#6366f1";
-                const bg = f.iconBg ?? "#6366f115";
+                const color = f.iconColor ?? "#3b82f6";
+                const bg = f.iconBg ?? "#3b82f615";
                 return (
                   <motion.div
                     key={f.id}

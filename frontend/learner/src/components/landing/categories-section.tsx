@@ -12,7 +12,7 @@ export function CategoriesSection() {
 
   return (
     <section
-      className="py-12 md:py-16 bg-white"
+      className="py-12 md:py-10 bg-white"
       aria-labelledby="categories-heading"
     >
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">

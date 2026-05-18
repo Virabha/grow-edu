@@ -269,11 +269,11 @@ export function BannerFormDialog(props: {
                             <Input
                               type="color"
                               className="w-10 h-10 p-1 cursor-pointer"
-                              value={field.value || "#6366f1"}
+                              value={field.value || "#3b82f6"}
                               onChange={field.onChange}
                             />
                             <Input
-                              placeholder="#6366f1"
+                              placeholder="#3b82f6"
                               {...field}
                               className="flex-1"
                             />

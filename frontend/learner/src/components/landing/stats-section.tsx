@@ -87,7 +87,7 @@ export function StatsSection() {
   if (isLoading) {
     return (
       <section className="bg-background">
-        <div className="container mx-auto px-4 py-16 sm:px-6 lg:px-8">
+        <div className="container mx-auto px-4 py-10 sm:px-6 lg:px-8">
           <div className="grid gap-8 lg:grid-cols-2">
             <div className="aspect-video animate-pulse rounded-2xl bg-muted/50" />
             <div className="space-y-4">
@@ -104,8 +104,8 @@ export function StatsSection() {
   return (
     <section className="overflow-hidden bg-background">
       {/* ── Top: Two-column split layout ── */}
-      <div className="container mx-auto px-4 py-12 sm:px-6 md:py-20 lg:px-8">
-        <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
+      <div className="container mx-auto px-4 py-12 sm:px-6 md:py-14 lg:px-8">
+        <div className="grid items-center gap-8 lg:grid-cols-2 lg:gap-16">
           {/* Left: Video / Image area with play button */}
           <motion.div
             initial={{ opacity: 0, x: -30 }}

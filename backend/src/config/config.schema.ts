@@ -47,7 +47,7 @@ export const configSchema = z
     STRIPE_UAE_PUBLISHABLE_KEY: z.string().optional(),
 
     EMAIL_PROVIDER: z.enum(["ses", "sendgrid"]).default("sendgrid"),
-    EMAIL_FROM_NAME: z.string().default("Loshi Edu"),
+    EMAIL_FROM_NAME: z.string().default("grotutor"),
     EMAIL_FROM_ADDRESS: z.string().email().optional(),
 
     SENDGRID_API_KEY: z.string().optional(),

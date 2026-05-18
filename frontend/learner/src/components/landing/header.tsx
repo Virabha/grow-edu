@@ -114,7 +114,7 @@ export function Header() {
       <div
         aria-hidden
         style={{ width: `${scrollProgress}%` }}
-        className="fixed top-0 left-0 z-[60] h-0.5 bg-gradient-to-r from-primary to-[#6366f1] transition-[width] duration-150"
+        className="fixed top-0 left-0 z-[60] h-0.5 bg-gradient-to-r from-primary to-[#3b82f6] transition-[width] duration-150"
       />
 
       <header
@@ -129,18 +129,18 @@ export function Header() {
           <Link
             href="/"
             className="shrink-0 flex items-center gap-2.5 group"
-            aria-label="Loshi Edu Home"
+            aria-label="grotutor Home"
           >
             <Image
               width={120}
               height={120}
               src="/logo.jpeg"
-              alt="Loshi Edu Logo"
+              alt="grotutor Logo"
               className="h-14 w-auto rounded-xl shadow-md shadow-primary/25 transition-transform group-hover:scale-105"
               priority
             />
             <span className="text-xl font-black tracking-tight">
-              <span className="text-primary">Loshi Edu</span>
+              <span className="text-primary">grotutor</span>
             </span>
           </Link>
 

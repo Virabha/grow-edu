@@ -35,7 +35,7 @@ const VALUES = [
 export function About() {
   return (
     <section
-      className="py-10 sm:py-12 md:py-16 bg-background relative overflow-hidden"
+      className="py-10 sm:py-12 md:py-10 bg-background relative overflow-hidden"
       id="about"
       aria-labelledby="about-heading"
     >
@@ -48,7 +48,7 @@ export function About() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
-        <header className="text-center mb-10 sm:mb-12 md:mb-16 max-w-4xl mx-auto bg-[#000052]">
+        <header className="text-center mb-10 sm:mb-8 md:mb-10 max-w-4xl mx-auto bg-[#000052]">
           <motion.h2
             id="about-heading"
             initial={{ opacity: 0, y: 20 }}
@@ -56,7 +56,7 @@ export function About() {
             viewport={{ once: true }}
             className="text-2xl sm:text-3xl md:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70 mb-4 sm:mb-6"
           >
-            About Loshi Edu
+            About grotutor
           </motion.h2>
 
           <motion.div
@@ -67,7 +67,7 @@ export function About() {
             className="space-y-4 sm:space-y-6 text-muted-foreground text-sm sm:text-base md:text-lg leading-relaxed"
           >
             <p>
-              Loshi Edu is a next-generation, online-only EdTech platform built
+              grotutor is a next-generation, online-only EdTech platform built
               to democratize access to high-quality learning. We believe that
               education should not be restricted by formal qualifications,
               expensive institutions, or rigid systems. Our mission is to
@@ -79,7 +79,7 @@ export function About() {
               Our platform offers practical, industry-aligned training modules
               that require no prior academic prerequisites. Whether you are
               starting a second career, upgrading your financial literacy, or
-              seeking to understand modern digital industries, Loshi Edu makes
+              seeking to understand modern digital industries, grotutor makes
               learning accessible, flexible, and affordable. We are committed to
               enabling millions of learners worldwide with tools that strengthen
               confidence, capability, and career growth.
@@ -88,7 +88,7 @@ export function About() {
         </header>
 
         <div
-          className="grid md:grid-cols-2 gap-4 sm:gap-6 md:gap-8 mb-12 sm:mb-16 md:mb-24"
+          className="grid md:grid-cols-2 gap-4 sm:gap-6 md:gap-8 mb-8 sm:mb-10 md:mb-24"
           role="group"
           aria-label="Mission and Vision"
         >
@@ -134,7 +134,7 @@ export function About() {
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-xl sm:text-2xl md:text-3xl font-bold text-center mb-8 sm:mb-10 md:mb-12"
+            className="text-xl sm:text-2xl md:text-3xl font-bold text-center mb-8 sm:mb-10 md:mb-8"
           >
             Our Core Values
           </motion.h3>

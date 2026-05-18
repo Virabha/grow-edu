@@ -47,7 +47,7 @@ const floatingIcons = [
 ];
 
 const features = [
-  { icon: GraduationCap, text: "Expert-Led Courses", color: "#6366f1" },
+  { icon: GraduationCap, text: "Expert-Led Courses", color: "#3b82f6" },
   { icon: Award, text: "Verified Certificates", color: "#f97316" },
   { icon: Users, text: "Growing Community", color: "#10b981" },
   { icon: Zap, text: "Learn at Your Pace", color: "#ec4899" },
@@ -99,7 +99,7 @@ export default function SignupPage() {
   return (
     <div className="flex min-h-screen">
       {/* Left Panel - Gradient with decorations */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-primary via-[#6366f1] to-[#8b5cf6]">
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-primary via-[#3b82f6] to-[#8b5cf6]">
         {/* Dot pattern overlay */}
         <div
           className="absolute inset-0 opacity-10"
@@ -148,7 +148,7 @@ export default function SignupPage() {
             <div className="w-20 h-20 rounded-2xl overflow-hidden bg-white/20 backdrop-blur-sm border border-white/30 shadow-xl">
               <Image
                 src="/logo.jpeg"
-                alt="Loshi Edu"
+                alt="grotutor"
                 width={80}
                 height={80}
                 className="w-full h-full object-cover"
@@ -213,7 +213,7 @@ export default function SignupPage() {
             <div className="w-14 h-14 rounded-xl overflow-hidden bg-primary/10 border border-primary/20">
               <Image
                 src="/logo.jpeg"
-                alt="Loshi Edu"
+                alt="grotutor"
                 width={56}
                 height={56}
                 className="w-full h-full object-cover"
@@ -226,7 +226,7 @@ export default function SignupPage() {
               Create Account
             </h1>
             <p className="text-muted-foreground text-sm sm:text-base">
-              Join Loshi Edu in minutes.
+              Join grotutor in minutes.
             </p>
           </header>
 

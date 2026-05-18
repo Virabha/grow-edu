@@ -10,7 +10,7 @@ function getInitials(name: string): string {
   return name.trim().split(/\s+/).map((w) => w[0]).join("").toUpperCase().slice(0, 2);
 }
 
-const avatarColors = ["#6366f1", "#10b981", "#f97316", "#ec4899"];
+const avatarColors = ["#3b82f6", "#10b981", "#f97316", "#ec4899"];
 
 const socialIcons = [
   { icon: Facebook, color: "#1877f2" },
@@ -24,7 +24,7 @@ export function InstructorsSection() {
 
   if (isLoading) {
     return (
-      <section className="py-12 md:py-16">
+      <section className="py-12 md:py-10">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-8">
             <p className="text-xs font-semibold uppercase tracking-widest text-primary">Our Experts</p>
@@ -43,7 +43,7 @@ export function InstructorsSection() {
   if (!instructors.length) return null;
 
   return (
-    <section className="py-12 md:py-16">
+    <section className="py-12 md:py-10">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

@@ -53,15 +53,15 @@ export function Navbar() {
             : "bg-transparent")}>
 
       <Link href="/" className="text-sm sm:text-base font-bold tracking-tighter text-foreground">
-        <span className="hidden sm:inline">Loshi </span>
-        <span className="text-primary hidden sm:inline">Edu</span>
-        <span className="sm:hidden">Loshi</span>
+        <span className="hidden sm:inline">gro</span>
+        <span className="text-primary hidden sm:inline">tutor</span>
+        <span className="sm:hidden">grotutor</span>
       </Link>
 
 
       <nav className="hidden md:flex items-center gap-4 lg:gap-6">
         {[
-            { label: "Why Loshi Edu", href: "#why-loshi-edu" },
+            { label: "Why grotutor", href: "#why-grotutor" },
             { label: "Categories", href: "#categories" },
             { label: "Courses", href: "#courses" },
             { label: "How It Works", href: "#how-it-works" },

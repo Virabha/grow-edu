@@ -17,7 +17,7 @@ import {
 export const metadata: Metadata = {
   title: "Terms & Conditions",
   description:
-    "Read the Terms and Conditions governing your use of the Loshi Edu platform operated by Loshi EduTech Pvt Ltd.",
+    "Read the Terms and Conditions governing your use of the grotutor platform operated by grotutor.",
 };
 
 const sections = [
@@ -25,7 +25,7 @@ const sections = [
     icon: FileCheck,
     title: "1. Acceptance of Terms",
     paragraphs: [
-      "By accessing or using the Loshi Edu platform (loshiedu.com), you agree to be bound by these Terms and Conditions, our Privacy Policy, and any additional guidelines or rules applicable to specific services. If you do not agree to these terms, you must not use the platform.",
+      "By accessing or using the grotutor platform (grotutor.com), you agree to be bound by these Terms and Conditions, our Privacy Policy, and any additional guidelines or rules applicable to specific services. If you do not agree to these terms, you must not use the platform.",
       "We reserve the right to update these Terms at any time. Continued use of the platform after changes are posted constitutes acceptance of the revised Terms. We will notify registered users of material changes via email.",
     ],
   },
@@ -33,7 +33,7 @@ const sections = [
     icon: Layers,
     title: "2. Description of Services",
     paragraphs: [
-      "Loshi Edu is an online education platform operated by Loshi EduTech Pvt Ltd. We provide access to a wide catalogue of courses, live sessions, recorded lectures, study materials, assessments, and certificates across various disciplines including IT, Business, Competitive Exams, Languages, and more.",
+      "grotutor is an online education platform operated by grotutor. We provide access to a wide catalogue of courses, live sessions, recorded lectures, study materials, assessments, and certificates across various disciplines including IT, Business, Competitive Exams, Languages, and more.",
       "Our services are available to individual learners, educators, and institutional partners. The availability of specific courses, features, or content may vary and is subject to change without prior notice.",
     ],
   },
@@ -41,7 +41,7 @@ const sections = [
     icon: UserCheck,
     title: "3. User Accounts",
     paragraphs: [
-      "To access most features of Loshi Edu, you must create an account by providing accurate and complete information. You are responsible for:",
+      "To access most features of grotutor, you must create an account by providing accurate and complete information. You are responsible for:",
     ],
     list: [
       "Maintaining the confidentiality of your account credentials.",
@@ -80,25 +80,25 @@ const sections = [
       "Subscription-based plans may be cancelled before the next billing cycle for a prorated refund.",
     ],
     footer:
-      "To request a refund, contact us at contact@loshiedu.com with your order details.",
+      "To request a refund, contact us at contact@grotutor.com with your order details.",
   },
   {
     icon: Copyright,
     title: "6. Intellectual Property",
     paragraphs: [
-      "All content on Loshi Edu — including course materials, videos, text, graphics, logos, software, and design — is the intellectual property of Loshi EduTech Pvt Ltd or its content creators and is protected by Indian and international copyright laws.",
+      "All content on grotutor — including course materials, videos, text, graphics, logos, software, and design — is the intellectual property of grotutor or its content creators and is protected by Indian and international copyright laws.",
     ],
     list: [
       "You may not reproduce, distribute, modify, or create derivative works from any content without written permission.",
       "Course materials are licensed for personal, non-commercial use only.",
       "Downloading, screen-recording, or sharing course content is strictly prohibited.",
-      "The Loshi Edu name, logo, and branding are registered trademarks of Loshi EduTech Pvt Ltd.",
+      "The grotutor name, logo, and branding are registered trademarks of grotutor.",
     ],
   },
   {
     icon: BookOpen,
     title: "7. User Conduct",
-    paragraphs: ["When using Loshi Edu, you agree not to:"],
+    paragraphs: ["When using grotutor, you agree not to:"],
     list: [
       "Share your account credentials or allow multiple users to access a single account.",
       "Post offensive, misleading, defamatory, or illegal content in forums, reviews, or messages.",
@@ -114,11 +114,11 @@ const sections = [
     icon: AlertTriangle,
     title: "8. Disclaimers",
     paragraphs: [
-      "Loshi Edu provides educational content on an \"as is\" and \"as available\" basis. While we strive for accuracy and quality:",
+      "grotutor provides educational content on an \"as is\" and \"as available\" basis. While we strive for accuracy and quality:",
     ],
     list: [
       "We do not guarantee that courses will lead to specific employment outcomes, certifications, or career advancement.",
-      "Course content reflects the instructor's knowledge and opinions and may not represent the views of Loshi EduTech Pvt Ltd.",
+      "Course content reflects the instructor's knowledge and opinions and may not represent the views of grotutor.",
       "We do not warrant that the platform will be uninterrupted, error-free, or free from viruses or harmful components.",
       "External links provided in courses or materials are not endorsed by us and are accessed at your own risk.",
     ],
@@ -127,7 +127,7 @@ const sections = [
     icon: ShieldAlert,
     title: "9. Limitation of Liability",
     paragraphs: [
-      "To the maximum extent permitted by applicable law, Loshi EduTech Pvt Ltd, its directors, employees, and affiliates shall not be liable for:",
+      "To the maximum extent permitted by applicable law, grotutor, its directors, employees, and affiliates shall not be liable for:",
     ],
     list: [
       "Any indirect, incidental, special, consequential, or punitive damages arising from your use of the platform.",
@@ -136,13 +136,13 @@ const sections = [
       "Actions or content of third-party service providers or other users.",
     ],
     footer:
-      "Our total liability for any claim arising from these Terms shall not exceed the amount paid by you to Loshi Edu in the 12 months preceding the claim.",
+      "Our total liability for any claim arising from these Terms shall not exceed the amount paid by you to grotutor in the 12 months preceding the claim.",
   },
   {
     icon: Scale,
     title: "10. Governing Law & Dispute Resolution",
     paragraphs: [
-      "These Terms shall be governed by and construed in accordance with the laws of India. Any disputes arising out of or relating to these Terms or the use of Loshi Edu shall be subject to the exclusive jurisdiction of the courts in Hyderabad, Telangana.",
+      "These Terms shall be governed by and construed in accordance with the laws of India. Any disputes arising out of or relating to these Terms or the use of grotutor shall be subject to the exclusive jurisdiction of the courts in Hyderabad, Telangana.",
       "Before initiating legal proceedings, parties agree to attempt resolution through good-faith negotiation and, if necessary, mediation.",
     ],
   },
@@ -153,8 +153,8 @@ const sections = [
       "For any questions, concerns, or requests regarding these Terms and Conditions, please contact us:",
     ],
     list: [
-      "Company: Loshi EduTech Pvt Ltd",
-      "Email: contact@loshiedu.com",
+      "Company: grotutor",
+      "Email: contact@grotutor.com",
       "Phone: +91-6309046611",
       "Address: Unit 1801, 18th Floor, Vasavi Sky City, Gachibowli, Hyderabad-500032",
     ],
@@ -175,7 +175,7 @@ export default function TermsPage() {
                 <span className="text-primary">Conditions</span>
               </h1>
               <p className="mt-3 text-sm leading-relaxed text-muted-foreground md:text-base">
-                Please read these terms carefully before using the Loshi Edu
+                Please read these terms carefully before using the grotutor
                 platform. By using our services, you agree to these terms.
               </p>
               <p className="mt-2 text-xs text-muted-foreground">
@@ -187,7 +187,7 @@ export default function TermsPage() {
 
         <section className="py-10 md:py-14">
           <div className="container mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-            <div className="space-y-10">
+            <div className="space-y-6">
               {sections.map((section) => (
                 <div key={section.title} className="group">
                   <div className="flex items-start gap-3">
@@ -230,7 +230,7 @@ export default function TermsPage() {
               ))}
             </div>
 
-            <div className="mt-12 rounded-xl border border-border bg-white/20 backdrop-blur-sm p-6 text-center">
+            <div className="mt-8 rounded-xl border border-border bg-white/20 backdrop-blur-sm p-6 text-center">
               <p className="text-sm text-muted-foreground">
                 Have questions about our terms?{" "}
                 <Link

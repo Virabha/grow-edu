@@ -152,10 +152,10 @@ export function WhyChooseFormDialog({
                         <Input
                           type="color"
                           className="w-10 h-10 p-1 cursor-pointer"
-                          value={field.value || "#6366f1"}
+                          value={field.value || "#3b82f6"}
                           onChange={field.onChange}
                         />
-                        <Input {...field} placeholder="#6366f1" className="flex-1" />
+                        <Input {...field} placeholder="#3b82f6" className="flex-1" />
                       </div>
                     </FormControl>
                     <FormMessage />
@@ -173,10 +173,10 @@ export function WhyChooseFormDialog({
                         <Input
                           type="color"
                           className="w-10 h-10 p-1 cursor-pointer"
-                          value={field.value || "#6366f115"}
+                          value={field.value || "#3b82f615"}
                           onChange={field.onChange}
                         />
-                        <Input {...field} placeholder="#6366f115" className="flex-1" />
+                        <Input {...field} placeholder="#3b82f615" className="flex-1" />
                       </div>
                     </FormControl>
                     <FormMessage />

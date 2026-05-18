@@ -30,30 +30,30 @@ type CategoryRow = {
   parentSlug: string | null;
 };
 
-const LOSHI_ACADEMICS: CategoryRow[] = [
-  { name: "Loshi Academics", slug: "loshi-academics", description: "School and academic courses", displayOrder: 0, parentSlug: null },
-  { name: "School and Academics", slug: "school-and-academics", description: null, displayOrder: 1, parentSlug: "loshi-academics" },
+const ACADEMICS: CategoryRow[] = [
+  { name: "Academics", slug: "academics", description: "School and academic courses", displayOrder: 0, parentSlug: null },
+  { name: "School and Academics", slug: "school-and-academics", description: null, displayOrder: 1, parentSlug: "academics" },
   { name: "ICSE", slug: "icse", description: null, displayOrder: 2, parentSlug: "school-and-academics" },
   { name: "State Boards - Telangana and AP", slug: "state-boards-telangana-and-ap", description: null, displayOrder: 3, parentSlug: "school-and-academics" },
 ];
 
-const LOSHI_LANGUAGE: CategoryRow[] = [
-  { name: "Loshi Language", slug: "loshi-language", description: "Language and overseas exam courses", displayOrder: 0, parentSlug: null },
-  { name: "Language Course", slug: "language-course", description: null, displayOrder: 1, parentSlug: "loshi-language" },
+const LANGUAGE: CategoryRow[] = [
+  { name: "Language", slug: "language", description: "Language and overseas exam courses", displayOrder: 0, parentSlug: null },
+  { name: "Language Course", slug: "language-course", description: null, displayOrder: 1, parentSlug: "language" },
   { name: "English", slug: "english-language", description: null, displayOrder: 2, parentSlug: "language-course" },
   { name: "French", slug: "french-language", description: null, displayOrder: 3, parentSlug: "language-course" },
   { name: "Spanish", slug: "spanish-language", description: null, displayOrder: 4, parentSlug: "language-course" },
   { name: "German", slug: "german-language", description: null, displayOrder: 5, parentSlug: "language-course" },
-  { name: "Overseas Exams", slug: "overseas-exams", description: null, displayOrder: 6, parentSlug: "loshi-language" },
+  { name: "Overseas Exams", slug: "overseas-exams", description: null, displayOrder: 6, parentSlug: "language" },
   { name: "IELTS", slug: "ielts", description: null, displayOrder: 7, parentSlug: "overseas-exams" },
   { name: "TOEFL", slug: "toefl", description: null, displayOrder: 8, parentSlug: "overseas-exams" },
   { name: "PTE", slug: "pte", description: null, displayOrder: 9, parentSlug: "overseas-exams" },
   { name: "Duolingo", slug: "duolingo", description: null, displayOrder: 10, parentSlug: "overseas-exams" },
 ];
 
-const LOSHI_EXECUTIVE: CategoryRow[] = [
-  { name: "Loshi Executive and Certificate Program", slug: "loshi-executive-and-certificate-program", description: "Executive and certificate programs", displayOrder: 0, parentSlug: null },
-  { name: "Executive and Certificate Programs", slug: "executive-and-certificate-programs", description: null, displayOrder: 1, parentSlug: "loshi-executive-and-certificate-program" },
+const EXECUTIVE: CategoryRow[] = [
+  { name: "Executive and Certificate Program", slug: "executive-and-certificate-program", description: "Executive and certificate programs", displayOrder: 0, parentSlug: null },
+  { name: "Executive and Certificate Programs", slug: "executive-and-certificate-programs", description: null, displayOrder: 1, parentSlug: "executive-and-certificate-program" },
   { name: "Management", slug: "management-executive", description: null, displayOrder: 2, parentSlug: "executive-and-certificate-programs" },
   { name: "Digital & AI Skills", slug: "digital-and-ai-skills", description: null, displayOrder: 3, parentSlug: "executive-and-certificate-programs" },
   { name: "Leadership & Mgmt", slug: "leadership-and-mgmt", description: null, displayOrder: 4, parentSlug: "executive-and-certificate-programs" },
@@ -83,7 +83,7 @@ const LOSHI_EXECUTIVE: CategoryRow[] = [
   { name: "Certificate in Entrepreneurship & Startups", slug: "certificate-in-entrepreneurship-and-startups", description: null, displayOrder: 28, parentSlug: "executive-and-certificate-programs" },
 ];
 
-const ALL_ROWS: CategoryRow[] = [...LOSHI_ACADEMICS, ...LOSHI_LANGUAGE, ...LOSHI_EXECUTIVE];
+const ALL_ROWS: CategoryRow[] = [...ACADEMICS, ...LANGUAGE, ...EXECUTIVE];
 
 async function seedCategories() {
   if (!DATABASE_URL) throw new Error("DATABASE_URL is required");

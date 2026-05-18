@@ -1,10 +1,10 @@
-import { useEffect } from "react";
+﻿import { useEffect } from "react";
 export function usePageTitle(title: string, subtitle?: string) {
     useEffect(() => {
         const fullTitle = subtitle ? `${title} - ${subtitle}` : title;
-        document.title = `${fullTitle} | Loshi Edu`;
+        document.title = `${fullTitle} | grotutor`;
         return () => {
-            document.title = "Loshi Edu";
+            document.title = "grotutor";
         };
     }, [title, subtitle]);
 }

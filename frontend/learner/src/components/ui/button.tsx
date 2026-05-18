@@ -21,7 +21,7 @@ const buttonVariants = cva(
           "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
         link: "text-primary underline-offset-4 hover:underline",
         glow:
-          "bg-primary text-primary-foreground hover:scale-[1.03] active:scale-[0.98] shadow-[0_0_15px_rgba(99,102,241,0.3)] hover:shadow-[0_0_25px_rgba(99,102,241,0.5)] border border-primary/30",
+          "bg-primary text-primary-foreground hover:scale-[1.03] active:scale-[0.98] shadow-[0_0_15px_rgba(59,130,246,0.3)] hover:shadow-[0_0_25px_rgba(59,130,246,0.5)] border border-primary/30",
         glass:
           "bg-muted/50 text-foreground border border-border/50 backdrop-blur-md hover:bg-muted hover:border-border hover:scale-[1.02] active:scale-[0.98]",
       },

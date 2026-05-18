@@ -16,7 +16,7 @@ function getInitials(name: string) {
     .toUpperCase();
 }
 
-const COLORS = ["#6366f1", "#f97316", "#10b981", "#ec4899", "#0ea5e9", "#8b5cf6"];
+const COLORS = ["#3b82f6", "#f97316", "#10b981", "#ec4899", "#0ea5e9", "#8b5cf6"];
 
 const socialIcons = [
   { icon: Facebook, color: "#1877f2" },
@@ -30,7 +30,7 @@ export default function InstructorsPage() {
 
   return (
     <main>
-      <section className="relative overflow-hidden border-b border-border bg-[#000052] py-14 md:py-20">
+      <section className="relative overflow-hidden border-b border-border bg-[#000052] py-14 md:py-14">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -53,7 +53,7 @@ export default function InstructorsPage() {
         </div>
       </section>
 
-      <section className="py-12 md:py-16">
+      <section className="py-12 md:py-10">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           {isLoading ? (
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -152,7 +152,7 @@ export default function InstructorsPage() {
               ))}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
+            <div className="flex flex-col items-center justify-center py-14 text-center">
               <Users className="size-12 text-muted-foreground/30" />
               <p className="mt-3 text-lg font-semibold text-foreground">No instructors found</p>
               <p className="text-sm text-muted-foreground">Check back soon!</p>
@@ -165,7 +165,7 @@ export default function InstructorsPage() {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="rounded-2xl bg-gradient-to-br from-[#000052] to-primary p-8 text-center text-white">
             <h2 className="text-2xl font-black sm:text-3xl">
-              Want to Teach on Loshi Edu?
+              Want to Teach on grotutor?
             </h2>
             <p className="mt-2 text-sm text-white/80">
               Share your expertise with thousands of students and earn on your

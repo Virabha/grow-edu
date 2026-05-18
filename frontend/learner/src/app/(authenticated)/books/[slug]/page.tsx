@@ -70,7 +70,7 @@ function BookDetailContent({ slug }: { slug: string }) {
 
   if (!book) {
     return (
-      <div className="flex flex-col items-center justify-center py-24 text-center">
+      <div className="flex flex-col items-center justify-center py-10 text-center">
         <BookOpen className="size-16 text-muted-foreground/30" />
         <h2 className="mt-4 text-xl font-semibold">Book not found</h2>
         <Link href="/books" className="mt-4 text-primary hover:underline">
@@ -161,8 +161,8 @@ function BookDetailContent({ slug }: { slug: string }) {
       <section className="py-8">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid gap-8 lg:grid-cols-3">
-            <div className="lg:col-span-2 space-y-8">
-              <div className="lg:hidden flex justify-center -mt-12">
+            <div className="lg:col-span-2 space-y-6">
+              <div className="lg:hidden flex justify-center -mt-8">
                 <div className="relative w-40 aspect-[3/4] rounded-xl overflow-hidden shadow-2xl border-4 border-white">
                   {book.coverImage ? (
                     <Image

@@ -174,7 +174,7 @@ function ResetPasswordForm() {
 export default function ResetPasswordPage() {
   return (
     <div className="flex min-h-screen">
-      <div className="relative hidden w-1/2 overflow-hidden bg-linear-to-br from-[#6366f1] via-primary to-[#8b5cf6] lg:flex lg:flex-col lg:justify-center">
+      <div className="relative hidden w-1/2 overflow-hidden bg-linear-to-br from-[#3b82f6] via-primary to-[#8b5cf6] lg:flex lg:flex-col lg:justify-center">
         <motion.div
           className="absolute -right-20 -top-20 h-80 w-80 rounded-full bg-white/5 blur-3xl"
           animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
@@ -190,11 +190,11 @@ export default function ResetPasswordPage() {
           style={{ backgroundImage: `radial-gradient(circle, white 1px, transparent 1px)`, backgroundSize: "32px 32px" }}
           aria-hidden
         />
-        <div className="relative z-10 p-10 xl:p-14">
+        <div className="relative z-10 p-6 xl:p-14">
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
             <Link href="/" className="mb-8 inline-flex items-center gap-3 group">
-              <Image src="/logo.jpeg" alt="Loshi Edu" width={44} height={44} className="rounded-xl shadow-lg transition-transform group-hover:scale-105" />
-              <span className="text-xl font-black text-white tracking-tight">Loshi Edu</span>
+              <Image src="/logo.jpeg" alt="grotutor" width={44} height={44} className="rounded-xl shadow-lg transition-transform group-hover:scale-105" />
+              <span className="text-xl font-black text-white tracking-tight">grotutor</span>
             </Link>
             <h2 className="text-3xl font-black leading-tight text-white xl:text-4xl">
               Create a new<br />password
@@ -209,8 +209,8 @@ export default function ResetPasswordPage() {
       <div className="flex flex-1 flex-col">
         <div className="flex items-center justify-between px-6 py-4 lg:hidden">
           <Link href="/" className="flex items-center gap-2">
-            <Image src="/logo.jpeg" alt="Loshi Edu" width={32} height={32} className="rounded-lg" />
-            <span className="text-base font-black"><span className="text-primary">Loshi</span> Edu</span>
+            <Image src="/logo.jpeg" alt="grotutor" width={32} height={32} className="rounded-lg" />
+            <span className="text-base font-black"><span className="text-primary">gro</span>tutor</span>
           </Link>
         </div>
 

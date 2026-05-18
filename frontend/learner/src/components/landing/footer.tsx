@@ -9,9 +9,9 @@ const footerLinks = {
   "Quick Links": [
     { label: "About Us", href: "/about-us" },
     { label: "All Courses", href: "/courses" },
-    { label: "Loshi Exams", href: "/courses?category=loshi-exams" },
-    { label: "Loshi Skills", href: "/courses?category=loshi-skills" },
-    { label: "Loshi Language", href: "/courses?category=loshi-language" },
+    { label: "Academics", href: "/courses?category=academics" },
+    { label: "Executive Programs", href: "/courses?category=executive-and-certificate-program" },
+    { label: "Language", href: "/courses?category=language" },
   ],
   Support: [
     { label: "Help Centre", href: "/contact" },
@@ -38,24 +38,24 @@ const socials = [
 export function Footer() {
   return (
     <footer className="bg-[#000052] text-white">
-      <div className="container mx-auto px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
-        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-12">
+      <div className="container mx-auto px-4 py-12 sm:px-6 sm:py-10 lg:px-8">
+        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-12">
           {/* Brand / Contact Column */}
           <div className="sm:col-span-2 lg:col-span-4">
             <Link href="/" className="inline-flex items-center gap-2.5 group">
               <Image
                 src="/logo.jpeg"
-                alt="Loshi Edu Logo"
+                alt="grotutor Logo"
                 width={48}
                 height={48}
                 className="rounded-lg shadow-md transition-transform group-hover:scale-105"
               />
               <span className="text-xl font-black tracking-tight text-white">
-                Loshi <span className="text-white/90">Edu</span>
+                grotutor <span className="text-white/90">Edu</span>
               </span>
             </Link>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-white/70">
-              Redefining the future of learning — bridging the gap between aspiration and achievement. At Loshi Edu Tech, we don&apos;t just teach; we transform potential into performance.
+              Redefining the future of learning — bridging the gap between aspiration and achievement. At grotutor Tech, we don&apos;t just teach; we transform potential into performance.
             </p>
 
             <div className="mt-5 space-y-2.5 text-sm text-white/70">
@@ -173,7 +173,7 @@ export function Footer() {
 
         {/* Copyright Bar */}
         <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-white/15 pt-6 text-xs text-white/50 sm:flex-row">
-          <p>&copy; {new Date().getFullYear()} Loshi EduTech Pvt Ltd. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} grotutor. All rights reserved.</p>
           <div className="flex gap-4">
             <Link href="/privacy-policy" className="transition-colors hover:text-white">
               Privacy

@@ -1,8 +1,8 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Shopping Cart",
-  description: "Review items in your cart and proceed to checkout at Loshi Edu.",
+  description: "Review items in your cart and proceed to checkout at grotutor.",
   robots: { index: false, follow: true },
 };
 

@@ -5,7 +5,7 @@ import { Shield, Lock, Cookie, Eye, Server, Baby, RefreshCw, Mail } from "lucide
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description:
-    "Learn how Loshi EduTech Pvt Ltd collects, uses, and protects your personal information on the Loshi Edu platform.",
+    "Learn how grotutor collects, uses, and protects your personal information on the grotutor platform.",
 };
 
 const sections = [
@@ -31,7 +31,7 @@ const sections = [
       "We use the information we collect for the following purposes:",
     ],
     list: [
-      "To create and manage your Loshi Edu account and authenticate your identity.",
+      "To create and manage your grotutor account and authenticate your identity.",
       "To process course enrollments, payments, and issue certificates of completion.",
       "To personalise your learning experience by recommending courses based on your interests and progress.",
       "To communicate with you about account updates, course announcements, promotional offers, and support responses.",
@@ -44,7 +44,7 @@ const sections = [
     icon: Cookie,
     title: "3. Cookies & Tracking Technologies",
     content: [
-      "Loshi Edu uses cookies and similar tracking technologies to enhance your browsing experience:",
+      "grotutor uses cookies and similar tracking technologies to enhance your browsing experience:",
     ],
     list: [
       "Essential cookies are required for core functionality such as authentication, session management, and security.",
@@ -91,7 +91,7 @@ const sections = [
     icon: Baby,
     title: "6. Children's Privacy",
     content: [
-      "Loshi Edu is not directed at children under the age of 13. We do not knowingly collect personal information from children under 13. If you are a parent or guardian and believe your child has provided us with personal information, please contact us immediately.",
+      "grotutor is not directed at children under the age of 13. We do not knowingly collect personal information from children under 13. If you are a parent or guardian and believe your child has provided us with personal information, please contact us immediately.",
       "For users between 13 and 18 years of age, we recommend parental guidance when using the platform and enrolling in courses. Parents or guardians may contact us to review, modify, or delete their child's information.",
     ],
   },
@@ -104,7 +104,7 @@ const sections = [
     list: [
       "We will update the 'Last Updated' date at the top of this page.",
       "For significant changes, we will notify you via email or a prominent notice on our platform.",
-      "Your continued use of Loshi Edu after changes are posted constitutes your acceptance of the updated policy.",
+      "Your continued use of grotutor after changes are posted constitutes your acceptance of the updated policy.",
     ],
     footer:
       "We encourage you to review this page periodically to stay informed about how we protect your data.",
@@ -116,7 +116,7 @@ const sections = [
       "If you have questions, concerns, or requests regarding this Privacy Policy or your personal data, please reach out to us:",
     ],
     list: [
-      "Email: contact@loshiedu.com",
+      "Email: contact@grotutor.com",
       "Phone: +91-6309046611",
       "Address: Unit 1801, 18th Floor, Vasavi Sky City, Gachibowli, Hyderabad-500032",
     ],
@@ -138,8 +138,7 @@ export default function PrivacyPolicyPage() {
                 Privacy <span className="text-primary">Policy</span>
               </h1>
               <p className="mt-3 text-sm leading-relaxed text-muted-foreground md:text-base">
-                Your privacy matters to us. This policy explains how Loshi
-                EduTech Pvt Ltd collects, uses, and safeguards your personal
+                Your privacy matters to us. This policy explains how grotutor collects, uses, and safeguards your personal
                 information.
               </p>
               <p className="mt-2 text-xs text-muted-foreground">
@@ -151,7 +150,7 @@ export default function PrivacyPolicyPage() {
 
         <section className="py-10 md:py-14">
           <div className="container mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-            <div className="space-y-10">
+            <div className="space-y-6">
               {sections.map((section) => (
                 <div key={section.title} className="group">
                   <div className="flex items-start gap-3">
@@ -194,7 +193,7 @@ export default function PrivacyPolicyPage() {
               ))}
             </div>
 
-            <div className="mt-12 rounded-xl border border-border bg-white/20 backdrop-blur-sm p-6 text-center">
+            <div className="mt-8 rounded-xl border border-border bg-white/20 backdrop-blur-sm p-6 text-center">
               <p className="text-sm text-muted-foreground">
                 Have questions about our privacy practices?{" "}
                 <Link

@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Our Services",
-  description: "Explore Loshi Edu's educational services — corporate training, exam preparation, skill development, and more.",
+  description: "Explore grotutor's educational services — corporate training, exam preparation, skill development, and more.",
   openGraph: {
-    title: "Our Services | Loshi Edu",
+    title: "Our Services | grotutor",
     description: "Corporate training, exam prep, skill development & more.",
   },
 };

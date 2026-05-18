@@ -61,7 +61,7 @@ function ZigzagDecor() {
 
 export function WorkshopCta() {
   return (
-    <section className="relative overflow-hidden bg-foreground py-16 md:py-24">
+    <section className="relative overflow-hidden bg-foreground py-10 md:py-10">
       {/* Subtle dot pattern overlay */}
       <div
         className="absolute inset-0 opacity-[0.04]"
@@ -72,7 +72,7 @@ export function WorkshopCta() {
       />
 
       <div className="container relative mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
+        <div className="grid items-center gap-8 lg:grid-cols-2 lg:gap-16">
           {/* ── Left column: text content ── */}
           <motion.div
             initial={{ opacity: 0, x: -30 }}

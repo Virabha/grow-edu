@@ -25,17 +25,17 @@ const loginSchema = z.object({
 type LoginFormData = z.infer<typeof loginSchema>;
 
 const floatingIcons = [
-  { icon: "🛡️", x: "15%", y: "20%", delay: 0 },
-  { icon: "💻", x: "80%", y: "15%", delay: 0.5 },
-  { icon: "📊", x: "10%", y: "75%", delay: 1 },
-  { icon: "🚀", x: "85%", y: "70%", delay: 1.5 },
-  { icon: "⚙️", x: "50%", y: "10%", delay: 2 },
-  { icon: "📚", x: "25%", y: "90%", delay: 0.8 },
-  { icon: "🏆", x: "70%", y: "85%", delay: 1.2 },
+  { icon: "ðŸ›¡ï¸", x: "15%", y: "20%", delay: 0 },
+  { icon: "ðŸ’»", x: "80%", y: "15%", delay: 0.5 },
+  { icon: "ðŸ“Š", x: "10%", y: "75%", delay: 1 },
+  { icon: "ðŸš€", x: "85%", y: "70%", delay: 1.5 },
+  { icon: "âš™ï¸", x: "50%", y: "10%", delay: 2 },
+  { icon: "ðŸ“š", x: "25%", y: "90%", delay: 0.8 },
+  { icon: "ðŸ†", x: "70%", y: "85%", delay: 1.2 },
 ];
 
 const features = [
-  { icon: Shield, text: "Secure Admin Access", color: "#6366f1" },
+  { icon: Shield, text: "Secure Admin Access", color: "#3b82f6" },
   { icon: Users, text: "User Management", color: "#f97316" },
   { icon: BookOpen, text: "Course Management", color: "#10b981" },
   { icon: BarChart3, text: "Analytics Dashboard", color: "#ec4899" },
@@ -73,7 +73,7 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen">
       {/* Left Panel - Gradient */}
-      <div className="relative hidden w-1/2 overflow-hidden bg-linear-to-br from-primary via-[#6366f1] to-[#8b5cf6] lg:flex lg:flex-col lg:justify-between">
+      <div className="relative hidden w-1/2 overflow-hidden bg-linear-to-br from-primary via-[#3b82f6] to-[#8b5cf6] lg:flex lg:flex-col lg:justify-between">
         {/* Floating Icons */}
         {floatingIcons.map((item, i) => (
           <motion.span
@@ -124,7 +124,7 @@ export default function LoginPage() {
         />
 
         {/* Content */}
-        <div className="relative z-10 flex flex-1 flex-col justify-center p-10 xl:p-14">
+        <div className="relative z-10 flex flex-1 flex-col justify-center p-6 xl:p-14">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -136,13 +136,13 @@ export default function LoginPage() {
             >
               <Image
                 src="/logo.jpeg"
-                alt="Loshi Edu"
+                alt="grotutor"
                 width={44}
                 height={44}
                 className="rounded-xl shadow-lg transition-transform group-hover:scale-105"
               />
               <span className="text-xl font-black text-white tracking-tight">
-                Loshi Edu
+                grotutor
               </span>
             </Link>
 
@@ -199,13 +199,13 @@ export default function LoginPage() {
           <Link href="/" className="flex items-center gap-2">
             <Image
               src="/logo.jpeg"
-              alt="Loshi Edu"
+              alt="grotutor"
               width={32}
               height={32}
               className="rounded-lg"
             />
             <span className="text-base font-black">
-              <span className="text-primary">Loshi</span> Edu
+              <span className="text-primary">gro</span>tutor
             </span>
           </Link>
         </div>

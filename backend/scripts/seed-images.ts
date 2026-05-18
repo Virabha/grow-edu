@@ -65,7 +65,7 @@ const FREE_BANNER_IMAGES = [
     secondaryCtaText: "Become an Instructor",
     secondaryCtaLink: "/become-teacher",
     badgeText: "New Courses Available",
-    badgeColor: "#6366f1",
+    badgeColor: "#3b82f6",
     textAlign: "left",
   },
   {

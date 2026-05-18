@@ -88,12 +88,12 @@ interface AboutLeadershipSettings {
 }
 
 const heroStats = [
-  { value: "50K+", label: "Active Students", icon: Users, color: "#6366f1" },
+  { value: "50K+", label: "Active Students", icon: Users, color: "#3b82f6" },
   {
     value: "100+",
     label: "Expert Tutors",
     icon: GraduationCap,
-    color: "#6366f1",
+    color: "#3b82f6",
   },
   { value: "95%", label: "Success Rate", icon: TrendingUp, color: "#10b981" },
 ];
@@ -108,13 +108,13 @@ const values: Array<{
     icon: Target,
     title: "Mission-Driven",
     desc: "Accessible, high-quality, industry-relevant education for all.",
-    color: "#6366f1",
+    color: "#3b82f6",
   },
   {
     icon: Users,
     title: "Community First",
     desc: "50,000+ learners and instructors powering everything we build.",
-    color: "#6366f1",
+    color: "#3b82f6",
   },
   {
     icon: Award,
@@ -126,7 +126,7 @@ const values: Array<{
     icon: BookOpen,
     title: "Lifelong Learning",
     desc: "Lifetime access, monthly content, non-stop growth.",
-    color: "#6366f1",
+    color: "#3b82f6",
   },
   {
     icon: Globe,
@@ -147,7 +147,7 @@ const directors = [
     name: "Mrs. Ashwini Vuppala",
     role: "Executive Director",
     image: "/about-us/director1.png",
-    color: "#6366f1",
+    color: "#3b82f6",
     points: [
       "Seasoned leader in education, finance, and institutional operations",
       "Corporate experience from global organizations driving process excellence",
@@ -161,7 +161,7 @@ const directors = [
     name: "Mrs. Mattewada Ramya",
     role: "Executive Director",
     image: "/about-us/director2.png",
-    color: "#6366f1",
+    color: "#3b82f6",
     points: [
       "Commerce graduate with 5+ years in education & business management",
       "Teaching commerce and business subjects with a practical approach",
@@ -176,7 +176,7 @@ const directors = [
 const ceo = {
   name: "Mr. Jaligama Arun",
   role: "Chief Executive Officer",
-  color: "#6366f1",
+  color: "#3b82f6",
   image: "/about-us/ceo.png",
   points: [
     "Visionary CEO with 10+ years building high-performing organizations",
@@ -198,13 +198,13 @@ const services: Array<{
     title: "Competitive Exam Prep",
     desc: "UPSC, SSC, Banking, Railways, State PSCs",
     icon: Target,
-    color: "#6366f1",
+    color: "#3b82f6",
   },
   {
     title: "Professional Skills",
     desc: "Management, Sales, Digital Transformation & Technology",
     icon: Briefcase,
-    color: "#6366f1",
+    color: "#3b82f6",
   },
   {
     title: "Career Readiness",
@@ -216,7 +216,7 @@ const services: Array<{
     title: "Live Learning & Mentorship",
     desc: "Interactive live classes with top educators",
     icon: GraduationCap,
-    color: "#6366f1",
+    color: "#3b82f6",
   },
   {
     title: "Customized Learning Paths",
@@ -304,7 +304,7 @@ export default function AboutPage() {
     | { items?: AboutWhatWeOfferItem[] }
     | undefined;
 
-  const heroTitle = aboutHero?.title ?? "About Loshi Edu";
+  const heroTitle = aboutHero?.title ?? "About grotutor";
   const heroSubtitle =
     aboutHero?.subtitle ??
     "Redefining the future of learning — bridging aspiration and achievement through technology, innovation, and expert-led education.";
@@ -356,7 +356,7 @@ export default function AboutPage() {
 
   return (
     <main>
-      <section className="relative overflow-hidden border-b-2 border-black bg-[#000052] py-14 md:py-20">
+      <section className="relative overflow-hidden border-b-2 border-black bg-[#000052] py-14 md:py-14">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             initial="hidden"
@@ -365,9 +365,9 @@ export default function AboutPage() {
             className="mx-auto max-w-3xl text-white text-center"
           >
             <h1 className="section-heading mt-2 text-3xl font-black text-white sm:text-4xl md:text-5xl">
-              {heroTitle === "About Loshi Edu" ? (
+              {heroTitle === "About grotutor" ? (
                 <>
-                  About <span className="text-white">Loshi Edu</span>
+                  About <span className="text-white">grotutor</span>
                 </>
               ) : (
                 heroTitle
@@ -400,7 +400,7 @@ export default function AboutPage() {
                   <IconOrUpload
                     iconUrl={visionIconUrl}
                     iconName={visionIconName}
-                    color="#6366f1"
+                    color="#3b82f6"
                     size="size-12"
                   />
                 </div>
@@ -425,7 +425,7 @@ export default function AboutPage() {
                   <IconOrUpload
                     iconUrl={missionIconUrl}
                     iconName={missionIconName}
-                    color="#6366f1"
+                    color="#3b82f6"
                     size="size-12"
                   />
                 </div>
@@ -463,7 +463,7 @@ export default function AboutPage() {
                 ? getLucideIcon((v as AboutValueItem).iconName)
                 : (v as (typeof values)[0]).icon;
               const iconUrl = isApi ? (v as AboutValueItem).iconUrl : undefined;
-              const color = (v as { color?: string }).color ?? "#6366f1";
+              const color = (v as { color?: string }).color ?? "#3b82f6";
               const title = isApi
                 ? (v as AboutValueItem).title
                 : (v as (typeof values)[0]).title;
@@ -540,7 +540,7 @@ export default function AboutPage() {
               const desc = isApi
                 ? (s as AboutWhatWeOfferItem).description
                 : (s as (typeof services)[0]).desc;
-              const color = (s as { color?: string }).color ?? "#6366f1";
+              const color = (s as { color?: string }).color ?? "#3b82f6";
               const iconUrl = isApi
                 ? (s as AboutWhatWeOfferItem).iconUrl
                 : undefined;
@@ -719,7 +719,7 @@ export default function AboutPage() {
                         key={point}
                         className="flex items-start gap-2 text-sm text-foreground"
                       >
-                        <Star className="mt-0.5 size-3 shrink-0 text-[#6366f1]" />
+                        <Star className="mt-0.5 size-3 shrink-0 text-[#3b82f6]" />
                         {point}
                       </li>
                     ))}
@@ -839,7 +839,7 @@ export default function AboutPage() {
               Your Journey to Excellence Begins Here
             </h2>
             <p className="mt-2 text-sm text-white/80">
-              At Loshi Edu, we don&apos;t just teach — we transform potential
+              At grotutor, we don&apos;t just teach — we transform potential
               into performance.
             </p>
             <div className="mt-5 flex flex-wrap justify-center gap-3">

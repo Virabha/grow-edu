@@ -1,10 +1,10 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Create Account",
-  description: "Join Loshi Edu today. Create your account and start your learning journey with 500+ expert-led courses.",
+  description: "Join grotutor today. Create your account and start your learning journey with 500+ expert-led courses.",
   openGraph: {
-    title: "Sign Up | Loshi Edu",
+    title: "Sign Up | grotutor",
     description: "Create your account and start learning today.",
   },
 };

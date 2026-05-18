@@ -43,7 +43,7 @@ function Dialog({ open, onOpenChange, children }: DialogProps) {
 
 function DialogHeader({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={cn("flex flex-col space-y-1.5 p-6 pb-4 shrink-0", className)}>
+    <div className={cn("flex flex-col space-y-1 p-4 pb-2 shrink-0", className)}>
       {children}
     </div>
   );
@@ -67,7 +67,7 @@ function DialogDescription({ children, className }: { children: React.ReactNode;
 
 function DialogContent({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={cn("p-6 pt-0 overflow-y-auto flex-1 min-h-0", className)}>
+    <div className={cn("p-4 pt-0 overflow-y-auto flex-1 min-h-0", className)}>
       {children}
     </div>
   );
@@ -75,7 +75,7 @@ function DialogContent({ children, className }: { children: React.ReactNode; cla
 
 function DialogFooter({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={cn("flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 p-6 pt-4 shrink-0", className)}>
+    <div className={cn("flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 p-4 pt-2 shrink-0", className)}>
       {children}
     </div>
   );

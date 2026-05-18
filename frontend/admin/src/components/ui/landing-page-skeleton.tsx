@@ -23,7 +23,7 @@ export function LandingPageSkeleton() {
       </div>
 
       
-      <section className="py-20 bg-gradient-to-b from-primary/5 to-background">
+      <section className="py-14 bg-gradient-to-b from-primary/5 to-background">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center space-y-6">
             <Skeleton className="h-12 w-full max-w-2xl mx-auto"/>
@@ -50,9 +50,9 @@ export function LandingPageSkeleton() {
       </section>
 
       
-      <section className="py-16 bg-muted/50">
+      <section className="py-10 bg-muted/50">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-12 space-y-3">
+          <div className="text-center mb-8 space-y-3">
             <Skeleton className="h-10 w-64 mx-auto"/>
             <Skeleton className="h-5 w-96 mx-auto"/>
           </div>
@@ -78,9 +78,9 @@ export function LandingPageSkeleton() {
       </section>
 
       
-      <section className="py-16">
+      <section className="py-10">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-12 space-y-3">
+          <div className="text-center mb-8 space-y-3">
             <Skeleton className="h-10 w-64 mx-auto"/>
             <Skeleton className="h-5 w-80 mx-auto"/>
           </div>
@@ -97,9 +97,9 @@ export function LandingPageSkeleton() {
       </section>
 
       
-      <section className="py-16 bg-muted/30">
+      <section className="py-10 bg-muted/30">
         <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto space-y-8">
+          <div className="max-w-4xl mx-auto space-y-6">
             <div className="text-center space-y-3">
               <Skeleton className="h-10 w-80 mx-auto"/>
               <Skeleton className="h-5 w-96 mx-auto"/>

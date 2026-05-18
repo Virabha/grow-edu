@@ -69,8 +69,8 @@ export function AdminNavbar() {
             : "bg-background/80 backdrop-blur-sm border-b border-border")}>
       <Link href="/admin/dashboard" className="text-sm sm:text-base font-bold tracking-tight text-foreground flex items-center gap-1.5">
         <Shield className="h-4 w-4 text-primary"/>
-        <span className="hidden sm:inline">LOSHI</span>
-        <span className="text-primary hidden sm:inline">ADMIN</span>
+        <span className="hidden sm:inline">grotutor</span>
+        <span className="text-primary hidden sm:inline ml-1">Admin</span>
         <span className="sm:hidden text-primary">Admin</span>
       </Link>
 

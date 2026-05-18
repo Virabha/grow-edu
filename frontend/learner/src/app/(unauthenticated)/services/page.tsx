@@ -116,7 +116,7 @@ export default function ServicesPage() {
 
   return (
     <>
-      <section className="relative overflow-hidden border-b-2 border-black py-14 md:py-20">
+      <section className="relative overflow-hidden border-b-2 border-black py-14 md:py-14">
         <div className={`absolute inset-0 ${getHeaderBgClass(0)}`} />
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
@@ -138,10 +138,10 @@ export default function ServicesPage() {
         </div>
       </section>
 
-      <main className="py-12 md:py-16">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 space-y-12 md:space-y-16">
+      <main className="py-12 md:py-10">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 space-y-6 md:space-y-16">
           {isLoading && (
-            <div className="space-y-8">
+            <div className="space-y-6">
               {[1, 2, 3].map((i) => (
                 <div key={i} className="h-64 animate-pulse rounded-2xl bg-muted" />
               ))}
@@ -155,7 +155,7 @@ export default function ServicesPage() {
           )}
 
           {!isLoading && !isError && services.length === 0 && (
-            <p className="text-center text-muted-foreground py-20">
+            <p className="text-center text-muted-foreground py-14">
               No services available yet.
             </p>
           )}
@@ -189,7 +189,7 @@ export default function ServicesPage() {
                     <div className="md:w-1/2">
                       <ServiceImageCarousel service={s} />
                     </div>
-                    <div className="flex flex-1 flex-col justify-center p-6 md:p-8 lg:p-10 gap-4">
+                    <div className="flex flex-1 flex-col justify-center p-6 md:p-8 lg:p-6 gap-4">
                       {s.description && (
                         <p className="text-sm leading-relaxed text-black sm:text-base whitespace-pre-wrap">
                           {s.description}

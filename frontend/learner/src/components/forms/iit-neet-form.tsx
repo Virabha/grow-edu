@@ -199,7 +199,7 @@ DECLARATION:
 
   if (submitStatus === "success") {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-center space-y-4">
+      <div className="flex flex-col items-center justify-center py-10 text-center space-y-4">
         <div className="flex items-center justify-center w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30">
           <CheckCircle2 className="h-9 w-9 text-green-600 dark:text-green-400" />
         </div>

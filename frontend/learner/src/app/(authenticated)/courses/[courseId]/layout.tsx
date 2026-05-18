@@ -3,9 +3,9 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Course Details",
   description:
-    "View course details, curriculum, instructor info, and enroll at Loshi Edu.",
+    "View course details, curriculum, instructor info, and enroll at grotutor.",
   openGraph: {
-    title: "Course Details | Loshi Edu",
+    title: "Course Details | grotutor",
     description: "View course details, curriculum, and enroll today.",
   },
 };

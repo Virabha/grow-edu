@@ -1,5 +1,5 @@
-# Robots.txt for Loshi Edu
-# https://loshiedu.com
+# Robots.txt for grotutor (admin)
+# https://grotutor.com
 
 User-agent: *
 Allow: /
@@ -21,7 +21,7 @@ Disallow: /reset-password/
 Crawl-delay: 1
 
 # Sitemap location
-Sitemap: https://loshiedu.com/sitemap.xml
+Sitemap: https://grotutor.com/sitemap.xml
 
 # Google specific
 User-agent: Googlebot

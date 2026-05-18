@@ -39,8 +39,8 @@ async function bootstrap() {
   );
 
   const swaggerConfig = new DocumentBuilder()
-    .setTitle("Loshi Edu API")
-    .setDescription("API documentation for Loshi Edu — Education & Training Platform")
+    .setTitle("grotutor API")
+    .setDescription("API documentation for grotutor — Online Learning Platform")
     .setVersion("1.0.0")
     .addBearerAuth()
     .addTag("auth", "Authentication endpoints")
@@ -61,7 +61,7 @@ async function bootstrap() {
 
   const port = configService.port;
   await app.listen(port, "0.0.0.0");
-  logger.log(`Loshi Edu API running on http://localhost:${port}`);
+  logger.log(`grotutor API running on http://localhost:${port}`);
   logger.log(`Swagger docs at http://localhost:${port}/api-docs`);
 }
 

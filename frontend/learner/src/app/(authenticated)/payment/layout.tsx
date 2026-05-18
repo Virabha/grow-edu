@@ -1,8 +1,8 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Payment",
-  description: "Payment processing for Loshi Edu.",
+  description: "Payment processing for grotutor.",
   robots: { index: false, follow: false },
 };
 

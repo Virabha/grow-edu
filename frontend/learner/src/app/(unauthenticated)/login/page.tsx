@@ -32,7 +32,7 @@ const floatingIcons: { icon: LucideIcon; x: string; y: string; delay: number }[]
 ];
 
 const features = [
-  { icon: BookOpen, text: "10+ Expert Courses", color: "#6366f1" },
+  { icon: BookOpen, text: "10+ Expert Courses", color: "#3b82f6" },
   { icon: Users, text: "1000+ Active Students", color: "#f97316" },
   { icon: Award, text: "10+ Industry Certificates", color: "#10b981" },
   { icon: Zap, text: "96% Success Rate", color: "#ec4899" },
@@ -94,11 +94,11 @@ export default function LoginPage() {
           aria-hidden
         />
 
-        <div className="relative z-10 flex flex-1 flex-col justify-center p-10 xl:p-14">
+        <div className="relative z-10 flex flex-1 flex-col justify-center p-6 xl:p-14">
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
             <Link href="/" className="mb-8 inline-flex items-center gap-3 group">
-              <Image src="/logo.jpeg" alt="Loshi Edu" width={44} height={44} className="rounded-xl shadow-lg transition-transform group-hover:scale-105" />
-              <span className="text-xl font-black text-white tracking-tight">Loshi Edu</span>
+              <Image src="/logo.jpeg" alt="grotutor" width={44} height={44} className="rounded-xl shadow-lg transition-transform group-hover:scale-105" />
+              <span className="text-xl font-black text-white tracking-tight">grotutor</span>
             </Link>
 
             <h2 className="text-3xl font-black leading-tight text-white xl:text-4xl">
@@ -150,8 +150,8 @@ export default function LoginPage() {
       <div className="flex flex-1 flex-col">
         <div className="flex items-center justify-between px-6 py-4 lg:hidden">
           <Link href="/" className="flex items-center gap-2">
-            <Image src="/logo.jpeg" alt="Loshi Edu" width={32} height={32} className="rounded-lg" />
-            <span className="text-base font-black"><span className="text-primary">Loshi</span> Edu</span>
+            <Image src="/logo.jpeg" alt="grotutor" width={32} height={32} className="rounded-lg" />
+            <span className="text-base font-black"><span className="text-primary">gro</span>tutor</span>
           </Link>
         </div>
 

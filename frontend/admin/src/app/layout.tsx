@@ -104,7 +104,7 @@ export default function RootLayout({
     "@context": "https://schema.org",
     "@type": "EducationalOrganization",
     name: siteName,
-    alternateName: "Loshi Edu",
+    alternateName: "grotutor",
     url: siteUrl,
     logo: `${siteUrl}/logo.jpeg`,
     description: siteDescription,
@@ -139,7 +139,8 @@ export default function RootLayout({
       <head>
         <link rel="canonical" href={siteUrl} />
         <link rel="icon" href="/favicon.ico" sizes="any" />
-        <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+        <link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192" />
+        <link rel="icon" href="/icon-512.png" type="image/png" sizes="512x512" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="manifest" href="/manifest.json" />
         <script

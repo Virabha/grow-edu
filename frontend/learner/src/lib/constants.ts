@@ -1,19 +1,19 @@
 // ── Brand constants ──────────────────────────────────────────────
 export const BRAND = {
-  name: "Loshi Edu",
-  tagline: "Transform Your Learning Journey",
+  name: "grotutor",
+  tagline: "Online Learning Platform",
   description:
     "India's leading online education platform — redefining the future of learning by bridging the gap between aspiration and achievement.",
-  website: "https://loshiedu.com",
-  email: "contact@loshiedu.com",
+  website: "https://grotutor.com",
+  email: "contact@grotutor.com",
   phone: "+91-6309046611",
   address:
     "Unit # 1801, Vasavi Sky City, Gachibowli X Road, Hyderabad, Telangana",
   social: {
-    facebook: "https://www.facebook.com/loshiedu",
-    linkedin: "https://www.linkedin.com/company/loshiedu",
-    youtube: "https://www.youtube.com/@loshiedu",
-    instagram: "https://www.instagram.com/loshiedu",
+    facebook: "https://www.facebook.com/grotutor",
+    linkedin: "https://www.linkedin.com/company/grotutor",
+    youtube: "https://www.youtube.com/@grotutor",
+    instagram: "https://www.instagram.com/grotutor",
   },
 } as const;
 
@@ -27,17 +27,17 @@ export const NAV_LINKS = [
   { href: "/contact", label: "Contact" },
 ] as const;
 
-// ── External LoshiEdu URLs ───────────────────────────────────────
-export const LOSHI_URLS = {
-  home: "https://loshiedu.com",
-  courses: "https://loshiedu.com/courses",
-  register: "https://loshiedu.com/register",
-  login: "https://loshiedu.com/login",
-  contact: "https://loshiedu.com/contact-us",
+// ── External URLs ────────────────────────────────────────────────
+export const SITE_URLS = {
+  home: "https://grotutor.com",
+  courses: "https://grotutor.com/courses",
+  register: "https://grotutor.com/register",
+  login: "https://grotutor.com/login",
+  contact: "https://grotutor.com/contact-us",
   instructorDetails: (id: string, slug: string) =>
-    `https://loshiedu.com/instructor-details/${id}/${slug}`,
-  course: (slug: string) => `https://loshiedu.com/course/${slug}`,
-  category: (id: number) => `https://loshiedu.com/courses?category=${id}`,
+    `https://grotutor.com/instructor-details/${id}/${slug}`,
+  course: (slug: string) => `https://grotutor.com/course/${slug}`,
+  category: (id: number) => `https://grotutor.com/courses?category=${id}`,
 } as const;
 
 // ── Stats ────────────────────────────────────────────────────────

@@ -1,16 +1,16 @@
 {{> header title="Your Account Role Has Been Updated"}}
               <h2 style="margin: 0 0 20px; color: #f8fafc; font-size: 24px; font-weight: 600;">Hello, {{firstName}}!</h2>
               <p style="margin: 0 0 20px; color: #94a3b8; font-size: 16px; line-height: 1.6;">
-                We're writing to inform you that your account role on Loshi Edu has been updated by an administrator.
+                We're writing to inform you that your account role on grotutor has been updated by an administrator.
               </p>
-              <table role="presentation" style="width: 100%; margin: 20px 0; background-color: rgba(224, 180, 88, 0.1); border-radius: 8px; padding: 20px;">
+              <table role="presentation" style="width: 100%; margin: 20px 0; background-color: rgba(59, 130, 246, 0.1); border-radius: 8px; padding: 20px;">
                 <tr>
                   <td>
                     <p style="margin: 0 0 10px; color: #cbd5e1; font-size: 14px;">
                       <strong style="color: #f8fafc;">Previous Role:</strong> {{oldRole}}
                     </p>
                     <p style="margin: 0; color: #cbd5e1; font-size: 14px;">
-                      <strong style="color: #f8fafc;">New Role:</strong> <span style="color: #e0b458; font-weight: 600;">{{newRole}}</span>
+                      <strong style="color: #f8fafc;">New Role:</strong> <span style="color: #3b82f6; font-weight: 600;">{{newRole}}</span>
                     </p>
                   </td>
                 </tr>
@@ -38,9 +38,9 @@
                 <tr>
                   <td align="center">
                     {{#eq newRole "Instructor"}}
-                      <a href="{{frontendUrl}}/instructor/dashboard" style="display: inline-block; padding: 14px 32px; background-color: #e0b458; color: #0a192f; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px; letter-spacing: 0.5px;">Go to Instructor Dashboard</a>
+                      <a href="{{frontendUrl}}/instructor/dashboard" style="display: inline-block; padding: 14px 32px; background-color: #3b82f6; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px; letter-spacing: 0.5px;">Go to Instructor Dashboard</a>
                     {{else}}
-                      <a href="{{frontendUrl}}/login" style="display: inline-block; padding: 14px 32px; background-color: #e0b458; color: #0a192f; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px; letter-spacing: 0.5px;">Log In to Your Account</a>
+                      <a href="{{frontendUrl}}/login" style="display: inline-block; padding: 14px 32px; background-color: #3b82f6; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px; letter-spacing: 0.5px;">Log In to Your Account</a>
                     {{/eq}}
                   </td>
                 </tr>

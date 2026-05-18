@@ -54,7 +54,7 @@ export function ModernSidebar({ items, className }: ModernSidebarProps) {
             <div className="px-2 py-2 border-b border-border bg-card">
                 <div className={cn("flex items-center min-h-[32px]", collapsed ? "justify-center" : "justify-between")}>
                     <Link href="/" className="flex items-center gap-2 overflow-hidden shrink-0">
-                        <Image src="/logo.jpeg" alt="Loshi Edu" width={28} height={28} className="rounded-md h-7 w-7 object-cover shrink-0" />
+                        <Image src="/logo.jpeg" alt="grotutor" width={28} height={28} className="rounded-md h-7 w-7 object-cover shrink-0" />
                         <AnimatePresence>
                             {!collapsed && (
                                 <motion.span
@@ -65,7 +65,7 @@ export function ModernSidebar({ items, className }: ModernSidebarProps) {
                                     transition={{ duration: 0.2, ease: "easeInOut" }}
                                     className="text-sm font-bold tracking-tight text-foreground whitespace-nowrap overflow-hidden"
                                 >
-                                    <span className="text-primary">Loshi</span> Edu
+                                    <span className="text-primary">gro</span>tutor
                                 </motion.span>
                             )}
                         </AnimatePresence>
@@ -226,9 +226,9 @@ export function ModernSidebar({ items, className }: ModernSidebarProps) {
                                 <div className="px-3 py-2 border-b border-border bg-gradient-to-r from-primary/5 to-primary/10">
                                     <div className="flex items-center justify-between">
                                         <Link href="/" className="flex items-center gap-2" onClick={() => setMobileOpen(false)}>
-                                            <Image src="/logo.jpeg" alt="Loshi Edu" width={24} height={24} className="rounded-md h-6 w-6 object-cover" />
+                                            <Image src="/logo.jpeg" alt="grotutor" width={24} height={24} className="rounded-md h-6 w-6 object-cover" />
                                             <span className="text-sm font-bold tracking-tight text-foreground">
-                                                <span className="text-primary">Loshi</span> Edu
+                                                <span className="text-primary">gro</span>tutor
                                             </span>
                                         </Link>
                                         <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setMobileOpen(false)}>

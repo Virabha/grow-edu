@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 export const metadata: Metadata = {
   title: "Careers",
   description:
-    "Join Loshi EduTech Pvt Ltd and help shape the future of education in India. Explore open positions in engineering, content, marketing, and more.",
+    "Join grotutor and help shape the future of education in India. Explore open positions in engineering, content, marketing, and more.",
 };
 
 const cultureValues = [
@@ -40,8 +40,8 @@ const cultureValues = [
   {
     icon: GraduationCap,
     title: "Continuous Learning",
-    desc: "Free access to all Loshi Edu courses, dedicated learning hours, conference budgets, and mentorship programs.",
-    color: "#6366f1",
+    desc: "Free access to all grotutor courses, dedicated learning hours, conference budgets, and mentorship programs.",
+    color: "#3b82f6",
   },
 ];
 
@@ -60,7 +60,7 @@ const positions = [
     location: "Hyderabad",
     type: "Full-time",
     description:
-      "Design and develop scalable APIs, microservices, and data pipelines powering the Loshi Edu platform.",
+      "Design and develop scalable APIs, microservices, and data pipelines powering the grotutor platform.",
   },
   {
     title: "Content Creator",
@@ -90,7 +90,7 @@ const positions = [
 
 const perks = [
   "Competitive salary & performance bonuses",
-  "Free access to all Loshi Edu courses",
+  "Free access to all grotutor courses",
   "Flexible working hours & hybrid model",
   "Health insurance for you & family",
   "Annual learning & conference budget",
@@ -100,7 +100,7 @@ const perks = [
 export default function CareersPage() {
   return (
     <main>
-        <section className="border-b border-border bg-gradient-to-br from-primary/5 via-background to-[#6366f1]/5 py-12 md:py-16">
+        <section className="border-b border-border bg-gradient-to-br from-primary/5 via-background to-[#3b82f6]/5 py-12 md:py-10">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="mx-auto max-w-2xl text-center">
               <p className="text-xs font-semibold uppercase tracking-widest text-primary">
@@ -108,7 +108,7 @@ export default function CareersPage() {
               </p>
               <h1 className="mt-2 text-3xl font-black text-foreground sm:text-4xl md:text-5xl">
                 Careers at{" "}
-                <span className="text-primary">Loshi Edu</span>
+                <span className="text-primary">grotutor</span>
               </h1>
               <p className="mt-3 text-sm leading-relaxed text-muted-foreground md:text-base">
                 Help us build the future of education in India. We&apos;re
@@ -123,7 +123,7 @@ export default function CareersPage() {
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="mb-6 text-center">
               <p className="text-xs font-semibold uppercase tracking-widest text-primary">
-                Why Loshi Edu
+                Why grotutor
               </p>
               <h2 className="mt-1 text-xl font-bold text-foreground sm:text-2xl md:text-3xl">
                 Our Culture & Values
@@ -224,7 +224,7 @@ export default function CareersPage() {
                       className="shrink-0 gap-1.5"
                       asChild
                     >
-                      <a href="mailto:careers@loshiedu.com?subject=Application for ${pos.title}">
+                      <a href="mailto:careers@grotutor.com?subject=Application for ${pos.title}">
                         Apply Now
                         <ArrowRight className="size-3.5" />
                       </a>
@@ -238,7 +238,7 @@ export default function CareersPage() {
 
         <section className="py-10 md:py-14">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="rounded-2xl bg-gradient-to-br from-primary to-[#6366f1] p-8 text-center text-white">
+            <div className="rounded-2xl bg-gradient-to-br from-primary to-[#3b82f6] p-8 text-center text-white">
               <h2 className="text-2xl font-black sm:text-3xl">
                 Don&apos;t See Your Role?
               </h2>
@@ -252,7 +252,7 @@ export default function CareersPage() {
                   className="gap-2 bg-white text-primary font-bold hover:bg-white/90 shadow-lg"
                   asChild
                 >
-                  <a href="mailto:careers@loshiedu.com?subject=General Application">
+                  <a href="mailto:careers@grotutor.com?subject=General Application">
                     Send Your Resume
                     <ArrowRight className="size-3.5" />
                   </a>

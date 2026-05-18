@@ -11,9 +11,9 @@ import { SubscribeSection } from "@/components/landing/subscribe-section";
 import { RolesCta } from "@/components/landing/roles-cta";
 
 export const metadata: Metadata = {
-  title: "Loshi Edu — Transform Your Learning Journey",
+  title: "grotutor — Transform Your Learning Journey",
   description:
-    "Loshi Edu offers 500+ expert-led online courses. Competitive Exams, Professional Skills, Academics & more.",
+    "grotutor offers 500+ expert-led online courses. Competitive Exams, Professional Skills, Academics & more.",
 };
 
 export default function HomePage() {

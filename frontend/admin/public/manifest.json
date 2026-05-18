@@ -1,15 +1,15 @@
 {
-  "name": "PRIME E-Learning & Training",
-  "short_name": "PRIME",
-  "description": "Dubai's premier online education platform for financial literacy, trading skills, and professional development.",
+  "name": "grotutor — Admin",
+  "short_name": "grotutor",
+  "description": "grotutor admin & instructor portal — manage courses, learners, and content.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0a0a0a",
-  "theme_color": "#e0b458",
+  "background_color": "#ffffff",
+  "theme_color": "#3b82f6",
   "orientation": "portrait-primary",
   "scope": "/",
   "lang": "en",
-  "categories": ["education", "finance", "business"],
+  "categories": ["education", "business"],
   "icons": [
     {
       "src": "/icon-192.png",

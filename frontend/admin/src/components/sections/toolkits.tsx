@@ -19,7 +19,7 @@ function ToolkitItem({ title, headline, description, index, imageSrc, imageAlt, 
     });
     const y = useTransform(scrollYProgress, [0, 1], [50, -50]);
     const isEven = index % 2 === 0;
-    return (<article ref={ref} className={`flex flex-col md:flex-row items-center gap-8 sm:gap-10 md:gap-16 lg:gap-24 py-8 sm:py-10 md:py-12 ${isEven ? "" : "md:flex-row-reverse"}`}>
+    return (<article ref={ref} className={`flex flex-col md:flex-row items-center gap-8 sm:gap-8 md:gap-16 lg:gap-24 py-8 sm:py-10 md:py-12 ${isEven ? "" : "md:flex-row-reverse"}`}>
       <div className="flex-1 space-y-4 sm:space-y-6 text-center md:text-left">
         <header>
           <p className="flex items-center justify-center md:justify-start gap-3 text-primary mb-2">
@@ -54,9 +54,9 @@ function ToolkitItem({ title, headline, description, index, imageSrc, imageAlt, 
     </article>);
 }
 export function Toolkits() {
-    return (<section id="toolkits" className="py-12 sm:py-16 md:py-20 px-4 sm:px-6 bg-background" aria-labelledby="toolkits-heading">
+    return (<section id="toolkits" className="py-12 sm:py-10 md:py-14 px-4 sm:px-6 bg-background" aria-labelledby="toolkits-heading">
       <div className="max-w-7xl mx-auto">
-        <header className="text-center mb-10 sm:mb-16 md:mb-24">
+        <header className="text-center mb-10 sm:mb-10 md:mb-24">
           <h2 id="toolkits-heading" className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-4 sm:mb-6">
             Learning Toolkits
           </h2>
@@ -65,7 +65,7 @@ export function Toolkits() {
           </p>
         </header>
 
-        <div className="space-y-12 sm:space-y-16 md:space-y-24" role="list" aria-label="Learning tools">
+        <div className="space-y-6 sm:space-y-16 md:space-y-24" role="list" aria-label="Learning tools">
           <ToolkitItem index={0} title="Progress Tracker" headline="Stay On Track With Your Goals." description="Our dynamic progress tracker adapts to your learning pace and highlights areas where you need more practice." imageSrc="/illustrations/risk_calculator.svg" imageAlt="Progress tracker showing learning analytics and skill assessments"/>
           <ToolkitItem index={1} title="Study Journal" headline="The Learner's Edge." description="Track your study habits, note key concepts, and measure your improvement. Data-driven learning leads to better outcomes." imageSrc="/illustrations/analytics_setup.svg" imageAlt="Study journal interface showing learning progress and notes"/>
         </div>

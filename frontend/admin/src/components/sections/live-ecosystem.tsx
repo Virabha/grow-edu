@@ -15,9 +15,9 @@ export function LiveEcosystem() {
         }, 1500);
         return () => clearInterval(interval);
     }, []);
-    return (<section id="markets" className="py-10 sm:py-12 md:py-16 px-4 sm:px-6 bg-background overflow-hidden" aria-labelledby="live-ecosystem-heading">
-      <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-8 sm:gap-12 md:gap-16 lg:gap-24">
-        <div className="flex-1 space-y-5 sm:space-y-6 md:space-y-8 z-10 text-center md:text-left">
+    return (<section id="markets" className="py-10 sm:py-12 md:py-10 px-4 sm:px-6 bg-background overflow-hidden" aria-labelledby="live-ecosystem-heading">
+      <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-8 sm:gap-8 md:gap-16 lg:gap-24">
+        <div className="flex-1 space-y-5 sm:space-y-6 md:space-y-6 z-10 text-center md:text-left">
           <h2 id="live-ecosystem-heading" className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-foreground leading-tight">
             Interactive <span className="text-primary">Live Learning.</span>
           </h2>

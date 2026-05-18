@@ -56,7 +56,7 @@ const defaultSlides: HeroSlide[] = [
     badge: "Industry Ready Professional Learning",
     heading: "Career Focused {rotate} Courses",
     sub: "Designed for the Modern Workforce",
-    accent: "#6366f1",
+    accent: "#3b82f6",
     ctaText: "Explore Courses",
     ctaLink: "/courses",
     rotatingWords: [
@@ -334,7 +334,7 @@ export function HeroSection() {
       />
 
       <div className="relative container mx-auto px-4 py-10 sm:px-6 sm:py-12 lg:px-8 lg:py-14">
-        <div className="grid items-center gap-10 lg:grid-cols-2">
+        <div className="grid items-center gap-8 lg:grid-cols-2">
           <div className="max-w-xl">
             <AnimatePresence mode="wait">
               <motion.div

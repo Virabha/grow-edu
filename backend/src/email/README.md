@@ -11,7 +11,7 @@ Switch between providers using the `EMAIL_PROVIDER` environment variable.
 ## Environment Variables
 
 ### Common (Required for both providers)
-- `EMAIL_FROM_NAME` - Display name for sender (default: "Loshi Edu")
+- `EMAIL_FROM_NAME` - Display name for sender (default: "grotutor")
 - `EMAIL_FROM_ADDRESS` - Email address for sender (required for all providers)
 
 ### AWS SES (Required when EMAIL_PROVIDER=ses)

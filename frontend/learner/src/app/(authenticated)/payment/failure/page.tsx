@@ -41,7 +41,7 @@ export default function PaymentFailurePage() {
               </Button>
             </motion.div>
 
-            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }} className="mt-12 text-sm text-muted-foreground">
+            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }} className="mt-8 text-sm text-muted-foreground">
               Need help? <span className="text-primary font-medium cursor-pointer hover:underline transition-all" onClick={() => router.push("/contact")}>Contact Support</span>
             </motion.p>
           </motion.div>

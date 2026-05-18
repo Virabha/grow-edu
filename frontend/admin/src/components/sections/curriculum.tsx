@@ -80,11 +80,11 @@ function TiltCard({ children, className = "", }: {
     </motion.div>);
 }
 export function Curriculum() {
-    return (<section id="curriculum" className="py-12 sm:py-16 md:py-20 px-4 sm:px-6 bg-background relative overflow-hidden" aria-labelledby="curriculum-heading">
+    return (<section id="curriculum" className="py-12 sm:py-10 md:py-14 px-4 sm:px-6 bg-background relative overflow-hidden" aria-labelledby="curriculum-heading">
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] sm:w-[800px] md:w-[1000px] h-[300px] sm:h-[400px] md:h-[500px] bg-primary/5 rounded-full blur-[80px] sm:blur-[100px] md:blur-[120px] pointer-events-none" aria-hidden="true"/>
 
       <div className="max-w-7xl mx-auto">
-        <header className="text-center mb-10 sm:mb-14 md:mb-20">
+        <header className="text-center mb-10 sm:mb-14 md:mb-12">
           <h2 id="curriculum-heading" className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-4 sm:mb-6">
             Choose Your Path to Mastery.
           </h2>

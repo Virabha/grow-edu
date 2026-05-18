@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Home } from "lucide-react";
 export const metadata: Metadata = {
-    title: "Page Not Found | Loshi Edu",
+    title: "Page Not Found | grotutor",
     description: "The page you're looking for doesn't exist or has been moved.",
     robots: {
         index: false,
@@ -41,10 +41,10 @@ export default function NotFound() {
           </Link>
         </div>
 
-        <div className="mt-12 pt-8 border-t border-border">
+        <div className="mt-8 pt-8 border-t border-border">
           <p className="text-sm text-muted-foreground">
             Need help?{" "}
-            <a href="mailto:support@loshiedu.com" className="text-primary hover:underline">
+            <a href="mailto:support@grotutor.com" className="text-primary hover:underline">
               Contact Support
             </a>
           </p>

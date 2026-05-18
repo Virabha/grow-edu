@@ -33,7 +33,7 @@ export function SubscribeSection() {
   return (
     <section className="py-10 md:py-14">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="relative overflow-hidden rounded-2xl bg-[#000052] px-6 py-12 sm:px-10 sm:py-14 md:px-16 md:py-16">
+        <div className="relative overflow-hidden rounded-2xl bg-[#000052] px-6 py-12 sm:px-10 sm:py-14 md:px-16 md:py-10">
           {/* Decorative background circles */}
           <div className="pointer-events-none absolute -top-20 -right-20 size-64 rounded-full bg-white/5" />
           <div className="pointer-events-none absolute -bottom-16 -left-16 size-48 rounded-full bg-white/5" />

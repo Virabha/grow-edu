@@ -319,7 +319,7 @@ function BooksContent() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="flex flex-col items-center justify-center gap-3 py-24 text-center"
+              className="flex flex-col items-center justify-center gap-3 py-10 text-center"
             >
               <div className="flex size-20 items-center justify-center rounded-full bg-muted/30">
                 <Search className="size-8 text-muted-foreground/50" />

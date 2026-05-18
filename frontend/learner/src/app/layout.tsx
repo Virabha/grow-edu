@@ -13,15 +13,14 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: "Loshi Edu — Transform Your Learning Journey",
-    template: "%s | Loshi Edu",
+    default: "grotutor — Online Learning Platform",
+    template: "%s | grotutor",
   },
   description:
     "Redefining the future of learning. 50K+ active students, 100+ expert tutors, 95% success rate. Expert-led courses in Competitive Exams, Professional Skills, Academics, and more.",
   keywords: [
     "online courses",
-    "Loshi Edu",
-    "LoshiEdu",
+    "grotutor",
     "education",
     "e-learning",
     "competitive exams",
@@ -31,34 +30,42 @@ export const metadata: Metadata = {
     "digital marketing",
     "data science",
   ],
-  authors: [{ name: "Loshi EduTech Pvt Ltd" }],
-  creator: "Loshi EduTech Pvt Ltd",
+  authors: [{ name: "grotutor" }],
+  creator: "grotutor",
   openGraph: {
     type: "website",
     locale: "en_IN",
-    url: "https://loshiedu.com",
-    siteName: "Loshi Edu",
-    title: "Loshi Edu — Transform Your Learning Journey",
+    url: "https://grotutor.com",
+    siteName: "grotutor",
+    title: "grotutor — Online Learning Platform",
     description:
       "50K+ active students. 100+ expert tutors. 95% success rate. Expert-led courses across Exams, Skills, Academics & more.",
     images: [
       {
-        url: "./logo.jpeg",
-        width: 192,
-        height: 192,
-        alt: "Loshi Edu",
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "grotutor",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Loshi Edu",
+    title: "grotutor",
     description:
-      "Transform Your Learning Journey. 50K+ active students. 100+ expert tutors.",
-    images: ["https://loshiedu.com/logo.jpeg"],
+      "Online Learning Platform. 50K+ active students. 100+ expert tutors.",
+    images: ["https://grotutor.com/og-image.png"],
   },
   robots: "index, follow",
-  metadataBase: new URL("https://loshiedu.com"),
+  metadataBase: new URL("https://grotutor.com"),
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icon-192.png", type: "image/png", sizes: "192x192" },
+      { url: "/icon-512.png", type: "image/png", sizes: "512x512" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export const viewport: Viewport = {
@@ -86,9 +93,9 @@ export default function RootLayout({
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "EducationalOrganization",
-              name: "Loshi Edu",
-              url: "https://loshiedu.com",
-              logo: "https://loshiedu.com/logo.jpeg",
+              name: "grotutor",
+              url: "https://grotutor.com",
+              logo: "https://grotutor.com/logo.jpeg",
               description:
                 "India's leading online education platform — redefining the future of learning.",
               address: {
@@ -102,15 +109,15 @@ export default function RootLayout({
               contactPoint: {
                 "@type": "ContactPoint",
                 telephone: "+91-6309046611",
-                email: "contact@loshiedu.com",
+                email: "contact@grotutor.com",
                 contactType: "customer service",
                 availableLanguage: ["English", "Hindi", "Telugu"],
               },
               sameAs: [
-                "https://www.facebook.com/loshiedu",
-                "https://www.linkedin.com/company/loshiedu",
-                "https://www.youtube.com/@loshiedu",
-                "https://www.instagram.com/loshiedu",
+                "https://www.facebook.com/grotutor",
+                "https://www.linkedin.com/company/grotutor",
+                "https://www.youtube.com/@grotutor",
+                "https://www.instagram.com/grotutor",
               ],
             }),
           }}

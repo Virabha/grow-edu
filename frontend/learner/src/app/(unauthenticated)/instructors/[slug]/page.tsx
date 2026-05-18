@@ -30,7 +30,7 @@ const stagger = {
   show: { transition: { staggerChildren: 0.08 } },
 };
 
-const COLORS = ["#6366f1", "#f97316", "#10b981", "#ec4899", "#0ea5e9", "#8b5cf6"];
+const COLORS = ["#3b82f6", "#f97316", "#10b981", "#ec4899", "#0ea5e9", "#8b5cf6"];
 
 function getInitials(name: string) {
   return name
@@ -113,7 +113,7 @@ export default function InstructorDetailPage() {
               <span className="font-medium text-foreground">{instructor.name}</span>
             </motion.nav>
 
-            <div className="flex flex-col items-center gap-6 md:flex-row md:items-start md:gap-10">
+            <div className="flex flex-col items-center gap-6 md:flex-row md:items-start md:gap-8">
               <motion.div
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}

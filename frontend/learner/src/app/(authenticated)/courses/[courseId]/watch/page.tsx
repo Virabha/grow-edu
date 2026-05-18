@@ -121,7 +121,7 @@ export default function WatchPage() {
   // Not enrolled - access denied
   if (!isEnrolled) {
     return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 py-24">
+      <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 py-10">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}

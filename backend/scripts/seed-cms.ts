@@ -59,7 +59,7 @@ async function downloadAndUploadToBunny(
 
 const FAQ_DATA = [
   {
-    question: "What types of courses does Loshi Edu offer?",
+    question: "What types of courses does grotutor offer?",
     answer:
       "We offer a wide range of courses across technology, business, design, personal development, and more. Our courses include video lectures, hands-on projects, quizzes, and certificates of completion.",
   },
@@ -84,7 +84,7 @@ const FAQ_DATA = [
       "We offer a 30-day money-back guarantee on all courses. If you're not satisfied with a course, you can request a full refund within 30 days of purchase.",
   },
   {
-    question: "Can I become an instructor on Loshi Edu?",
+    question: "Can I become an instructor on grotutor?",
     answer:
       "Absolutely! We welcome experienced professionals to share their knowledge. Visit our 'Become an Instructor' page to submit your application and start creating courses.",
   },
@@ -96,14 +96,14 @@ const FAQ_DATA = [
   {
     question: "How can I contact support?",
     answer:
-      "You can reach our support team via the Contact page, email at support@loshiedu.com, or through our live chat available during business hours.",
+      "You can reach our support team via the Contact page, email at support@grotutor.com, or through our live chat available during business hours.",
   },
 ];
 
 const WHY_CHOOSE_US_DATA = [
   {
     iconName: "GraduationCap",
-    iconColor: "#6366f1",
+    iconColor: "#3b82f6",
     iconBg: "#eef2ff",
     title: "Expert Instructors",
     description:
@@ -207,7 +207,7 @@ const TESTIMONIAL_DATA = [
     role: "Freelance Developer",
     company: "Self-Employed",
     rating: 5,
-    text: "Loshi Edu changed my career trajectory. The React course gave me the confidence to start freelancing, and now I earn more than ever.",
+    text: "grotutor changed my career trajectory. The React course gave me the confidence to start freelancing, and now I earn more than ever.",
     course: "React.js Advanced Patterns",
     avatarUrl:
       "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&h=120&fit=crop&q=80",
@@ -386,7 +386,7 @@ async function seedCms() {
   const aboutSettings = {
     heroTitle: "Transforming Education, Empowering Futures",
     heroDescription:
-      "Loshi Edu is a leading online learning platform dedicated to making quality education accessible to everyone, everywhere.",
+      "grotutor is a leading online learning platform dedicated to making quality education accessible to everyone, everywhere.",
     mission:
       "To democratize education by providing affordable, high-quality online courses that empower learners to achieve their professional and personal goals.",
     vision:

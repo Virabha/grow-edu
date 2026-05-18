@@ -67,7 +67,7 @@ const infoCards = [
     value: BRAND.email,
     sub: "Typically responds in < 6 hours",
     href: `mailto:${BRAND.email}`,
-    color: "#6366f1",
+    color: "#3b82f6",
     hoverColor: "hover:bg-indigo-50 hover:border-indigo-400",
   },
   {
@@ -188,7 +188,7 @@ export default function ContactPage() {
 
   return (
     <main>
-      <section className="relative overflow-hidden border-b-2 border-black bg-[#000052] py-14 md:py-20">
+      <section className="relative overflow-hidden border-b-2 border-black bg-[#000052] py-14 md:py-14">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             initial="hidden"
@@ -282,7 +282,7 @@ export default function ContactPage() {
                   key="success"
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-green-500 bg-green-50 p-10 text-center"
+                  className="flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-green-500 bg-green-50 p-6 text-center"
                 >
                   <motion.div
                     initial={{ scale: 0 }}
@@ -557,7 +557,7 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <p className="text-xs font-bold text-foreground">
-                      Loshi Edu HQ
+                      grotutor HQ
                     </p>
                     <p className="text-[11px] text-muted-foreground">
                       Unit # 1801, Vasavi Sky City, Gachibowli X Road, Hyderabad
@@ -576,7 +576,7 @@ export default function ContactPage() {
 
               <div className="relative flex-1 min-h-[320px]">
                 <iframe
-                  title="Loshi Edu Office — Gachibowli, Hyderabad"
+                  title="grotutor Office — Gachibowli, Hyderabad"
                   src="https://maps.google.com/maps?q=Vasavi+Sky+City+Gachibowli+X+Road+Hyderabad+Telangana&t=&z=15&ie=UTF8&iwloc=&output=embed"
                   className="h-full w-full border-0"
                   allowFullScreen

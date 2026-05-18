@@ -54,9 +54,9 @@ export function CorporateNavbar() {
             : "bg-background/80 backdrop-blur-sm border-b border-border")}>
       <Link href="/corporate/dashboard" className="text-base sm:text-lg md:text-xl font-bold tracking-tight text-foreground flex items-center gap-1 sm:gap-2">
         <Building2 className="h-4 w-4 sm:h-5 sm:w-5 text-primary"/>
-        <span className="hidden sm:inline">LOSHI</span>
-        <span className="text-primary hidden sm:inline">CORPORATE</span>
-        <span className="sm:hidden">LOSHI</span>
+        <span className="hidden sm:inline">grotutor</span>
+        <span className="text-primary hidden sm:inline ml-1">Corporate</span>
+        <span className="sm:hidden">grotutor</span>
       </Link>
 
       <div className="flex items-center gap-2 sm:gap-3">

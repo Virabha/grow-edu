@@ -168,7 +168,7 @@ export default function CourseDetailPage() {
 
   if (!course || error) {
     return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 py-24">
+      <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 py-10">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -231,7 +231,7 @@ export default function CourseDetailPage() {
             <span className="truncate text-white/80 font-medium">{course.title}</span>
           </nav>
 
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-10">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-8">
             <div className="flex-1">
               <div className="mb-3 flex flex-wrap items-center gap-2">
                 {course.category && (
@@ -332,13 +332,13 @@ export default function CourseDetailPage() {
 
       <section className="py-8 md:py-10">
         <div className="container mx-auto grid max-w-7xl gap-8 px-4 sm:px-6 lg:px-8 lg:grid-cols-[1fr_380px]">
-          <div className="space-y-8">
+          <div className="space-y-6">
             {activeTab === "about" && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
-                className="space-y-8"
+                className="space-y-6"
               >
                 {learningOutcomes && learningOutcomes.length > 0 && (
                   <div className="rounded-2xl border border-border/80 bg-white p-6">

@@ -46,11 +46,11 @@ const cards = [
 
 export function RolesCta() {
   return (
-    <section className="py-12 md:py-16 bg-white">
+    <section className="py-12 md:py-10 bg-white">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8 text-center">
           <h2 className="text-xl font-bold text-foreground sm:text-2xl md:text-3xl">
-            Join Loshi Edu — However You Learn Best
+            Join grotutor — However You Learn Best
           </h2>
           <p className="mt-2 text-sm text-muted-foreground">
             Whether you want to teach or learn, we have a place for you

@@ -8,7 +8,7 @@ import Link from "next/link";
 export default function CartPage() {
   return (
     <>
-      <section className="relative flex min-h-[80vh] items-center justify-center overflow-hidden py-20">
+      <section className="relative flex min-h-[80vh] items-center justify-center overflow-hidden py-14">
           {/* Animated floating icon particles */}
           {[BookOpen, GraduationCap, Sparkles, Rocket, Lightbulb, Star].map((Icon, i) => (
             <motion.span
@@ -31,7 +31,7 @@ export default function CartPage() {
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ type: "spring", damping: 14, stiffness: 180 }}
-                className="mx-auto mb-6 flex size-24 items-center justify-center rounded-3xl bg-gradient-to-br from-primary to-[#6366f1] shadow-2xl shadow-primary/30"
+                className="mx-auto mb-6 flex size-24 items-center justify-center rounded-3xl bg-gradient-to-br from-primary to-[#3b82f6] shadow-2xl shadow-primary/30"
               >
                 <ShoppingCart className="size-12 text-white" />
               </motion.div>
@@ -59,7 +59,7 @@ export default function CartPage() {
                 </Button>
                 <Button size="lg" variant="outline" className="w-full gap-2 border-2 hover:border-primary hover:-translate-y-0.5 transition-all" asChild>
                   <Link href="/courses">
-                    <Sparkles className="size-4 text-primary" /> View All Courses on Loshi Edu
+                    <Sparkles className="size-4 text-primary" /> View All Courses on grotutor
                   </Link>
                 </Button>
               </motion.div>
@@ -71,7 +71,7 @@ export default function CartPage() {
                 transition={{ delay: 0.5 }}
                 className="mt-6 text-xs text-muted-foreground"
               >
-                Join <span className="font-semibold text-foreground">50,000+</span> learners already upskilling on Loshi Edu
+                Join <span className="font-semibold text-foreground">50,000+</span> learners already upskilling on grotutor
               </motion.p>
             </div>
           </div>

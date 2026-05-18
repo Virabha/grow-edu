@@ -145,7 +145,7 @@ export class EmailService {
       email: data.email,
     });
     const html = template(templateData);
-    await this.sendEmail(data.email, "Welcome to Loshi Edu!", html);
+    await this.sendEmail(data.email, "Welcome to grotutor!", html);
   }
 
   async sendVerificationEmail(data: VerifyEmailData): Promise<void> {

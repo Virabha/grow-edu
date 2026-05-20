@@ -99,7 +99,7 @@ export class PaymentController {
   @ApiOperation({ summary: 'List all payments (admin)' })
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('PLATFORM_ADMIN' as any)
+  @Roles('PLATFORM_ADMIN')
   @ApiBearerAuth()
   async getAllPayments(
     @Query('search') search?: string,
@@ -124,7 +124,7 @@ export class PaymentController {
   @ApiOperation({ summary: 'Pending QR-payment reviews (admin)' })
   @Get('pending-review')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('PLATFORM_ADMIN' as any)
+  @Roles('PLATFORM_ADMIN')
   @ApiBearerAuth()
   async getPendingReview(
     @Query('limit') limit?: string,
@@ -140,7 +140,7 @@ export class PaymentController {
   @Post(':id/approve')
   @HttpCode(200)
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('PLATFORM_ADMIN' as any)
+  @Roles('PLATFORM_ADMIN')
   @ApiBearerAuth()
   async approve(
     @Param('id') id: string,
@@ -154,7 +154,7 @@ export class PaymentController {
   @Post(':id/reject')
   @HttpCode(200)
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('PLATFORM_ADMIN' as any)
+  @Roles('PLATFORM_ADMIN')
   @ApiBearerAuth()
   async reject(
     @Param('id') id: string,
@@ -171,7 +171,7 @@ export class PaymentController {
   @ApiOperation({ summary: 'Update QR/bank settings (admin)' })
   @Patch('qr-settings')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('PLATFORM_ADMIN' as any)
+  @Roles('PLATFORM_ADMIN')
   @ApiBearerAuth()
   async updateQRSettings(@Body() dto: UpdateQRSettingsDto) {
     return this.paymentService.updateQRSettings(dto);
@@ -180,7 +180,7 @@ export class PaymentController {
   @ApiOperation({ summary: 'Get a specific payment by ID (admin)' })
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('PLATFORM_ADMIN' as any)
+  @Roles('PLATFORM_ADMIN')
   @ApiBearerAuth()
   async getPaymentById(@Param('id') id: string) {
     return this.paymentService.getPaymentById(id);

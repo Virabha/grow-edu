@@ -7,6 +7,9 @@ export enum UserRole {
   PLATFORM_ADMIN = 'PLATFORM_ADMIN',
 }
 
+export type UserRoleName = `${UserRole}`;
+
 export const ROLES_KEY = 'roles';
-export const Roles = (...roles: UserRole[]) => SetMetadata(ROLES_KEY, roles);
+export const Roles = (...roles: (UserRole | UserRoleName)[]) =>
+  SetMetadata(ROLES_KEY, roles);
 

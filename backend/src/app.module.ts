@@ -1,4 +1,6 @@
 import { Module } from "@nestjs/common";
+import { APP_GUARD } from "@nestjs/core";
+import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { InstructorModule } from "./instructor/instructor.module";
@@ -16,7 +18,6 @@ import { PaymentModule } from "./payment/payment.module";
 import { StorageModule } from "./storage/storage.module";
 import { LessonsModule } from "./lessons/lessons.module";
 import { SectionsModule } from "./sections/sections.module";
-import { CartModule } from "./cart/cart.module";
 import { FilesModule } from "./files/files.module";
 import { VideoEncodingModule } from "./video-encoding/video-encoding.module";
 import { CdnModule } from "./cdn/cdn.module";
@@ -34,6 +35,11 @@ import { BooksModule } from "./books/books.module";
     AppConfigModule,
     AppCacheModule,
     DatabaseModule,
+    ThrottlerModule.forRoot([
+      { name: "short", ttl: 1_000, limit: 10 },
+      { name: "default", ttl: 60_000, limit: 120 },
+      { name: "long", ttl: 60_000 * 60, limit: 2_000 },
+    ]),
     AuthModule,
     CoursesModule,
     CategoriesModule,
@@ -46,7 +52,6 @@ import { BooksModule } from "./books/books.module";
     StorageModule,
     LessonsModule,
     SectionsModule,
-    CartModule,
     InstructorModule,
     FilesModule,
     VideoEncodingModule,
@@ -60,6 +65,9 @@ import { BooksModule } from "./books/books.module";
     BooksModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+  ],
 })
 export class AppModule {}

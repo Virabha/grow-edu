@@ -39,6 +39,7 @@ export const paymentStatusEnum = pgEnum("payment_status", [
 export const paymentGatewayEnum = pgEnum("payment_gateway", [
   "RAZORPAY",
   "MANUAL_QR",
+  "PHONEPE",
   "FREE",
 ]);
 export const courseLevelEnum = pgEnum("course_level", [

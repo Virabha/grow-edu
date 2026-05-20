@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, ConflictException, BadRequestException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, BadRequestException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Inject } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
@@ -20,8 +20,24 @@ export interface UserPayload {
   lastName?: string | null;
 }
 
+const userPublicColumns = {
+  userId: users.userId,
+  email: users.email,
+  role: users.role,
+  firstName: users.firstName,
+  lastName: users.lastName,
+  emailVerified: users.emailVerified,
+};
+
+// Pre-computed bcrypt hash used to keep forgot-password response time
+// constant whether the email exists or not (prevents enumeration).
+const DUMMY_PASSWORD_HASH =
+  '$2b$10$CwTycUXWue0Thq9StjUM0uJ8L3pPSWBLm0rZIIYTjGsNS6.zb3oUe';
+
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private jwtService: JwtService,
     @Inject(DATABASE_CONNECTION)
@@ -33,7 +49,14 @@ export class AuthService {
 
   async validateUser(email: string, password: string): Promise<UserPayload | null> {
     const [user] = await this.db
-      .select()
+      .select({
+        userId: users.userId,
+        email: users.email,
+        role: users.role,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        password: users.password,
+      })
       .from(users)
       .where(eq(users.email, email))
       .limit(1);
@@ -57,13 +80,13 @@ export class AuthService {
   }
 
   async register(dto: RegisterDto): Promise<{ message: string; email: string }> {
-    const existingUser = await this.db
-      .select()
+    const [existingUser] = await this.db
+      .select({ userId: users.userId })
       .from(users)
       .where(eq(users.email, dto.email))
       .limit(1);
 
-    if (existingUser.length > 0) {
+    if (existingUser) {
       throw new ConflictException('User with this email already exists');
     }
 
@@ -79,9 +102,14 @@ export class AuthService {
         role: 'LEARNER',
         emailVerified: false,
       })
-      .returning({ userId: users.userId, email: users.email, role: users.role, firstName: users.firstName, lastName: users.lastName });
+      .returning({
+        userId: users.userId,
+        email: users.email,
+        role: users.role,
+        firstName: users.firstName,
+        lastName: users.lastName,
+      });
 
-    // Send verification email only (welcome email will be sent after verification)
     try {
       const verificationToken = await this.tokenService.generateToken(
         newUser.userId,
@@ -94,8 +122,12 @@ export class AuthService {
         email: newUser.email,
         verificationUrl,
       });
-    } catch {
-      // Even if email fails, allow registration to complete
+    } catch (err) {
+      this.logger.warn(
+        `Verification email failed for ${newUser.email}: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
     }
 
     return {
@@ -120,13 +152,19 @@ export class AuthService {
 
   async forgotPassword(email: string): Promise<{ message: string }> {
     const [user] = await this.db
-      .select()
+      .select(userPublicColumns)
       .from(users)
       .where(eq(users.email, email))
       .limit(1);
 
+    const genericResponse = {
+      message:
+        'If an account exists with this email, a password reset link has been sent.',
+    };
+
     if (!user) {
-      return { message: 'If an account exists with this email, a password reset link has been sent.' };
+      await bcrypt.compare('dummy-payload', DUMMY_PASSWORD_HASH);
+      return genericResponse;
     }
 
     try {
@@ -142,9 +180,15 @@ export class AuthService {
         email: user.email,
         resetUrl,
       });
-    } catch {}
+    } catch (err) {
+      this.logger.warn(
+        `Forgot-password email failed for ${email}: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+    }
 
-    return { message: 'If an account exists with this email, a password reset link has been sent.' };
+    return genericResponse;
   }
 
   async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
@@ -155,7 +199,7 @@ export class AuthService {
     }
 
     const [user] = await this.db
-      .select()
+      .select(userPublicColumns)
       .from(users)
       .where(eq(users.userId, userId))
       .limit(1);
@@ -178,7 +222,13 @@ export class AuthService {
         firstName: user.firstName,
         email: user.email,
       });
-    } catch {}
+    } catch (err) {
+      this.logger.warn(
+        `Reset-password confirmation email failed for ${user.email}: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+    }
 
     return { message: 'Password has been reset successfully' };
   }
@@ -191,7 +241,7 @@ export class AuthService {
     }
 
     const [user] = await this.db
-      .select()
+      .select(userPublicColumns)
       .from(users)
       .where(eq(users.userId, userId))
       .limit(1);
@@ -211,15 +261,18 @@ export class AuthService {
 
     await this.tokenService.invalidateToken(token, 'EMAIL_VERIFICATION');
 
-    // Send welcome email after successful verification
     try {
       await this.emailService.sendWelcomeEmail({
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
       });
-    } catch {
-      // Don't fail the verification if email sending fails
+    } catch (err) {
+      this.logger.warn(
+        `Welcome email failed for ${user.email}: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
     }
 
     return { message: 'Email has been verified successfully' };
@@ -233,4 +286,3 @@ export class AuthService {
     return bcrypt.compare(password, hash);
   }
 }
-

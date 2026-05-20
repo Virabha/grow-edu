@@ -91,6 +91,29 @@ export class AppConfigService {
     return this.configService.get("RAZORPAY_KEY_SECRET", { infer: true });
   }
 
+  get phonepeMerchantId(): string | undefined {
+    return this.configService.get("PHONEPE_MERCHANT_ID", { infer: true });
+  }
+
+  get phonepeSaltKey(): string | undefined {
+    return this.configService.get("PHONEPE_SALT_KEY", { infer: true });
+  }
+
+  get phonepeSaltIndex(): string | undefined {
+    return this.configService.get("PHONEPE_SALT_INDEX", { infer: true });
+  }
+
+  get phonepeBaseUrl(): string | undefined {
+    return this.configService.get("PHONEPE_BASE_URL", { infer: true });
+  }
+
+  get phonepeRedirectUrl(): string {
+    return (
+      this.configService.get("PHONEPE_REDIRECT_URL", { infer: true }) ??
+      `${this.frontendUrl}/payment/success`
+    );
+  }
+
   get emailProvider(): "ses" | "sendgrid" {
     return this.configService.get("EMAIL_PROVIDER", { infer: true });
   }

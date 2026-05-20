@@ -22,7 +22,8 @@
     "seed:images": "ts-node -r tsconfig-paths/register scripts/seed-images.ts",
     "seed:cms": "ts-node -r tsconfig-paths/register scripts/seed-cms.ts",
     "seed:categories": "ts-node -r tsconfig-paths/register scripts/seed-categories.ts",
-    "seed:all": "ts-node -r tsconfig-paths/register scripts/seed-images.ts && ts-node -r tsconfig-paths/register scripts/seed-cms.ts"
+    "seed:all": "ts-node -r tsconfig-paths/register scripts/seed-images.ts && ts-node -r tsconfig-paths/register scripts/seed-cms.ts",
+    "check:bunny": "ts-node -r tsconfig-paths/register scripts/check-bunny.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.3.0",

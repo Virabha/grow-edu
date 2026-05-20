@@ -159,12 +159,20 @@ export function CourseBuilder({ courseId }: CourseBuilderProps) {
         setIsAddingModule(true);
     };
     const handleAddLesson = async () => {
-        if (!isAddingLessonFor || !lessonTitle.trim())
+        if (!isAddingLessonFor) return;
+        if (!lessonTitle.trim()) {
+            setLessonTitleError("Lesson title is required.");
             return;
+        }
+        if (lessonTitle.trim().length < 2) {
+            setLessonTitleError("Lesson title must be at least 2 characters.");
+            return;
+        }
+        setLessonTitleError(null);
         try {
             const newLesson = await createLessonMutation.mutateAsync({
                 sectionId: isAddingLessonFor,
-                title: lessonTitle,
+                title: lessonTitle.trim(),
                 type: lessonType,
                 order: (modules?.find((m) => m.sectionId === isAddingLessonFor)?.lessons
                     ?.length || 0) + 1,
@@ -393,6 +401,7 @@ export function CourseBuilder({ courseId }: CourseBuilderProps) {
             setIsAddingLessonFor(null);
             setLessonTitle("");
             setLessonType("VIDEO");
+            setLessonTitleError(null);
           }
         }}
       >
@@ -409,14 +418,22 @@ export function CourseBuilder({ courseId }: CourseBuilderProps) {
           <SheetBody className="scrollbar-hide space-y-3 py-3">
             <div className="space-y-1.5">
               <Label className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                Lesson title
+                Lesson title <span className="text-destructive">*</span>
               </Label>
               <Input
                 value={lessonTitle}
-                onChange={(e) => setLessonTitle(e.target.value)}
+                onChange={(e) => {
+                  setLessonTitle(e.target.value);
+                  if (lessonTitleError) setLessonTitleError(null);
+                }}
                 placeholder="Lesson title"
                 autoFocus
+                aria-invalid={!!lessonTitleError}
+                className={lessonTitleError ? "border-destructive focus-visible:ring-destructive/30" : undefined}
               />
+              {lessonTitleError && (
+                <p className="text-xs text-destructive">{lessonTitleError}</p>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">

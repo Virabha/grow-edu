@@ -1,8 +1,8 @@
 "use client";
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { CheckCircle2, Loader2, ShoppingCart } from "lucide-react";
+import { ArrowRight, Loader2, ShoppingCart } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,10 +11,8 @@ import { PageLayout } from "@/components/layout/page-layout";
 
 import { useCourseById } from "@/lib/hooks/use-courses";
 import {
-  useCreatePayment,
   useFreeEnroll,
-  useMyPayment,
-  type CreateManualQRResponse,
+  useInitiatePhonePe,
 } from "@/lib/hooks/use-payments";
 import { useDebounce } from "@/hooks/use-debounce";
 import {
@@ -23,8 +21,6 @@ import {
 } from "@/lib/hooks/use-coupons";
 import { getApiErrorMessage } from "@/lib/utils";
 
-import { PaymentPanel } from "@/components/checkout/payment-panel";
-import { ProofPanel } from "@/components/checkout/proof-panel";
 import { OrderSummary } from "@/components/checkout/order-summary";
 
 function CheckoutContent() {
@@ -37,7 +33,7 @@ function CheckoutContent() {
     itemTypeParam === "SECTION" && sectionId ? "SECTION" : "COURSE";
 
   const { data: course, isLoading } = useCourseById(courseId);
-  const createPayment = useCreatePayment();
+  const initiate = useInitiatePhonePe();
   const freeEnroll = useFreeEnroll();
   const validateCoupon = useValidateCoupon();
 
@@ -54,7 +50,6 @@ function CheckoutContent() {
     return parseFloat(course.price);
   }, [course, itemType, targetSection?.sectionPrice]);
 
-  // ── Coupon state ─────────────────────────────────────────────────────
   const [couponInput, setCouponInput] = useState("");
   const debouncedCoupon = useDebounce(couponInput.trim(), 400);
   const [couponPreview, setCouponPreview] =
@@ -62,66 +57,12 @@ function CheckoutContent() {
   const [appliedCoupon, setAppliedCoupon] =
     useState<CouponValidationResult | null>(null);
 
-  // ── Payment state ────────────────────────────────────────────────────
-  const [pending, setPending] = useState<CreateManualQRResponse | null>(null);
-  const [done, setDone] = useState(false);
-  const [paymentError, setPaymentError] = useState<string | null>(null);
-  const autoAttempted = useRef(false);
-
-  const { data: paymentStatus } = useMyPayment(pending?.paymentId ?? null);
-
-  // Reset everything when the target item changes.
   useEffect(() => {
     setAppliedCoupon(null);
     setCouponPreview(null);
     setCouponInput("");
-    setPending(null);
-    setPaymentError(null);
-    autoAttempted.current = false;
   }, [courseId, sectionId, itemType]);
 
-  useEffect(() => {
-    if (!course || autoAttempted.current) return;
-    autoAttempted.current = true;
-
-    if (baseAmount === 0) {
-      freeEnroll
-        .mutateAsync({
-          courseId: course.courseId,
-          sectionId:
-            itemType === "SECTION" ? sectionId || undefined : undefined,
-          itemType,
-        })
-        .then(() => {
-          toast.success("Enrolled successfully!");
-          router.push("/my-courses");
-        })
-        .catch((err) => {
-          toast.error(getApiErrorMessage(err, "Failed to enrol."));
-        });
-      return;
-    }
-
-    createPayment
-      .mutateAsync({
-        itemType,
-        courseId: course.courseId,
-        sectionId: itemType === "SECTION" ? sectionId || undefined : undefined,
-      })
-      .then((res) => {
-        setPending(res);
-      })
-      .catch((err) => {
-        const msg = getApiErrorMessage(err, "Couldn't start the payment.");
-        setPaymentError(msg);
-        toast.error(msg);
-      });
-    // freeEnroll/createPayment are mutation objects (new reference every render);
-    // re-running on them would loop on failure. The ref guard makes this safe.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [course, baseAmount, itemType, sectionId, router]);
-
-  // Live-validate coupon as user types.
   useEffect(() => {
     if (!course || !debouncedCoupon) {
       setCouponPreview(null);
@@ -174,7 +115,21 @@ function CheckoutContent() {
     }
   };
 
-  // ── Loading / not-found / enrolling / done states ────────────────────
+  const payNow = async () => {
+    if (!course) return;
+    try {
+      const { paymentUrl } = await initiate.mutateAsync({
+        itemType,
+        courseId: course.courseId,
+        sectionId: itemType === "SECTION" ? sectionId || undefined : undefined,
+        couponCode: effectiveCoupon?.couponCode,
+      });
+      window.location.href = paymentUrl;
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Couldn't start the payment."));
+    }
+  };
+
   if (isLoading) {
     return (
       <PageLayout header="Checkout" description="Loading your order…">
@@ -195,68 +150,10 @@ function CheckoutContent() {
     );
   }
 
-  if (baseAmount === 0 && freeEnroll.isPending) {
-    return (
-      <PageLayout header="Enrolling…" description="Setting up your access.">
-        <div className="flex flex-col items-center gap-3 py-16">
-          <Loader2 className="size-8 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground">One moment…</p>
-        </div>
-      </PageLayout>
-    );
-  }
-
-  if (done) {
-    return (
-      <PageLayout
-        header="Payment submitted"
-        description="The admin is verifying your transfer."
-      >
-        <div className="mx-auto max-w-md py-8">
-          <div className="rounded-2xl border border-border bg-card p-7 text-center">
-            <CheckCircle2 className="mx-auto size-12 text-primary" />
-            <h2 className="font-display mt-4 text-2xl font-medium leading-tight tracking-tight text-foreground">
-              You&apos;re in the queue.
-            </h2>
-            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-              We&apos;ve received your transaction ID and proof. You&apos;ll
-              get an email the moment it&apos;s verified.
-            </p>
-            <div className="mt-7 flex flex-wrap justify-center gap-2">
-              <Button
-                variant="outline"
-                onClick={() => router.push("/courses")}
-                className="rounded-full"
-              >
-                Browse more
-              </Button>
-              <Button
-                onClick={() => router.push("/my-courses")}
-                className="rounded-full"
-              >
-                My courses
-              </Button>
-            </div>
-          </div>
-        </div>
-      </PageLayout>
-    );
-  }
-
-  // ── Main render ──────────────────────────────────────────────────────
-  const isPaymentStarted = !!pending && finalAmount > 0;
-  const isAlreadySubmitted =
-    pending?.status === "PROOF_UPLOADED" ||
-    paymentStatus?.status === "PROOF_UPLOADED";
-
   return (
     <PageLayout
-      header={isPaymentStarted ? "Pay & verify" : "Checkout"}
-      description={
-        isPaymentStarted
-          ? "Pay via QR or bank transfer, then submit your transaction ID & screenshot."
-          : "Review your order — your payment details will load in a moment."
-      }
+      header="Checkout"
+      description="Review your order and continue to payment."
     >
       <div className="mx-auto grid w-full max-w-6xl gap-4 lg:grid-cols-[1fr_340px] lg:gap-5">
         <div className="min-w-0 space-y-4 lg:space-y-5">
@@ -281,53 +178,48 @@ function CheckoutContent() {
             )}
           </div>
 
-          {isPaymentStarted && pending ? (
-            <>
-              <PaymentPanel
-                qr={pending.qrSettings}
-                amount={pending.amount}
-                currency={pending.currency}
-              />
-              <ProofPanel
-                pending={pending}
-                isAlreadySubmitted={!!isAlreadySubmitted}
-                onSubmitted={() => setDone(true)}
-              />
-            </>
-          ) : paymentError ? (
-            <div className="rounded-2xl border border-destructive/30 bg-destructive/5 px-6 py-6 text-center">
-              <p className="font-display text-lg font-medium text-destructive">
-                Payment couldn&apos;t start.
-              </p>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                {paymentError}
-              </p>
-              <div className="mt-5 flex flex-wrap justify-center gap-2">
-                <Button
-                  variant="outline"
-                  className="rounded-full"
-                  onClick={() => {
-                    autoAttempted.current = false;
-                    setPaymentError(null);
-                  }}
-                >
-                  Try again
-                </Button>
-                <Button
-                  variant="ghost"
-                  className="rounded-full"
-                  onClick={() => router.push("/my-courses")}
-                >
-                  Go to my courses
-                </Button>
+          {finalAmount > 0 && (
+            <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+              <div className="flex items-start gap-3">
+                <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+                  <ArrowRight className="size-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    Secure payment
+                  </p>
+                  <h3 className="font-display mt-1 text-lg font-medium leading-snug text-foreground sm:text-xl">
+                    Pay with PhonePe.
+                  </h3>
+                  <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+                    You&apos;ll be redirected to PhonePe to complete the
+                    payment. UPI, cards, and net banking are all supported.
+                    Once payment is confirmed you&apos;re enrolled instantly.
+                  </p>
+                </div>
               </div>
+
+              <Button
+                type="button"
+                size="lg"
+                disabled={initiate.isPending}
+                onClick={payNow}
+                className="mt-5 h-11 w-full gap-2 rounded-full bg-foreground font-medium text-background hover:bg-foreground/90"
+              >
+                {initiate.isPending ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" />
+                    Redirecting to PhonePe…
+                  </>
+                ) : (
+                  <>
+                    Continue to PhonePe
+                    <ArrowRight className="size-4" />
+                  </>
+                )}
+              </Button>
             </div>
-          ) : baseAmount > 0 ? (
-            <div className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-muted/30 px-6 py-10 text-sm text-muted-foreground">
-              <Loader2 className="size-4 animate-spin" />
-              Preparing your payment details…
-            </div>
-          ) : null}
+          )}
         </div>
 
         <aside className="lg:sticky lg:top-4 lg:h-fit">

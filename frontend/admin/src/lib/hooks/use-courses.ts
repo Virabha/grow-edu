@@ -76,6 +76,11 @@ export const useCreateCourse = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({
                 queryKey: queryKeys.courses.all(),
+                refetchType: "all",
+            });
+            queryClient.invalidateQueries({
+                queryKey: queryKeys.instructor.all(),
+                refetchType: "all",
             });
         },
     });
@@ -96,6 +101,11 @@ export const useUpdateCourse = () => {
             queryClient.setQueryData(queryKeys.courses.detail(variables.id), data);
             queryClient.invalidateQueries({
                 queryKey: queryKeys.courses.all(),
+                refetchType: "all",
+            });
+            queryClient.invalidateQueries({
+                queryKey: queryKeys.instructor.all(),
+                refetchType: "all",
             });
         },
     });
@@ -111,12 +121,15 @@ export const useDeleteCourse = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({
                 queryKey: queryKeys.courses.all(),
+                refetchType: "all",
             });
             queryClient.invalidateQueries({
                 queryKey: queryKeys.instructor.all(),
+                refetchType: "all",
             });
             queryClient.invalidateQueries({
                 queryKey: queryKeys.dashboard.all(),
+                refetchType: "all",
             });
         },
     });
@@ -132,6 +145,14 @@ export const useSubmitCourseForReview = () => {
         mutationFn: fetchSubmitCourseForReviewMutationFunction,
         onSuccess: (data, id) => {
             queryClient.setQueryData(queryKeys.courses.detail(id), data);
+            queryClient.invalidateQueries({
+                queryKey: queryKeys.courses.all(),
+                refetchType: "all",
+            });
+            queryClient.invalidateQueries({
+                queryKey: queryKeys.instructor.all(),
+                refetchType: "all",
+            });
         },
     });
 };

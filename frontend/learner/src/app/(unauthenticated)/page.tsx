@@ -1,32 +1,42 @@
 import type { Metadata } from "next";
 import { HeroSection } from "@/components/landing/hero-section";
-import { CategoriesSection } from "@/components/landing/categories-section";
+import { StatsStrip } from "@/components/landing/stats-strip";
 import { BannerCarousel } from "@/components/landing/banner-carousel";
+import { CategoriesSection } from "@/components/landing/categories-section";
 import { CoursesCarousel } from "@/components/landing/courses-carousel";
-import { TrustSection } from "@/components/landing/trust-section";
-import { WorkshopCta } from "@/components/landing/workshop-cta";
+import { WhyGrotutor } from "@/components/landing/why-grotutor";
 import { InstructorsSection } from "@/components/landing/instructors-section";
+import { TestimonialsSection } from "@/components/landing/testimonials-section";
+import { WorkshopCta } from "@/components/landing/workshop-cta";
 import { FaqSection } from "@/components/landing/faq-section";
 import { SubscribeSection } from "@/components/landing/subscribe-section";
-import { RolesCta } from "@/components/landing/roles-cta";
 
 export const metadata: Metadata = {
-  title: "grotutor — Transform Your Learning Journey",
+  title: "grotutor — Build the career you've always wanted",
   description:
-    "grotutor offers 500+ expert-led online courses. Competitive Exams, Professional Skills, Academics & more.",
+    "grotutor is India's outcomes-first online learning platform. 500+ expert-led courses across academics, executive programs, and languages. Learn from mentors who've built real careers.",
+  openGraph: {
+    title: "grotutor — Build the career you've always wanted",
+    description:
+      "500+ expert-led courses across academics, executive programs, and languages. Outcomes-first online learning.",
+    url: "https://grotutor.com",
+    siteName: "grotutor",
+    type: "website",
+  },
 };
 
 export default function HomePage() {
   return (
     <main className="flex flex-col">
-      <BannerCarousel />
       <HeroSection />
+      <StatsStrip />
+      <BannerCarousel />
       <CategoriesSection />
       <CoursesCarousel />
-      <TrustSection />
+      <WhyGrotutor />
       <InstructorsSection />
+      <TestimonialsSection />
       <WorkshopCta />
-      <RolesCta />
       <FaqSection />
       <SubscribeSection />
     </main>

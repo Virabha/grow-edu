@@ -12,7 +12,7 @@ import type { Service } from "@/lib/api/services/cms";
 
 const VIOLET_HEADER_CLASS =
   "bg-gradient-to-r from-[#8A2C91] via-[#7C218B] to-[#5E1676]";
-const BLUE_HEADER_CLASS = "bg-[#000052]";
+const BLUE_HEADER_CLASS = "bg-[#1c1917]";
 const getHeaderBgClass = (index: number) =>
   index % 2 === 1 ? VIOLET_HEADER_CLASS : BLUE_HEADER_CLASS;
 

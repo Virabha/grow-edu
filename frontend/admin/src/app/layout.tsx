@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Manrope, Inter, Poppins } from "next/font/google";
+import { Manrope, Inter, Poppins, Fraunces } from "next/font/google";
 import "../../globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Providers } from "@/components/providers";
@@ -10,6 +10,12 @@ const poppins = Poppins({
   weight: ["300", "400", "500", "600", "700"],
   subsets: ["latin"],
   variable: "--font-poppins",
+});
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  variable: "--font-fraunces",
+  display: "swap",
+  axes: ["SOFT", "WONK", "opsz"],
 });
 const siteUrl = siteConfig.url;
 const siteName = siteConfig.name;
@@ -88,8 +94,8 @@ export const metadata: Metadata = {
 };
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+    { media: "(prefers-color-scheme: light)", color: "#faf7ee" },
+    { media: "(prefers-color-scheme: dark)", color: "#1c1917" },
   ],
   width: "device-width",
   initialScale: 1,
@@ -157,11 +163,11 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${manrope.variable} ${inter.variable} ${poppins.variable} font-sans antialiased`}
+        className={`${manrope.variable} ${inter.variable} ${poppins.variable} ${fraunces.variable} font-sans antialiased`}
       >
         <ThemeProvider
           attribute="class"
-          defaultTheme="dark"
+          defaultTheme="light"
           enableSystem={false}
           disableTransitionOnChange
         >

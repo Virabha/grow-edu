@@ -49,7 +49,7 @@ export default function ForgotPasswordPage() {
 
   return (
     <div className="flex min-h-screen">
-      <div className="relative hidden w-1/2 overflow-hidden bg-linear-to-br from-primary via-[#3b82f6] to-[#8b5cf6] lg:flex lg:flex-col lg:justify-center">
+      <div className="relative hidden w-1/2 overflow-hidden bg-linear-to-br from-primary via-[#a07028] to-[#8b5cf6] lg:flex lg:flex-col lg:justify-center">
         <motion.div
           className="absolute -right-20 -top-20 h-80 w-80 rounded-full bg-white/5 blur-3xl"
           animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}

@@ -41,7 +41,7 @@ const cultureValues = [
     icon: GraduationCap,
     title: "Continuous Learning",
     desc: "Free access to all grotutor courses, dedicated learning hours, conference budgets, and mentorship programs.",
-    color: "#3b82f6",
+    color: "#a07028",
   },
 ];
 
@@ -100,7 +100,7 @@ const perks = [
 export default function CareersPage() {
   return (
     <main>
-        <section className="border-b border-border bg-gradient-to-br from-primary/5 via-background to-[#3b82f6]/5 py-12 md:py-10">
+        <section className="border-b border-border bg-gradient-to-br from-primary/5 via-background to-[#a07028]/5 py-12 md:py-10">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="mx-auto max-w-2xl text-center">
               <p className="text-xs font-semibold uppercase tracking-widest text-primary">
@@ -238,7 +238,7 @@ export default function CareersPage() {
 
         <section className="py-10 md:py-14">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="rounded-2xl bg-gradient-to-br from-primary to-[#3b82f6] p-8 text-center text-white">
+            <div className="rounded-2xl bg-gradient-to-br from-primary to-[#a07028] p-8 text-center text-white">
               <h2 className="text-2xl font-black sm:text-3xl">
                 Don&apos;t See Your Role?
               </h2>

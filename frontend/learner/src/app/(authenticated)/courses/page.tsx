@@ -105,7 +105,7 @@ function CoursesContent() {
   return (
     <>
       <section className="relative">
-        <div className="mx-auto bg-[#000052] py-14">
+        <div className="mx-auto bg-[#1c1917] py-14">
           <motion.div
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}

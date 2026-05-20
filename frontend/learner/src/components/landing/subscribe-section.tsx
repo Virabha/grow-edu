@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, CheckCircle2 } from "lucide-react";
+import Image from "next/image";
+import { ArrowUpRight, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BRAND } from "@/lib/constants";
 import { useSubscribe } from "@/lib/hooks/use-contact";
@@ -26,101 +27,103 @@ export function SubscribeSection() {
         onError: () => {
           toast.error("Failed to subscribe. Please try again.");
         },
-      }
+      },
     );
   };
 
   return (
-    <section className="py-10 md:py-14">
+    <section className="bg-background py-20 md:py-24">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="relative overflow-hidden rounded-2xl bg-[#000052] px-6 py-12 sm:px-10 sm:py-14 md:px-16 md:py-10">
-          {/* Decorative background circles */}
-          <div className="pointer-events-none absolute -top-20 -right-20 size-64 rounded-full bg-white/5" />
-          <div className="pointer-events-none absolute -bottom-16 -left-16 size-48 rounded-full bg-white/5" />
+        <div className="relative overflow-hidden rounded-3xl border border-border bg-foreground text-background">
+          <div className="absolute inset-0 opacity-30">
+            <Image
+              src="/images/landing/books.jpg"
+              alt=""
+              fill
+              className="object-cover"
+              sizes="100vw"
+            />
+            <div className="absolute inset-0 bg-gradient-to-tr from-foreground via-foreground/85 to-foreground/40" />
+          </div>
+          <div className="pointer-events-none absolute -top-24 right-1/4 size-[300px] rounded-full bg-primary/25 blur-3xl" />
 
-          <div className="relative mx-auto max-w-2xl text-center">
-            <motion.p
-              initial={{ opacity: 0, y: 10 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{}}
-              transition={{ duration: 0.4 }}
-              className="text-xs font-semibold uppercase tracking-widest text-white/80"
-            >
-              Stay Updated
-            </motion.p>
+          <div className="relative grid items-center gap-8 px-7 py-14 sm:px-12 md:grid-cols-2 md:py-16">
+            <div>
+              <p className="font-display text-xs italic tracking-wide text-background/70">
+                Stay in the loop
+              </p>
+              <h2 className="font-display mt-3 text-3xl font-medium leading-tight sm:text-4xl md:text-5xl">
+                A weekly note on learning,{" "}
+                <em className="text-primary">worth opening.</em>
+              </h2>
+              <p className="mt-4 max-w-md text-base leading-relaxed text-background/75">
+                Join 20,000+ readers who get curated courses, career stories
+                and exclusive early-access discounts from {BRAND.name}.
+              </p>
+            </div>
 
-            <motion.h2
-              initial={{ opacity: 0, y: 10 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{}}
-              transition={{ duration: 0.4, delay: 0.1 }}
-              className="mt-2 text-2xl font-bold text-white sm:text-3xl md:text-4xl"
-            >
-              Get Free Learning Tips & Offers
-            </motion.h2>
-
-            <motion.p
-              initial={{ opacity: 0, y: 10 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{}}
-              transition={{ duration: 0.4, delay: 0.2 }}
-              className="mt-3 text-sm leading-relaxed text-white/80 sm:text-base"
-            >
-              Join 20,000+ learners who receive our weekly newsletter with curated courses, career tips, and exclusive discounts from {BRAND.name}.
-            </motion.p>
-
-            <AnimatePresence mode="wait">
-              {done ? (
-                <motion.div
-                  key="success"
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="mt-8 flex flex-col items-center gap-2"
-                >
-                  <CheckCircle2 className="size-10 text-green-300" />
-                  <p className="font-semibold text-white">You&apos;re in!</p>
-                  <p className="text-sm text-white/70">Check your inbox for a welcome coupon.</p>
-                </motion.div>
-              ) : (
-                <motion.form
-                  key="form"
-                  initial={{ opacity: 0, y: 10 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{}}
-                  transition={{ duration: 0.4, delay: 0.3 }}
-                  onSubmit={handleSubmit}
-                  className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center"
-                >
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter your email address"
-                    id="subscribe-email"
-                    className="flex-1 max-w-md rounded-lg bg-white px-4 py-3 text-sm text-gray-900 outline-none transition-all placeholder:text-gray-400 focus:ring-2 focus:ring-white/40 shadow-sm"
-                  />
-                  <Button
-                    type="submit"
-                    disabled={subscribe.isPending}
-                    className="gap-2 shrink-0 rounded-lg bg-white px-6 h-11 text-sm font-semibold text-primary shadow-lg transition-all hover:bg-white/90 hover:shadow-xl"
+            <div>
+              <AnimatePresence mode="wait">
+                {done ? (
+                  <motion.div
+                    key="success"
+                    initial={{ opacity: 0, scale: 0.96 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="flex flex-col items-start gap-2 rounded-2xl border border-emerald-300/30 bg-emerald-300/10 p-6"
                   >
-                    {subscribe.isPending ? "Subscribing..." : "Subscribe"}
-                    {!subscribe.isPending && <ArrowRight className="size-4" />}
-                  </Button>
-                </motion.form>
-              )}
-            </AnimatePresence>
-
-            <motion.p
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{}}
-              transition={{ duration: 0.4, delay: 0.4 }}
-              className="mt-3 text-xs text-white/50"
-            >
-              No spam, ever. Unsubscribe at any time.
-            </motion.p>
+                    <CheckCircle2 className="size-8 text-emerald-300" />
+                    <p className="font-display text-xl font-medium">
+                      You&apos;re in.
+                    </p>
+                    <p className="text-sm text-background/70">
+                      Check your inbox for a welcome coupon.
+                    </p>
+                  </motion.div>
+                ) : (
+                  <motion.form
+                    key="form"
+                    initial={{ opacity: 0, y: 10 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.4, delay: 0.15 }}
+                    onSubmit={handleSubmit}
+                    className="flex flex-col gap-3"
+                  >
+                    <label
+                      htmlFor="subscribe-email"
+                      className="text-[11px] font-semibold uppercase tracking-[0.18em] text-background/55"
+                    >
+                      Your email
+                    </label>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <input
+                        type="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="you@somewhere.com"
+                        id="subscribe-email"
+                        className="flex-1 rounded-full border border-white/15 bg-white/10 px-5 py-3 text-sm text-background outline-none transition-all placeholder:text-background/45 focus:border-primary/60 focus:bg-white/15"
+                      />
+                      <Button
+                        type="submit"
+                        size="lg"
+                        disabled={subscribe.isPending}
+                        className="h-12 gap-2 rounded-full bg-primary px-6 font-medium text-primary-foreground transition-all hover:bg-primary/90"
+                      >
+                        {subscribe.isPending ? "Subscribing..." : "Subscribe"}
+                        {!subscribe.isPending && (
+                          <ArrowUpRight className="size-4" />
+                        )}
+                      </Button>
+                    </div>
+                    <p className="mt-1 text-[11px] text-background/45">
+                      No spam, ever. Unsubscribe at any time.
+                    </p>
+                  </motion.form>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </div>
       </div>

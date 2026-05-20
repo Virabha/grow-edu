@@ -16,7 +16,7 @@ function getInitials(name: string) {
     .toUpperCase();
 }
 
-const COLORS = ["#3b82f6", "#f97316", "#10b981", "#ec4899", "#0ea5e9", "#8b5cf6"];
+const COLORS = ["#a07028", "#f97316", "#10b981", "#ec4899", "#0ea5e9", "#8b5cf6"];
 
 const socialIcons = [
   { icon: Facebook, color: "#1877f2" },
@@ -30,7 +30,7 @@ export default function InstructorsPage() {
 
   return (
     <main>
-      <section className="relative overflow-hidden border-b border-border bg-[#000052] py-14 md:py-14">
+      <section className="relative overflow-hidden border-b border-border bg-[#1c1917] py-14 md:py-14">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -163,7 +163,7 @@ export default function InstructorsPage() {
 
       <section className="py-10 md:py-14">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="rounded-2xl bg-gradient-to-br from-[#000052] to-primary p-8 text-center text-white">
+          <div className="rounded-2xl bg-gradient-to-br from-[#1c1917] to-primary p-8 text-center text-white">
             <h2 className="text-2xl font-black sm:text-3xl">
               Want to Teach on grotutor?
             </h2>

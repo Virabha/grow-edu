@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Fraunces } from "next/font/google";
 
 import "../../globals.css";
 import { Toaster } from "sonner";
@@ -9,6 +9,13 @@ const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
   display: "swap",
+});
+
+const fraunces = Fraunces({
+  variable: "--font-fraunces",
+  subsets: ["latin"],
+  display: "swap",
+  axes: ["SOFT", "WONK", "opsz"],
 });
 
 export const metadata: Metadata = {
@@ -70,8 +77,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+    { media: "(prefers-color-scheme: light)", color: "#faf7ee" },
+    { media: "(prefers-color-scheme: dark)", color: "#1c1917" },
   ],
   width: "device-width",
   initialScale: 1,
@@ -124,7 +131,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${inter.variable} font-sans antialiased overflow-x-hidden`}
+        className={`${inter.variable} ${fraunces.variable} font-sans antialiased overflow-x-hidden`}
       >
         <QueryProvider>
           {children}

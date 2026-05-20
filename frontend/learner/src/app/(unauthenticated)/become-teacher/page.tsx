@@ -32,7 +32,7 @@ const fadeUp = {
 };
 
 const benefits = [
-  { icon: Users, title: "Reach 50,000+ Students", desc: "Get instant access to our growing community of motivated learners across India looking to upskill.", color: "#3b82f6" },
+  { icon: Users, title: "Reach 50,000+ Students", desc: "Get instant access to our growing community of motivated learners across India looking to upskill.", color: "#a07028" },
   { icon: Clock, title: "Flexible Schedule", desc: "Teach on your own time. Create recorded courses or host live sessions — you decide when and how.", color: "#f97316" },
   { icon: IndianRupee, title: "Earn Competitive Revenue", desc: "Earn up to 70% revenue share on every enrollment. Get paid monthly with transparent earnings dashboards.", color: "#10b981" },
   { icon: Wrench, title: "World-Class Tools", desc: "Access our studio-grade recording tools, analytics dashboard, student management, and marketing support.", color: "#ec4899" },
@@ -172,7 +172,7 @@ export default function BecomeTeacherPage() {
 
   return (
     <main>
-        <section className="border-b border-border bg-linear-to-br from-primary/5 via-background to-[#3b82f6]/5 py-12 md:py-10">
+        <section className="border-b border-border bg-linear-to-br from-primary/5 via-background to-[#a07028]/5 py-12 md:py-10">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <motion.div initial="hidden" animate="show" variants={fadeUp} className="mx-auto max-w-2xl text-center">
               <p className="text-xs font-semibold uppercase tracking-widest text-primary">Join Our Team</p>

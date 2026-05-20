@@ -76,7 +76,7 @@ export default function RegisterPage() {
 
   return (
     <div className="flex min-h-screen">
-      <div className="relative hidden w-1/2 overflow-hidden bg-[#000052] lg:flex lg:flex-col lg:justify-between">
+      <div className="relative hidden w-1/2 overflow-hidden bg-[#1c1917] lg:flex lg:flex-col lg:justify-between">
         <div className="absolute inset-0 flex items-center justify-center" aria-hidden>
           {orbits.map((orbit, oi) => (
             <motion.div

@@ -31,7 +31,7 @@ export default function CartPage() {
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ type: "spring", damping: 14, stiffness: 180 }}
-                className="mx-auto mb-6 flex size-24 items-center justify-center rounded-3xl bg-gradient-to-br from-primary to-[#3b82f6] shadow-2xl shadow-primary/30"
+                className="mx-auto mb-6 flex size-24 items-center justify-center rounded-3xl bg-gradient-to-br from-primary to-[#a07028] shadow-2xl shadow-primary/30"
               >
                 <ShoppingCart className="size-12 text-white" />
               </motion.div>

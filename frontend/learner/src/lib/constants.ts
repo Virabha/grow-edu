@@ -21,10 +21,8 @@ export const BRAND = {
 export const NAV_LINKS = [
   { href: "/", label: "Home" },
   { href: "/courses", label: "Courses" },
-  // { href: "/books", label: "Books" },
-  { href: "/about-us", label: "About Us" },
+  { href: "/instructors", label: "Instructors" },
   { href: "/services", label: "Services" },
-  { href: "/contact", label: "Contact" },
 ] as const;
 
 // ── External URLs ────────────────────────────────────────────────
@@ -33,7 +31,6 @@ export const SITE_URLS = {
   courses: "https://grotutor.com/courses",
   register: "https://grotutor.com/register",
   login: "https://grotutor.com/login",
-  contact: "https://grotutor.com/contact-us",
   instructorDetails: (id: string, slug: string) =>
     `https://grotutor.com/instructor-details/${id}/${slug}`,
   course: (slug: string) => `https://grotutor.com/course/${slug}`,

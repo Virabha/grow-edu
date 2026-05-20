@@ -60,6 +60,8 @@
   --color-rose-400: #fb7185;
 
   --font-poppins: var(--font-poppins);
+  --font-fraunces: var(--font-fraunces);
+  --font-display: var(--font-fraunces);
   --font-sans:
     var(--font-inter), var(--font-poppins), ui-sans-serif, system-ui,
     sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
@@ -101,72 +103,81 @@
 }
 
 :root {
-  --radius: 0.65rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.141 0.005 285.823);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.141 0.005 285.823);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.141 0.005 285.823);
-  --primary: oklch(0.546 0.245 262.881);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.967 0.001 286.375);
-  --secondary-foreground: oklch(0.21 0.006 285.885);
-  --muted: oklch(0.967 0.001 286.375);
-  --muted-foreground: oklch(0.552 0.016 285.938);
-  --accent: oklch(0.967 0.001 286.375);
-  --accent-foreground: oklch(0.21 0.006 285.885);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.92 0.004 286.32);
-  --input: oklch(0.92 0.004 286.32);
-  --ring: oklch(0.546 0.245 262.881);
-  --chart-1: oklch(0.546 0.245 262.881);
-  --chart-2: oklch(0.623 0.214 259.815);
-  --chart-3: oklch(0.488 0.243 264.376);
-  --chart-4: oklch(0.424 0.199 265.638);
-  --chart-5: oklch(0.809 0.105 251.813);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.141 0.005 285.823);
-  --sidebar-primary: oklch(0.546 0.245 262.881);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.967 0.001 286.375);
-  --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
-  --sidebar-border: oklch(0.92 0.004 286.32);
-  --sidebar-ring: oklch(0.546 0.245 262.881);
+  /* ── Dark Academic: warm cream paper, deep slate ink, brass amber accent ── */
+  --radius: 0.5rem;
+  --background: oklch(0.985 0.006 75);
+  --foreground: oklch(0.21 0.013 60);
+  --card: oklch(0.995 0.003 75);
+  --card-foreground: oklch(0.21 0.013 60);
+  --popover: oklch(0.995 0.003 75);
+  --popover-foreground: oklch(0.21 0.013 60);
+  --primary: oklch(0.58 0.13 72);
+  --primary-foreground: oklch(0.99 0.005 75);
+  --secondary: oklch(0.94 0.012 75);
+  --secondary-foreground: oklch(0.21 0.013 60);
+  --muted: oklch(0.95 0.01 75);
+  --muted-foreground: oklch(0.5 0.018 60);
+  --accent: oklch(0.93 0.018 75);
+  --accent-foreground: oklch(0.21 0.013 60);
+  --destructive: oklch(0.55 0.2 28);
+  --destructive-foreground: oklch(0.99 0.005 75);
+  --border: oklch(0.89 0.014 70);
+  --input: oklch(0.89 0.014 70);
+  --ring: oklch(0.58 0.13 72);
+  --chart-1: oklch(0.58 0.13 72);
+  --chart-2: oklch(0.45 0.09 165);
+  --chart-3: oklch(0.42 0.1 30);
+  --chart-4: oklch(0.55 0.08 220);
+  --chart-5: oklch(0.7 0.12 75);
+  --canvas-deep: oklch(0.18 0.014 60);
+  --canvas-deeper: oklch(0.14 0.012 60);
+  --brass: oklch(0.7 0.13 75);
+  --sidebar: oklch(0.97 0.008 75);
+  --sidebar-foreground: oklch(0.21 0.013 60);
+  --sidebar-primary: oklch(0.58 0.13 72);
+  --sidebar-primary-foreground: oklch(0.99 0.005 75);
+  --sidebar-accent: oklch(0.93 0.018 75);
+  --sidebar-accent-foreground: oklch(0.21 0.013 60);
+  --sidebar-border: oklch(0.89 0.014 70);
+  --sidebar-ring: oklch(0.58 0.13 72);
 }
 
 .dark {
-  --background: oklch(0.141 0.005 285.823);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.21 0.006 285.885);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.21 0.006 285.885);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.623 0.214 259.815);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.274 0.006 286.033);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.274 0.006 286.033);
-  --muted-foreground: oklch(0.705 0.015 286.067);
-  --accent: oklch(0.274 0.006 286.033);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
+  --background: oklch(0.18 0.014 60);
+  --foreground: oklch(0.96 0.008 75);
+  --card: oklch(0.22 0.014 60);
+  --card-foreground: oklch(0.96 0.008 75);
+  --popover: oklch(0.22 0.014 60);
+  --popover-foreground: oklch(0.96 0.008 75);
+  --primary: oklch(0.72 0.13 75);
+  --primary-foreground: oklch(0.18 0.014 60);
+  --secondary: oklch(0.27 0.014 60);
+  --secondary-foreground: oklch(0.96 0.008 75);
+  --muted: oklch(0.27 0.014 60);
+  --muted-foreground: oklch(0.72 0.015 70);
+  --accent: oklch(0.3 0.018 65);
+  --accent-foreground: oklch(0.96 0.008 75);
+  --destructive: oklch(0.65 0.2 28);
+  --destructive-foreground: oklch(0.99 0.005 75);
   --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.623 0.214 259.815);
-  --chart-1: oklch(0.623 0.214 259.815);
-  --chart-2: oklch(0.546 0.245 262.881);
-  --chart-3: oklch(0.488 0.243 264.376);
-  --chart-4: oklch(0.424 0.199 265.638);
-  --chart-5: oklch(0.809 0.105 251.813);
-  --sidebar: oklch(0.21 0.006 285.885);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.623 0.214 259.815);
-  --sidebar-primary-foreground: oklch(0.97 0.014 254.604);
-  --sidebar-accent: oklch(0.274 0.006 286.033);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --input: oklch(1 0 0 / 12%);
+  --ring: oklch(0.72 0.13 75);
+  --chart-1: oklch(0.72 0.13 75);
+  --chart-2: oklch(0.55 0.09 165);
+  --chart-3: oklch(0.55 0.12 30);
+  --chart-4: oklch(0.65 0.08 220);
+  --chart-5: oklch(0.82 0.1 75);
+  --canvas-deep: oklch(0.14 0.012 60);
+  --canvas-deeper: oklch(0.1 0.01 60);
+  --brass: oklch(0.78 0.14 75);
+  --sidebar: oklch(0.22 0.014 60);
+  --sidebar-foreground: oklch(0.96 0.008 75);
+  --sidebar-primary: oklch(0.72 0.13 75);
+  --sidebar-primary-foreground: oklch(0.18 0.014 60);
+  --sidebar-accent: oklch(0.3 0.018 65);
+  --sidebar-accent-foreground: oklch(0.96 0.008 75);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.439 0 0);
+  --sidebar-ring: oklch(0.72 0.13 75);
 }
 
 @layer base {
@@ -175,5 +186,18 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "ss01", "cv11";
+  }
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  .font-display {
+    font-family: var(--font-fraunces), Georgia, "Times New Roman", serif;
+    font-weight: 600;
+    font-feature-settings: "ss01", "ss02";
+    letter-spacing: -0.02em;
   }
 }

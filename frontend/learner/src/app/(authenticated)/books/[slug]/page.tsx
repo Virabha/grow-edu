@@ -101,7 +101,7 @@ function BookDetailContent({ slug }: { slug: string }) {
 
   return (
     <>
-      <section className="bg-[#000052]">
+      <section className="bg-[#1c1917]">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <nav className="flex items-center gap-1.5 text-xs text-white/60">
             <Link href="/" className="hover:text-white transition-colors">

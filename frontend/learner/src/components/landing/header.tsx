@@ -114,15 +114,15 @@ export function Header() {
       <div
         aria-hidden
         style={{ width: `${scrollProgress}%` }}
-        className="fixed top-0 left-0 z-[60] h-0.5 bg-gradient-to-r from-primary to-[#3b82f6] transition-[width] duration-150"
+        className="fixed top-0 left-0 z-[60] h-0.5 bg-gradient-to-r from-primary to-[#a07028] transition-[width] duration-150"
       />
 
       <header
         className={cn(
           "sticky top-0 z-50 w-full transition-all duration-300",
           scrolled
-            ? "bg-white/70 dark:bg-background/70 shadow-sm backdrop-blur-xl border-b border-border/50"
-            : "bg-white/40 dark:bg-background/40 backdrop-blur-xl border-b border-border/30",
+            ? "bg-background/85 shadow-sm backdrop-blur-xl border-b border-border"
+            : "bg-background/55 backdrop-blur-xl border-b border-border/40",
         )}
       >
         <div className="container mx-auto flex h-16 items-center gap-4 px-4 sm:px-6 lg:px-8">
@@ -136,11 +136,11 @@ export function Header() {
               height={120}
               src="/logo.jpeg"
               alt="grotutor Logo"
-              className="h-14 w-auto rounded-xl shadow-md shadow-primary/25 transition-transform group-hover:scale-105"
+              className="h-11 w-11 rounded-lg object-cover shadow-sm transition-transform group-hover:scale-105"
               priority
             />
-            <span className="text-xl font-black tracking-tight">
-              <span className="text-primary">grotutor</span>
+            <span className="font-display text-xl font-medium tracking-tight text-foreground">
+              grotutor
             </span>
           </Link>
 
@@ -190,11 +190,11 @@ export function Header() {
                     transition={{ duration: 0.2 }}
                     className="absolute left-0 top-full pt-2"
                   >
-                    <div className="w-[740px] rounded-xl border-2 border-black/80 bg-white shadow-2xl overflow-hidden">
+                    <div className="w-[740px] overflow-hidden rounded-2xl border border-border bg-card shadow-[0_24px_60px_-20px_rgba(28,25,23,0.25)]">
                       <div className="flex min-h-[320px]">
-                        <div className="w-52 border-r-2 border-black/60 bg-gradient-to-b from-[#000052]/5 to-white p-2">
-                          <p className="px-2 py-1.5 text-xs font-bold uppercase tracking-wider text-[#000052]">
-                            Categories
+                        <div className="w-52 border-r border-border bg-muted/40 p-2">
+                          <p className="px-2 py-1.5 font-display text-[11px] font-medium uppercase tracking-[0.18em] text-primary">
+                            Programmes
                           </p>
                           {mainCategories.map((cat) => (
                             <Link
@@ -207,7 +207,7 @@ export function Header() {
                                 "flex items-center gap-2.5 rounded-lg border px-3 py-2.5 text-sm font-medium transition-all duration-200 mb-1",
                                 activeCategoryId === cat.categoryId
                                   ? "border-primary bg-primary text-white shadow-md"
-                                  : "border-transparent text-foreground hover:border-primary/30 hover:bg-gradient-to-r hover:from-primary/10 hover:to-violet-500/10 hover:text-primary",
+                                  : "border-transparent text-foreground hover:border-primary/40 hover:bg-primary/5 hover:text-primary",
                               )}
                             >
                               {cat.imageUrl ? (
@@ -234,7 +234,7 @@ export function Header() {
                           </Link>
                         </div>
                         <div className="flex-1 p-4">
-                          <p className="mb-3 text-xs font-bold uppercase tracking-wider text-[#000052]">
+                          <p className="mb-3 font-display text-[11px] font-medium uppercase tracking-[0.18em] text-primary">
                             {activeCategory?.name ?? "Courses"}
                           </p>
                           {hasChildren ? (
@@ -244,7 +244,7 @@ export function Header() {
                                   <Link
                                     key={sub.categoryId}
                                     href={`/courses?category=${sub.categoryId}`}
-                                    className="flex items-center gap-3 rounded-lg border border-border/60 px-3 py-2.5 text-sm transition-all duration-200 hover:border-primary/40 hover:bg-gradient-to-r hover:from-primary/5 hover:to-violet-500/5 hover:shadow-sm"
+                                    className="flex items-center gap-3 rounded-lg border border-border/60 px-3 py-2.5 text-sm transition-all duration-200 hover:border-primary/40 hover:bg-primary/5 hover:shadow-sm"
                                   >
                                     {sub.imageUrl ? (
                                       <Image
@@ -284,7 +284,7 @@ export function Header() {
                                     <Link
                                       key={course.courseId}
                                       href={`/courses/${course.slug}`}
-                                      className="flex items-center gap-3 rounded-lg border border-border/60 px-3 py-2.5 text-sm transition-all duration-200 hover:border-primary/40 hover:bg-gradient-to-r hover:from-primary/5 hover:to-violet-500/5 hover:shadow-sm"
+                                      className="flex items-center gap-3 rounded-lg border border-border/60 px-3 py-2.5 text-sm transition-all duration-200 hover:border-primary/40 hover:bg-primary/5 hover:shadow-sm"
                                     >
                                       {course.thumbnail ? (
                                         <Image
@@ -452,17 +452,20 @@ export function Header() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 px-3 text-sm font-medium"
+                className="h-9 rounded-full px-4 text-sm font-medium text-foreground/80 hover:bg-muted hover:text-foreground"
                 asChild
               >
-                <Link href="/login">Sign In</Link>
+                <Link href="/login">Sign in</Link>
               </Button>
               <Button
                 size="sm"
-                className="h-8 px-4 text-sm font-semibold bg-primary hover:bg-primary/90 shadow-sm transition-all"
+                className="group h-9 gap-1.5 rounded-full bg-foreground px-4 text-sm font-medium text-background shadow-sm transition-all hover:bg-foreground/90"
                 asChild
               >
-                <Link href="/register">Get Started</Link>
+                <Link href="/register">
+                  Get started
+                  <ChevronDown className="size-3.5 -rotate-90" />
+                </Link>
               </Button>
             </div>
           )}

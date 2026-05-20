@@ -32,7 +32,7 @@ const floatingIcons: { icon: LucideIcon; x: string; y: string; delay: number }[]
 ];
 
 const features = [
-  { icon: BookOpen, text: "10+ Expert Courses", color: "#3b82f6" },
+  { icon: BookOpen, text: "10+ Expert Courses", color: "#a07028" },
   { icon: Users, text: "1000+ Active Students", color: "#f97316" },
   { icon: Award, text: "10+ Industry Certificates", color: "#10b981" },
   { icon: Zap, text: "96% Success Rate", color: "#ec4899" },
@@ -64,7 +64,7 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen">
-      <div className="relative hidden w-1/2 overflow-hidden bg-[#000052]  lg:flex lg:flex-col lg:justify-between">
+      <div className="relative hidden w-1/2 overflow-hidden bg-[#1c1917]  lg:flex lg:flex-col lg:justify-between">
         {floatingIcons.map((item, i) => (
           <motion.span
             key={i}

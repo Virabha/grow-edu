@@ -146,7 +146,7 @@ export default function CourseDetailPage() {
   if (isLoading) {
     return (
       <div>
-        <div className="bg-[#000052] py-10">
+        <div className="bg-[#1c1917] py-10">
           <div className="container mx-auto max-w-7xl px-4">
             <Skeleton className="mb-3 h-4 w-48 bg-white/10" />
             <Skeleton className="mb-4 h-10 w-3/4 bg-white/10" />
@@ -212,7 +212,7 @@ export default function CourseDetailPage() {
 
   return (
     <>
-      <section className="relative overflow-hidden bg-gradient-to-br from-[#000052] to-primary">
+      <section className="relative overflow-hidden bg-gradient-to-br from-[#1c1917] to-primary">
         <div className="container mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 sm:py-8">
           <nav
             className="mb-4 flex flex-wrap items-center gap-1.5 text-sm text-white/50"

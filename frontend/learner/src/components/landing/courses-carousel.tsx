@@ -8,7 +8,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Star,
-  ArrowRight,
+  ArrowUpRight,
   BookOpen,
 } from "lucide-react";
 import { motion } from "framer-motion";
@@ -16,18 +16,18 @@ import { useCourses } from "@/lib/hooks/use-courses";
 import { useCategories } from "@/lib/hooks/use-categories";
 import { cn } from "@/lib/utils";
 
-const levelColors: Record<string, string> = {
-  BEGINNER: "bg-emerald-100 text-emerald-700",
-  INTERMEDIATE: "bg-amber-100 text-amber-700",
-  ADVANCED: "bg-red-100 text-red-700",
-  ALL_LEVELS: "bg-slate-100 text-slate-700",
+const levelLabels: Record<string, string> = {
+  BEGINNER: "Beginner",
+  INTERMEDIATE: "Intermediate",
+  ADVANCED: "Advanced",
+  ALL_LEVELS: "All levels",
 };
 
 function formatPrice(price: string): string {
   const num = parseFloat(price);
   if (Number.isNaN(num)) return price;
-  if (num >= 100000) return `₹${(num / 100000).toFixed(1)}L+`;
-  if (num >= 1000) return `₹${(num / 1000).toFixed(0)}K+`;
+  if (num >= 100000) return `₹${(num / 100000).toFixed(1)}L`;
+  if (num >= 1000) return `₹${(num / 1000).toFixed(0)}K`;
   return `₹${Math.round(num).toLocaleString()}`;
 }
 
@@ -69,7 +69,7 @@ export function CoursesCarousel() {
 
   const startAutoplay = useCallback(() => {
     if (autoplayRef.current) clearInterval(autoplayRef.current);
-    autoplayRef.current = setInterval(() => emblaApi?.scrollNext(), 4000);
+    autoplayRef.current = setInterval(() => emblaApi?.scrollNext(), 4500);
   }, [emblaApi]);
 
   const stopAutoplay = useCallback(() => {
@@ -99,46 +99,51 @@ export function CoursesCarousel() {
 
   return (
     <section
-      className="py-10 md:py-14"
+      className="bg-muted/40 py-20 md:py-24"
       aria-labelledby="courses-heading"
     >
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{}}
+          viewport={{ once: true }}
           transition={{ duration: 0.5 }}
-          className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"
+          className="mb-10 flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between"
         >
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-primary">
-              Featured Courses
-            </p>
+          <div className="max-w-xl">
+            <div className="flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              <span className="font-display text-base italic text-primary">
+                02
+              </span>
+              <span className="inline-block h-px w-8 bg-border" />
+              Featured this term
+            </div>
             <h2
               id="courses-heading"
-              className="section-heading mt-1 text-xl font-bold text-foreground sm:text-2xl md:text-3xl"
+              className="font-display mt-4 text-3xl font-medium leading-[1.05] tracking-tight text-foreground sm:text-4xl md:text-5xl"
             >
-              Most Popular Courses
+              Courses our students keep <em className="text-primary">finishing</em>.
             </h2>
           </div>
           <Link
             href="/courses"
-            className="flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+            className="group inline-flex shrink-0 items-center gap-2 self-start border-b border-foreground pb-1 text-sm font-medium text-foreground transition-colors hover:border-primary hover:text-primary sm:self-end"
           >
-            See all courses <ArrowRight className="size-3.5" />
+            See all courses
+            <ArrowUpRight className="size-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
           </Link>
         </motion.div>
 
-        <div className="mb-5 flex flex-wrap gap-2">
+        <div className="mb-8 flex flex-wrap gap-2">
           {categoryFilters.map((f) => (
             <button
               key={f.label}
               onClick={() => setActiveCategoryId(f.categoryId)}
               className={cn(
-                "rounded-full border px-3 py-1 text-xs font-medium transition-all",
+                "rounded-full border px-4 py-1.5 text-xs font-medium transition-all",
                 activeCategoryId === f.categoryId
-                  ? "border-primary bg-primary text-white"
-                  : "border-border/60 bg-white/50 backdrop-blur-sm text-muted-foreground hover:border-primary/50 hover:text-primary",
+                  ? "border-foreground bg-foreground text-background"
+                  : "border-border bg-background/60 text-muted-foreground hover:border-primary/50 hover:text-foreground",
               )}
             >
               {f.label}
@@ -147,9 +152,12 @@ export function CoursesCarousel() {
         </div>
 
         {isLoading ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-64 animate-pulse rounded-xl bg-muted" />
+              <div
+                key={i}
+                className="h-80 animate-pulse rounded-2xl bg-card"
+              />
             ))}
           </div>
         ) : (
@@ -159,8 +167,8 @@ export function CoursesCarousel() {
             onMouseLeave={startAutoplay}
           >
             <div className="overflow-hidden" ref={emblaRef}>
-              <div className="flex gap-4">
-                {(courses.length ? courses : []).map((course) => {
+              <div className="flex gap-5">
+                {courses.map((course) => {
                   const instructorName = course.instructor
                     ? [course.instructor.firstName, course.instructor.lastName]
                         .filter(Boolean)
@@ -174,59 +182,62 @@ export function CoursesCarousel() {
                     >
                       <Link
                         href={`/courses/${course.slug}`}
-                        className="group block h-full overflow-hidden rounded-xl border border-border/80 bg-white/50 backdrop-blur-sm transition-all duration-200 hover:shadow-lg hover:border-primary/30"
+                        className="group flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-[0_24px_50px_-20px_rgba(28,25,23,0.2)]"
                       >
-                        <div className="relative flex h-40 items-center justify-center overflow-hidden bg-muted">
+                        <div className="relative aspect-[5/3] overflow-hidden bg-muted">
                           {course.thumbnail ? (
                             <Image
                               src={course.thumbnail}
                               alt={course.title}
                               fill
-                              className="object-cover transition-transform duration-300 group-hover:scale-105"
+                              className="object-cover transition-transform duration-500 group-hover:scale-105"
+                              sizes="(max-width: 1024px) 100vw, 33vw"
                               unoptimized={course.thumbnail.startsWith("http")}
                             />
                           ) : (
-                            <BookOpen className="size-12 text-muted-foreground/40" />
-                          )}
-                          <span
-                            className={cn(
-                              "absolute top-3 right-3 rounded-full px-2 py-0.5 text-[10px] font-semibold",
-                              levelColors[level] ?? levelColors.ALL_LEVELS,
-                            )}
-                          >
-                            {level.replace("_", " ")}
-                          </span>
-                        </div>
-                        <div className="p-4">
-                          <div className="flex items-center justify-between">
-                            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-primary">
-                              {course.category?.name ?? "Course"}
-                            </p>
-                            <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
-                              <Star className="size-3 fill-amber-400 text-amber-400" />
-                              <span>5</span>
+                            <div className="flex h-full items-center justify-center">
+                              <BookOpen className="size-12 text-muted-foreground/40" />
                             </div>
+                          )}
+                          <div className="absolute inset-x-0 bottom-0 flex items-center justify-between px-4 py-3">
+                            <span className="rounded-full bg-background/85 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-foreground backdrop-blur-md">
+                              {levelLabels[level] ?? "All levels"}
+                            </span>
+                            <span className="flex items-center gap-1 rounded-full bg-foreground/75 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur-md">
+                              <Star className="size-3 fill-amber-300 text-amber-300" />
+                              5.0
+                            </span>
                           </div>
-                          <h3 className="line-clamp-2 text-sm font-bold text-foreground leading-snug group-hover:text-primary transition-colors">
+                        </div>
+                        <div className="flex flex-1 flex-col px-5 pb-5 pt-4">
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">
+                            {course.category?.name ?? "Course"}
+                          </p>
+                          <h3 className="font-display mt-1.5 line-clamp-2 text-lg font-medium leading-snug text-foreground transition-colors group-hover:text-primary sm:text-xl">
                             {course.title}
                           </h3>
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            By {instructorName}
+                          <p className="mt-2 text-xs text-muted-foreground">
+                            with{" "}
+                            <span className="font-medium text-foreground/80">
+                              {instructorName}
+                            </span>
                           </p>
 
-                          <div className="mt-3 flex items-center gap-2 border-t border-border/60 pt-3">
-                            <span className="font-bold text-foreground">
-                              {formatPrice(course.price)}
-                            </span>
-                            {course.compareAtPrice &&
-                              parseFloat(course.compareAtPrice) >
-                                parseFloat(course.price) && (
-                                <span className="text-xs text-muted-foreground line-through">
-                                  {formatPrice(course.compareAtPrice)}
-                                </span>
-                              )}
-                            <span className="ml-auto flex items-center gap-0.5 text-xs font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100">
-                              <BookOpen className="size-3" /> Enroll
+                          <div className="mt-auto flex items-baseline justify-between gap-3 border-t border-border/70 pt-4">
+                            <div className="flex items-baseline gap-2">
+                              <span className="font-display text-xl font-medium text-foreground">
+                                {formatPrice(course.price)}
+                              </span>
+                              {course.compareAtPrice &&
+                                parseFloat(course.compareAtPrice) >
+                                  parseFloat(course.price) && (
+                                  <span className="text-xs text-muted-foreground line-through">
+                                    {formatPrice(course.compareAtPrice)}
+                                  </span>
+                                )}
+                            </div>
+                            <span className="flex size-9 items-center justify-center rounded-full border border-border bg-background text-foreground transition-all group-hover:border-primary group-hover:bg-primary group-hover:text-primary-foreground">
+                              <ArrowUpRight className="size-4" />
                             </span>
                           </div>
                         </div>
@@ -238,54 +249,38 @@ export function CoursesCarousel() {
             </div>
             <button
               onClick={() => emblaApi?.scrollPrev()}
-              className="absolute -left-3 top-1/2 -translate-y-1/2 hidden size-8 items-center justify-center rounded-full border border-border bg-white shadow-md transition-all hover:border-primary/50 hover:shadow-lg md:flex"
+              className="absolute -left-3 top-1/2 hidden -translate-y-1/2 size-10 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-md transition-all hover:border-primary hover:text-primary md:flex"
               aria-label="Previous"
             >
-              <ChevronLeft className="size-4 text-foreground" />
+              <ChevronLeft className="size-4" />
             </button>
             <button
               onClick={() => emblaApi?.scrollNext()}
-              className="absolute -right-3 top-1/2 -translate-y-1/2 hidden size-8 items-center justify-center rounded-full border border-border bg-white shadow-md transition-all hover:border-primary/50 hover:shadow-lg md:flex"
+              className="absolute -right-3 top-1/2 hidden -translate-y-1/2 size-10 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-md transition-all hover:border-primary hover:text-primary md:flex"
               aria-label="Next"
             >
-              <ChevronRight className="size-4 text-foreground" />
+              <ChevronRight className="size-4" />
             </button>
           </div>
         )}
 
         {scrollSnaps.length > 1 && (
-          <div className="mt-5 flex justify-center gap-1.5">
+          <div className="mt-8 flex justify-center gap-2">
             {scrollSnaps.map((_, i) => (
               <button
                 key={i}
                 onClick={() => emblaApi?.scrollTo(i)}
                 className={cn(
-                  "h-1.5 rounded-full transition-all duration-300",
+                  "h-1 rounded-full transition-all duration-300",
                   i === selectedIndex
-                    ? "w-5 bg-primary"
-                    : "w-1.5 bg-border hover:bg-muted-foreground/40",
+                    ? "w-8 bg-foreground"
+                    : "w-2 bg-foreground/20 hover:bg-foreground/40",
                 )}
                 aria-label={`Go to slide ${i + 1}`}
               />
             ))}
           </div>
         )}
-
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{}}
-          transition={{ duration: 0.4, delay: 0.2 }}
-          className="mt-8 flex justify-center"
-        >
-          <Link
-            href="/courses"
-            className="inline-flex items-center gap-2 rounded-full border-2 border-primary px-6 py-2.5 text-sm font-semibold text-primary transition-all hover:bg-primary hover:text-white"
-          >
-            VIEW ALL COURSES
-            <ArrowRight className="size-4" />
-          </Link>
-        </motion.div>
       </div>
     </section>
   );

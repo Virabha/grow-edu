@@ -104,23 +104,36 @@ function CoursesContent() {
 
   return (
     <>
-      <section className="relative">
-        <div className="mx-auto bg-[#1c1917] py-14">
+      <section className="relative overflow-hidden bg-foreground py-16 text-background md:py-20">
+        <Image
+          src="/images/landing/books.jpg"
+          alt=""
+          fill
+          className="object-cover opacity-25"
+          sizes="100vw"
+          priority
+        />
+        <div className="absolute inset-0 bg-gradient-to-br from-foreground/85 via-foreground/65 to-foreground/45" />
+        <div className="absolute inset-0 bg-primary/15 mix-blend-multiply" />
+        <div className="relative container mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
-            initial={{ opacity: 0, y: 24 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="text-center"
+            className="mx-auto max-w-2xl text-center"
           >
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/8 px-3 py-1 text-3xl font-semibold text-white">
-              Our Courses Available
-            </span>
-            <h1 className="mt-3 text-3xl text-white tracking-tight sm:text-4xl md:text-5xl">
-              Find Your Perfect Course
+            <div className="inline-flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-background/70">
+              <span className="inline-block h-px w-8 bg-background/30" />
+              The catalogue
+              <span className="inline-block h-px w-8 bg-background/30" />
+            </div>
+            <h1 className="font-display mt-5 text-4xl font-medium leading-[1.05] tracking-tight sm:text-5xl md:text-6xl">
+              Find the course that{" "}
+              <em className="text-primary">fits you.</em>
             </h1>
-            <p className="mx-auto mt-3 max-w-xl text-sm text-white md:text-base">
-              Explore our catalog, master new skills, and accelerate your
-              career.
+            <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-background/80">
+              Browse expert-led programmes across academics, executive courses
+              and languages.
             </p>
           </motion.div>
         </div>

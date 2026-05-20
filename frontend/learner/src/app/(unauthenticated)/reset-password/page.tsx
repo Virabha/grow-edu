@@ -17,7 +17,7 @@ const resetSchema = z
   .object({
     password: z
       .string()
-      .min(8, "Password must be at least 8 characters")
+      .min(8, "At least 8 characters")
       .regex(/[A-Z]/, "Must include an uppercase letter")
       .regex(/[a-z]/, "Must include a lowercase letter")
       .regex(/[0-9]/, "Must include a number"),
@@ -73,16 +73,21 @@ function ResetPasswordForm() {
 
   if (!token) {
     return (
-      <div className="text-center">
-        <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-red-100">
-          <Lock className="size-8 text-red-600" />
+      <div>
+        <div className="flex size-12 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+          <Lock className="size-6" />
         </div>
-        <h1 className="text-2xl font-black text-foreground">Invalid Link</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          This password reset link is invalid or has expired. Please request a new one.
+        <h1 className="font-display mt-5 text-3xl font-medium leading-tight tracking-tight text-foreground">
+          Invalid link.
+        </h1>
+        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+          This reset link is invalid or has expired. Please request a new one.
         </p>
-        <Link href="/forgot-password" className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline">
-          <ArrowLeft className="size-3.5" /> Request New Link
+        <Link
+          href="/forgot-password"
+          className="mt-7 inline-flex items-center gap-2 text-sm font-medium text-foreground underline-offset-4 hover:text-primary hover:underline"
+        >
+          <ArrowLeft className="size-3.5" /> Request new link
         </Link>
       </div>
     );
@@ -90,33 +95,47 @@ function ResetPasswordForm() {
 
   if (submitted) {
     return (
-      <div className="text-center">
-        <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-green-100">
-          <CheckCircle2 className="size-8 text-green-600" />
+      <div>
+        <div className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <CheckCircle2 className="size-6" />
         </div>
-        <h1 className="text-2xl font-black text-foreground">Password Reset!</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Your password has been successfully reset. You can now sign in with your new password.
+        <h1 className="font-display mt-5 text-3xl font-medium leading-tight tracking-tight text-foreground">
+          Password reset.
+        </h1>
+        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+          You can now sign in with your new password.
         </p>
-        <Link href="/login" className="mt-6 inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-2.5 text-sm font-bold text-white shadow-md hover:bg-primary/90 transition-all">
-          Sign In
-        </Link>
+        <Button
+          asChild
+          className="mt-7 h-12 gap-2 rounded-full bg-foreground px-6 font-medium text-background hover:bg-foreground/90"
+        >
+          <Link href="/login">Sign in</Link>
+        </Button>
       </div>
     );
   }
 
   return (
     <>
-      <div className="mb-8">
-        <h1 className="text-2xl font-black text-foreground">Reset Password</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Create a new strong password for your account.
-        </p>
-      </div>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+        Set a new password
+      </p>
+      <h1 className="font-display mt-3 text-4xl font-medium leading-tight tracking-tight text-foreground">
+        Reset.
+      </h1>
+      <p className="mt-3 text-sm text-muted-foreground">
+        Pick a password you&apos;ll remember — strong enough to keep things
+        safe.
+      </p>
 
-      <form className="space-y-5" onSubmit={handleSubmit(onSubmit)}>
+      <form className="mt-8 space-y-5" onSubmit={handleSubmit(onSubmit)}>
         <div>
-          <label htmlFor="reset-password" className="mb-1.5 block text-xs font-semibold text-foreground">New Password</label>
+          <label
+            htmlFor="reset-password"
+            className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground"
+          >
+            New password
+          </label>
           <div className="relative">
             <input
               type={showPass ? "text" : "password"}
@@ -124,19 +143,34 @@ function ResetPasswordForm() {
               {...register("password")}
               disabled={loading}
               placeholder="Min. 8 characters"
-              className="w-full rounded-xl border border-input bg-background px-4 py-3 pr-11 text-sm outline-none transition-all placeholder:text-muted-foreground/60 focus:border-primary/50 focus:ring-2 focus:ring-primary/15 disabled:opacity-50"
+              className="w-full rounded-lg border border-input bg-card px-4 py-3 pr-11 text-sm outline-none transition-all placeholder:text-muted-foreground/55 focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:opacity-50"
             />
-            <button type="button" onClick={() => setShowPass((v) => !v)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
-              {showPass ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+            <button
+              type="button"
+              onClick={() => setShowPass((v) => !v)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+            >
+              {showPass ? (
+                <EyeOff className="size-4" />
+              ) : (
+                <Eye className="size-4" />
+              )}
             </button>
           </div>
           {errors.password && (
-            <p className="mt-1 text-xs text-red-500">{errors.password.message}</p>
+            <p className="mt-1.5 text-xs text-destructive">
+              {errors.password.message}
+            </p>
           )}
         </div>
 
         <div>
-          <label htmlFor="reset-confirm" className="mb-1.5 block text-xs font-semibold text-foreground">Confirm Password</label>
+          <label
+            htmlFor="reset-confirm"
+            className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground"
+          >
+            Confirm password
+          </label>
           <div className="relative">
             <input
               type={showConfirm ? "text" : "password"}
@@ -144,28 +178,47 @@ function ResetPasswordForm() {
               {...register("confirmPassword")}
               disabled={loading}
               placeholder="Re-enter password"
-              className="w-full rounded-xl border border-input bg-background px-4 py-3 pr-11 text-sm outline-none transition-all placeholder:text-muted-foreground/60 focus:border-primary/50 focus:ring-2 focus:ring-primary/15 disabled:opacity-50"
+              className="w-full rounded-lg border border-input bg-card px-4 py-3 pr-11 text-sm outline-none transition-all placeholder:text-muted-foreground/55 focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:opacity-50"
             />
-            <button type="button" onClick={() => setShowConfirm((v) => !v)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
-              {showConfirm ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+            <button
+              type="button"
+              onClick={() => setShowConfirm((v) => !v)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+            >
+              {showConfirm ? (
+                <EyeOff className="size-4" />
+              ) : (
+                <Eye className="size-4" />
+              )}
             </button>
           </div>
           {errors.confirmPassword && (
-            <p className="mt-1 text-xs text-red-500">{errors.confirmPassword.message}</p>
+            <p className="mt-1.5 text-xs text-destructive">
+              {errors.confirmPassword.message}
+            </p>
           )}
         </div>
 
-        <Button type="submit" disabled={loading} className="w-full gap-2 rounded-xl bg-primary py-3 font-bold shadow-md hover:bg-primary/90 hover:-translate-y-0.5 transition-all h-12">
+        <Button
+          type="submit"
+          disabled={loading}
+          className="h-12 w-full gap-2 rounded-full bg-foreground font-medium text-background shadow-lg shadow-foreground/15 transition-all hover:bg-foreground/90"
+        >
           {loading ? (
-            <><Loader2 className="size-4 animate-spin" /> Resetting...</>
+            <>
+              <Loader2 className="size-4 animate-spin" /> Resetting…
+            </>
           ) : (
-            <><Lock className="size-4" /> Reset Password</>
+            <>Reset password</>
           )}
         </Button>
       </form>
 
-      <Link href="/login" className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline">
-        <ArrowLeft className="size-3.5" /> Back to Sign In
+      <Link
+        href="/login"
+        className="mt-7 inline-flex items-center gap-2 text-sm font-medium text-foreground underline-offset-4 hover:text-primary hover:underline"
+      >
+        <ArrowLeft className="size-3.5" /> Back to sign in
       </Link>
     </>
   );
@@ -173,55 +226,96 @@ function ResetPasswordForm() {
 
 export default function ResetPasswordPage() {
   return (
-    <div className="flex min-h-screen">
-      <div className="relative hidden w-1/2 overflow-hidden bg-linear-to-br from-[#a07028] via-primary to-[#8b5cf6] lg:flex lg:flex-col lg:justify-center">
-        <motion.div
-          className="absolute -right-20 -top-20 h-80 w-80 rounded-full bg-white/5 blur-3xl"
-          animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
-          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+    <div className="flex min-h-screen bg-background">
+      <aside className="relative hidden w-1/2 overflow-hidden bg-foreground text-background lg:flex lg:flex-col lg:justify-between">
+        <Image
+          src="/images/landing/hero-student.jpg"
+          alt=""
+          fill
+          className="object-cover opacity-40"
+          sizes="50vw"
+          priority
         />
-        <motion.div
-          className="absolute -bottom-16 -left-16 h-64 w-64 rounded-full bg-white/5 blur-3xl"
-          animate={{ scale: [1, 1.3, 1], opacity: [0.2, 0.4, 0.2] }}
-          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-        />
-        <div
-          className="absolute inset-0 opacity-[0.04]"
-          style={{ backgroundImage: `radial-gradient(circle, white 1px, transparent 1px)`, backgroundSize: "32px 32px" }}
-          aria-hidden
-        />
-        <div className="relative z-10 p-6 xl:p-14">
-          <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-            <Link href="/" className="mb-8 inline-flex items-center gap-3 group">
-              <Image src="/logo.jpeg" alt="grotutor" width={44} height={44} className="rounded-xl shadow-lg transition-transform group-hover:scale-105" />
-              <span className="text-xl font-black text-white tracking-tight">grotutor</span>
-            </Link>
-            <h2 className="text-3xl font-black leading-tight text-white xl:text-4xl">
-              Create a new<br />password
-            </h2>
-            <p className="mt-3 max-w-sm text-sm leading-relaxed text-white/70">
-              Choose a strong password to keep your account secure. Use a mix of letters, numbers, and symbols.
-            </p>
-          </motion.div>
-        </div>
-      </div>
+        <div className="absolute inset-0 bg-gradient-to-br from-foreground/85 via-foreground/65 to-foreground/35" />
+        <div className="absolute inset-0 bg-primary/15 mix-blend-multiply" />
 
-      <div className="flex flex-1 flex-col">
-        <div className="flex items-center justify-between px-6 py-4 lg:hidden">
-          <Link href="/" className="flex items-center gap-2">
-            <Image src="/logo.jpeg" alt="grotutor" width={32} height={32} className="rounded-lg" />
-            <span className="text-base font-black"><span className="text-primary">gro</span>tutor</span>
+        <div className="relative flex items-center justify-between p-10">
+          <Link href="/" className="inline-flex items-center gap-2.5">
+            <Image
+              src="/logo.jpeg"
+              alt="grotutor"
+              width={40}
+              height={40}
+              className="rounded-lg shadow-md"
+            />
+            <span className="font-display text-xl font-medium tracking-tight">
+              grotutor
+            </span>
+          </Link>
+          <Link
+            href="/"
+            className="text-xs font-medium text-background/70 transition-colors hover:text-background"
+          >
+            ← Back to home
           </Link>
         </div>
 
-        <div className="flex flex-1 items-center justify-center px-6 py-8">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="w-full max-w-sm">
-            <Suspense fallback={<div className="flex justify-center py-12"><Loader2 className="size-6 animate-spin text-primary" /></div>}>
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="relative max-w-md p-10"
+        >
+          <p className="font-display text-xs italic tracking-wide text-background/70">
+            — A note on security
+          </p>
+          <h2 className="font-display mt-5 text-3xl font-medium leading-tight xl:text-4xl">
+            One new password.{" "}
+            <em className="text-primary">A fresh start.</em>
+          </h2>
+          <p className="mt-4 max-w-sm text-sm leading-relaxed text-background/80">
+            We never store passwords in plain text. Pick something you&apos;ll
+            remember.
+          </p>
+        </motion.div>
+      </aside>
+
+      <main className="flex flex-1 flex-col">
+        <div className="flex items-center justify-between px-6 py-4 lg:hidden">
+          <Link href="/" className="flex items-center gap-2">
+            <Image
+              src="/logo.jpeg"
+              alt="grotutor"
+              width={36}
+              height={36}
+              className="rounded-lg"
+            />
+            <span className="font-display text-lg font-medium">grotutor</span>
+          </Link>
+          <Link href="/" className="text-xs text-muted-foreground">
+            ← Home
+          </Link>
+        </div>
+
+        <div className="flex flex-1 items-center justify-center px-6 py-12">
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="w-full max-w-sm"
+          >
+            <Suspense
+              fallback={
+                <div className="flex justify-center py-12">
+                  <Loader2 className="size-6 animate-spin text-primary" />
+                </div>
+              }
+            >
               <ResetPasswordForm />
             </Suspense>
           </motion.div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Shield, Users, BookOpen, BarChart3, LogIn, ArrowRight, Sparkles } from "lucide-react";
+import { ArrowUpRight, Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -23,23 +23,6 @@ const loginSchema = z.object({
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
-
-const floatingIcons = [
-  { icon: "ðŸ›¡ï¸", x: "15%", y: "20%", delay: 0 },
-  { icon: "ðŸ’»", x: "80%", y: "15%", delay: 0.5 },
-  { icon: "ðŸ“Š", x: "10%", y: "75%", delay: 1 },
-  { icon: "ðŸš€", x: "85%", y: "70%", delay: 1.5 },
-  { icon: "âš™ï¸", x: "50%", y: "10%", delay: 2 },
-  { icon: "ðŸ“š", x: "25%", y: "90%", delay: 0.8 },
-  { icon: "ðŸ†", x: "70%", y: "85%", delay: 1.2 },
-];
-
-const features = [
-  { icon: Shield, text: "Secure Admin Access", color: "#3b82f6" },
-  { icon: Users, text: "User Management", color: "#f97316" },
-  { icon: BookOpen, text: "Course Management", color: "#10b981" },
-  { icon: BarChart3, text: "Analytics Dashboard", color: "#ec4899" },
-];
 
 export default function LoginPage() {
   const router = useRouter();
@@ -71,51 +54,12 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen">
-      {/* Left Panel - Gradient */}
-      <div className="relative hidden w-1/2 overflow-hidden bg-linear-to-br from-primary via-[#3b82f6] to-[#8b5cf6] lg:flex lg:flex-col lg:justify-between">
-        {/* Floating Icons */}
-        {floatingIcons.map((item, i) => (
-          <motion.span
-            key={i}
-            className="pointer-events-none absolute text-3xl opacity-20 select-none"
-            style={{ left: item.x, top: item.y }}
-            animate={{
-              y: [0, -25, 0],
-              rotate: [0, 15, -15, 0],
-              scale: [1, 1.15, 1],
-            }}
-            transition={{
-              duration: 5 + i * 0.7,
-              repeat: Infinity,
-              delay: item.delay,
-              ease: "easeInOut",
-            }}
-          >
-            {item.icon}
-          </motion.span>
-        ))}
-
-        {/* Blur Orbs */}
-        <motion.div
-          className="absolute -right-20 -top-20 h-80 w-80 rounded-full bg-white/5 blur-3xl"
-          animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
-          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-        />
-        <motion.div
-          className="absolute -bottom-16 -left-16 h-64 w-64 rounded-full bg-white/5 blur-3xl"
-          animate={{ scale: [1, 1.3, 1], opacity: [0.2, 0.4, 0.2] }}
-          transition={{
-            duration: 10,
-            repeat: Infinity,
-            ease: "easeInOut",
-            delay: 2,
-          }}
-        />
-
-        {/* Dot Pattern */}
+    <div className="flex min-h-screen bg-background">
+      <aside className="relative hidden w-1/2 overflow-hidden bg-foreground text-background lg:flex lg:flex-col lg:justify-between">
+        <div className="absolute inset-0 bg-gradient-to-br from-foreground via-foreground/90 to-foreground/65" />
+        <div className="absolute inset-0 bg-primary/15 mix-blend-multiply" />
         <div
-          className="absolute inset-0 opacity-[0.04]"
+          className="pointer-events-none absolute inset-0 opacity-[0.05]"
           style={{
             backgroundImage: `radial-gradient(circle, white 1px, transparent 1px)`,
             backgroundSize: "32px 32px",
@@ -123,211 +67,163 @@ export default function LoginPage() {
           aria-hidden
         />
 
-        {/* Content */}
-        <div className="relative z-10 flex flex-1 flex-col justify-center p-6 xl:p-14">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-          >
-            <Link
-              href="/"
-              className="mb-8 inline-flex items-center gap-3 group"
-            >
-              <Image
-                src="/logo.jpeg"
-                alt="grotutor"
-                width={44}
-                height={44}
-                className="rounded-xl shadow-lg transition-transform group-hover:scale-105"
-              />
-              <span className="text-xl font-black text-white tracking-tight">
-                grotutor
-              </span>
-            </Link>
-
-            <h2 className="text-3xl font-black leading-tight text-white xl:text-4xl">
-              Admin Control
-              <br />
-              Center
-            </h2>
-            <p className="mt-3 max-w-sm text-sm leading-relaxed text-white/70">
-              Manage courses, users, and analytics from a single powerful
-              dashboard. Built for administrators.
-            </p>
-          </motion.div>
-
-          {/* Feature Badges */}
-          <div className="relative z-10 mt-10 grid grid-cols-2 gap-3">
-            {features.map((f, i) => (
-              <motion.div
-                key={f.text}
-                initial={{ opacity: 0, x: -30 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.4 + i * 0.12, duration: 0.5 }}
-                className="flex items-center gap-2.5 rounded-xl bg-white/10 px-3.5 py-3 backdrop-blur-sm"
-              >
-                <f.icon className="size-4 shrink-0 text-white/80" />
-                <span className="text-xs font-semibold text-white/90">
-                  {f.text}
-                </span>
-              </motion.div>
-            ))}
-          </div>
-
-          {/* Social Proof Bar */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1 }}
-            className="relative z-10 mt-8"
-          >
-            <div className="flex items-center gap-2 rounded-xl bg-white/8 px-4 py-3 backdrop-blur-sm">
-              <Shield className="size-4 text-white/70" />
-              <p className="text-xs text-white/70">
-                Secure admin portal with role-based access control
-              </p>
-            </div>
-          </motion.div>
+        <div className="relative flex items-center justify-between p-10">
+          <Link href="/" className="inline-flex items-center gap-2.5">
+            <Image
+              src="/logo.jpeg"
+              alt="grotutor"
+              width={40}
+              height={40}
+              className="rounded-lg shadow-md"
+            />
+            <span className="font-display text-xl font-medium tracking-tight">
+              grotutor / admin
+            </span>
+          </Link>
         </div>
-      </div>
 
-      {/* Right Panel - Form */}
-      <div className="flex flex-1 flex-col">
-        {/* Mobile Logo */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="relative max-w-md p-10"
+        >
+          <p className="font-display text-xs italic tracking-wide text-background/70">
+            — A private place
+          </p>
+          <h2 className="font-display mt-5 text-3xl font-medium leading-tight xl:text-4xl">
+            Where the platform{" "}
+            <em className="text-primary">is run.</em>
+          </h2>
+          <p className="mt-4 max-w-sm text-sm leading-relaxed text-background/80">
+            Manage courses, learners, payments and the catalogue from a single,
+            quiet console.
+          </p>
+        </motion.div>
+      </aside>
+
+      <main className="flex flex-1 flex-col">
         <div className="flex items-center justify-between px-6 py-4 lg:hidden">
           <Link href="/" className="flex items-center gap-2">
             <Image
               src="/logo.jpeg"
               alt="grotutor"
-              width={32}
-              height={32}
+              width={36}
+              height={36}
               className="rounded-lg"
             />
-            <span className="text-base font-black">
-              <span className="text-primary">gro</span>tutor
+            <span className="font-display text-lg font-medium">
+              grotutor / admin
             </span>
           </Link>
         </div>
 
-        <div className="flex flex-1 items-center justify-center px-6 py-8">
+        <div className="flex flex-1 items-center justify-center px-6 py-12">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
             className="w-full max-w-sm"
           >
-            {/* Header */}
-            <div className="mb-8">
-              <h1 className="text-2xl font-black text-foreground">
-                Admin Sign In
-              </h1>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Enter your credentials to access the admin panel.
-              </p>
-            </div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Admin console
+            </p>
+            <h1 className="font-display mt-3 text-4xl font-medium leading-tight tracking-tight text-foreground">
+              Sign in.
+            </h1>
+            <p className="mt-3 text-sm text-muted-foreground">
+              Enter your credentials to access the dashboard.
+            </p>
 
-            {/* Form */}
             <form
               onSubmit={handleSubmit(handleFormSubmit)}
-              className="space-y-5"
+              className="mt-8 space-y-5"
               aria-label="Login form"
             >
               <div>
                 <label
                   htmlFor="email"
-                  className="mb-1.5 block text-xs font-semibold text-foreground"
+                  className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground"
                 >
-                  Email Address
+                  Email
                 </label>
                 <Input
                   id="email"
                   type="email"
                   autoComplete="email"
-                  placeholder="you@example.com"
-                  className="h-auto rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none transition-all placeholder:text-muted-foreground/60 focus:border-primary/50 focus:ring-2 focus:ring-primary/15"
+                  placeholder="admin@grotutor.com"
+                  className="h-auto rounded-lg border border-input bg-card px-4 py-3 text-sm outline-none placeholder:text-muted-foreground/55 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/15"
                   {...register("email")}
                   disabled={login.isPending}
-                  aria-describedby={errors.email ? "email-error" : undefined}
                 />
                 {errors.email && (
-                  <p
-                    id="email-error"
-                    className="mt-1 text-xs text-destructive"
-                    role="alert"
-                  >
+                  <p className="mt-1.5 text-xs text-destructive" role="alert">
                     {errors.email.message}
                   </p>
                 )}
               </div>
 
               <div>
-                <label
-                  htmlFor="password"
-                  className="mb-1.5 block text-xs font-semibold text-foreground"
-                >
-                  Password
-                </label>
+                <div className="mb-2 flex items-end justify-between">
+                  <label
+                    htmlFor="password"
+                    className="block text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground"
+                  >
+                    Password
+                  </label>
+                  <Link
+                    href="/forgot-password"
+                    className="text-xs text-muted-foreground underline-offset-4 hover:text-primary hover:underline"
+                  >
+                    Forgot?
+                  </Link>
+                </div>
                 <PasswordInput
                   id="password"
                   autoComplete="current-password"
                   placeholder="Your password"
-                  className="h-auto rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none transition-all placeholder:text-muted-foreground/60 focus:border-primary/50 focus:ring-2 focus:ring-primary/15"
+                  className="h-auto rounded-lg border border-input bg-card px-4 py-3 text-sm outline-none placeholder:text-muted-foreground/55 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/15"
                   {...register("password")}
                   disabled={login.isPending}
-                  aria-describedby={
-                    errors.password ? "password-error" : undefined
-                  }
                 />
                 {errors.password && (
-                  <p
-                    id="password-error"
-                    className="mt-1 text-xs text-destructive"
-                    role="alert"
-                  >
+                  <p className="mt-1.5 text-xs text-destructive" role="alert">
                     {errors.password.message}
                   </p>
                 )}
-                <div className="mt-1.5 flex justify-end">
-                  <Link
-                    href="/forgot-password"
-                    className="text-xs text-primary hover:underline"
-                  >
-                    Forgot password?
-                  </Link>
-                </div>
               </div>
 
               <Button
                 type="submit"
-                className="w-full gap-2 rounded-xl bg-primary py-3 font-bold shadow-md hover:bg-primary/90 hover:-translate-y-0.5 transition-all h-12"
                 disabled={login.isPending}
+                className="group h-12 w-full gap-2 rounded-full bg-foreground font-medium text-background shadow-lg shadow-foreground/15 transition-all hover:bg-foreground/90"
               >
-                <LogIn className="size-4" />
-                {login.isPending ? "Signing in..." : "Sign In"}
+                {login.isPending ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" /> Signing in…
+                  </>
+                ) : (
+                  <>
+                    Sign in
+                    <ArrowUpRight className="size-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                  </>
+                )}
               </Button>
 
-              <div className="relative flex items-center gap-3">
-                <div className="h-px flex-1 bg-border" />
-                <span className="text-xs text-muted-foreground">or</span>
-                <div className="h-px flex-1 bg-border" />
-              </div>
-
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full gap-2 rounded-xl border-2 py-3 hover:border-primary hover:-translate-y-0.5 transition-all h-12"
-                asChild
-              >
-                <Link href="/signup">
-                  <Sparkles className="size-4 text-primary" /> Apply for Access{" "}
-                  <ArrowRight className="size-3.5" />
+              <p className="text-center text-[11px] text-muted-foreground">
+                Need access?{" "}
+                <Link
+                  href="/signup"
+                  className="font-medium text-foreground underline-offset-4 hover:text-primary hover:underline"
+                >
+                  Apply here
                 </Link>
-              </Button>
+                .
+              </p>
             </form>
           </motion.div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

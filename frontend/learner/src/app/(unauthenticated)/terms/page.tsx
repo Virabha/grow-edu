@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import {
   FileCheck,
   Layers,
@@ -163,23 +162,23 @@ const sections = [
 
 export default function TermsPage() {
   return (
-    <main>
-        <section className="border-b border-border bg-white/20 backdrop-blur-sm py-10 md:py-14">
+    <main className="bg-background">
+        <section className="border-b border-border bg-card py-16 md:py-20">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="mx-auto max-w-2xl text-center">
-              <p className="text-xs font-semibold uppercase tracking-widest text-primary">
-                Legal
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                — Legal —
               </p>
-              <h1 className="mt-2 text-3xl font-black text-foreground sm:text-4xl md:text-5xl">
+              <h1 className="font-display mt-4 text-4xl font-medium leading-tight tracking-tight text-foreground sm:text-5xl md:text-6xl">
                 Terms &{" "}
-                <span className="text-primary">Conditions</span>
+                <em className="text-primary">Conditions.</em>
               </h1>
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground md:text-base">
-                Please read these terms carefully before using the grotutor
-                platform. By using our services, you agree to these terms.
+              <p className="mt-5 text-base leading-relaxed text-muted-foreground">
+                Please read these terms carefully before using grotutor. By
+                using our services, you agree to them.
               </p>
-              <p className="mt-2 text-xs text-muted-foreground">
-                Effective Date: February 2026
+              <p className="mt-2 text-xs uppercase tracking-widest text-muted-foreground/70">
+                Effective February 2026
               </p>
             </div>
           </div>
@@ -195,7 +194,7 @@ export default function TermsPage() {
                       <section.icon className="size-4 text-primary" />
                     </div>
                     <div className="flex-1">
-                      <h2 className="text-lg font-bold text-foreground sm:text-xl">
+                      <h2 className="font-display text-xl font-medium leading-snug text-foreground sm:text-2xl">
                         {section.title}
                       </h2>
                       {section.paragraphs.map((p, i) => (
@@ -230,16 +229,16 @@ export default function TermsPage() {
               ))}
             </div>
 
-            <div className="mt-8 rounded-xl border border-border bg-white/20 backdrop-blur-sm p-6 text-center">
-              <p className="text-sm text-muted-foreground">
+            <div className="mt-12 rounded-2xl border border-border bg-card p-7 text-center">
+              <p className="text-sm leading-relaxed text-muted-foreground">
                 Have questions about our terms?{" "}
-                <Link
-                  href="/contact"
-                  className="font-semibold text-primary hover:underline"
+                <a
+                  href="mailto:contact@grotutor.com"
+                  className="font-medium text-foreground underline-offset-4 hover:text-primary hover:underline"
                 >
-                  Contact our team
-                </Link>{" "}
-                — we&apos;re here to help.
+                  Email us
+                </a>{" "}
+                — we&apos;re happy to walk you through it.
               </p>
             </div>
           </div>

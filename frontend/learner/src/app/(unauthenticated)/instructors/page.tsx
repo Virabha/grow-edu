@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { Star, Users, BookOpen, ArrowRight, Facebook, Linkedin, Youtube, Instagram } from "lucide-react";
+import { Star, Users, BookOpen, ArrowUpRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useInstructors } from "@/lib/hooks/use-cms";
 
@@ -16,49 +16,59 @@ function getInitials(name: string) {
     .toUpperCase();
 }
 
-const COLORS = ["#a07028", "#f97316", "#10b981", "#ec4899", "#0ea5e9", "#8b5cf6"];
-
-const socialIcons = [
-  { icon: Facebook, color: "#1877f2" },
-  { icon: Linkedin, color: "#0a66c2" },
-  { icon: Youtube, color: "#ff0000" },
-  { icon: Instagram, color: "#e1306c" },
+const fallbackAvatars = [
+  "/images/landing/mentor-1.jpg",
+  "/images/landing/mentor-2.jpg",
+  "/images/landing/mentor-3.jpg",
+  "/images/landing/mentor-4.jpg",
 ];
 
 export default function InstructorsPage() {
   const { data: instructors, isLoading } = useInstructors();
 
   return (
-    <main>
-      <section className="relative overflow-hidden border-b border-border bg-[#1c1917] py-14 md:py-14">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+    <main className="bg-background">
+      <section className="relative overflow-hidden border-b border-border bg-foreground py-16 text-background md:py-20">
+        <Image
+          src="/images/landing/classroom-2.jpg"
+          alt=""
+          fill
+          className="object-cover opacity-30"
+          sizes="100vw"
+          priority
+        />
+        <div className="absolute inset-0 bg-gradient-to-br from-foreground/85 via-foreground/70 to-foreground/45" />
+        <div className="absolute inset-0 bg-primary/15 mix-blend-multiply" />
+        <div className="relative container mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="mx-auto max-w-3xl text-white text-center"
+            className="mx-auto max-w-3xl text-center"
           >
-            <p className="text-xs font-semibold uppercase tracking-widest text-white/70">
-              Learn from the Best
-            </p>
-            <h1 className="mt-2 text-3xl font-black text-white sm:text-4xl md:text-5xl">
-              Our Instructors
+            <div className="inline-flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-background/70">
+              <span className="inline-block h-px w-8 bg-background/30" />
+              The faculty
+              <span className="inline-block h-px w-8 bg-background/30" />
+            </div>
+            <h1 className="font-display mt-5 text-4xl font-medium leading-[1.05] tracking-tight sm:text-5xl md:text-6xl">
+              Practitioners. Researchers.{" "}
+              <em className="text-primary">Teachers.</em>
             </h1>
-            <p className="mt-3 leading-relaxed text-white text-base">
-              Meet our team of expert instructors — industry leaders,
-              researchers, and educators who are passionate about helping you
-              succeed.
+            <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-background/80">
+              Every mentor on grotutor has shipped, built, or trained in the
+              field they teach.
             </p>
           </motion.div>
         </div>
       </section>
 
-      <section className="py-12 md:py-10">
+      <section className="py-16 md:py-20">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           {isLoading ? (
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {Array.from({ length: 8 }).map((_, i) => (
-                <Skeleton key={i} className="h-72 rounded-2xl" />
+                <Skeleton key={i} className="h-96 rounded-2xl" />
               ))}
             </div>
           ) : instructors && instructors.length > 0 ? (
@@ -66,59 +76,62 @@ export default function InstructorsPage() {
               {instructors.map((instructor, i) => (
                 <motion.div
                   key={instructor.profileId}
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: 16 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  transition={{ duration: 0.4, delay: i * 0.06 }}
+                  transition={{ duration: 0.4, delay: i * 0.05 }}
                 >
                   <Link
                     href={`/instructors/${instructor.userId}`}
-                    className="group block overflow-hidden rounded-2xl border border-border/80 bg-white shadow-sm text-center transition-all duration-300 hover:border-primary/40 hover:shadow-xl hover:-translate-y-1"
+                    className="group block overflow-hidden rounded-2xl border border-border bg-card transition-all hover:-translate-y-1 hover:border-primary/40 hover:shadow-[0_20px_40px_-20px_rgba(28,25,23,0.18)]"
                   >
-                    <div className="relative pt-8 pb-5 px-4">
-                      <div className="relative mx-auto mb-4 size-24 sm:size-28">
-                        {instructor.avatarUrl ? (
-                          <div className="relative size-full overflow-hidden rounded-full ring-4 ring-primary/10">
-                            <Image
-                              src={instructor.avatarUrl}
-                              alt={instructor.name}
-                              fill
-                              className="object-cover transition-transform duration-300 group-hover:scale-110"
-                              unoptimized={instructor.avatarUrl.startsWith("http")}
-                            />
-                          </div>
-                        ) : (
-                          <div
-                            className="flex size-full items-center justify-center rounded-full text-2xl font-black text-white shadow-md ring-4 ring-primary/10 transition-transform duration-300 group-hover:scale-110"
-                            style={{ background: `linear-gradient(135deg, ${COLORS[i % COLORS.length]}, ${COLORS[i % COLORS.length]}cc)` }}
-                          >
-                            {getInitials(instructor.name)}
-                          </div>
-                        )}
-                        <div className="absolute inset-0 flex items-center justify-center rounded-full bg-primary/80 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-                          <div className="flex gap-1.5">
-                            {socialIcons.map((s, idx) => (
-                              <span
-                                key={idx}
-                                className="flex size-7 items-center justify-center rounded-full bg-white/20 text-white transition-colors hover:bg-white/40"
-                              >
-                                <s.icon className="size-3.5" />
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-
-                      <h3 className="text-base font-bold text-foreground transition-colors group-hover:text-primary">
-                        {instructor.name}
-                      </h3>
-                      {instructor.experience && (
-                        <p className="mt-0.5 text-sm text-foreground/70">
-                          {instructor.experience}
-                        </p>
+                    <div className="relative aspect-[4/5] overflow-hidden bg-muted">
+                      {instructor.avatarUrl ? (
+                        <Image
+                          src={instructor.avatarUrl}
+                          alt={instructor.name}
+                          fill
+                          className="object-cover transition-transform duration-500 group-hover:scale-105"
+                          sizes="(max-width: 1024px) 50vw, 25vw"
+                          unoptimized={instructor.avatarUrl.startsWith("http")}
+                        />
+                      ) : (
+                        <Image
+                          src={fallbackAvatars[i % fallbackAvatars.length]}
+                          alt={instructor.name}
+                          fill
+                          className="object-cover transition-transform duration-500 group-hover:scale-105"
+                          sizes="(max-width: 1024px) 50vw, 25vw"
+                        />
                       )}
-                      {instructor.expertise && instructor.expertise.length > 0 && (
-                        <div className="mt-3 flex flex-wrap justify-center gap-1.5">
+                      <div className="absolute inset-0 bg-gradient-to-t from-foreground/65 via-foreground/15 to-transparent" />
+                      <span className="font-display absolute right-4 top-4 text-[10px] uppercase tracking-widest text-white/70">
+                        {getInitials(instructor.name)}
+                      </span>
+                      <div className="absolute inset-x-4 bottom-4 flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="font-display truncate text-lg font-medium leading-tight text-white sm:text-xl">
+                            {instructor.name}
+                          </p>
+                          {instructor.experience ? (
+                            <p className="mt-0.5 truncate text-[11px] uppercase tracking-widest text-white/75">
+                              {instructor.experience}
+                            </p>
+                          ) : instructor.expertise?.length ? (
+                            <p className="mt-0.5 truncate text-[11px] uppercase tracking-widest text-white/75">
+                              {instructor.expertise[0]}
+                            </p>
+                          ) : null}
+                        </div>
+                        <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-background/85 text-foreground backdrop-blur-md transition-all group-hover:bg-primary group-hover:text-primary-foreground">
+                          <ArrowUpRight className="size-4" />
+                        </span>
+                      </div>
+                    </div>
+
+                    {instructor.expertise &&
+                      instructor.expertise.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 border-b border-border/60 px-4 py-3">
                           {instructor.expertise.slice(0, 3).map((skill) => (
                             <span
                               key={skill}
@@ -129,55 +142,66 @@ export default function InstructorsPage() {
                           ))}
                         </div>
                       )}
-                    </div>
 
-                    <div className="border-t border-border/60 px-4 py-3 bg-muted/20">
-                      <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Star className="size-3 fill-amber-400 text-amber-400" />
-                          <span className="font-semibold text-foreground">5.0</span>
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <BookOpen className="size-3" />
-                          Courses
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Users className="size-3" />
-                          Students
-                        </span>
-                      </div>
+                    <div className="flex items-center justify-between gap-3 px-4 py-3 text-[11px] uppercase tracking-widest text-muted-foreground">
+                      <span className="flex items-center gap-1.5">
+                        <Star className="size-3 fill-primary text-primary" />
+                        <span className="font-semibold text-foreground">5.0</span>
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <BookOpen className="size-3" /> Courses
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <Users className="size-3" /> Cohorts
+                      </span>
                     </div>
                   </Link>
                 </motion.div>
               ))}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center py-14 text-center">
+            <div className="flex flex-col items-center justify-center py-20 text-center">
               <Users className="size-12 text-muted-foreground/30" />
-              <p className="mt-3 text-lg font-semibold text-foreground">No instructors found</p>
-              <p className="text-sm text-muted-foreground">Check back soon!</p>
+              <p className="font-display mt-4 text-xl font-medium text-foreground">
+                No instructors yet.
+              </p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Check back soon — applications are reviewed weekly.
+              </p>
             </div>
           )}
         </div>
       </section>
 
-      <section className="py-10 md:py-14">
+      <section className="py-16 md:py-20">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="rounded-2xl bg-gradient-to-br from-[#1c1917] to-primary p-8 text-center text-white">
-            <h2 className="text-2xl font-black sm:text-3xl">
-              Want to Teach on grotutor?
-            </h2>
-            <p className="mt-2 text-sm text-white/80">
-              Share your expertise with thousands of students and earn on your
-              own terms.
-            </p>
-            <div className="mt-5">
+          <div className="relative overflow-hidden rounded-3xl border border-border bg-foreground p-10 text-center text-background sm:p-14">
+            <Image
+              src="/images/landing/study-1.jpg"
+              alt=""
+              fill
+              className="object-cover opacity-25"
+              sizes="100vw"
+            />
+            <div className="absolute inset-0 bg-gradient-to-br from-foreground/85 via-foreground/65 to-foreground/45" />
+            <div className="relative mx-auto max-w-2xl">
+              <p className="font-display text-xs italic tracking-wide text-background/70">
+                — A note for educators
+              </p>
+              <h2 className="font-display mt-4 text-3xl font-medium leading-tight sm:text-4xl md:text-5xl">
+                Want to teach on{" "}
+                <em className="text-primary">grotutor?</em>
+              </h2>
+              <p className="mt-4 text-base leading-relaxed text-background/80">
+                Share your expertise with thousands of learners. We&apos;ll
+                handle the platform — you teach what you know best.
+              </p>
               <Link
                 href="/become-teacher"
-                className="inline-flex items-center gap-2 rounded-lg bg-white px-5 py-2.5 text-sm font-bold text-primary shadow-lg transition-all hover:bg-white/90"
+                className="group/btn mt-8 inline-flex items-center gap-2 rounded-full bg-background px-6 py-3 text-sm font-medium text-foreground transition-all hover:bg-background/95"
               >
-                Become an Instructor
-                <ArrowRight className="size-3.5" />
+                Become an instructor
+                <ArrowUpRight className="size-4 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
               </Link>
             </div>
           </div>

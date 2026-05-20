@@ -5,12 +5,10 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod/v3";
 import { motion } from "framer-motion";
-import { Eye, EyeOff, UserPlus, CheckCircle2, ArrowRight, Shield, Sparkles, TrendingUp, Clock, Loader2, Monitor, BarChart3, Target, Trophy, BookOpen, Rocket, Star } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { Eye, EyeOff, ArrowUpRight, CheckCircle2, Loader2 } from "lucide-react";
 import Image from "next/image";
-import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useRegister } from "@/lib/hooks/use-auth";
 
@@ -19,7 +17,7 @@ const registerSchema = z.object({
   email: z.string().min(1, "Email is required").email("Enter a valid email"),
   password: z
     .string()
-    .min(8, "Password must be at least 8 characters")
+    .min(8, "At least 8 characters")
     .regex(/[A-Z]/, "Must include an uppercase letter")
     .regex(/[a-z]/, "Must include a lowercase letter")
     .regex(/[0-9]/, "Must include a number"),
@@ -28,16 +26,10 @@ const registerSchema = z.object({
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
 const perks = [
-  { icon: CheckCircle2, text: "Lifetime course access", color: "text-green-300" },
-  { icon: Shield, text: "Industry-recognised certificates", color: "text-blue-300" },
-  { icon: Sparkles, text: "AI-powered learning paths", color: "text-amber-300" },
-  { icon: TrendingUp, text: "95% success rate", color: "text-emerald-300" },
-  { icon: Clock, text: "7-day refund guarantee", color: "text-rose-300" },
-];
-
-const orbits: { size: number; duration: number; items: LucideIcon[] }[] = [
-  { size: 280, duration: 20, items: [Monitor, BarChart3, Target] },
-  { size: 380, duration: 30, items: [Trophy, BookOpen, Rocket, Star] },
+  "Lifetime course access",
+  "Verified certificates",
+  "Live cohort doubt sessions",
+  "7-day money-back guarantee",
 ];
 
 export default function RegisterPage() {
@@ -75,165 +67,226 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="flex min-h-screen">
-      <div className="relative hidden w-1/2 overflow-hidden bg-[#1c1917] lg:flex lg:flex-col lg:justify-between">
-        <div className="absolute inset-0 flex items-center justify-center" aria-hidden>
-          {orbits.map((orbit, oi) => (
-            <motion.div
-              key={oi}
-              className="absolute rounded-full border border-white/10"
-              style={{ width: orbit.size, height: orbit.size }}
-              animate={{ rotate: 360 }}
-              transition={{ duration: orbit.duration, repeat: Infinity, ease: "linear" }}
-            >
-              {orbit.items.map((Icon, ei) => {
-                const angle = (360 / orbit.items.length) * ei;
-                const rad = (angle * Math.PI) / 180;
-                const x = Math.cos(rad) * (orbit.size / 2);
-                const y = Math.sin(rad) * (orbit.size / 2);
-                return (
-                  <motion.span
-                    key={ei}
-                    className="absolute opacity-25"
-                    style={{ left: `calc(50% + ${x}px - 10px)`, top: `calc(50% + ${y}px - 10px)` }}
-                    animate={{ rotate: -360 }}
-                    transition={{ duration: orbit.duration, repeat: Infinity, ease: "linear" }}
-                  >
-                    <Icon className="size-5 text-white" />
-                  </motion.span>
-                );
-              })}
-            </motion.div>
-          ))}
-        </div>
-
-        <motion.div
-          className="absolute left-1/2 top-1/2 h-48 w-48 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/10 blur-3xl"
-          animate={{ scale: [1, 1.5, 1], opacity: [0.15, 0.3, 0.15] }}
-          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+    <div className="flex min-h-screen bg-background">
+      <aside className="relative hidden w-1/2 overflow-hidden bg-foreground text-background lg:flex lg:flex-col lg:justify-between">
+        <Image
+          src="/images/landing/study-1.jpg"
+          alt=""
+          fill
+          className="object-cover opacity-40"
+          sizes="50vw"
+          priority
         />
+        <div className="absolute inset-0 bg-gradient-to-br from-foreground/85 via-foreground/65 to-foreground/35" />
+        <div className="absolute inset-0 bg-primary/15 mix-blend-multiply" />
 
-        <div
-          className="absolute inset-0 opacity-[0.03]"
-          style={{ backgroundImage: `radial-gradient(circle, white 1px, transparent 1px)`, backgroundSize: "28px 28px" }}
-          aria-hidden
-        />
-
-        <div className="relative z-10 flex flex-1 flex-col justify-center p-6 xl:p-14">
-          <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-            <Link href="/" className="mb-8 inline-flex items-center gap-3 group">
-              <Image src="/logo.jpeg" alt="grotutor" width={44} height={44} className="rounded-xl shadow-lg transition-transform group-hover:scale-105" />
-              <span className="text-xl font-black text-white tracking-tight">grotutor</span>
-            </Link>
-
-            <h2 className="text-3xl font-black leading-tight text-white xl:text-4xl">
-              Transform your<br />
-              learning journey
-            </h2>
-            <p className="mt-3 max-w-sm text-sm leading-relaxed text-white/70">
-              Join 1000+ learners building skills, advancing careers, and achieving lifelong success.
-            </p>
-          </motion.div>
-
-          <div className="relative z-10 mt-8 space-y-2">
-            {perks.map((perk, i) => (
-              <motion.div
-                key={perk.text}
-                initial={{ opacity: 0, x: -30 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.3 + i * 0.1, duration: 0.5 }}
-                className="flex items-center gap-3 rounded-xl bg-white/8 px-4 py-2.5 backdrop-blur-sm"
-              >
-                <perk.icon className={cn("size-4 shrink-0", perk.color)} />
-                <span className="text-sm text-white">{perk.text}</span>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="flex flex-1 flex-col">
-        <div className="flex items-center justify-between px-6 py-4 lg:hidden">
-          <Link href="/" className="flex items-center gap-2">
-            <Image src="/logo.jpeg" alt="grotutor" width={32} height={32} className="rounded-lg" />
-            <span className="text-base font-black"><span className="text-primary">gro</span>tutor</span>
+        <div className="relative flex items-center justify-between p-10">
+          <Link href="/" className="inline-flex items-center gap-2.5">
+            <Image
+              src="/logo.jpeg"
+              alt="grotutor"
+              width={40}
+              height={40}
+              className="rounded-lg shadow-md"
+            />
+            <span className="font-display text-xl font-medium tracking-tight">
+              grotutor
+            </span>
+          </Link>
+          <Link
+            href="/"
+            className="text-xs font-medium text-background/70 transition-colors hover:text-background"
+          >
+            ← Back to home
           </Link>
         </div>
 
-        <div className="flex flex-1 items-center justify-center px-6 py-8">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="w-full max-w-sm">
-            <div className="mb-6">
-              <h1 className="text-2xl font-black text-foreground">Create Account</h1>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Already have an account?{" "}
-                <Link href="/login" className="font-semibold text-primary hover:underline">Sign in</Link>
-              </p>
-            </div>
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="relative max-w-md p-10"
+        >
+          <p className="font-display text-xs italic tracking-wide text-background/70">
+            — A note for newcomers
+          </p>
+          <h2 className="font-display mt-5 text-3xl font-medium leading-tight xl:text-4xl">
+            Start something{" "}
+            <em className="text-primary">that lasts.</em>
+          </h2>
+          <p className="mt-4 max-w-sm text-sm leading-relaxed text-background/80">
+            One account. Every course you enrol in — yours for life.
+          </p>
+          <ul className="mt-7 space-y-2.5">
+            {perks.map((p) => (
+              <li
+                key={p}
+                className="flex items-center gap-2.5 text-sm text-background/85"
+              >
+                <CheckCircle2 className="size-4 shrink-0 text-primary" />
+                {p}
+              </li>
+            ))}
+          </ul>
+        </motion.div>
+      </aside>
 
-            <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
+      <main className="flex flex-1 flex-col">
+        <div className="flex items-center justify-between px-6 py-4 lg:hidden">
+          <Link href="/" className="flex items-center gap-2">
+            <Image
+              src="/logo.jpeg"
+              alt="grotutor"
+              width={36}
+              height={36}
+              className="rounded-lg"
+            />
+            <span className="font-display text-lg font-medium">grotutor</span>
+          </Link>
+          <Link href="/" className="text-xs text-muted-foreground">
+            ← Home
+          </Link>
+        </div>
+
+        <div className="flex flex-1 items-center justify-center px-6 py-12">
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="w-full max-w-sm"
+          >
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Create an account
+            </p>
+            <h1 className="font-display mt-3 text-4xl font-medium leading-tight tracking-tight text-foreground">
+              Let&apos;s begin.
+            </h1>
+            <p className="mt-3 text-sm text-muted-foreground">
+              Already a member?{" "}
+              <Link
+                href="/login"
+                className="font-medium text-foreground underline-offset-4 hover:text-primary hover:underline"
+              >
+                Sign in
+              </Link>
+            </p>
+
+            <form className="mt-8 space-y-5" onSubmit={handleSubmit(onSubmit)}>
               <div>
-                <label htmlFor="register-name" className="mb-1.5 block text-xs font-semibold text-foreground">Full Name</label>
+                <label
+                  htmlFor="register-name"
+                  className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground"
+                >
+                  Full name
+                </label>
                 <input
                   id="register-name"
                   {...register("name")}
                   disabled={registerUser.isPending}
                   placeholder="Your full name"
-                  className="w-full rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none transition-all placeholder:text-muted-foreground/60 focus:border-primary/50 focus:ring-2 focus:ring-primary/15 disabled:opacity-50"
+                  className="w-full rounded-lg border border-input bg-card px-4 py-3 text-sm outline-none transition-all placeholder:text-muted-foreground/55 focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:opacity-50"
                 />
                 {errors.name && (
-                  <p className="mt-1 text-xs text-red-500">{errors.name.message}</p>
+                  <p className="mt-1.5 text-xs text-destructive">
+                    {errors.name.message}
+                  </p>
                 )}
               </div>
               <div>
-                <label htmlFor="register-email" className="mb-1.5 block text-xs font-semibold text-foreground">Email</label>
+                <label
+                  htmlFor="register-email"
+                  className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground"
+                >
+                  Email
+                </label>
                 <input
-                  type="email" id="register-email"
+                  type="email"
+                  id="register-email"
                   {...register("email")}
                   disabled={registerUser.isPending}
-                  placeholder="you@email.com"
-                  className="w-full rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none transition-all placeholder:text-muted-foreground/60 focus:border-primary/50 focus:ring-2 focus:ring-primary/15 disabled:opacity-50"
+                  placeholder="you@somewhere.com"
+                  className="w-full rounded-lg border border-input bg-card px-4 py-3 text-sm outline-none transition-all placeholder:text-muted-foreground/55 focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:opacity-50"
                 />
                 {errors.email && (
-                  <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>
+                  <p className="mt-1.5 text-xs text-destructive">
+                    {errors.email.message}
+                  </p>
                 )}
               </div>
               <div>
-                <label htmlFor="register-password" className="mb-1.5 block text-xs font-semibold text-foreground">Password</label>
+                <label
+                  htmlFor="register-password"
+                  className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground"
+                >
+                  Password
+                </label>
                 <div className="relative">
                   <input
-                    type={showPass ? "text" : "password"} id="register-password"
+                    type={showPass ? "text" : "password"}
+                    id="register-password"
                     {...register("password")}
                     disabled={registerUser.isPending}
-                    placeholder="Min. 8 characters"
-                    className="w-full rounded-xl border border-input bg-background px-4 py-3 pr-11 text-sm outline-none transition-all placeholder:text-muted-foreground/60 focus:border-primary/50 focus:ring-2 focus:ring-primary/15 disabled:opacity-50"
+                    placeholder="Min. 8 characters, with a letter & number"
+                    className="w-full rounded-lg border border-input bg-card px-4 py-3 pr-11 text-sm outline-none transition-all placeholder:text-muted-foreground/55 focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:opacity-50"
                   />
-                  <button type="button" onClick={() => setShowPass((v) => !v)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
-                    {showPass ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  <button
+                    type="button"
+                    onClick={() => setShowPass((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    {showPass ? (
+                      <EyeOff className="size-4" />
+                    ) : (
+                      <Eye className="size-4" />
+                    )}
                   </button>
                 </div>
                 {errors.password && (
-                  <p className="mt-1 text-xs text-red-500">{errors.password.message}</p>
+                  <p className="mt-1.5 text-xs text-destructive">
+                    {errors.password.message}
+                  </p>
                 )}
               </div>
 
-              <Button type="submit" disabled={registerUser.isPending} className="w-full gap-2 rounded-xl bg-primary py-3 font-bold shadow-md hover:bg-primary/90 hover:-translate-y-0.5 transition-all h-12">
+              <Button
+                type="submit"
+                disabled={registerUser.isPending}
+                className="group h-12 w-full gap-2 rounded-full bg-foreground font-medium text-background shadow-lg shadow-foreground/15 transition-all hover:bg-foreground/90"
+              >
                 {registerUser.isPending ? (
-                  <><Loader2 className="size-4 animate-spin" /> Creating account...</>
+                  <>
+                    <Loader2 className="size-4 animate-spin" /> Creating
+                    account…
+                  </>
                 ) : (
-                  <><UserPlus className="size-4" /> Create Account <ArrowRight className="size-3.5" /></>
+                  <>
+                    Create account
+                    <ArrowUpRight className="size-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                  </>
                 )}
               </Button>
 
-              <p className="text-center text-[11px] text-muted-foreground">
+              <p className="text-center text-[11px] leading-relaxed text-muted-foreground">
                 By signing up you agree to our{" "}
-                <Link href="/terms" className="text-primary hover:underline">Terms</Link>{" "}
+                <Link
+                  href="/terms"
+                  className="underline-offset-4 hover:text-primary hover:underline"
+                >
+                  Terms
+                </Link>{" "}
                 &amp;{" "}
-                <Link href="/privacy-policy" className="text-primary hover:underline">Privacy Policy</Link>.
+                <Link
+                  href="/privacy-policy"
+                  className="underline-offset-4 hover:text-primary hover:underline"
+                >
+                  Privacy Policy
+                </Link>
+                .
               </p>
             </form>
           </motion.div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

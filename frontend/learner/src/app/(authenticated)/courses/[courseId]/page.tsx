@@ -146,7 +146,7 @@ export default function CourseDetailPage() {
   if (isLoading) {
     return (
       <div>
-        <div className="bg-[#1c1917] py-10">
+        <div className="bg-foreground py-10">
           <div className="container mx-auto max-w-7xl px-4">
             <Skeleton className="mb-3 h-4 w-48 bg-white/10" />
             <Skeleton className="mb-4 h-10 w-3/4 bg-white/10" />
@@ -212,8 +212,10 @@ export default function CourseDetailPage() {
 
   return (
     <>
-      <section className="relative overflow-hidden bg-gradient-to-br from-[#1c1917] to-primary">
-        <div className="container mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 sm:py-8">
+      <section className="relative overflow-hidden bg-foreground">
+        <div className="absolute inset-0 bg-gradient-to-br from-foreground via-foreground/90 to-foreground/70" />
+        <div className="absolute inset-0 bg-primary/15 mix-blend-multiply" />
+        <div className="relative container mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 sm:py-8">
           <nav
             className="mb-4 flex flex-wrap items-center gap-1.5 text-sm text-white/50"
             aria-label="Breadcrumb"
@@ -251,7 +253,7 @@ export default function CourseDetailPage() {
                 )}
               </div>
 
-              <h1 className="mb-3 text-2xl font-black text-white tracking-tight md:text-3xl lg:text-4xl">
+              <h1 className="font-display mb-3 text-3xl font-medium leading-tight tracking-tight text-white md:text-4xl lg:text-5xl">
                 {course.title}
               </h1>
 
@@ -609,7 +611,7 @@ export default function CourseDetailPage() {
 
               <div className="p-6">
                 <div className="mb-4 flex items-baseline gap-3">
-                  <span className="text-3xl font-black text-foreground">
+                  <span className="font-display text-3xl font-medium text-foreground">
                     {price === 0 ? "Free" : `₹${price.toFixed(0)}`}
                   </span>
                   {comparePrice && price > 0 && (

@@ -171,26 +171,36 @@ export default function BecomeTeacherPage() {
   }
 
   return (
-    <main>
-        <section className="border-b border-border bg-linear-to-br from-primary/5 via-background to-[#a07028]/5 py-12 md:py-10">
+    <main className="bg-background">
+        <section className="border-b border-border bg-card py-16 md:py-20">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <motion.div initial="hidden" animate="show" variants={fadeUp} className="mx-auto max-w-2xl text-center">
-              <p className="text-xs font-semibold uppercase tracking-widest text-primary">Join Our Team</p>
-              <h1 className="mt-2 text-3xl font-black text-foreground sm:text-4xl md:text-5xl">
-                Become an <span className="text-primary">Instructor</span>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                — For mentors —
+              </p>
+              <h1 className="font-display mt-4 text-4xl font-medium leading-[1.05] tracking-tight text-foreground sm:text-5xl md:text-6xl">
+                Become an{" "}
+                <em className="text-primary">instructor.</em>
               </h1>
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground md:text-base">
-                Share your expertise with thousands of learners. Join grotutor&apos;s community of instructors and make an impact while earning on your own terms.
+              <p className="mt-5 text-base leading-relaxed text-muted-foreground">
+                Share your craft with learners across India. We handle the
+                platform — you focus on teaching what you know best.
               </p>
             </motion.div>
           </div>
         </section>
 
-        <section className="py-10 md:py-14">
+        <section className="py-16 md:py-20">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={fadeUp} className="mb-6 text-center">
-              <p className="text-xs font-semibold uppercase tracking-widest text-primary">Why Teach With Us</p>
-              <h2 className="mt-1 text-xl font-bold text-foreground sm:text-2xl md:text-3xl">Benefits of Teaching on grotutor</h2>
+            <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={fadeUp} className="mb-10 text-center">
+              <div className="inline-flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                <span className="font-display text-base italic text-primary">01</span>
+                <span className="inline-block h-px w-8 bg-border" />
+                Why teach with us
+              </div>
+              <h2 className="font-display mt-4 text-3xl font-medium leading-tight tracking-tight text-foreground sm:text-4xl">
+                Built for serious educators.
+              </h2>
             </motion.div>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {benefits.map((b, i) => (
@@ -201,12 +211,12 @@ export default function BecomeTeacherPage() {
                   whileInView="show"
                   viewport={{ once: true }}
                   variants={fadeUp}
-                  className="rounded-xl border border-border/60 bg-white/60 backdrop-blur-sm p-5 transition-all hover:shadow-md hover:border-primary/30"
+                  className="rounded-2xl border border-border bg-card p-5 transition-all hover:shadow-md hover:border-primary/30"
                 >
                   <div className="mb-3 flex size-10 items-center justify-center rounded-xl" style={{ background: `${b.color}15` }}>
                     <b.icon className="size-5" style={{ color: b.color }} />
                   </div>
-                  <h3 className="text-sm font-bold text-foreground">{b.title}</h3>
+                  <h3 className="font-display text-base font-medium text-foreground">{b.title}</h3>
                   <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{b.desc}</p>
                 </motion.div>
               ))}
@@ -214,11 +224,17 @@ export default function BecomeTeacherPage() {
           </div>
         </section>
 
-        <section className="bg-muted/20 py-10 md:py-14">
+        <section className="bg-muted/40 py-16 md:py-20">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={fadeUp} className="mb-6 text-center">
-              <p className="text-xs font-semibold uppercase tracking-widest text-primary">How It Works</p>
-              <h2 className="mt-1 text-xl font-bold text-foreground sm:text-2xl md:text-3xl">Steps to Become an Instructor</h2>
+            <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={fadeUp} className="mb-10 text-center">
+              <div className="inline-flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                <span className="font-display text-base italic text-primary">02</span>
+                <span className="inline-block h-px w-8 bg-border" />
+                The process
+              </div>
+              <h2 className="font-display mt-4 text-3xl font-medium leading-tight tracking-tight text-foreground sm:text-4xl">
+                From application to live course.
+              </h2>
             </motion.div>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
               {steps.map((s, i) => (
@@ -229,13 +245,13 @@ export default function BecomeTeacherPage() {
                   whileInView="show"
                   viewport={{ once: true }}
                   variants={fadeUp}
-                  className="relative rounded-xl border border-border/60 bg-white/60 backdrop-blur-sm p-5"
+                  className="relative rounded-2xl border border-border bg-card p-5"
                 >
                   <span className="absolute right-4 top-3 text-3xl font-black text-primary/10">{s.step}</span>
                   <div className="mb-3 flex size-10 items-center justify-center rounded-xl bg-primary/10">
                     <s.icon className="size-5 text-primary" />
                   </div>
-                  <h3 className="text-sm font-bold text-foreground">{s.title}</h3>
+                  <h3 className="font-display text-base font-medium text-foreground">{s.title}</h3>
                   <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{s.desc}</p>
                 </motion.div>
               ))}
@@ -243,16 +259,22 @@ export default function BecomeTeacherPage() {
           </div>
         </section>
 
-        <section className="py-10 md:py-14" id="apply">
+        <section className="py-16 md:py-20" id="apply">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={fadeUp} className="mx-auto max-w-xl">
-              <div className="mb-6 text-center">
-                <p className="text-xs font-semibold uppercase tracking-widest text-primary">Apply Now</p>
-                <h2 className="mt-1 text-xl font-bold text-foreground sm:text-2xl md:text-3xl">Start Your Teaching Journey</h2>
-                <p className="mt-2 text-sm text-muted-foreground">Fill in your details and we&apos;ll get in touch within 48 hours.</p>
+              <div className="mb-10 text-center">
+                <div className="inline-flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  <span className="font-display text-base italic text-primary">03</span>
+                  <span className="inline-block h-px w-8 bg-border" />
+                  Apply
+                </div>
+                <h2 className="font-display mt-4 text-3xl font-medium leading-tight tracking-tight text-foreground sm:text-4xl">
+                  Start your teaching journey.
+                </h2>
+                <p className="mt-3 text-sm text-muted-foreground">We&apos;ll get back to you within 48 hours.</p>
               </div>
 
-              <form onSubmit={rhfHandleSubmit(onSubmit)} className="space-y-4 rounded-xl border border-border/60 bg-white/60 backdrop-blur-sm p-6">
+              <form onSubmit={rhfHandleSubmit(onSubmit)} className="space-y-4 rounded-2xl border border-border bg-card p-6">
                 {error && (
                   <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>
                 )}

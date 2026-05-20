@@ -37,8 +37,9 @@ export default function CartPage() {
               </motion.div>
 
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-                <h1 className="section-heading text-3xl font-black text-foreground sm:text-4xl">
-                  Your Cart is <span className="text-primary">Empty</span>
+                <h1 className="font-display text-4xl font-medium leading-tight tracking-tight text-foreground sm:text-5xl">
+                  Your cart is{" "}
+                  <em className="text-primary">empty.</em>
                 </h1>
                 <p className="mt-3 text-muted-foreground">
                   Looks like you haven&apos;t added any courses yet. Let&apos;s fix that!

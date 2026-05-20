@@ -14,7 +14,7 @@ import { useAuthStore } from "@/lib/store/auth-store";
 import { useEffect } from "react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { GraduationCap, Award, Users, Zap } from "lucide-react";
+import { ArrowUpRight, Loader2, CheckCircle2 } from "lucide-react";
 
 const signupSchema = z.object({
   email: z
@@ -27,7 +27,7 @@ const signupSchema = z.object({
     .max(128, "Password must not exceed 128 characters")
     .regex(
       /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
-      "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character"
+      "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character",
     ),
   fullName: z
     .string()
@@ -38,19 +38,11 @@ const signupSchema = z.object({
 
 type SignupFormData = z.infer<typeof signupSchema>;
 
-const floatingIcons = [
-  { icon: "\u{1F393}", x: "15%", y: "20%", delay: 0 },
-  { icon: "\u{1F4BB}", x: "80%", y: "15%", delay: 0.5 },
-  { icon: "\u{1F4CA}", x: "10%", y: "75%", delay: 1 },
-  { icon: "\u{1F680}", x: "85%", y: "70%", delay: 1.5 },
-  { icon: "\u2B50", x: "50%", y: "10%", delay: 2 },
-];
-
-const features = [
-  { icon: GraduationCap, text: "Expert-Led Courses", color: "#3b82f6" },
-  { icon: Award, text: "Verified Certificates", color: "#f97316" },
-  { icon: Users, text: "Growing Community", color: "#10b981" },
-  { icon: Zap, text: "Learn at Your Pace", color: "#ec4899" },
+const perks = [
+  "Course authoring tools",
+  "Catalogue management",
+  "Real-time analytics",
+  "Payment & enrolment control",
 ];
 
 export default function SignupPage() {
@@ -82,11 +74,6 @@ export default function SignupPage() {
         firstName,
         lastName,
       })
-      .then(() => {
-        toast.success(
-          "Account created! Please check your email to verify your account."
-        );
-      })
       .catch((error: unknown) => {
         const errorMessage =
           error instanceof Error
@@ -97,263 +84,203 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="flex min-h-screen">
-      {/* Left Panel - Gradient with decorations */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-primary via-[#3b82f6] to-[#8b5cf6]">
-        {/* Dot pattern overlay */}
+    <div className="flex min-h-screen bg-background">
+      <aside className="relative hidden w-1/2 overflow-hidden bg-foreground text-background lg:flex lg:flex-col lg:justify-between">
+        <div className="absolute inset-0 bg-gradient-to-br from-foreground via-foreground/90 to-foreground/65" />
+        <div className="absolute inset-0 bg-primary/15 mix-blend-multiply" />
         <div
-          className="absolute inset-0 opacity-10"
+          className="pointer-events-none absolute inset-0 opacity-[0.05]"
           style={{
-            backgroundImage:
-              "radial-gradient(circle, rgba(255,255,255,0.8) 1px, transparent 1px)",
-            backgroundSize: "24px 24px",
+            backgroundImage: `radial-gradient(circle, white 1px, transparent 1px)`,
+            backgroundSize: "32px 32px",
           }}
+          aria-hidden
         />
 
-        {/* Blur orbs */}
-        <div className="absolute top-1/4 -left-20 w-72 h-72 bg-white/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-violet-300/10 rounded-full blur-3xl" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-indigo-300/10 rounded-full blur-3xl" />
-
-        {/* Floating emoji icons */}
-        {floatingIcons.map((item, i) => (
-          <motion.div
-            key={i}
-            className="absolute text-3xl"
-            style={{ left: item.x, top: item.y }}
-            animate={{
-              y: [0, -20, 0],
-              opacity: [0.5, 1, 0.5],
-            }}
-            transition={{
-              duration: 4,
-              repeat: Infinity,
-              delay: item.delay,
-              ease: "easeInOut",
-            }}
-          >
-            {item.icon}
-          </motion.div>
-        ))}
-
-        {/* Content */}
-        <div className="relative z-10 flex flex-col items-center justify-center w-full px-12">
-          {/* Logo */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="mb-8"
-          >
-            <div className="w-20 h-20 rounded-2xl overflow-hidden bg-white/20 backdrop-blur-sm border border-white/30 shadow-xl">
-              <Image
-                src="/logo.jpeg"
-                alt="grotutor"
-                width={80}
-                height={80}
-                className="w-full h-full object-cover"
-              />
-            </div>
-          </motion.div>
-
-          {/* Headline */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-center mb-10"
-          >
-            <h1 className="text-4xl font-bold text-white mb-3">
-              Join the Platform
-            </h1>
-            <p className="text-white/80 text-lg max-w-sm">
-              Create your account and start your learning journey with thousands
-              of students worldwide.
-            </p>
-          </motion.div>
-
-          {/* Feature badges */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
-            className="grid grid-cols-2 gap-3 w-full max-w-sm"
-          >
-            {features.map((feature, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.4, delay: 0.5 + i * 0.1 }}
-                className="flex items-center gap-2.5 bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/20"
-              >
-                <div
-                  className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                  style={{ backgroundColor: feature.color + "30" }}
-                >
-                  <feature.icon
-                    className="w-4 h-4"
-                    style={{ color: feature.color }}
-                  />
-                </div>
-                <span className="text-white text-sm font-medium">
-                  {feature.text}
-                </span>
-              </motion.div>
-            ))}
-          </motion.div>
+        <div className="relative flex items-center justify-between p-10">
+          <Link href="/" className="inline-flex items-center gap-2.5">
+            <Image
+              src="/logo.jpeg"
+              alt="grotutor"
+              width={40}
+              height={40}
+              className="rounded-lg shadow-md"
+            />
+            <span className="font-display text-xl font-medium tracking-tight">
+              grotutor / admin
+            </span>
+          </Link>
         </div>
-      </div>
 
-      {/* Right Panel - Signup Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center px-6 py-12 sm:px-12 bg-background">
-        <div className="w-full max-w-md space-y-6">
-          {/* Mobile logo */}
-          <div className="flex justify-center lg:hidden mb-4">
-            <div className="w-14 h-14 rounded-xl overflow-hidden bg-primary/10 border border-primary/20">
-              <Image
-                src="/logo.jpeg"
-                alt="grotutor"
-                width={56}
-                height={56}
-                className="w-full h-full object-cover"
-              />
-            </div>
-          </div>
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="relative max-w-md p-10"
+        >
+          <p className="font-display text-xs italic tracking-wide text-background/70">
+            — A note for instructors
+          </p>
+          <h2 className="font-display mt-5 text-3xl font-medium leading-tight xl:text-4xl">
+            Build courses that{" "}
+            <em className="text-primary">actually ship.</em>
+          </h2>
+          <p className="mt-4 max-w-sm text-sm leading-relaxed text-background/80">
+            Apply for an instructor account. You&apos;ll get production tools,
+            cohort management, and transparent revenue share.
+          </p>
+          <ul className="mt-7 space-y-2.5">
+            {perks.map((p) => (
+              <li
+                key={p}
+                className="flex items-center gap-2.5 text-sm text-background/85"
+              >
+                <CheckCircle2 className="size-4 shrink-0 text-primary" />
+                {p}
+              </li>
+            ))}
+          </ul>
+        </motion.div>
+      </aside>
 
-          <header className="space-y-1.5">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
-              Create Account
-            </h1>
-            <p className="text-muted-foreground text-sm sm:text-base">
-              Join grotutor in minutes.
-            </p>
-          </header>
+      <main className="flex flex-1 flex-col">
+        <div className="flex items-center justify-between px-6 py-4 lg:hidden">
+          <Link href="/" className="flex items-center gap-2">
+            <Image
+              src="/logo.jpeg"
+              alt="grotutor"
+              width={36}
+              height={36}
+              className="rounded-lg"
+            />
+            <span className="font-display text-lg font-medium">
+              grotutor / admin
+            </span>
+          </Link>
+        </div>
 
-          <form
-            onSubmit={handleSubmit(handleFormSubmit)}
-            className="space-y-4"
-            aria-label="Registration form"
+        <div className="flex flex-1 items-center justify-center px-6 py-12">
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="w-full max-w-sm"
           >
-            <div className="space-y-1.5">
-              <Label
-                htmlFor="fullName"
-                className="text-foreground font-medium text-sm"
-              >
-                Full Name
-              </Label>
-              <input
-                id="fullName"
-                type="text"
-                autoComplete="name"
-                placeholder="John Doe"
-                className="flex h-11 w-full rounded-xl border border-input bg-background px-4 py-3 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                {...register("fullName")}
-                disabled={registerUser.isPending}
-                aria-describedby={
-                  errors.fullName ? "fullname-error" : undefined
-                }
-              />
-              {errors.fullName && (
-                <p
-                  id="fullname-error"
-                  className="text-xs text-destructive"
-                  role="alert"
-                >
-                  {errors.fullName.message}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-1.5">
-              <Label
-                htmlFor="email"
-                className="text-foreground font-medium text-sm"
-              >
-                Email Address
-              </Label>
-              <input
-                id="email"
-                type="email"
-                autoComplete="email"
-                placeholder="you@example.com"
-                className="flex h-11 w-full rounded-xl border border-input bg-background px-4 py-3 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                {...register("email")}
-                disabled={registerUser.isPending}
-                aria-describedby={errors.email ? "email-error" : undefined}
-              />
-              {errors.email && (
-                <p
-                  id="email-error"
-                  className="text-xs text-destructive"
-                  role="alert"
-                >
-                  {errors.email.message}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-1.5">
-              <Label
-                htmlFor="password"
-                className="text-foreground font-medium text-sm"
-              >
-                Password
-              </Label>
-              <PasswordInput
-                id="password"
-                autoComplete="new-password"
-                placeholder="••••••••"
-                className="h-11 rounded-xl border border-input bg-background px-4 py-3 text-sm"
-                {...register("password")}
-                disabled={registerUser.isPending}
-                aria-describedby={
-                  errors.password ? "password-error" : "password-hint"
-                }
-              />
-              {errors.password ? (
-                <p
-                  id="password-error"
-                  className="text-xs text-destructive"
-                  role="alert"
-                >
-                  {errors.password.message}
-                </p>
-              ) : (
-                <p
-                  id="password-hint"
-                  className="text-xs text-muted-foreground"
-                >
-                  Must include uppercase, lowercase, number, and special
-                  character (@$!%*?&amp;)
-                </p>
-              )}
-            </div>
-
-            <Button
-              type="submit"
-              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold h-11 rounded-xl"
-              disabled={registerUser.isPending}
-            >
-              {registerUser.isPending
-                ? "Creating Account..."
-                : "Create Account"}
-            </Button>
-
-            <div className="text-center text-sm pt-2">
-              <span className="text-muted-foreground">
-                Already a member?{" "}
-              </span>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Apply for access
+            </p>
+            <h1 className="font-display mt-3 text-4xl font-medium leading-tight tracking-tight text-foreground">
+              Create your account.
+            </h1>
+            <p className="mt-3 text-sm text-muted-foreground">
+              Already on the platform?{" "}
               <Link
                 href="/login"
-                className="text-primary hover:underline font-semibold"
+                className="font-medium text-foreground underline-offset-4 hover:text-primary hover:underline"
               >
-                Sign In
+                Sign in
               </Link>
-            </div>
-          </form>
+            </p>
+
+            <form
+              onSubmit={handleSubmit(handleFormSubmit)}
+              className="mt-8 space-y-5"
+              aria-label="Registration form"
+            >
+              <div>
+                <Label
+                  htmlFor="fullName"
+                  className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground"
+                >
+                  Full name
+                </Label>
+                <input
+                  id="fullName"
+                  type="text"
+                  autoComplete="name"
+                  placeholder="Your full name"
+                  className="flex h-12 w-full rounded-lg border border-input bg-card px-4 py-3 text-sm outline-none placeholder:text-muted-foreground/55 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/15 disabled:cursor-not-allowed disabled:opacity-50"
+                  {...register("fullName")}
+                  disabled={registerUser.isPending}
+                />
+                {errors.fullName && (
+                  <p className="mt-1.5 text-xs text-destructive" role="alert">
+                    {errors.fullName.message}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <Label
+                  htmlFor="email"
+                  className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground"
+                >
+                  Email
+                </Label>
+                <input
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="you@somewhere.com"
+                  className="flex h-12 w-full rounded-lg border border-input bg-card px-4 py-3 text-sm outline-none placeholder:text-muted-foreground/55 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/15 disabled:cursor-not-allowed disabled:opacity-50"
+                  {...register("email")}
+                  disabled={registerUser.isPending}
+                />
+                {errors.email && (
+                  <p className="mt-1.5 text-xs text-destructive" role="alert">
+                    {errors.email.message}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <Label
+                  htmlFor="password"
+                  className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground"
+                >
+                  Password
+                </Label>
+                <PasswordInput
+                  id="password"
+                  autoComplete="new-password"
+                  placeholder="Min. 8 characters"
+                  className="h-12 rounded-lg border border-input bg-card px-4 py-3 text-sm"
+                  {...register("password")}
+                  disabled={registerUser.isPending}
+                />
+                {errors.password ? (
+                  <p className="mt-1.5 text-xs text-destructive" role="alert">
+                    {errors.password.message}
+                  </p>
+                ) : (
+                  <p className="mt-1.5 text-[11px] text-muted-foreground">
+                    Must include uppercase, lowercase, number & special
+                    character (@$!%*?&amp;).
+                  </p>
+                )}
+              </div>
+
+              <Button
+                type="submit"
+                disabled={registerUser.isPending}
+                className="group h-12 w-full gap-2 rounded-full bg-foreground font-medium text-background shadow-lg shadow-foreground/15 transition-all hover:bg-foreground/90"
+              >
+                {registerUser.isPending ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" /> Creating
+                    account…
+                  </>
+                ) : (
+                  <>
+                    Apply
+                    <ArrowUpRight className="size-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                  </>
+                )}
+              </Button>
+            </form>
+          </motion.div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

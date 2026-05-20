@@ -28,6 +28,7 @@ import {
 import { FilterCoursesDto } from "./dto/filter-courses.dto";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { OptionalJwtAuthGuard } from "../auth/guards/optional-jwt-auth.guard";
+import { Public } from "../auth/decorators/public.decorator";
 import { RolesGuard } from "../auth/guards/roles.guard";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { UserRole } from "../auth/decorators/roles.decorator";
@@ -41,6 +42,7 @@ export class CoursesController {
   @ApiOperation({ summary: "Get all courses" })
   @ApiResponse({ status: 200, description: "List of courses" })
   @Get()
+  @Public()
   @UseGuards(OptionalJwtAuthGuard)
   @ApiBearerAuth()
   async findAll(
@@ -66,6 +68,7 @@ export class CoursesController {
   @ApiOperation({ summary: "Get course by slug" })
   @ApiResponse({ status: 200, description: "Course details" })
   @ApiResponse({ status: 404, description: "Course not found" })
+  @Public()
   @UseGuards(OptionalJwtAuthGuard)
   @ApiBearerAuth()
   @Get("slug/:slug")
@@ -79,6 +82,7 @@ export class CoursesController {
   @ApiOperation({ summary: "Get course by ID" })
   @ApiResponse({ status: 200, description: "Course details" })
   @ApiResponse({ status: 404, description: "Course not found" })
+  @Public()
   @UseGuards(OptionalJwtAuthGuard)
   @ApiBearerAuth()
   @Get(":id")

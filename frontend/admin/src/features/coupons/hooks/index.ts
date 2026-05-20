@@ -90,8 +90,3 @@ export function useValidateCoupon() {
         mutationFn: couponsApi.validate,
     });
 }
-export function useValidateBulkCoupon() {
-    return useMutation({
-        mutationFn: couponsApi.validateBulk,
-    });
-}

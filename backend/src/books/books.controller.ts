@@ -19,6 +19,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { CreateBookDto } from './dto/create-book.dto';
 import { UpdateBookDto } from './dto/update-book.dto';
 import { FilterBooksDto } from './dto/filter-books.dto';
+import { Public } from '../auth/decorators/public.decorator';
 
 @ApiTags('books')
 @Controller('books')
@@ -26,6 +27,7 @@ export class BooksController {
   constructor(private readonly booksService: BooksService) {}
 
   @Get()
+  @Public()
   @ApiOperation({ summary: 'Get published books (public)' })
   findPublished(@Query() filters: FilterBooksDto) {
     return this.booksService.findPublished(filters);
@@ -49,6 +51,7 @@ export class BooksController {
   }
 
   @Get('slug/:slug')
+  @Public()
   @UseGuards(OptionalJwtAuthGuard)
   @ApiOperation({ summary: 'Get book by slug (public)' })
   findBySlug(@Param('slug') slug: string) {
@@ -56,6 +59,7 @@ export class BooksController {
   }
 
   @Get(':id')
+  @Public()
   @UseGuards(OptionalJwtAuthGuard)
   @ApiOperation({ summary: 'Get book by ID' })
   findById(@Param('id') id: string) {

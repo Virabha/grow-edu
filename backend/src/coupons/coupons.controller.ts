@@ -2,7 +2,6 @@ import { Controller, Post, Body, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 import { CouponsService } from './coupons.service';
 import { ValidateCouponDto } from './dto/validate-coupon.dto';
-import { ValidateBulkCouponDto } from './dto/validate-bulk-coupon.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
@@ -40,17 +39,5 @@ export class CouponsController {
   ) {
     const userId = user.userId || user.sub;
     return this.couponsService.validateCoupon(dto, userId as string);
-  }
-
-  @Post('validate-bulk')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Validate a coupon code against cart items (bulk)' })
-  async validateBulkCoupon(
-    @Body() dto: ValidateBulkCouponDto,
-    @CurrentUser() user: { sub?: string; userId?: string },
-  ) {
-    const userId = user.userId || user.sub;
-    return this.couponsService.validateCouponForCartItems(dto, userId as string);
   }
 }

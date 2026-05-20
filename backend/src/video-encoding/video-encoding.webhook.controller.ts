@@ -15,10 +15,12 @@ import { timingSafeEqual } from "crypto";
 import { AppConfigService } from "../config";
 import { VideoEncodingService } from "./video-encoding.service";
 import { BunnyWebhookDto } from "./dto/bunny-webhook.dto";
+import { Public } from "../auth/decorators/public.decorator";
 
 @ApiTags("video-encoding")
 @Controller("video-encoding")
 @SkipThrottle()
+@Public()
 export class VideoEncodingWebhookController implements OnModuleInit {
   private readonly logger = new Logger(VideoEncodingWebhookController.name);
 

@@ -1,5 +1,5 @@
 import { apiClient } from '@/lib/api/client';
-import type { Coupon, CouponsResponse, CreateCouponDto, UpdateCouponDto, CouponFilters, CouponValidationResult, BulkCouponValidationResult, } from '../types';
+import type { Coupon, CouponsResponse, CreateCouponDto, UpdateCouponDto, CouponFilters, CouponValidationResult, } from '../types';
 export const couponsApi = {
     getAll: async (filters?: CouponFilters): Promise<CouponsResponse> => {
         const params = new URLSearchParams();
@@ -65,13 +65,6 @@ export const couponsApi = {
         itemType: 'COURSE' | 'SECTION';
     }): Promise<CouponValidationResult> => {
         const { data } = await apiClient.post<CouponValidationResult>('/coupons/validate', payload);
-        return data;
-    },
-    validateBulk: async (payload: {
-        couponCode: string;
-        cartItemIds: string[];
-    }): Promise<BulkCouponValidationResult> => {
-        const { data } = await apiClient.post<BulkCouponValidationResult>('/coupons/validate-bulk', payload);
         return data;
     },
 };

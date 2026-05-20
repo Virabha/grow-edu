@@ -61,34 +61,6 @@ export interface CouponValidationResult {
     reason?: string;
     message: string;
 }
-export interface BulkCouponItemResult {
-    cartItemId: string;
-    itemType: 'COURSE' | 'SECTION';
-    courseId?: string | null;
-    sectionId?: string | null;
-    currency: string;
-    originalAmount: string;
-    discountAmount: string;
-    finalAmount: string;
-    valid: boolean;
-    reason?: string;
-    message: string;
-}
-export interface BulkCouponValidationResult {
-    valid: boolean;
-    couponCode: string;
-    couponId?: string;
-    appliedCount: number;
-    totalItems: number;
-    totals: {
-        originalAmount: string;
-        discountAmount: string;
-        finalAmount: string;
-        currency: string;
-    };
-    items: BulkCouponItemResult[];
-    message: string;
-}
 export interface CouponFilters {
     search?: string;
     isActive?: boolean;

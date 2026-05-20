@@ -3,6 +3,7 @@ import { APP_GUARD } from "@nestjs/core";
 import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
+import { JwtAuthGuard } from "./auth/guards/jwt-auth.guard";
 import { InstructorModule } from "./instructor/instructor.module";
 import { AppConfigModule } from "./config/config.module";
 import { DatabaseModule } from "./database/database.module";
@@ -68,6 +69,7 @@ import { BooksModule } from "./books/books.module";
   providers: [
     AppService,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
   ],
 })
 export class AppModule {}

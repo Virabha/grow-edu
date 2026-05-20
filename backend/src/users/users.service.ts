@@ -141,6 +141,12 @@ export class UsersService {
       throw new ForbiddenException('Only platform admins can change user roles');
     }
 
+    // Only admins can flip the emailVerified flag — otherwise a learner could
+    // bypass the email-verification gate by PUTing emailVerified: true on themselves.
+    if (dto.emailVerified !== undefined && currentUserRole !== 'PLATFORM_ADMIN') {
+      throw new ForbiddenException('Only platform admins can change email verification status');
+    }
+
     // Track if role is changing
     const roleChanged = dto.role && dto.role !== user.role;
     const oldRole = user.role;
@@ -158,12 +164,19 @@ export class UsersService {
       }
     }
 
+    const { role, emailVerified, ...rest } = dto;
+    const updates: Partial<typeof users.$inferInsert> = {
+      ...rest,
+      updatedAt: new Date(),
+    };
+    if (currentUserRole === 'PLATFORM_ADMIN') {
+      if (role !== undefined) updates.role = role;
+      if (emailVerified !== undefined) updates.emailVerified = emailVerified;
+    }
+
     const [updated] = await this.db
       .update(users)
-      .set({
-        ...dto,
-        updatedAt: new Date(),
-      })
+      .set(updates)
       .where(eq(users.userId, id))
       .returning({ userId: users.userId });
 

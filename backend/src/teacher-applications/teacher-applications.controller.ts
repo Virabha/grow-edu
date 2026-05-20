@@ -24,6 +24,8 @@ import {
   UpdateTeacherApplicationStatusDto,
   TeacherApplicationStatus,
 } from './dto/update-status.dto';
+import { Public } from '../auth/decorators/public.decorator';
+import { Throttle } from '@nestjs/throttler';
 
 @ApiTags('teacher-applications')
 @Controller('teacher-applications')
@@ -34,6 +36,8 @@ export class TeacherApplicationsController {
   ) {}
 
   @Post()
+  @Public()
+  @Throttle({ default: { ttl: 60_000 * 60, limit: 3 } })
   @ApiOperation({ summary: 'Submit teacher application (public)' })
   @ApiResponse({ status: 201, description: 'Application submitted' })
   create(@Body() dto: CreateTeacherApplicationDto) {
@@ -41,6 +45,8 @@ export class TeacherApplicationsController {
   }
 
   @Post('upload-cv')
+  @Public()
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
   @ApiBody({

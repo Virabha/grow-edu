@@ -3,9 +3,11 @@ import { Throttle } from '@nestjs/throttler';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { SubscribeService } from './subscribe.service';
 import { CreateSubscribeDto } from './dto/create-subscribe.dto';
+import { Public } from '../auth/decorators/public.decorator';
 
 @ApiTags('subscribe')
 @Controller('subscribe')
+@Public()
 export class SubscribeController {
   constructor(private readonly subscribeService: SubscribeService) {}
 

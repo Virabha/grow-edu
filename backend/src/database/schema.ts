@@ -408,35 +408,6 @@ export const sectionAccess = pgTable(
   })
 );
 
-export const cartItems = pgTable(
-  "cart_items",
-  {
-    cartItemId: text("cart_item_id")
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
-    userId: text("user_id").notNull(),
-    courseId: text("course_id"),
-    sectionId: text("section_id"),
-    itemType: itemTypeEnum("item_type").notNull().default("COURSE"),
-    price: decimal("price", { precision: 10, scale: 2 }).notNull().default("0"),
-    currency: text("currency").notNull().default("INR"),
-    metadata: jsonb("metadata"),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
-  },
-  (table) => ({
-    userItemUnique: unique("cart_items_user_item_unique").on(
-      table.userId,
-      table.courseId,
-      table.sectionId,
-      table.itemType
-    ),
-    userIdx: index("cart_items_user_idx").on(table.userId),
-    courseIdx: index("cart_items_course_idx").on(table.courseId),
-    sectionIdx: index("cart_items_section_idx").on(table.sectionId),
-  })
-);
-
 export const payments = pgTable(
   "payments",
   {
@@ -953,7 +924,6 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   createdCourses: many(courses),
   payments: many(payments),
   progress: many(courseProgress),
-  cartItems: many(cartItems),
   sectionAccess: many(sectionAccess),
   emailTokens: many(emailTokens),
   couponUsages: many(couponUsages),
@@ -1002,7 +972,6 @@ export const coursesRelations = relations(courses, ({ one, many }) => ({
   sections: many(courseSections),
   enrollments: many(enrollments),
   progress: many(courseProgress),
-  cartItems: many(cartItems),
   sectionAccess: many(sectionAccess),
   payments: many(payments),
   encodingJobs: many(videoEncodingJobs),
@@ -1018,7 +987,6 @@ export const courseSectionsRelations = relations(
     }),
     lessons: many(lessons),
     sectionAccess: many(sectionAccess),
-    cartItems: many(cartItems),
   })
 );
 
@@ -1123,21 +1091,6 @@ export const sectionAccessRelations = relations(sectionAccess, ({ one }) => ({
   payment: one(payments, {
     fields: [sectionAccess.paymentId],
     references: [payments.paymentId],
-  }),
-}));
-
-export const cartItemsRelations = relations(cartItems, ({ one }) => ({
-  user: one(users, {
-    fields: [cartItems.userId],
-    references: [users.userId],
-  }),
-  course: one(courses, {
-    fields: [cartItems.courseId],
-    references: [courses.courseId],
-  }),
-  section: one(courseSections, {
-    fields: [cartItems.sectionId],
-    references: [courseSections.sectionId],
   }),
 }));
 

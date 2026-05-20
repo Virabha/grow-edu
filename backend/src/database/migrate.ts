@@ -24,7 +24,8 @@ async function main() {
 }
 
 main().catch((err) => {
-  void err;
+  // eslint-disable-next-line no-console
+  console.error('Migration failed:', err);
   process.exit(1);
 });
 

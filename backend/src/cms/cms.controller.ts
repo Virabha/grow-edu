@@ -11,6 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { CmsService } from './cms.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -28,6 +29,7 @@ import { CreateServiceDto } from './dto/create-service.dto';
 import { UpdateServiceDto } from './dto/update-service.dto';
 import { UpsertSiteSettingDto } from './dto/upsert-site-setting.dto';
 import { CreateServiceApplicationDto } from './dto/create-service-application.dto';
+import { Public } from '../auth/decorators/public.decorator';
 import { UpdateApplicationStatusDto } from './dto/update-application-status.dto';
 
 @ApiTags('cms')
@@ -38,6 +40,7 @@ export class CmsController {
   // ==================== BANNERS (public + admin) ====================
 
   @Get('banners')
+  @Public()
   @ApiOperation({ summary: 'Get active banners (public)' })
   @ApiResponse({ status: 200, description: 'List of active banners' })
   getBanners() {
@@ -110,6 +113,7 @@ export class CmsController {
   // ==================== FAQS (public + admin) ====================
 
   @Get('faqs')
+  @Public()
   @ApiOperation({ summary: 'Get active FAQs (public)' })
   @ApiResponse({ status: 200, description: 'List of active FAQs' })
   getFaqs() {
@@ -160,6 +164,7 @@ export class CmsController {
   // ==================== WHY CHOOSE US (public + admin) ====================
 
   @Get('why-choose-us')
+  @Public()
   @ApiOperation({ summary: 'Get active why choose us (public)' })
   getWhyChooseUs() {
     return this.cmsService.getWhyChooseUs();
@@ -208,6 +213,7 @@ export class CmsController {
   // ==================== TESTIMONIALS (public + admin) ====================
 
   @Get('testimonials')
+  @Public()
   @ApiOperation({ summary: 'Get active testimonials (public)' })
   getTestimonials() {
     return this.cmsService.getTestimonials();
@@ -256,12 +262,14 @@ export class CmsController {
   // ==================== SERVICES (public + admin) ====================
 
   @Get('services')
+  @Public()
   @ApiOperation({ summary: 'Get active services (public)' })
   getServices() {
     return this.cmsService.getServices();
   }
 
   @Get('services/slug/:slug')
+  @Public()
   @ApiOperation({ summary: 'Get service by slug (public)' })
   getServiceBySlug(@Param('slug') slug: string) {
     return this.cmsService.getServiceBySlug(slug);
@@ -310,6 +318,8 @@ export class CmsController {
   // ==================== SERVICE APPLICATIONS (public + admin) ====================
 
   @Post('services/:serviceId/applications')
+  @Public()
+  @Throttle({ default: { ttl: 60_000, limit: 3 } })
   @ApiOperation({ summary: 'Submit a service application (public)' })
   submitServiceApplication(
     @Param('serviceId') serviceId: string,
@@ -372,6 +382,7 @@ export class CmsController {
   // ==================== SITE SETTINGS (public + admin) ====================
 
   @Get('instructors')
+  @Public()
   @ApiOperation({ summary: 'Get active instructors (public)' })
   @ApiResponse({ status: 200, description: 'List of instructors' })
   getInstructors() {
@@ -379,6 +390,7 @@ export class CmsController {
   }
 
   @Get('site-settings')
+  @Public()
   @ApiOperation({ summary: 'Get all site settings as key-value (public)' })
   getAllSiteSettings() {
     return this.cmsService.getAllSiteSettings();
@@ -393,6 +405,7 @@ export class CmsController {
   }
 
   @Get('site-settings/:key')
+  @Public()
   @ApiOperation({ summary: 'Get site setting by key (public)' })
   getSiteSetting(@Param('key') key: string) {
     return this.cmsService.getSiteSetting(key);

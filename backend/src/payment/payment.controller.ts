@@ -22,6 +22,7 @@ import { PhonePeService } from './phonepe/phonepe.service';
 import { EnrollFreeDto } from './dto/enroll-free.dto';
 import { InitiatePhonePeDto } from './phonepe/dto/initiate-phonepe.dto';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { Public } from '../auth/decorators/public.decorator';
 
 @ApiTags('payments')
 @Controller('payments')
@@ -90,6 +91,7 @@ export class PaymentController {
   @Post('phonepe/webhook')
   @HttpCode(200)
   @SkipThrottle()
+  @Public()
   async phonepeWebhook(
     @Req() req: Request,
     @Headers('x-verify') xVerify: string | undefined,

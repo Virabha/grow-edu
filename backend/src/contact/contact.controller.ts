@@ -3,9 +3,11 @@ import { Throttle } from '@nestjs/throttler';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { ContactService } from './contact.service';
 import { CreateContactDto } from './dto/create-contact.dto';
+import { Public } from '../auth/decorators/public.decorator';
 
 @ApiTags('contact')
 @Controller('contact')
+@Public()
 export class ContactController {
   constructor(private readonly contactService: ContactService) {}
 

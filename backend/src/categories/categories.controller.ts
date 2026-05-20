@@ -18,6 +18,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../auth/decorators/roles.decorator';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
+import { Public } from '../auth/decorators/public.decorator';
 
 @ApiTags('categories')
 @Controller('categories')
@@ -25,6 +26,7 @@ export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
 
   @Get()
+  @Public()
   @ApiOperation({ summary: 'Get all categories (public)' })
   @ApiResponse({ status: 200, description: 'List of categories' })
   async findAll() {
@@ -32,6 +34,7 @@ export class CategoriesController {
   }
 
   @Get('slug/:slug')
+  @Public()
   @ApiOperation({ summary: 'Get category by slug (public)' })
   @ApiResponse({ status: 200, description: 'Category details' })
   @ApiResponse({ status: 404, description: 'Category not found' })
@@ -60,6 +63,7 @@ export class CategoriesController {
   }
 
   @Get(':id')
+  @Public()
   @ApiOperation({ summary: 'Get category by ID' })
   @ApiResponse({ status: 200, description: 'Category details' })
   @ApiResponse({ status: 404, description: 'Category not found' })

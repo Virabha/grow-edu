@@ -387,83 +387,108 @@ function CheckoutContent() {
 
   const [pending, setPending] = useState<CreateManualQRResponse | null>(null);
   const [done, setDone] = useState(false);
-  const freeAutoAttempted = useRef(false);
-  const [freeAutoEnrolling, setFreeAutoEnrolling] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const autoAttempted = useRef(false);
 
-  // Poll the payment when in pending state to detect status changes (e.g. admin approval).
+  // Live status — backend may have already approved this payment.
   const { data: paymentStatus } = useMyPayment(pending?.paymentId ?? null);
 
-  useEffect(() => {
-    if (pending?.status === "PROOF_UPLOADED") {
-      setDone(false); // we'll just display "already submitted" inline
-    }
-  }, [pending?.status]);
-
-  // Auto-enroll if free.
-  useEffect(() => {
-    if (!course || baseAmount !== 0 || freeAutoAttempted.current) return;
-    freeAutoAttempted.current = true;
-    let cancelled = false;
-    setFreeAutoEnrolling(true);
-    freeEnroll
-      .mutateAsync({
-        courseId: course.courseId,
-        sectionId: itemType === "SECTION" ? sectionId || undefined : undefined,
-        itemType,
-      })
-      .then(() => {
-        if (!cancelled) {
-          toast.success("Enrolled successfully!");
-          router.push("/my-courses");
-        }
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          freeAutoAttempted.current = false;
-          setFreeAutoEnrolling(false);
-          toast.error(getApiErrorMessage(err, "Failed to enroll"));
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [course, baseAmount, freeEnroll, itemType, sectionId, router]);
-
-  // Reset coupon state when target changes.
+  // Reset coupon + payment state when the target item changes.
   useEffect(() => {
     setAppliedCoupon(null);
     setCouponPreview(null);
     setCouponInput("");
+    setPending(null);
+    setPaymentError(null);
+    autoAttempted.current = false;
   }, [courseId, sectionId, itemType]);
+
+  // Free items auto-enrol, paid items auto-create the pending order.
+  // One effect; one network call; idempotent (backend reuses any existing PENDING).
+  useEffect(() => {
+    if (!course || autoAttempted.current) return;
+    autoAttempted.current = true;
+    let cancelled = false;
+
+    if (baseAmount === 0) {
+      freeEnroll
+        .mutateAsync({
+          courseId: course.courseId,
+          sectionId:
+            itemType === "SECTION" ? sectionId || undefined : undefined,
+          itemType,
+        })
+        .then(() => {
+          if (cancelled) return;
+          toast.success("Enrolled successfully!");
+          router.push("/my-courses");
+        })
+        .catch((err) => {
+          if (cancelled) return;
+          autoAttempted.current = false;
+          toast.error(getApiErrorMessage(err, "Failed to enrol."));
+        });
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    createPayment
+      .mutateAsync({
+        itemType,
+        courseId: course.courseId,
+        sectionId: itemType === "SECTION" ? sectionId || undefined : undefined,
+      })
+      .then((res) => {
+        if (!cancelled) setPending(res);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        autoAttempted.current = false;
+        const msg = getApiErrorMessage(err, "Couldn't start the payment.");
+        setPaymentError(msg);
+        toast.error(msg);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    course,
+    baseAmount,
+    itemType,
+    sectionId,
+    freeEnroll,
+    createPayment,
+    router,
+  ]);
 
   // Live-validate coupon as user types.
   useEffect(() => {
+    if (!course || !debouncedCoupon) {
+      setCouponPreview(null);
+      return;
+    }
     let cancelled = false;
-    async function run() {
-      if (!course || !debouncedCoupon) {
-        setCouponPreview(null);
-        return;
-      }
-      try {
-        const res = await validateCoupon.mutateAsync({
-          couponCode: debouncedCoupon,
-          courseId: course.courseId,
-          sectionId: itemType === "SECTION" ? sectionId || undefined : undefined,
-          itemType,
-        });
+    validateCoupon
+      .mutateAsync({
+        couponCode: debouncedCoupon,
+        courseId: course.courseId,
+        sectionId: itemType === "SECTION" ? sectionId || undefined : undefined,
+        itemType,
+      })
+      .then((res) => {
         if (!cancelled) setCouponPreview(res);
-      } catch (e) {
+      })
+      .catch((e) => {
         if (!cancelled) {
           setCouponPreview({
             valid: false,
             couponCode: debouncedCoupon.toUpperCase(),
             reason: "ERROR",
-            message: getApiErrorMessage(e, "Failed to validate coupon"),
+            message: getApiErrorMessage(e, "Couldn't validate coupon."),
           });
         }
-      }
-    }
-    run();
+      });
     return () => {
       cancelled = true;
     };
@@ -533,7 +558,7 @@ function CheckoutContent() {
     );
   }
 
-  if (freeAutoEnrolling) {
+  if (baseAmount === 0 && freeEnroll.isPending) {
     return (
       <PageLayout header="Enrolling…" description="Setting up your access.">
         <div className="flex flex-col items-center gap-3 py-16">
@@ -594,34 +619,35 @@ function CheckoutContent() {
       header={isPaymentStarted ? "Pay & verify" : "Checkout"}
       description={
         isPaymentStarted
-          ? "Pay via QR or bank transfer, then submit your transaction ID + screenshot."
-          : "Review your order and continue to payment."
+          ? "Pay via QR or bank transfer, then submit your transaction ID & screenshot."
+          : "Review your order — your payment details will load in a moment."
       }
     >
-      <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
-        {/* ── Left: order + (when started) payment+proof ─────────────── */}
+      <div className="mx-auto grid w-full max-w-6xl gap-5 lg:grid-cols-[1fr_340px]">
+        {/* ── Left: order summary + (once ready) payment + proof ────── */}
         <div className="space-y-5">
           <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               You&apos;re purchasing
             </p>
-            <h2 className="font-display mt-2 text-2xl font-medium leading-tight tracking-tight text-foreground sm:text-3xl">
+            <h2 className="font-display mt-2 break-words text-2xl font-medium leading-tight tracking-tight text-foreground sm:text-3xl">
               {course.title}
             </h2>
             {itemType === "SECTION" && targetSection ? (
               <p className="mt-2 text-sm text-muted-foreground">
-                Section: <span className="text-foreground">{targetSection.title}</span>
+                Section:{" "}
+                <span className="text-foreground">{targetSection.title}</span>
               </p>
             ) : (
               course.description && (
-                <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-muted-foreground">
+                <p className="mt-3 line-clamp-3 break-words text-sm leading-relaxed text-muted-foreground">
                   {course.description}
                 </p>
               )
             )}
           </div>
 
-          {isPaymentStarted && pending && (
+          {isPaymentStarted && pending ? (
             <>
               <PaymentPanel
                 qr={pending.qrSettings}
@@ -634,6 +660,39 @@ function CheckoutContent() {
                 onSubmitted={() => setDone(true)}
               />
             </>
+          ) : paymentError ? (
+            <div className="rounded-2xl border border-destructive/30 bg-destructive/5 px-6 py-6 text-center">
+              <p className="font-display text-lg font-medium text-destructive">
+                Payment couldn&apos;t start.
+              </p>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                {paymentError}
+              </p>
+              <div className="mt-5 flex flex-wrap justify-center gap-2">
+                <Button
+                  variant="outline"
+                  className="rounded-full"
+                  onClick={() => {
+                    autoAttempted.current = false;
+                    setPaymentError(null);
+                  }}
+                >
+                  Try again
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="rounded-full"
+                  onClick={() => router.push("/my-courses")}
+                >
+                  Go to my courses
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-muted/30 px-6 py-10 text-sm text-muted-foreground">
+              <Loader2 className="size-4 animate-spin" />
+              Preparing your payment details…
+            </div>
           )}
         </div>
 
@@ -742,19 +801,13 @@ function CheckoutContent() {
               )}
             </div>
 
-            {!isPaymentStarted && (
+            {finalAmount === 0 && (
               <Button
                 className="mt-5 h-11 w-full gap-2 rounded-full bg-foreground font-medium text-background hover:bg-foreground/90"
                 onClick={startPayment}
-                disabled={createPayment.isPending || freeEnroll.isPending}
+                disabled={freeEnroll.isPending}
               >
-                {finalAmount === 0
-                  ? freeEnroll.isPending
-                    ? "Enrolling…"
-                    : "Enrol for free"
-                  : createPayment.isPending
-                    ? "Preparing…"
-                    : "Continue to payment"}
+                {freeEnroll.isPending ? "Enrolling…" : "Enrol for free"}
               </Button>
             )}
           </div>

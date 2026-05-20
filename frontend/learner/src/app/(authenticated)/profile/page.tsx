@@ -118,20 +118,17 @@ export default function ProfilePage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-6 sm:px-6 lg:px-8">
-        <PageLayout header="Profile Settings">
-          <Skeleton className="h-64 w-full" />
-        </PageLayout>
-      </div>
+      <PageLayout header="Profile Settings">
+        <Skeleton className="h-64 w-full" />
+      </PageLayout>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 sm:px-6 lg:px-8">
-      <PageLayout
-        header="Profile Settings"
-        description="Manage your account information and preferences."
-      >
+    <PageLayout
+      header="Profile Settings"
+      description="Manage your account information and preferences."
+    >
         <div className="grid gap-6 md:grid-cols-[200px_1fr]">
           {/* Left column - Profile Image */}
           <Card>
@@ -246,6 +243,5 @@ export default function ProfilePage() {
           </Card>
         </div>
       </PageLayout>
-    </div>
   );
 }

@@ -39,7 +39,6 @@ export default function MyCoursesPage() {
   });
   const pagination = enrollmentsData?.pagination;
   return (
-    <div className="container mx-auto px-4 py-6 sm:px-6 lg:px-8">
     <PageLayout
       header="My Courses"
       description="Continue your learning journey with your enrolled courses."
@@ -237,6 +236,5 @@ export default function MyCoursesPage() {
         ) : null}
       </div>
     </PageLayout>
-    </div>
   );
 }

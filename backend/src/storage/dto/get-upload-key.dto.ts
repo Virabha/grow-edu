@@ -1,10 +1,23 @@
-import { IsEnum, IsOptional, IsString } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsEnum, IsOptional, IsString } from "class-validator";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+
+export const UPLOAD_TYPES = [
+  "course",
+  "profile",
+  "lesson",
+  "payment-proofs",
+  "qr",
+  "thumbnails",
+  "documents",
+  "misc",
+] as const;
+
+export type UploadType = (typeof UPLOAD_TYPES)[number];
 
 export class GetUploadKeyDto {
-  @ApiProperty({ enum: ['course', 'profile', 'lesson'] })
-  @IsEnum(['course', 'profile', 'lesson'])
-  type: 'course' | 'profile' | 'lesson';
+  @ApiProperty({ enum: UPLOAD_TYPES })
+  @IsEnum(UPLOAD_TYPES)
+  type: UploadType;
 
   @ApiPropertyOptional()
   @IsOptional()

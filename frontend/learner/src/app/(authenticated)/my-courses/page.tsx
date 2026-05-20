@@ -223,7 +223,7 @@ export default function MyCoursesPage() {
           </div>
         )}
 
-        {pagination && pagination.totalPages && pagination.totalPages > 1 && (
+        {pagination && (pagination.totalPages ?? 0) > 1 ? (
           <div className="mt-6">
             <Pagination
               currentPage={pagination.page}
@@ -234,7 +234,7 @@ export default function MyCoursesPage() {
               }}
             />
           </div>
-        )}
+        ) : null}
       </div>
     </PageLayout>
     </div>

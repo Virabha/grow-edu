@@ -529,14 +529,21 @@ export default function AdminCourseReviewPage({
         open={!!previewVideo}
         onOpenChange={(open) => !open && setPreviewVideo(null)}
       >
-        <DialogContent className="max-w-4xl max-h-[90vh]">
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
-            <DialogTitle>{previewVideo?.title}</DialogTitle>
-            <DialogDescription>
-              {previewVideo?.sectionTitle} — Admin Preview
-            </DialogDescription>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Admin preview
+            </p>
+            <DialogTitle className="line-clamp-2">
+              {previewVideo?.title}
+            </DialogTitle>
+            {previewVideo?.sectionTitle && (
+              <DialogDescription className="line-clamp-1">
+                {previewVideo.sectionTitle}
+              </DialogDescription>
+            )}
           </DialogHeader>
-          <div className="w-full aspect-video bg-muted rounded-lg overflow-hidden">
+          <div className="w-full overflow-hidden rounded-xl">
             {previewVideo?.lessonId && (
               <SecureVideoPlayer lessonId={previewVideo.lessonId} />
             )}

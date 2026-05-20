@@ -78,6 +78,8 @@ export class PaymentController {
       paymentId: id,
       userId: user.userId,
       proofUrl: dto.proofUrl,
+      transactionId: dto.transactionId,
+      payerName: dto.payerName,
     });
   }
 

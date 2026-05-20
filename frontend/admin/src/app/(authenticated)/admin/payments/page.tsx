@@ -176,7 +176,7 @@ export default function PaymentManagementPage() {
                             </Table>
                         </div>
                     </CardContent>
-                    {pagination && pagination.totalPages && pagination.totalPages > 1 && (
+                    {pagination && (pagination.totalPages ?? 0) > 1 ? (
                         <div className="flex items-center justify-between px-4 py-3 border-t">
                             <div className="text-sm text-muted-foreground">
                                 Page {pagination.page} of {pagination.totalPages} ({pagination.total} total)
@@ -200,7 +200,7 @@ export default function PaymentManagementPage() {
                                 </Button>
                             </div>
                         </div>
-                    )}
+                    ) : null}
                 </Card>
             )}
 

@@ -275,6 +275,51 @@ export class PaymentService {
       throw new BadRequestException('Item is free. Use the free-enroll endpoint instead.');
     }
 
+    // Already-paid guard — block creating a new pending order when the user
+    // already has a completed payment for this exact item.
+    const itemCondition = courseId
+      ? eq(payments.courseId, courseId)
+      : sectionId
+      ? eq(payments.sectionId, sectionId)
+      : null;
+    if (itemCondition) {
+      const completed = await this.db.query.payments.findFirst({
+        where: and(
+          eq(payments.userId, payload.userId),
+          itemCondition,
+          eq(payments.status, 'COMPLETED'),
+        ),
+      });
+      if (completed) {
+        throw new BadRequestException(
+          'You have already paid for this item. Check My Courses for access.',
+        );
+      }
+      // If there's an existing PENDING or PROOF_UPLOADED payment for this
+      // user+item, reuse it instead of creating a duplicate order.
+      const existing = await this.db.query.payments.findFirst({
+        where: and(
+          eq(payments.userId, payload.userId),
+          itemCondition,
+          eq(payments.gateway, PaymentGateway.MANUAL_QR),
+        ),
+        orderBy: (p, { desc }) => [desc(p.createdAt)],
+      });
+      if (
+        existing &&
+        (existing.status === 'PENDING' || existing.status === 'PROOF_UPLOADED')
+      ) {
+        return {
+          paymentId: existing.paymentId,
+          amount: Number(existing.amount),
+          currency: PLATFORM_CURRENCY,
+          status: existing.status,
+          qrSettings: await this.getQRSettings(),
+          reused: true,
+        };
+      }
+    }
+
     const [payment] = await this.db
       .insert(payments)
       .values({
@@ -326,12 +371,20 @@ export class PaymentService {
   }
 
   /**
-   * Learner uploads proof of QR payment (screenshot URL).
+   * Learner uploads proof of QR payment (screenshot URL + transaction id).
+   * Enforces:
+   *  - payment belongs to user, is MANUAL_QR, and is in a state that accepts proof
+   *  - transactionId is unique across all payments (prevents one screenshot/txn
+   *    being reused on a second checkout)
+   *  - same (courseId|sectionId, user) doesn't already have a COMPLETED payment
+   *    — covers the "already paid" case before bothering an admin
    */
   async uploadPaymentProof(payload: {
     paymentId: string;
     userId: string;
     proofUrl: string;
+    transactionId: string;
+    payerName?: string;
   }) {
     const payment = await this.db.query.payments.findFirst({
       where: and(
@@ -352,11 +405,52 @@ export class PaymentService {
       throw new BadRequestException(`Cannot upload proof for ${payment.status} payment`);
     }
 
+    // Already-paid guard: same user + same item with a completed payment.
+    const itemCondition = payment.courseId
+      ? eq(payments.courseId, payment.courseId)
+      : payment.sectionId
+      ? eq(payments.sectionId, payment.sectionId)
+      : null;
+
+    if (itemCondition) {
+      const alreadyPaid = await this.db.query.payments.findFirst({
+        where: and(
+          eq(payments.userId, payload.userId),
+          itemCondition,
+          eq(payments.status, 'COMPLETED'),
+        ),
+      });
+      if (alreadyPaid && alreadyPaid.paymentId !== payment.paymentId) {
+        throw new BadRequestException(
+          'You have already paid for this item. No further payment is required.',
+        );
+      }
+    }
+
+    // Transaction ID uniqueness — case-insensitive trim.
+    const normalisedTxn = payload.transactionId.trim();
+    if (normalisedTxn.length < 4) {
+      throw new BadRequestException('Transaction ID is too short');
+    }
+    const duplicate = await this.db.query.payments.findFirst({
+      where: and(
+        eq(payments.transactionId, normalisedTxn),
+        // ignore the current payment row itself (re-upload after correction)
+      ),
+    });
+    if (duplicate && duplicate.paymentId !== payment.paymentId) {
+      throw new BadRequestException(
+        'This transaction ID has already been submitted with another payment.',
+      );
+    }
+
     const now = new Date();
     const [updated] = await this.db
       .update(payments)
       .set({
         paymentProofUrl: payload.proofUrl,
+        transactionId: normalisedTxn,
+        payerName: payload.payerName?.trim() || null,
         proofUploadedAt: now,
         status: 'PROOF_UPLOADED',
         updatedAt: now,

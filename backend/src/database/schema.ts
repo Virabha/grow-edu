@@ -456,6 +456,8 @@ export const payments = pgTable(
     gatewayId: text("gateway_id"),
     status: paymentStatusEnum("status").notNull().default("PENDING"),
     paymentProofUrl: text("payment_proof_url"),
+    transactionId: text("transaction_id"),
+    payerName: text("payer_name"),
     proofUploadedAt: timestamp("proof_uploaded_at"),
     reviewedAt: timestamp("reviewed_at"),
     reviewedBy: text("reviewed_by"),
@@ -471,6 +473,7 @@ export const payments = pgTable(
     courseIdx: index("payments_course_idx").on(table.courseId),
     sectionIdx: index("payments_section_idx").on(table.sectionId),
     couponIdx: index("payments_coupon_idx").on(table.couponId),
+    txnIdx: index("payments_transaction_id_idx").on(table.transactionId),
   })
 );
 

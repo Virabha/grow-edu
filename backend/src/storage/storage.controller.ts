@@ -44,6 +44,10 @@ export class StorageController {
       key = `videos/${user.userId}/${cId}/${lId}/${timestamp}-${random}.${extension}`;
     } else if (body.courseId && body.type === "course") {
       key = `images/course/${user.userId}/${body.courseId}/${timestamp}-${random}.${extension}`;
+    } else if (body.type === "payment-proofs") {
+      key = `payment-proofs/${user.userId}/${timestamp}-${random}.${extension}`;
+    } else if (body.type === "documents") {
+      key = `documents/${user.userId}/${timestamp}-${random}.${extension}`;
     } else {
       key = `images/${body.type}/${user.userId}/${timestamp}-${random}.${extension}`;
     }

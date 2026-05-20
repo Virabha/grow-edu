@@ -43,11 +43,14 @@ export function CourseBuilder({ courseId }: CourseBuilderProps) {
     const [moduleTitle, setModuleTitle] = useState("");
     const [modulePrice, setModulePrice] = useState<string>("");
     const [modulePriceType, setModulePriceType] = useState<"INCLUDED" | "INDIVIDUAL" | "BOTH">("INCLUDED");
+    const [moduleTitleError, setModuleTitleError] = useState<string | null>(null);
+    const [modulePriceError, setModulePriceError] = useState<string | null>(null);
     const [isAddingLessonFor, setIsAddingLessonFor] = useState<string | null>(null);
     const [editingLessonId, setEditingLessonId] = useState<string | null>(null);
     const [previewLessonId, setPreviewLessonId] = useState<string | null>(null);
     const [lessonTitle, setLessonTitle] = useState("");
     const [lessonType, setLessonType] = useState<"VIDEO" | "TEXT" | "QUIZ">("VIDEO");
+    const [lessonTitleError, setLessonTitleError] = useState<string | null>(null);
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [confirmConfig, setConfirmConfig] = useState<{
         title: string;
@@ -64,16 +67,47 @@ export function CourseBuilder({ courseId }: CourseBuilderProps) {
         setModuleTitle("");
         setModulePrice("");
         setModulePriceType("INCLUDED");
+        setModuleTitleError(null);
+        setModulePriceError(null);
         setIsAddingModule(false);
         setEditingModuleId(null);
     };
+
+    const validateModuleForm = (): boolean => {
+        let valid = true;
+        if (!moduleTitle.trim()) {
+            setModuleTitleError("Title is required.");
+            valid = false;
+        } else if (moduleTitle.trim().length < 2) {
+            setModuleTitleError("Title must be at least 2 characters.");
+            valid = false;
+        } else {
+            setModuleTitleError(null);
+        }
+
+        if (modulePriceType !== "INCLUDED") {
+            const priceNum = parseFloat(modulePrice);
+            if (!modulePrice.trim() || Number.isNaN(priceNum)) {
+                setModulePriceError("Price is required when the section is sold separately.");
+                valid = false;
+            } else if (priceNum <= 0) {
+                setModulePriceError("Price must be greater than 0.");
+                valid = false;
+            } else {
+                setModulePriceError(null);
+            }
+        } else {
+            setModulePriceError(null);
+        }
+        return valid;
+    };
+
     const handleCreateModule = async () => {
-        if (!moduleTitle.trim())
-            return;
+        if (!validateModuleForm()) return;
         try {
             await createModuleMutation.mutateAsync({
                 courseId,
-                title: moduleTitle,
+                title: moduleTitle.trim(),
                 order: modules ? modules.length + 1 : 1,
                 priceType: modulePriceType,
                 sectionPrice: modulePrice ? parseFloat(modulePrice) : undefined,
@@ -86,14 +120,14 @@ export function CourseBuilder({ courseId }: CourseBuilderProps) {
         }
     };
     const handleUpdateModule = async () => {
-        if (!editingModuleId || !moduleTitle.trim())
-            return;
+        if (!editingModuleId) return;
+        if (!validateModuleForm()) return;
         try {
             await updateModuleMutation.mutateAsync({
                 id: editingModuleId,
                 dto: {
                     courseId,
-                    title: moduleTitle,
+                    title: moduleTitle.trim(),
                     priceType: modulePriceType,
                     sectionPrice: modulePrice ? parseFloat(modulePrice) : undefined,
                 },
@@ -197,13 +231,33 @@ export function CourseBuilder({ courseId }: CourseBuilderProps) {
           </CardHeader>
           <CardContent className="space-y-2.5">
             <div className="space-y-1.5">
-              <Label>Title</Label>
-              <Input value={moduleTitle} onChange={(e) => setModuleTitle(e.target.value)} placeholder="Section Title (e.g. Introduction)" autoFocus/>
+              <Label>
+                Title <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                value={moduleTitle}
+                onChange={(e) => {
+                  setModuleTitle(e.target.value);
+                  if (moduleTitleError) setModuleTitleError(null);
+                }}
+                placeholder="Section Title (e.g. Introduction)"
+                autoFocus
+                aria-invalid={!!moduleTitleError}
+                className={moduleTitleError ? "border-destructive focus-visible:ring-destructive/30" : undefined}
+              />
+              {moduleTitleError && (
+                <p className="text-xs text-destructive">{moduleTitleError}</p>
+              )}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label>Pricing Model</Label>
-                <Select value={modulePriceType} onValueChange={(val: "INCLUDED" | "INDIVIDUAL" | "BOTH") => setModulePriceType(val)}>
+                <Label>
+                  Pricing Model <span className="text-destructive">*</span>
+                </Label>
+                <Select value={modulePriceType} onValueChange={(val: "INCLUDED" | "INDIVIDUAL" | "BOTH") => {
+                  setModulePriceType(val);
+                  if (modulePriceError) setModulePriceError(null);
+                }}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -217,8 +271,28 @@ export function CourseBuilder({ courseId }: CourseBuilderProps) {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label>Price (if separate)</Label>
-                <Input type="number" step="0.01" value={modulePrice} onChange={(e) => setModulePrice(e.target.value)} placeholder="0.00" disabled={modulePriceType === "INCLUDED"}/>
+                <Label>
+                  Price (if separate)
+                  {modulePriceType !== "INCLUDED" && (
+                    <span className="text-destructive"> *</span>
+                  )}
+                </Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={modulePrice}
+                  onChange={(e) => {
+                    setModulePrice(e.target.value);
+                    if (modulePriceError) setModulePriceError(null);
+                  }}
+                  placeholder="0.00"
+                  disabled={modulePriceType === "INCLUDED"}
+                  aria-invalid={!!modulePriceError}
+                  className={modulePriceError ? "border-destructive focus-visible:ring-destructive/30" : undefined}
+                />
+                {modulePriceError && (
+                  <p className="text-xs text-destructive">{modulePriceError}</p>
+                )}
               </div>
             </div>
             <div className="flex justify-end gap-2">

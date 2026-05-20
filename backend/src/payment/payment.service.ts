@@ -23,6 +23,7 @@ import {
 import { eq, and, inArray, desc, like, sql } from 'drizzle-orm';
 import { EmailService } from '../email/email.service';
 import { CouponsService } from '../coupons/coupons.service';
+import { PhonePeService } from './phonepe/phonepe.service';
 
 const MAX_PAGE_LIMIT = 50;
 const PLATFORM_CURRENCY = 'INR';
@@ -34,6 +35,7 @@ const Razorpay = (RazorpayLib.default || RazorpayLib) as typeof RazorpayType;
 export enum PaymentGateway {
   RAZORPAY = 'RAZORPAY',
   MANUAL_QR = 'MANUAL_QR',
+  PHONEPE = 'PHONEPE',
   FREE = 'FREE',
 }
 
@@ -67,6 +69,7 @@ export class PaymentService {
     private readonly db: PostgresJsDatabase<typeof schema>,
     private emailService: EmailService,
     private couponsService: CouponsService,
+    private phonepeService: PhonePeService,
   ) {
     const razorpayKeyId = this.configService.razorpayKeyId;
     const razorpayKeySecret = this.configService.razorpayKeySecret;
@@ -920,5 +923,204 @@ export class PaymentService {
       data: results,
       pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
     };
+  }
+
+  async initiatePhonePePayment(payload: {
+    userId: string;
+    itemType: 'COURSE' | 'SECTION';
+    courseId?: string;
+    sectionId?: string;
+    couponCode?: string;
+  }) {
+    const { courseId, sectionId, originalAmount, amount, couponId, discountAmount } =
+      await this.resolveItemAndCoupon(payload);
+
+    if (amount <= 0) {
+      throw new BadRequestException(
+        'This item is free. Use the free-enrolment endpoint.',
+      );
+    }
+
+    if (payload.itemType === 'COURSE' && courseId) {
+      const [existing] = await this.db
+        .select({ id: enrollments.enrollmentId })
+        .from(enrollments)
+        .where(
+          and(
+            eq(enrollments.courseId, courseId),
+            eq(enrollments.userId, payload.userId),
+            inArray(enrollments.status, ['ACTIVE', 'COMPLETED']),
+          ),
+        )
+        .limit(1);
+      if (existing) {
+        throw new ConflictException('Already enrolled');
+      }
+    } else if (payload.itemType === 'SECTION' && sectionId) {
+      const [existing] = await this.db
+        .select({ id: sectionAccess.sectionAccessId })
+        .from(sectionAccess)
+        .where(
+          and(
+            eq(sectionAccess.userId, payload.userId),
+            eq(sectionAccess.sectionId, sectionId),
+          ),
+        )
+        .limit(1);
+      if (existing) {
+        throw new ConflictException('Already purchased');
+      }
+    }
+
+    const [payment] = await this.db
+      .insert(payments)
+      .values({
+        userId: payload.userId,
+        courseId,
+        sectionId,
+        itemType: payload.itemType,
+        amount: String(amount),
+        originalAmount: String(originalAmount),
+        discountAmount: String(discountAmount),
+        couponId,
+        currency: PLATFORM_CURRENCY,
+        gateway: PaymentGateway.PHONEPE,
+        status: 'PENDING',
+        metadata: {
+          couponCode: payload.couponCode || null,
+        },
+      })
+      .returning();
+
+    const merchantTransactionId = payment.paymentId;
+    const amountInPaise = Math.round(amount * 100);
+    const backendUrl = this.configService.backendUrl;
+
+    const result = await this.phonepeService.initiate({
+      merchantTransactionId,
+      amountInPaise,
+      userId: payload.userId,
+      redirectUrl: `${this.configService.phonepeRedirectUrl}?paymentId=${merchantTransactionId}`,
+      callbackUrl: `${backendUrl}/payments/phonepe/webhook`,
+    });
+
+    await this.db
+      .update(payments)
+      .set({ gatewayId: merchantTransactionId, updatedAt: new Date() })
+      .where(eq(payments.paymentId, payment.paymentId));
+
+    return {
+      paymentId: payment.paymentId,
+      paymentUrl: result.paymentUrl,
+      amount,
+      currency: PLATFORM_CURRENCY,
+    };
+  }
+
+  async finalizePhonePePayment(merchantTransactionId: string) {
+    const [payment] = await this.db
+      .select()
+      .from(payments)
+      .where(eq(payments.paymentId, merchantTransactionId))
+      .limit(1);
+
+    if (!payment) {
+      throw new NotFoundException('Payment not found');
+    }
+    if (payment.gateway !== PaymentGateway.PHONEPE) {
+      throw new BadRequestException('Not a PhonePe payment');
+    }
+
+    if (payment.status === 'COMPLETED') {
+      return { status: 'COMPLETED' as const, paymentId: payment.paymentId };
+    }
+    if (payment.status === 'FAILED' || payment.status === 'REFUNDED') {
+      return { status: payment.status, paymentId: payment.paymentId };
+    }
+
+    const result = await this.phonepeService.checkStatus(merchantTransactionId);
+
+    if (result.status === 'PENDING') {
+      return { status: 'PENDING' as const, paymentId: payment.paymentId };
+    }
+
+    if (result.status === 'FAILED') {
+      await this.db
+        .update(payments)
+        .set({ status: 'FAILED', updatedAt: new Date() })
+        .where(eq(payments.paymentId, payment.paymentId));
+      return { status: 'FAILED' as const, paymentId: payment.paymentId };
+    }
+
+    await this.db
+      .update(payments)
+      .set({
+        status: 'COMPLETED',
+        transactionId: result.providerTransactionId ?? null,
+        updatedAt: new Date(),
+      })
+      .where(eq(payments.paymentId, payment.paymentId));
+
+    await this.grantAccessForPayment(
+      payment.paymentId,
+      payment.itemType as 'COURSE' | 'SECTION',
+      payment.userId,
+      payment.courseId || undefined,
+      payment.sectionId || undefined,
+    );
+
+    if (payment.couponId && payment.courseId) {
+      try {
+        await this.couponsService.recordConsumedUsageLegacy({
+          couponId: payment.couponId,
+          userId: payment.userId,
+          courseId: payment.courseId,
+          paymentId: payment.paymentId,
+          originalAmount: Number(payment.originalAmount ?? payment.amount),
+          discountAmount: Number(payment.discountAmount ?? 0),
+          finalAmount: Number(payment.amount),
+        });
+      } catch {}
+    }
+
+    try {
+      await this.db
+        .delete(cartItems)
+        .where(
+          and(
+            eq(cartItems.userId, payment.userId),
+            payment.courseId
+              ? eq(cartItems.courseId, payment.courseId)
+              : sql`false`,
+          ),
+        );
+    } catch {}
+
+    return { status: 'COMPLETED' as const, paymentId: payment.paymentId };
+  }
+
+  async getPhonePeStatus(paymentId: string, userId: string) {
+    const [payment] = await this.db
+      .select({
+        paymentId: payments.paymentId,
+        userId: payments.userId,
+        status: payments.status,
+        gateway: payments.gateway,
+      })
+      .from(payments)
+      .where(eq(payments.paymentId, paymentId))
+      .limit(1);
+
+    if (!payment || payment.userId !== userId) {
+      throw new NotFoundException('Payment not found');
+    }
+    if (payment.gateway !== PaymentGateway.PHONEPE) {
+      throw new BadRequestException('Not a PhonePe payment');
+    }
+
+    if (payment.status === 'PENDING') {
+      return this.finalizePhonePePayment(paymentId);
+    }
+    return { status: payment.status, paymentId: payment.paymentId };
   }
 }

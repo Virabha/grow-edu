@@ -4,27 +4,39 @@ import {
   Get,
   Patch,
   Body,
+  Headers,
   Param,
   UseGuards,
   HttpCode,
   Query,
+  Req,
+  Logger,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { PaymentService } from './payment.service';
+import { PhonePeService } from './phonepe/phonepe.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { EnrollFreeDto } from './dto/enroll-free.dto';
 import { UploadProofDto } from './dto/upload-proof.dto';
 import { ReviewPaymentDto } from './dto/review-payment.dto';
 import { UpdateQRSettingsDto } from './dto/qr-settings.dto';
+import { InitiatePhonePeDto } from './phonepe/dto/initiate-phonepe.dto';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('payments')
 @Controller('payments')
 export class PaymentController {
-  constructor(private paymentService: PaymentService) {}
+  private readonly logger = new Logger(PaymentController.name);
+
+  constructor(
+    private paymentService: PaymentService,
+    private phonepeService: PhonePeService,
+  ) {}
 
   // ─── Public-ish (authenticated learner) ─────────────────────────────
 
@@ -92,6 +104,103 @@ export class PaymentController {
     @CurrentUser() user: { userId: string },
   ) {
     return this.paymentService.getMyPayment(id, user.userId);
+  }
+
+  // ─── PhonePe ────────────────────────────────────────────────────────
+
+  @ApiOperation({ summary: 'Initiate a PhonePe payment and get the redirect URL' })
+  @ApiResponse({ status: 201, description: 'PhonePe payment initiated' })
+  @Post('phonepe/initiate')
+  @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
+  @ApiBearerAuth()
+  async initiatePhonePe(
+    @Body() dto: InitiatePhonePeDto,
+    @CurrentUser() user: { userId: string },
+  ) {
+    return this.paymentService.initiatePhonePePayment({
+      userId: user.userId,
+      itemType: dto.itemType,
+      courseId: dto.courseId,
+      sectionId: dto.sectionId,
+      couponCode: dto.couponCode,
+    });
+  }
+
+  @ApiOperation({ summary: 'Poll PhonePe payment status (learner, own payment only)' })
+  @Get('phonepe/status/:paymentId')
+  @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { ttl: 60_000, limit: 60 } })
+  @ApiBearerAuth()
+  async getPhonePeStatus(
+    @Param('paymentId') paymentId: string,
+    @CurrentUser() user: { userId: string },
+  ) {
+    return this.paymentService.getPhonePeStatus(paymentId, user.userId);
+  }
+
+  @ApiOperation({ summary: 'PhonePe S2S callback (public, signature-verified)' })
+  @Post('phonepe/webhook')
+  @HttpCode(200)
+  @SkipThrottle()
+  async phonepeWebhook(
+    @Req() req: Request,
+    @Headers('x-verify') xVerify: string | undefined,
+  ) {
+    const rawBody =
+      typeof req.body === 'string'
+        ? req.body
+        : JSON.stringify(req.body ?? {});
+
+    this.phonepeService.verifyCallbackSignature(rawBody, xVerify);
+
+    type Envelope = { response?: string };
+    const parsed: Envelope =
+      typeof req.body === 'object' && req.body !== null
+        ? (req.body as Envelope)
+        : ((): Envelope => {
+            try {
+              return JSON.parse(rawBody) as Envelope;
+            } catch {
+              return {};
+            }
+          })();
+
+    const encoded = parsed.response;
+    if (!encoded) {
+      return { received: true, processed: false, reason: 'Missing response' };
+    }
+
+    let decoded: { data?: { merchantTransactionId?: string } } = {};
+    try {
+      decoded = JSON.parse(Buffer.from(encoded, 'base64').toString('utf8'));
+    } catch (err) {
+      this.logger.warn(
+        `PhonePe webhook decode failed: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+      return { received: true, processed: false, reason: 'Invalid envelope' };
+    }
+
+    const merchantTransactionId = decoded.data?.merchantTransactionId;
+    if (!merchantTransactionId) {
+      return { received: true, processed: false, reason: 'Missing transaction id' };
+    }
+
+    try {
+      const result = await this.paymentService.finalizePhonePePayment(
+        merchantTransactionId,
+      );
+      return { received: true, processed: true, status: result.status };
+    } catch (err) {
+      this.logger.error(
+        `PhonePe webhook finalize failed for ${merchantTransactionId}: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+      return { received: true, processed: false };
+    }
   }
 
   // ─── Admin ──────────────────────────────────────────────────────────

@@ -46,82 +46,6 @@ export interface WhyChooseUs {
   updatedAt: string;
 }
 
-export interface Testimonial {
-  testimonialId: string;
-  name: string;
-  role: string | null;
-  company: string | null;
-  rating: number;
-  text: string;
-  course: string | null;
-  avatarUrl: string | null;
-  displayOrder: number;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-// ==================== FORM SCHEMA TYPES ====================
-
-export interface FormFieldValidation {
-  minLength?: number;
-  maxLength?: number;
-  pattern?: string;
-  patternMessage?: string;
-  min?: number;
-  max?: number;
-}
-
-export interface FormFieldOption {
-  label: string;
-  value: string;
-}
-
-export type FormFieldType = "text" | "email" | "tel" | "number" | "date" | "select" | "textarea" | "radio" | "checkbox";
-
-export interface FormField {
-  id: string;
-  name: string;
-  label: string;
-  type: FormFieldType;
-  placeholder?: string;
-  required: boolean;
-  options?: FormFieldOption[];
-  validation?: FormFieldValidation;
-  defaultValue?: string;
-  width?: "full" | "half";
-}
-
-export interface FormSection {
-  id: string;
-  title: string;
-  description?: string;
-  fields: FormField[];
-}
-
-export interface FormSchema {
-  title: string;
-  description?: string;
-  sections: FormSection[];
-}
-
-// ==================== SERVICE TYPES ====================
-
-export interface Service {
-  serviceId: string;
-  title: string;
-  slug: string;
-  description: string | null;
-  imageUrl: string | null;
-  screenshots: string[];
-  iconName: string | null;
-  formSchema: FormSchema | null;
-  displayOrder: number;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
 export type SiteSettings = Record<string, unknown>;
 
 export interface Instructor {
@@ -136,27 +60,13 @@ export interface Instructor {
   displayOrder: number;
 }
 
-export interface SubmitServiceApplicationDto {
-  serviceId: string;
-  formData: Record<string, unknown>;
-  applicantName: string;
-  applicantEmail: string;
-  applicantPhone?: string;
-}
-
 export const cmsApi = {
-  getInstructors: () => apiClient.get<Instructor[]>("/cms/instructors").then((r) => r.data),
+  getInstructors: () =>
+    apiClient.get<Instructor[]>("/cms/instructors").then((r) => r.data),
   getBanners: () => apiClient.get<Banner[]>("/cms/banners").then((r) => r.data),
   getFaqs: () => apiClient.get<Faq[]>("/cms/faqs").then((r) => r.data),
-  getWhyChooseUs: () => apiClient.get<WhyChooseUs[]>("/cms/why-choose-us").then((r) => r.data),
-  getTestimonials: () => apiClient.get<Testimonial[]>("/cms/testimonials").then((r) => r.data),
-  getServices: () => apiClient.get<Service[]>("/cms/services").then((r) => r.data),
-  getServiceBySlug: (slug: string) =>
-    apiClient.get<Service>(`/cms/services/slug/${slug}`).then((r) => r.data),
+  getWhyChooseUs: () =>
+    apiClient.get<WhyChooseUs[]>("/cms/why-choose-us").then((r) => r.data),
   getAllSiteSettings: () =>
     apiClient.get<SiteSettings>("/cms/site-settings").then((r) => r.data),
-  getSiteSetting: <T = unknown>(key: string) =>
-    apiClient.get<T>(`/cms/site-settings/${key}`).then((r) => r.data),
-  submitServiceApplication: (dto: SubmitServiceApplicationDto) =>
-    apiClient.post(`/cms/services/${dto.serviceId}/applications`, dto).then((r) => r.data),
 };

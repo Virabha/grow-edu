@@ -120,19 +120,19 @@ export function WhyGrotutor() {
               className="group relative isolate flex min-h-[460px] flex-col justify-end overflow-hidden bg-primary p-7 text-primary-foreground sm:col-span-2 sm:p-10 lg:row-span-2"
             >
               <Image
-                src="/images/landing/classroom-1.jpg"
+                src="/images/landing/mentor-headline.jpg"
                 alt=""
                 fill
                 priority={false}
                 sizes="(max-width: 1024px) 100vw, 66vw"
-                className="object-cover transition-transform duration-700 group-hover:scale-[1.04]"
+                className="object-cover object-center transition-transform duration-700 group-hover:scale-[1.04]"
               />
               <div
-                className="absolute inset-0 bg-gradient-to-tr from-foreground/85 via-foreground/55 to-foreground/20"
+                className="absolute inset-0 bg-gradient-to-tr from-foreground/90 via-foreground/60 to-foreground/25"
                 aria-hidden
               />
               <div
-                className="absolute inset-0 bg-primary/25 mix-blend-multiply"
+                className="absolute inset-0 bg-primary/20 mix-blend-multiply"
                 aria-hidden
               />
               <div

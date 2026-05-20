@@ -6,12 +6,8 @@ export const queryKeys = {
     banners: () => ["cms", "banners"] as const,
     faqs: () => ["cms", "faqs"] as const,
     whyChooseUs: () => ["cms", "whyChooseUs"] as const,
-    testimonials: () => ["cms", "testimonials"] as const,
-    services: () => ["cms", "services"] as const,
-    serviceBySlug: (slug: string) => ["cms", "services", slug] as const,
     instructors: () => ["cms", "instructors"] as const,
     siteSettings: () => ["cms", "siteSettings"] as const,
-    siteSetting: (key: string) => ["cms", "siteSettings", key] as const,
   },
   categories: {
     all: () => ["categories"] as const,

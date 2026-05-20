@@ -91,22 +91,6 @@ export class AppConfigService {
     return this.configService.get("RAZORPAY_KEY_SECRET", { infer: true });
   }
 
-  get stripeUsSecretKey(): string | undefined {
-    return this.configService.get("STRIPE_US_SECRET_KEY", { infer: true });
-  }
-
-  get stripeUsPublishableKey(): string | undefined {
-    return this.configService.get("STRIPE_US_PUBLISHABLE_KEY", { infer: true });
-  }
-
-  get stripeUaeSecretKey(): string | undefined {
-    return this.configService.get("STRIPE_UAE_SECRET_KEY", { infer: true });
-  }
-
-  get stripeUaePublishableKey(): string | undefined {
-    return this.configService.get("STRIPE_UAE_PUBLISHABLE_KEY", { infer: true });
-  }
-
   get emailProvider(): "ses" | "sendgrid" {
     return this.configService.get("EMAIL_PROVIDER", { infer: true });
   }

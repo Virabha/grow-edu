@@ -59,11 +59,20 @@ export function useFreeEnroll() {
   });
 }
 
+interface UploadProofParams {
+  paymentId: string;
+  proofUrl: string;
+  transactionId: string;
+  payerName?: string;
+}
+
 export function useUploadProof() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ paymentId, proofUrl }: { paymentId: string; proofUrl: string }) =>
-      apiClient.post(`/payments/${paymentId}/upload-proof`, { proofUrl }).then((r) => r.data),
+    mutationFn: ({ paymentId, ...body }: UploadProofParams) =>
+      apiClient
+        .post(`/payments/${paymentId}/upload-proof`, body)
+        .then((r) => r.data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["payments"] });
     },

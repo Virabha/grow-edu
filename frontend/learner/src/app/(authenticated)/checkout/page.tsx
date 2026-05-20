@@ -1,22 +1,355 @@
 "use client";
-import { PageLayout } from "@/components/layout/page-layout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import Image from "next/image";
+import { useRouter, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
+import {
+  CheckCircle2,
+  Clock,
+  Copy,
+  Loader2,
+  QrCode,
+  ShoppingCart,
+  Upload,
+  X,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useSearchParams, useRouter } from "next/navigation";
-import { useCourseById } from "@/lib/hooks/use-courses";
-import { useCreatePayment, useFreeEnroll, useUploadProof, type CreateManualQRResponse } from "@/lib/hooks/use-payments";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
-import { ShoppingCart, Loader2, Upload, QrCode, Copy, CheckCircle2 } from "lucide-react";
-import Image from "next/image";
-import { useState, Suspense, useMemo, useEffect, useCallback, useRef } from "react";
+import { PageLayout } from "@/components/layout/page-layout";
+import { useCourseById } from "@/lib/hooks/use-courses";
+import {
+  useCreatePayment,
+  useFreeEnroll,
+  useMyPayment,
+  useUploadProof,
+  type CreateManualQRResponse,
+  type QRPaymentSettings,
+} from "@/lib/hooks/use-payments";
 import { useDebounce } from "@/hooks/use-debounce";
-import { useValidateCoupon, type CouponValidationResult } from "@/lib/hooks/use-coupons";
-import { toast } from "sonner";
+import {
+  useValidateCoupon,
+  type CouponValidationResult,
+} from "@/lib/hooks/use-coupons";
 import { getApiErrorMessage } from "@/lib/utils";
 import { uploadFile } from "@/lib/api/upload";
+
+function CopyButton({ value, label }: { value: string; label: string }) {
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        navigator.clipboard.writeText(value);
+        toast.success(`${label} copied`);
+      }}
+      className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border bg-background px-2 py-0.5 text-[11px] font-medium text-muted-foreground transition-colors hover:border-primary hover:text-foreground"
+      aria-label={`Copy ${label}`}
+    >
+      <Copy className="size-3" /> Copy
+    </button>
+  );
+}
+
+function DetailRow({
+  label,
+  value,
+  copyable,
+  mono,
+}: {
+  label: string;
+  value: string;
+  copyable?: boolean;
+  mono?: boolean;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-3 py-1.5 text-sm">
+      <span className="text-[11px] uppercase tracking-widest text-muted-foreground">
+        {label}
+      </span>
+      <span className="flex items-center gap-2 text-right">
+        <span
+          className={mono ? "font-mono text-foreground" : "text-foreground"}
+        >
+          {value}
+        </span>
+        {copyable && <CopyButton value={value} label={label} />}
+      </span>
+    </div>
+  );
+}
+
+function PaymentPanel({
+  qr,
+  amount,
+  currency,
+}: {
+  qr: QRPaymentSettings;
+  amount: number;
+  currency: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+      <div className="flex items-center gap-3">
+        <span className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <QrCode className="size-5" />
+        </span>
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            Step 01 · Pay
+          </p>
+          <p className="font-display text-2xl font-medium leading-tight text-foreground">
+            {currency} {amount.toFixed(2)}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-5 sm:grid-cols-[auto_1fr]">
+        {qr.qrImageUrl ? (
+          <div className="relative size-56 shrink-0 overflow-hidden rounded-xl border border-border bg-white">
+            <Image
+              src={qr.qrImageUrl}
+              alt="Payment QR code"
+              fill
+              className="object-contain p-2"
+              sizes="224px"
+              unoptimized
+            />
+          </div>
+        ) : (
+          <div className="grid size-56 shrink-0 place-items-center rounded-xl border border-dashed border-border bg-muted/30 text-xs text-muted-foreground">
+            QR not configured
+          </div>
+        )}
+
+        <div className="space-y-1.5">
+          {qr.upiId && (
+            <DetailRow label="UPI ID" value={qr.upiId} mono copyable />
+          )}
+          {qr.bankAccountHolder && (
+            <DetailRow label="Account holder" value={qr.bankAccountHolder} />
+          )}
+          {qr.bankName && <DetailRow label="Bank" value={qr.bankName} />}
+          {qr.bankAccountNumber && (
+            <DetailRow
+              label="Account no."
+              value={qr.bankAccountNumber}
+              mono
+              copyable
+            />
+          )}
+          {qr.bankIfsc && (
+            <DetailRow label="IFSC" value={qr.bankIfsc} mono copyable />
+          )}
+        </div>
+      </div>
+
+      {qr.instructions && (
+        <div className="mt-5 rounded-xl bg-muted/40 p-3 text-xs leading-relaxed text-muted-foreground">
+          {qr.instructions}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ProofPanel({
+  pending,
+  isAlreadySubmitted,
+  onSubmitted,
+}: {
+  pending: CreateManualQRResponse;
+  isAlreadySubmitted: boolean;
+  onSubmitted: () => void;
+}) {
+  const uploadProof = useUploadProof();
+  const [proofFile, setProofFile] = useState<File | null>(null);
+  const [proofPreview, setProofPreview] = useState<string | null>(null);
+  const [transactionId, setTransactionId] = useState("");
+  const [payerName, setPayerName] = useState("");
+  const [uploading, setUploading] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (proofPreview) URL.revokeObjectURL(proofPreview);
+    };
+  }, [proofPreview]);
+
+  const handleFile = (file: File | null) => {
+    setProofFile(file);
+    if (proofPreview) URL.revokeObjectURL(proofPreview);
+    setProofPreview(file ? URL.createObjectURL(file) : null);
+  };
+
+  const canSubmit =
+    !!proofFile && transactionId.trim().length >= 4 && !uploading;
+
+  const handleSubmit = async () => {
+    if (!proofFile) {
+      toast.error("Attach your transaction screenshot first.");
+      return;
+    }
+    if (transactionId.trim().length < 4) {
+      toast.error("Enter your transaction ID (min. 4 characters).");
+      return;
+    }
+    setUploading(true);
+    try {
+      const url = await uploadFile(proofFile, "payment-proofs");
+      await uploadProof.mutateAsync({
+        paymentId: pending.paymentId,
+        proofUrl: url,
+        transactionId: transactionId.trim(),
+        payerName: payerName.trim() || undefined,
+      });
+      toast.success("Proof submitted — awaiting admin review.");
+      onSubmitted();
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Upload failed."));
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+      <div className="flex items-center gap-3">
+        <span className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <Upload className="size-5" />
+        </span>
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            Step 02 · Verify
+          </p>
+          <p className="font-display text-2xl font-medium leading-tight text-foreground">
+            Submit your proof.
+          </p>
+        </div>
+      </div>
+
+      {isAlreadySubmitted ? (
+        <div className="mt-5 flex items-center gap-3 rounded-xl border border-amber-300/40 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+          <Clock className="size-4 shrink-0" />
+          We already received your proof. The admin is reviewing — we&apos;ll
+          email you when it&apos;s confirmed.
+        </div>
+      ) : (
+        <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_240px]">
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label
+                htmlFor="txn-id"
+                className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground"
+              >
+                Transaction ID / UTR{" "}
+                <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="txn-id"
+                value={transactionId}
+                onChange={(e) => setTransactionId(e.target.value)}
+                placeholder="e.g. 458912703456"
+                autoComplete="off"
+                inputMode="text"
+                spellCheck={false}
+                className="font-mono"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Find this on your bank/UPI app after a successful payment. We
+                use it to match your transfer.
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label
+                htmlFor="payer-name"
+                className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground"
+              >
+                Payer name (optional)
+              </Label>
+              <Input
+                id="payer-name"
+                value={payerName}
+                onChange={(e) => setPayerName(e.target.value)}
+                placeholder="Name shown on the receipt"
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Label
+                htmlFor="proof-upload"
+                className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+              >
+                <Upload className="size-4" />
+                {proofFile ? "Change screenshot" : "Attach screenshot"}
+                <input
+                  id="proof-upload"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => handleFile(e.target.files?.[0] || null)}
+                />
+              </Label>
+              {proofFile && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => handleFile(null)}
+                  className="gap-1"
+                >
+                  <X className="size-3.5" />
+                  Remove
+                </Button>
+              )}
+            </div>
+
+            <Button
+              type="button"
+              className="h-11 w-full gap-2 rounded-full bg-foreground font-medium text-background hover:bg-foreground/90"
+              disabled={!canSubmit || uploadProof.isPending}
+              onClick={handleSubmit}
+            >
+              {uploading || uploadProof.isPending ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" /> Submitting…
+                </>
+              ) : (
+                "Submit for review"
+              )}
+            </Button>
+          </div>
+
+          <div>
+            {proofPreview ? (
+              <div className="relative aspect-[3/4] w-full overflow-hidden rounded-xl border border-border bg-background">
+                <Image
+                  src={proofPreview}
+                  alt="Payment proof preview"
+                  fill
+                  className="object-contain"
+                  unoptimized
+                />
+              </div>
+            ) : (
+              <div className="grid aspect-[3/4] w-full place-items-center rounded-xl border border-dashed border-border bg-muted/30 text-center text-xs text-muted-foreground">
+                Screenshot preview
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function CheckoutContent() {
   const searchParams = useSearchParams();
@@ -30,7 +363,6 @@ function CheckoutContent() {
   const { data: course, isLoading } = useCourseById(courseId);
   const createPayment = useCreatePayment();
   const freeEnroll = useFreeEnroll();
-  const uploadProof = useUploadProof();
   const validateCoupon = useValidateCoupon();
 
   const targetSection = useMemo(
@@ -39,31 +371,38 @@ function CheckoutContent() {
   );
 
   const baseAmount = useMemo(() => {
-    const coursePrice = course ? parseFloat(course.price) : 0;
+    if (!course) return 0;
     if (itemType === "SECTION" && targetSection?.sectionPrice) {
       return parseFloat(String(targetSection.sectionPrice));
     }
-    return coursePrice;
+    return parseFloat(course.price);
   }, [course, itemType, targetSection?.sectionPrice]);
 
   const [couponInput, setCouponInput] = useState("");
   const debouncedCoupon = useDebounce(couponInput.trim(), 400);
-  const [couponPreview, setCouponPreview] = useState<CouponValidationResult | null>(null);
-  const [appliedCoupon, setAppliedCoupon] = useState<CouponValidationResult | null>(null);
+  const [couponPreview, setCouponPreview] =
+    useState<CouponValidationResult | null>(null);
+  const [appliedCoupon, setAppliedCoupon] =
+    useState<CouponValidationResult | null>(null);
 
-  const [step, setStep] = useState<"review" | "pay" | "done">("review");
   const [pending, setPending] = useState<CreateManualQRResponse | null>(null);
-  const [proofFile, setProofFile] = useState<File | null>(null);
-  const [proofPreview, setProofPreview] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
-
-  const freeAutoEnrollAttempted = useRef(false);
+  const [done, setDone] = useState(false);
+  const freeAutoAttempted = useRef(false);
   const [freeAutoEnrolling, setFreeAutoEnrolling] = useState(false);
 
-  // Auto-enroll if free
+  // Poll the payment when in pending state to detect status changes (e.g. admin approval).
+  const { data: paymentStatus } = useMyPayment(pending?.paymentId ?? null);
+
   useEffect(() => {
-    if (!course || baseAmount !== 0 || freeAutoEnrollAttempted.current) return;
-    freeAutoEnrollAttempted.current = true;
+    if (pending?.status === "PROOF_UPLOADED") {
+      setDone(false); // we'll just display "already submitted" inline
+    }
+  }, [pending?.status]);
+
+  // Auto-enroll if free.
+  useEffect(() => {
+    if (!course || baseAmount !== 0 || freeAutoAttempted.current) return;
+    freeAutoAttempted.current = true;
     let cancelled = false;
     setFreeAutoEnrolling(true);
     freeEnroll
@@ -80,7 +419,7 @@ function CheckoutContent() {
       })
       .catch((err) => {
         if (!cancelled) {
-          freeAutoEnrollAttempted.current = false;
+          freeAutoAttempted.current = false;
           setFreeAutoEnrolling(false);
           toast.error(getApiErrorMessage(err, "Failed to enroll"));
         }
@@ -90,12 +429,14 @@ function CheckoutContent() {
     };
   }, [course, baseAmount, freeEnroll, itemType, sectionId, router]);
 
+  // Reset coupon state when target changes.
   useEffect(() => {
     setAppliedCoupon(null);
     setCouponPreview(null);
     setCouponInput("");
   }, [courseId, sectionId, itemType]);
 
+  // Live-validate coupon as user types.
   useEffect(() => {
     let cancelled = false;
     async function run() {
@@ -113,14 +454,11 @@ function CheckoutContent() {
         if (!cancelled) setCouponPreview(res);
       } catch (e) {
         if (!cancelled) {
-          const msg =
-            (e as any)?.response?.data?.message ||
-            (e instanceof Error ? e.message : "Failed to validate coupon");
           setCouponPreview({
             valid: false,
             couponCode: debouncedCoupon.toUpperCase(),
             reason: "ERROR",
-            message: msg,
+            message: getApiErrorMessage(e, "Failed to validate coupon"),
           });
         }
       }
@@ -132,26 +470,60 @@ function CheckoutContent() {
   }, [course, debouncedCoupon, itemType, sectionId, validateCoupon]);
 
   const effectiveCoupon = appliedCoupon?.valid ? appliedCoupon : null;
-  const finalAmount = effectiveCoupon?.valid
+  const finalAmount = effectiveCoupon
     ? parseFloat(String(effectiveCoupon.finalAmount))
     : baseAmount;
 
-  const copyToClipboard = useCallback((label: string, value: string) => {
-    navigator.clipboard.writeText(value);
-    toast.success(`${label} copied`);
-  }, []);
+  const startPayment = useCallback(async () => {
+    if (!course) return;
+    if (finalAmount === 0) {
+      try {
+        await freeEnroll.mutateAsync({
+          courseId: course.courseId,
+          sectionId: itemType === "SECTION" ? sectionId || undefined : undefined,
+          itemType,
+          couponCode: effectiveCoupon?.couponCode,
+        });
+        toast.success("Enrolled successfully!");
+        router.push("/my-courses");
+      } catch (err) {
+        toast.error(getApiErrorMessage(err, "Failed to enroll"));
+      }
+      return;
+    }
+    try {
+      const res = await createPayment.mutateAsync({
+        itemType,
+        courseId: course.courseId,
+        sectionId: itemType === "SECTION" ? sectionId || undefined : undefined,
+        couponCode: effectiveCoupon?.couponCode,
+      });
+      setPending(res);
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to start payment"));
+    }
+  }, [
+    course,
+    finalAmount,
+    itemType,
+    sectionId,
+    effectiveCoupon,
+    freeEnroll,
+    createPayment,
+    router,
+  ]);
 
   if (isLoading) {
     return (
-      <PageLayout header="Loading...">
-        <Skeleton className="h-64 w-full" />
+      <PageLayout header="Checkout" description="Loading your order…">
+        <Skeleton className="h-64 w-full rounded-2xl" />
       </PageLayout>
     );
   }
 
   if (!course) {
     return (
-      <PageLayout header="Course Not Found">
+      <PageLayout header="Checkout">
         <EmptyState
           title="Course not found"
           description="The course you're looking for doesn't exist."
@@ -163,295 +535,176 @@ function CheckoutContent() {
 
   if (freeAutoEnrolling) {
     return (
-      <PageLayout header="Enrolling...">
-        <div className="flex flex-col items-center justify-center py-10 gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">Enrolling you for free...</p>
+      <PageLayout header="Enrolling…" description="Setting up your access.">
+        <div className="flex flex-col items-center gap-3 py-16">
+          <Loader2 className="size-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">One moment…</p>
         </div>
       </PageLayout>
     );
   }
 
-  const handleProceed = async () => {
-    if (finalAmount === 0) {
-      try {
-        await freeEnroll.mutateAsync({
-          courseId: course.courseId,
-          sectionId: itemType === "SECTION" ? sectionId || undefined : undefined,
-          itemType,
-          couponCode: effectiveCoupon?.valid ? effectiveCoupon.couponCode : undefined,
-        });
-        toast.success("Enrolled successfully!");
-        router.push("/my-courses");
-      } catch (err) {
-        toast.error(getApiErrorMessage(err, "Failed to enroll"));
-      }
-      return;
-    }
-
-    try {
-      const res = await createPayment.mutateAsync({
-        itemType,
-        courseId: course.courseId,
-        sectionId: itemType === "SECTION" ? sectionId || undefined : undefined,
-        couponCode: effectiveCoupon?.valid ? effectiveCoupon.couponCode : undefined,
-      });
-      setPending(res);
-      setStep("pay");
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, "Failed to create payment"));
-    }
-  };
-
-  const handleFile = (file: File | null) => {
-    setProofFile(file);
-    if (file) {
-      const url = URL.createObjectURL(file);
-      setProofPreview(url);
-    } else {
-      setProofPreview(null);
-    }
-  };
-
-  const handleSubmitProof = async () => {
-    if (!pending || !proofFile) return;
-    setUploading(true);
-    try {
-      const url = await uploadFile(proofFile, "payment-proofs");
-      await uploadProof.mutateAsync({ paymentId: pending.paymentId, proofUrl: url });
-      toast.success("Proof submitted — awaiting admin review");
-      setStep("done");
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, "Upload failed"));
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  // ─── Step: done ──────────────────────────────────────────────────────
-  if (step === "done") {
+  // ── Done state ─────────────────────────────────────────────────────────
+  if (done) {
     return (
-      <PageLayout header="Payment submitted">
+      <PageLayout
+        header="Payment submitted"
+        description="The admin is verifying your transfer."
+      >
         <div className="mx-auto max-w-md py-8">
-          <Card>
-            <CardContent className="flex flex-col items-center gap-3 py-8 text-center">
-              <CheckCircle2 className="h-12 w-12 text-green-600" />
-              <h2 className="text-xl font-semibold">Awaiting verification</h2>
-              <p className="text-sm text-muted-foreground">
-                Thanks! Your payment proof has been submitted. Once an admin verifies it,
-                you&apos;ll get email confirmation and instant course access.
-              </p>
-              <div className="flex gap-2 pt-2">
-                <Button variant="outline" onClick={() => router.push("/my-courses")}>
-                  My courses
-                </Button>
-                <Button onClick={() => router.push("/courses")}>Browse more</Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </PageLayout>
-    );
-  }
-
-  // ─── Step: pay ───────────────────────────────────────────────────────
-  if (step === "pay" && pending) {
-    const qr = pending.qrSettings;
-    return (
-      <PageLayout header="Pay & upload proof" description="Pay using the QR code or bank transfer, then upload your transaction screenshot.">
-        <div className="grid gap-4 lg:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <QrCode className="h-4 w-4" />
-                Pay {pending.currency} {pending.amount.toFixed(2)}
-              </CardTitle>
-              <CardDescription>Scan the QR or use the bank details below.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {qr.qrImageUrl ? (
-                <div className="relative mx-auto h-64 w-64 overflow-hidden rounded-md border bg-white">
-                  <Image
-                    src={qr.qrImageUrl}
-                    alt="Payment QR code"
-                    fill
-                    className="object-contain"
-                    sizes="256px"
-                    unoptimized
-                  />
-                </div>
-              ) : (
-                <div className="mx-auto grid h-64 w-64 place-items-center rounded-md border border-dashed text-sm text-muted-foreground">
-                  QR not configured
-                </div>
-              )}
-
-              {qr.upiId && (
-                <div className="flex items-center justify-between rounded-md border p-2 text-sm">
-                  <div>
-                    <div className="text-xs text-muted-foreground">UPI ID</div>
-                    <div className="font-medium">{qr.upiId}</div>
-                  </div>
-                  <Button variant="ghost" size="sm" onClick={() => copyToClipboard("UPI ID", qr.upiId!)}>
-                    <Copy className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              )}
-
-              {(qr.bankName || qr.bankAccountNumber || qr.bankIfsc) && (
-                <div className="rounded-md border p-3 text-sm space-y-1.5">
-                  <div className="text-xs font-semibold text-muted-foreground uppercase">
-                    Bank transfer
-                  </div>
-                  {qr.bankAccountHolder && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Account holder</span>
-                      <span>{qr.bankAccountHolder}</span>
-                    </div>
-                  )}
-                  {qr.bankName && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Bank</span>
-                      <span>{qr.bankName}</span>
-                    </div>
-                  )}
-                  {qr.bankAccountNumber && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Account</span>
-                      <button
-                        className="font-mono hover:underline"
-                        onClick={() => copyToClipboard("Account number", qr.bankAccountNumber!)}
-                      >
-                        {qr.bankAccountNumber}
-                      </button>
-                    </div>
-                  )}
-                  {qr.bankIfsc && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">IFSC</span>
-                      <button
-                        className="font-mono hover:underline"
-                        onClick={() => copyToClipboard("IFSC", qr.bankIfsc!)}
-                      >
-                        {qr.bankIfsc}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {qr.instructions && (
-                <div className="rounded-md bg-muted p-3 text-xs text-muted-foreground whitespace-pre-wrap">
-                  {qr.instructions}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Upload proof of payment</CardTitle>
-              <CardDescription>
-                After paying, attach a screenshot of the transaction. Admin reviews this manually.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {proofPreview ? (
-                <div className="relative mx-auto aspect-[3/4] w-full max-w-xs overflow-hidden rounded-md border">
-                  <Image src={proofPreview} alt="Proof preview" fill className="object-contain" unoptimized />
-                </div>
-              ) : (
-                <div className="grid aspect-[3/4] w-full max-w-xs mx-auto place-items-center rounded-md border border-dashed text-sm text-muted-foreground">
-                  No file selected
-                </div>
-              )}
-
-              <div className="flex items-center justify-center gap-2">
-                <Label htmlFor="proof-upload" className="cursor-pointer">
-                  <span className="inline-flex items-center gap-2 rounded-md border bg-background px-3 py-1.5 text-sm shadow-sm hover:bg-accent">
-                    <Upload className="h-4 w-4" />
-                    {proofFile ? "Change file" : "Choose screenshot"}
-                  </span>
-                  <input
-                    id="proof-upload"
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => handleFile(e.target.files?.[0] || null)}
-                  />
-                </Label>
-                {proofFile && (
-                  <Button variant="ghost" size="sm" onClick={() => handleFile(null)}>
-                    Remove
-                  </Button>
-                )}
-              </div>
-
+          <div className="rounded-2xl border border-border bg-card p-7 text-center">
+            <CheckCircle2 className="mx-auto size-12 text-primary" />
+            <h2 className="font-display mt-4 text-2xl font-medium leading-tight tracking-tight text-foreground">
+              You&apos;re in the queue.
+            </h2>
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+              We&apos;ve received your transaction ID and proof. You&apos;ll
+              get an email the moment it&apos;s verified — usually within a few
+              hours.
+            </p>
+            <div className="mt-7 flex flex-wrap justify-center gap-2">
               <Button
-                className="w-full"
-                disabled={!proofFile || uploading || uploadProof.isPending}
-                onClick={handleSubmitProof}
+                variant="outline"
+                onClick={() => router.push("/courses")}
+                className="rounded-full"
               >
-                {uploading || uploadProof.isPending ? "Submitting…" : "Submit for review"}
+                Browse more
               </Button>
-            </CardContent>
-          </Card>
+              <Button
+                onClick={() => router.push("/my-courses")}
+                className="rounded-full"
+              >
+                My courses
+              </Button>
+            </div>
+          </div>
         </div>
       </PageLayout>
     );
   }
 
-  // ─── Step: review ────────────────────────────────────────────────────
-  return (
-    <PageLayout header="Checkout" description="Review your order and proceed to payment.">
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-base">{course.title}</CardTitle>
-            <CardDescription className="line-clamp-2">{course.description}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {itemType === "SECTION" && targetSection && (
-              <p className="text-xs text-muted-foreground">
-                Purchasing section: <span className="font-medium text-foreground">{targetSection.title}</span>
-              </p>
-            )}
-          </CardContent>
-        </Card>
+  // ── Order summary card ────────────────────────────────────────────────
+  const isPaymentStarted = !!pending && finalAmount > 0;
+  const isAlreadySubmitted =
+    (pending?.status === "PROOF_UPLOADED") ||
+    paymentStatus?.status === "PROOF_UPLOADED";
 
-        <Card className="lg:sticky lg:top-4 h-fit">
-          <CardHeader>
-            <CardTitle className="text-base">Order summary</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex justify-between text-sm">
-              <span>{itemType === "SECTION" ? "Section price" : "Course price"}</span>
-              <span>₹{baseAmount.toFixed(2)}</span>
+  return (
+    <PageLayout
+      header={isPaymentStarted ? "Pay & verify" : "Checkout"}
+      description={
+        isPaymentStarted
+          ? "Pay via QR or bank transfer, then submit your transaction ID + screenshot."
+          : "Review your order and continue to payment."
+      }
+    >
+      <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
+        {/* ── Left: order + (when started) payment+proof ─────────────── */}
+        <div className="space-y-5">
+          <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              You&apos;re purchasing
+            </p>
+            <h2 className="font-display mt-2 text-2xl font-medium leading-tight tracking-tight text-foreground sm:text-3xl">
+              {course.title}
+            </h2>
+            {itemType === "SECTION" && targetSection ? (
+              <p className="mt-2 text-sm text-muted-foreground">
+                Section: <span className="text-foreground">{targetSection.title}</span>
+              </p>
+            ) : (
+              course.description && (
+                <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-muted-foreground">
+                  {course.description}
+                </p>
+              )
+            )}
+          </div>
+
+          {isPaymentStarted && pending && (
+            <>
+              <PaymentPanel
+                qr={pending.qrSettings}
+                amount={pending.amount}
+                currency={pending.currency}
+              />
+              <ProofPanel
+                pending={pending}
+                isAlreadySubmitted={!!isAlreadySubmitted}
+                onSubmitted={() => setDone(true)}
+              />
+            </>
+          )}
+        </div>
+
+        {/* ── Right: sticky summary ────────────────────────────────────── */}
+        <aside className="lg:sticky lg:top-4 lg:h-fit">
+          <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Order summary
+            </p>
+            <dl className="mt-3 space-y-2 text-sm">
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">
+                  {itemType === "SECTION" ? "Section price" : "Course price"}
+                </dt>
+                <dd className="font-medium text-foreground">
+                  ₹{baseAmount.toFixed(2)}
+                </dd>
+              </div>
+              {effectiveCoupon && (
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">
+                    Discount · {effectiveCoupon.couponCode}
+                  </dt>
+                  <dd className="font-medium text-primary">
+                    −₹
+                    {parseFloat(String(effectiveCoupon.discountAmount)).toFixed(
+                      2,
+                    )}
+                  </dd>
+                </div>
+              )}
+            </dl>
+
+            <div className="mt-4 flex items-baseline justify-between border-t border-border/70 pt-4">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                Total
+              </span>
+              <span className="font-display text-2xl font-medium leading-none tracking-tight text-foreground">
+                ₹{finalAmount.toFixed(2)}
+              </span>
             </div>
-            <div>
-              <Label>Coupon</Label>
+
+            <div className="mt-5">
               {effectiveCoupon ? (
-                <div className="mt-2 flex items-center justify-between rounded-md border p-2">
-                  <div className="text-sm">
-                    <span className="font-medium">{effectiveCoupon.couponCode}</span>
-                    <span className="text-muted-foreground"> applied</span>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="ghost"
+                <div className="flex items-center justify-between rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 text-sm">
+                  <span className="font-medium text-primary">
+                    {effectiveCoupon.couponCode} applied
+                  </span>
+                  <button
+                    type="button"
                     onClick={() => {
                       setAppliedCoupon(null);
                       toast.success("Coupon removed");
                     }}
+                    className="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
                   >
                     Remove
-                  </Button>
+                  </button>
                 </div>
               ) : (
-                <div className="mt-2 space-y-2">
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="coupon"
+                    className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground"
+                  >
+                    Coupon
+                  </Label>
                   <div className="flex gap-2">
                     <Input
-                      placeholder="Enter coupon code"
+                      id="coupon"
+                      placeholder="Enter code"
                       value={couponInput}
                       onChange={(e) => setCouponInput(e.target.value)}
                     />
@@ -475,36 +728,37 @@ function CheckoutContent() {
                     </Button>
                   </div>
                   {couponPreview && (
-                    <div className={`text-xs ${couponPreview.valid ? "text-green-600" : "text-destructive"}`}>
+                    <p
+                      className={`text-[11px] ${
+                        couponPreview.valid
+                          ? "text-primary"
+                          : "text-destructive"
+                      }`}
+                    >
                       {couponPreview.message}
-                    </div>
+                    </p>
                   )}
                 </div>
               )}
             </div>
-            {effectiveCoupon && (
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Discount ({effectiveCoupon.couponCode})</span>
-                <span className="text-green-600 font-medium">
-                  -₹{parseFloat(String(effectiveCoupon.discountAmount)).toFixed(2)}
-                </span>
-              </div>
+
+            {!isPaymentStarted && (
+              <Button
+                className="mt-5 h-11 w-full gap-2 rounded-full bg-foreground font-medium text-background hover:bg-foreground/90"
+                onClick={startPayment}
+                disabled={createPayment.isPending || freeEnroll.isPending}
+              >
+                {finalAmount === 0
+                  ? freeEnroll.isPending
+                    ? "Enrolling…"
+                    : "Enrol for free"
+                  : createPayment.isPending
+                    ? "Preparing…"
+                    : "Continue to payment"}
+              </Button>
             )}
-            <div className="flex justify-between font-semibold pt-2 border-t">
-              <span>Total</span>
-              <span>₹{finalAmount.toFixed(2)}</span>
-            </div>
-            <Button className="w-full" onClick={handleProceed} disabled={createPayment.isPending || freeEnroll.isPending}>
-              {finalAmount === 0
-                ? freeEnroll.isPending
-                  ? "Enrolling…"
-                  : "Enroll for free"
-                : createPayment.isPending
-                  ? "Preparing…"
-                  : "Continue to payment"}
-            </Button>
-          </CardContent>
-        </Card>
+          </div>
+        </aside>
       </div>
     </PageLayout>
   );
@@ -514,8 +768,8 @@ export default function CheckoutPage() {
   return (
     <Suspense
       fallback={
-        <PageLayout header="Loading...">
-          <Skeleton className="h-64 w-full" />
+        <PageLayout header="Checkout" description="Loading…">
+          <Skeleton className="h-64 w-full rounded-2xl" />
         </PageLayout>
       }
     >

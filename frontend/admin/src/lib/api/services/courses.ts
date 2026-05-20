@@ -33,6 +33,8 @@ export interface Course {
     learningOutcomes?: string[];
     requirements?: string[];
     targetAudience?: string[];
+    level?: "BEGINNER" | "INTERMEDIATE" | "ADVANCED" | "ALL_LEVELS";
+    language?: string;
 }
 export interface SectionWithLessons {
     sectionId: string;

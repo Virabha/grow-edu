@@ -1,349 +1,776 @@
 "use client";
-import { use, useState, useEffect } from "react";
+import { use, useEffect, useMemo, useState } from "react";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import {
+  BookOpen as BookIcon,
+  ImageIcon,
+  Loader2,
+  Send,
+  Trash2,
+} from "lucide-react";
+
 import { PageLayout } from "@/components/layout/page-layout";
 import { PageTransition } from "@/components/page-transition";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, } from "@/components/ui/card";
-import { useCourse, useUpdateCourse, useSubmitCourseForReview, } from "@/features/courses/hooks/use-courses";
-import type { UpdateCourseDto } from "@/lib/api/services/courses";
 import { EmptyState } from "@/components/ui/empty-state";
-import { BookOpen as BookIcon, ImageIcon, Trash2 } from "lucide-react";
 import { BackButton } from "@/components/ui/back-button";
 import { CourseLoading } from "@/components/ui/course-loading";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { toast } from "sonner";
-import { useRouter } from "next/navigation";
-import { generateSlug } from "@/lib/utils";
-import { useCategories } from "@/features/categories/hooks/use-categories";
-import { FormField } from "@/components/ui/form-field";
-import { FileUpload } from "@/components/ui/file-upload";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { FileUpload } from "@/components/ui/file-upload";
+import { DynamicList } from "@/components/ui/dynamic-list";
+
+import {
+  useCourse,
+  useUpdateCourse,
+  useSubmitCourseForReview,
+} from "@/features/courses/hooks/use-courses";
+import { useCategories } from "@/features/categories/hooks/use-categories";
 import { CourseBuilder } from "@/features/courses/components/course-builder";
-import type { AxiosError } from "axios";
-const formSchema = z.object({
-    title: z.string().min(1, "Title is required"),
-    // Keep in sync with backend UpdateCourseDto (@MinLength(10))
-    description: z.string().min(10, "Description must be at least 10 characters"),
-    price: z.preprocess((v) => (typeof v === "number" && !Number.isFinite(v) ? undefined : v), z.number().min(0, "Price must be positive")),
-    compareAtPrice: z.preprocess((v) => (typeof v === "number" && !Number.isFinite(v) ? undefined : v), z.number().min(0, "Original price must be positive").optional()),
-    currency: z.string().min(1, "Currency is required"),
-    thumbnail: z
-        .string()
-        .min(1)
-        .optional()
-        .or(z.literal(""))
-        .transform((val) => val === "" ? undefined : val),
-    categoryId: z.string().min(1, "Category is required"),
-    status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).optional(),
+import type { UpdateCourseDto } from "@/lib/api/services/courses";
+import { generateSlug } from "@/lib/utils";
+
+const LEVELS = [
+  { value: "BEGINNER", label: "Beginner" },
+  { value: "INTERMEDIATE", label: "Intermediate" },
+  { value: "ADVANCED", label: "Advanced" },
+  { value: "ALL_LEVELS", label: "All levels" },
+] as const;
+
+const LANGUAGES = [
+  "English",
+  "Hindi",
+  "Telugu",
+  "Spanish",
+  "French",
+  "German",
+] as const;
+
+const detailsSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  description: z
+    .string()
+    .min(10, "Description must be at least 10 characters"),
+  thumbnail: z.string().optional().or(z.literal("")),
+  mainCategoryId: z.string().min(1, "Main category is required"),
+  subCategoryId: z.string().optional().or(z.literal("")),
+  level: z.enum(["BEGINNER", "INTERMEDIATE", "ADVANCED", "ALL_LEVELS"]),
+  language: z.string().min(1, "Language is required"),
 });
-export default function CourseEditPage({ params, }: {
-    params: Promise<{
-        courseId: string;
-    }>;
+
+const pricingSchema = z.object({
+  price: z.preprocess(
+    (v) => (typeof v === "string" ? Number(v) : v),
+    z.number().min(0, "Price must be 0 or more"),
+  ),
+  compareAtPrice: z
+    .preprocess(
+      (v) =>
+        v === "" || v == null || (typeof v === "number" && Number.isNaN(v))
+          ? undefined
+          : typeof v === "string"
+            ? Number(v)
+            : v,
+      z.number().min(0).optional(),
+    )
+    .optional(),
+});
+
+type DetailsForm = z.infer<typeof detailsSchema>;
+type PricingForm = z.infer<typeof pricingSchema>;
+
+export default function CourseEditPage({
+  params,
+}: {
+  params: Promise<{ courseId: string }>;
 }) {
-    const { courseId } = use(params);
-    const [mounted, setMounted] = useState(false);
-    const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
-    const { data: course, isLoading } = useCourse({ enabled: true, courseId });
-    const { data: categories } = useCategories();
-    const updateCourse = useUpdateCourse();
-    const submitForReview = useSubmitCourseForReview();
-    const router = useRouter();
-    useEffect(() => {
-        setMounted(true);
-    }, []);
-    const { register, handleSubmit, formState: { errors }, reset, setValue, watch, } = useForm<z.infer<typeof formSchema>>({
-        resolver: zodResolver(formSchema),
-        defaultValues: {
-            title: "",
-            description: "",
-            price: 0,
-            compareAtPrice: undefined,
-            currency: "INR",
-            thumbnail: "",
-            categoryId: "",
-            status: "DRAFT",
-        },
+  const { courseId } = use(params);
+  const router = useRouter();
+
+  const { data: course, isLoading } = useCourse({ enabled: true, courseId });
+  const { data: categories } = useCategories();
+  const updateCourse = useUpdateCourse();
+  const submitForReview = useSubmitCourseForReview();
+
+  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
+
+  const mainCategories = useMemo(
+    () => (categories ?? []).filter((c) => !c.parentCategoryId),
+    [categories],
+  );
+
+  // ── Details form ────────────────────────────────────────────────────
+  const detailsForm = useForm<DetailsForm>({
+    resolver: zodResolver(detailsSchema),
+    defaultValues: {
+      title: "",
+      description: "",
+      thumbnail: "",
+      mainCategoryId: "",
+      subCategoryId: "",
+      level: "BEGINNER",
+      language: "English",
+    },
+  });
+
+  const watchedMainCategory = detailsForm.watch("mainCategoryId");
+  const subCategories = useMemo(() => {
+    const parent = mainCategories.find(
+      (c) => c.categoryId === watchedMainCategory,
+    );
+    return parent?.children ?? [];
+  }, [mainCategories, watchedMainCategory]);
+
+  // ── Pricing form ────────────────────────────────────────────────────
+  const pricingForm = useForm<PricingForm>({
+    resolver: zodResolver(pricingSchema),
+    defaultValues: { price: 0, compareAtPrice: undefined },
+  });
+
+  // ── Audience state ──────────────────────────────────────────────────
+  const [outcomes, setOutcomes] = useState<string[]>([""]);
+  const [audience, setAudience] = useState<string[]>([""]);
+  const [requirements, setRequirements] = useState<string[]>([""]);
+  const [audienceSaving, setAudienceSaving] = useState(false);
+
+  // ── Hydrate from server ─────────────────────────────────────────────
+  useEffect(() => {
+    if (!course) return;
+
+    // Resolve main + sub from current categoryId
+    let mainId = course.categoryId;
+    let subId: string | undefined;
+    const cat = (categories ?? []).find(
+      (c) => c.categoryId === course.categoryId,
+    );
+    if (cat?.parentCategoryId) {
+      mainId = cat.parentCategoryId;
+      subId = cat.categoryId;
+    }
+
+    detailsForm.reset({
+      title: course.title,
+      description: course.description,
+      thumbnail: course.thumbnail || "",
+      mainCategoryId: mainId,
+      subCategoryId: subId || "",
+      level: (course.level as DetailsForm["level"]) || "BEGINNER",
+      language: course.language || "English",
     });
-    useEffect(() => {
-        if (course) {
-            reset({
-                title: course.title,
-                description: course.description,
-                price: parseFloat(course.price),
-                compareAtPrice: course.compareAtPrice ? parseFloat(String(course.compareAtPrice)) : undefined,
-                currency: "INR",
-                thumbnail: course.thumbnail || "",
-                categoryId: course.categoryId,
-                status: course.status as "DRAFT" | "PUBLISHED" | "ARCHIVED",
-            });
-            if (course.thumbnail) {
-                setThumbnailPreview(course.thumbnail);
-            }
-        }
-    }, [course, reset]);
-    async function onSubmit(values: z.infer<typeof formSchema>) {
-        if (!courseId) {
-            toast.error("Course ID is missing. Please reload and try again.");
-            return;
-        }
-        try {
-            const slug = generateSlug(values.title);
-            const dto: UpdateCourseDto = {
-                ...values,
-                currency: "INR",
-                shortDescription: values.description,
-                slug,
-                thumbnail: values.thumbnail ?? undefined,
-            };
-            if (dto.compareAtPrice !== undefined && !Number.isFinite(dto.compareAtPrice)) {
-                delete dto.compareAtPrice;
-            }
-            await updateCourse.mutateAsync({
-                id: courseId,
-                dto,
-            });
-            router.push("/instructor/courses");
-        }
-        catch (error: unknown) {
-            const axiosError = error as AxiosError<{ message?: string | string[] }>;
-            const serverMessage = axiosError?.response?.data?.message;
-            const errorMessage = Array.isArray(serverMessage)
-                ? serverMessage.join(", ")
-                : typeof serverMessage === "string"
-                    ? serverMessage
-                    : error instanceof Error
-                        ? error.message
-                        : "Failed to update course";
-            toast.error(errorMessage);
-        }
+    setThumbnailPreview(course.thumbnail || null);
+
+    pricingForm.reset({
+      price: parseFloat(course.price),
+      compareAtPrice: course.compareAtPrice
+        ? parseFloat(String(course.compareAtPrice))
+        : undefined,
+    });
+
+    if (course.learningOutcomes?.length)
+      setOutcomes(course.learningOutcomes);
+    if (course.targetAudience?.length) setAudience(course.targetAudience);
+    if (course.requirements?.length) setRequirements(course.requirements);
+  }, [course, categories, detailsForm, pricingForm]);
+
+  if (isLoading) return <CourseLoading type="edit" />;
+  if (!course) {
+    return (
+      <PageLayout header="Course not found">
+        <EmptyState
+          title="Course not found"
+          description="This course doesn't exist or you can't access it."
+          icon={<BookIcon className="h-12 w-12" />}
+        />
+      </PageLayout>
+    );
+  }
+
+  const submitDetails = detailsForm.handleSubmit(async (values) => {
+    const categoryId = values.subCategoryId || values.mainCategoryId;
+    const dto: UpdateCourseDto = {
+      title: values.title,
+      description: values.description,
+      shortDescription: values.description,
+      thumbnail: values.thumbnail || undefined,
+      categoryId,
+      level: values.level,
+      language: values.language,
+      slug: generateSlug(values.title),
+      currency: "INR",
+    };
+    try {
+      await updateCourse.mutateAsync({ id: courseId, dto });
+      toast.success("Details saved.");
+    } catch (err) {
+      const msg =
+        (err as { response?: { data?: { message?: string | string[] } } })
+          ?.response?.data?.message;
+      toast.error(Array.isArray(msg) ? msg.join(", ") : msg || "Save failed");
     }
-    if (isLoading) {
-        return <CourseLoading type="edit"/>;
+  });
+
+  const submitPricing = pricingForm.handleSubmit(async (values) => {
+    const compare = values.compareAtPrice;
+    if (compare !== undefined && compare < values.price) {
+      toast.error("Strike-through price must be greater than the final price.");
+      return;
     }
-    if (!course) {
-        return (<PageLayout header="Course Not Found">
-        <EmptyState title="Course not found" description="The course you're looking for doesn't exist." icon={<BookIcon className="h-12 w-12"/>}/>
-      </PageLayout>);
+    try {
+      await updateCourse.mutateAsync({
+        id: courseId,
+        dto: {
+          price: values.price,
+          compareAtPrice: compare,
+          currency: "INR",
+        },
+      });
+      toast.success("Pricing saved.");
+    } catch (err) {
+      toast.error(
+        (err as Error)?.message || "Couldn't save pricing.",
+      );
     }
-    return (<PageTransition>
-      <PageLayout header={`Edit Course: ${course.title}`} subtitle="Course Management" description="Update your course details, curriculum, and settings." enableTransition={false} actions={<BackButton href="/instructor/courses"/>}>
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Badge variant="outline">{course.reviewStatus || "DRAFT"}</Badge>
-            {course.status === "PUBLISHED" && (<Badge className="bg-green-500">Published</Badge>)}
-          </div>
-          <div className="flex gap-2">
-            <Button variant="secondary" disabled={submitForReview.isPending ||
-            course.reviewStatus === "PENDING_REVIEW"} onClick={async () => {
-            if (!courseId)
-                return;
-            await submitForReview.mutateAsync(courseId);
-        }} className="w-full sm:w-auto">
-              {submitForReview.isPending
-            ? "Submitting..."
-            : "Submit for Review"}
+  });
+
+  const saveAudience = async () => {
+    setAudienceSaving(true);
+    try {
+      await updateCourse.mutateAsync({
+        id: courseId,
+        dto: {
+          learningOutcomes: outcomes.filter((s) => s.trim() !== ""),
+          targetAudience: audience.filter((s) => s.trim() !== ""),
+          requirements: requirements.filter((s) => s.trim() !== ""),
+        },
+      });
+      toast.success("Audience details saved.");
+    } catch {
+      toast.error("Couldn't save audience details.");
+    } finally {
+      setAudienceSaving(false);
+    }
+  };
+
+  const setStatus = async (
+    status: "DRAFT" | "PUBLISHED" | "ARCHIVED",
+  ) => {
+    try {
+      await updateCourse.mutateAsync({ id: courseId, dto: { status } });
+      toast.success(`Status set to ${status.toLowerCase()}.`);
+    } catch {
+      toast.error("Couldn't change status.");
+    }
+  };
+
+  const onSubmitReview = async () => {
+    try {
+      await submitForReview.mutateAsync(courseId);
+      toast.success("Submitted for review.");
+    } catch (err) {
+      const msg = (err as Error)?.message || "Submission failed.";
+      toast.error(msg);
+    }
+  };
+
+  return (
+    <PageTransition>
+      <PageLayout
+        subtitle="Course management"
+        header={course.title}
+        description="Edit details, audience, pricing, curriculum and visibility."
+        enableTransition={false}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <BackButton href="/instructor/courses" />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onSubmitReview}
+              disabled={
+                submitForReview.isPending ||
+                course.reviewStatus === "PENDING_REVIEW"
+              }
+              className="gap-1.5"
+            >
+              {submitForReview.isPending ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <Send className="size-3.5" />
+              )}
+              {course.reviewStatus === "PENDING_REVIEW"
+                ? "Under review"
+                : "Submit for review"}
             </Button>
           </div>
-        </div>
+        }
+      >
+        <div className="space-y-4">
+          {/* Status badges */}
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="outline" className="font-display">
+              {course.reviewStatus || "DRAFT"}
+            </Badge>
+            {course.status === "PUBLISHED" && (
+              <Badge className="bg-primary text-primary-foreground">
+                Published
+              </Badge>
+            )}
+            {course.rejectionReason && (
+              <Badge variant="destructive">Changes requested</Badge>
+            )}
+          </div>
 
-        <Tabs defaultValue="details" className="space-y-2.5">
-          <TabsList>
-            <TabsTrigger value="details">Details</TabsTrigger>
-            <TabsTrigger value="curriculum">Curriculum</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
-          </TabsList>
+          {course.rejectionReason && (
+            <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4 text-sm leading-relaxed text-destructive">
+              <p className="font-display font-medium">
+                Reviewer&apos;s note
+              </p>
+              <p className="mt-1">{course.rejectionReason}</p>
+            </div>
+          )}
 
-          <TabsContent value="details">
-            <Card>
-              <CardHeader>
-                <CardTitle>Course Details</CardTitle>
-                <CardDescription>
-                  Update your course information
-                </CardDescription>
-                {course.rejectionReason && (<div className="mt-2 p-2 bg-destructive/10 text-destructive text-sm rounded-md">
-                    <strong>Rejection Reason:</strong> {course.rejectionReason}
-                  </div>)}
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmit(onSubmit)} className="space-y-2.5">
-                  
-                  <input type="hidden" {...register("categoryId")} value={watch("categoryId") || ""}/>
-                  <input type="hidden" {...register("status")} value={watch("status") || "DRAFT"}/>
-                  <input type="hidden" {...register("currency")} value="INR"/>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="title">Title</Label>
-                    <Input id="title" placeholder="Course title" {...register("title")}/>
-                    {errors.title && (<p className="text-xs text-destructive">
-                        {errors.title.message}
-                      </p>)}
+          <Tabs defaultValue="details" className="space-y-4">
+            <TabsList className="flex w-full flex-wrap gap-1 sm:w-auto">
+              <TabsTrigger value="details">Details</TabsTrigger>
+              <TabsTrigger value="audience">Audience</TabsTrigger>
+              <TabsTrigger value="pricing">Pricing</TabsTrigger>
+              <TabsTrigger value="curriculum">Curriculum</TabsTrigger>
+              <TabsTrigger value="settings">Settings</TabsTrigger>
+            </TabsList>
+
+            {/* ── Details ──────────────────────────────────────────── */}
+            <TabsContent value="details">
+              <form
+                onSubmit={submitDetails}
+                className="space-y-5 rounded-2xl border border-border bg-card p-5 sm:p-6"
+              >
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="title"
+                    className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground"
+                  >
+                    Title
+                  </Label>
+                  <Input
+                    id="title"
+                    placeholder="Course title"
+                    {...detailsForm.register("title")}
+                  />
+                  {detailsForm.formState.errors.title && (
+                    <p className="text-xs text-destructive">
+                      {detailsForm.formState.errors.title.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="description"
+                    className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground"
+                  >
+                    Description
+                  </Label>
+                  <Textarea
+                    id="description"
+                    rows={4}
+                    placeholder="Describe the value of the course in 2–3 sentences."
+                    className="resize-none"
+                    {...detailsForm.register("description")}
+                  />
+                  {detailsForm.formState.errors.description && (
+                    <p className="text-xs text-destructive">
+                      {detailsForm.formState.errors.description.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="grid gap-5 md:grid-cols-2">
+                  <div className="space-y-5">
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                        Main category
+                      </Label>
+                      <Controller
+                        control={detailsForm.control}
+                        name="mainCategoryId"
+                        render={({ field }) => (
+                          <Select
+                            value={field.value}
+                            onValueChange={field.onChange}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select category" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {mainCategories.map((c) => (
+                                <SelectItem
+                                  key={c.categoryId}
+                                  value={c.categoryId}
+                                >
+                                  {c.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      />
+                      {detailsForm.formState.errors.mainCategoryId && (
+                        <p className="text-xs text-destructive">
+                          {detailsForm.formState.errors.mainCategoryId.message}
+                        </p>
+                      )}
+                    </div>
+
+                    {subCategories.length > 0 && (
+                      <div className="space-y-1.5">
+                        <Label className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                          Sub-category (optional)
+                        </Label>
+                        <Controller
+                          control={detailsForm.control}
+                          name="subCategoryId"
+                          render={({ field }) => (
+                            <Select
+                              value={field.value || "__none__"}
+                              onValueChange={(v) =>
+                                field.onChange(v === "__none__" ? "" : v)
+                              }
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select sub-category" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="__none__">None</SelectItem>
+                                {subCategories.map((c) => (
+                                  <SelectItem
+                                    key={c.categoryId}
+                                    value={c.categoryId}
+                                  >
+                                    {c.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        />
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                          Level
+                        </Label>
+                        <Controller
+                          control={detailsForm.control}
+                          name="level"
+                          render={({ field }) => (
+                            <Select
+                              value={field.value}
+                              onValueChange={field.onChange}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Level" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {LEVELS.map((l) => (
+                                  <SelectItem key={l.value} value={l.value}>
+                                    {l.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                          Language
+                        </Label>
+                        <Controller
+                          control={detailsForm.control}
+                          name="language"
+                          render={({ field }) => (
+                            <Select
+                              value={field.value}
+                              onValueChange={field.onChange}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Language" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {LANGUAGES.map((l) => (
+                                  <SelectItem key={l} value={l}>
+                                    {l}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        />
+                      </div>
+                    </div>
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label>Course Thumbnail</Label>
-                    <div className="max-w-md">
-                      {thumbnailPreview ? (
-                        <div className="relative group rounded-lg overflow-hidden border border-border">
+                    <Label className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                      Thumbnail
+                    </Label>
+                    <div className="rounded-xl border-2 border-dashed border-border bg-muted/30 p-3">
+                      <div className="relative mb-3 flex aspect-video items-center justify-center overflow-hidden rounded-lg bg-background">
+                        {thumbnailPreview ? (
+                          // eslint-disable-next-line @next/next/no-img-element
                           <img
                             src={thumbnailPreview}
-                            alt="Course thumbnail"
-                            className="w-full aspect-video object-cover"
+                            alt="Thumbnail preview"
+                            className="h-full w-full object-cover"
                           />
-                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                            <label className="cursor-pointer inline-flex items-center gap-1.5 rounded-md bg-white px-3 py-1.5 text-xs font-medium text-foreground hover:bg-white/90 transition-colors">
-                              Change
-                              <input
-                                type="file"
-                                accept="image/*"
-                                className="sr-only"
-                                onChange={async (e) => {
-                                  const file = e.target.files?.[0];
-                                  if (!file) return;
-                                  const formData = new FormData();
-                                  formData.append("file", file);
-                                  formData.append("folder", "thumbnails");
-                                  try {
-                                    const { apiClient } = await import("@/lib/api/client");
-                                    const { data } = await apiClient.post<{ url: string; key: string }>("/files/storage/upload-url", formData, {
-                                      headers: { "Content-Type": "multipart/form-data" },
-                                    });
-                                    setValue("thumbnail", data.key, { shouldDirty: true });
-                                    setThumbnailPreview(data.url);
-                                    toast.success("Thumbnail updated");
-                                  } catch {
-                                    toast.error("Failed to upload thumbnail");
-                                  }
-                                }}
-                              />
-                            </label>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="destructive"
-                              className="h-7 text-xs"
-                              onClick={() => {
-                                setValue("thumbnail", "", { shouldDirty: true });
-                                setThumbnailPreview(null);
-                              }}
-                            >
-                              <Trash2 className="size-3 mr-1" />
-                              Remove
-                            </Button>
+                        ) : (
+                          <div className="flex flex-col items-center gap-1 text-muted-foreground/70">
+                            <ImageIcon className="size-7" />
+                            <span className="text-xs">No image</span>
                           </div>
-                        </div>
-                      ) : (
+                        )}
+                      </div>
+                      <div className="flex flex-wrap gap-2">
                         <FileUpload
                           onUploadComplete={(key, url) => {
-                            setValue("thumbnail", key, { shouldDirty: true });
+                            detailsForm.setValue("thumbnail", key, {
+                              shouldDirty: true,
+                            });
                             setThumbnailPreview(url);
                           }}
                           folder="thumbnails"
-                          label="Upload course thumbnail"
-                          className="w-full"
+                          label={thumbnailPreview ? "Replace" : "Upload"}
+                          className="flex-1"
                         />
-                      )}
+                        {thumbnailPreview && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              detailsForm.setValue("thumbnail", "", {
+                                shouldDirty: true,
+                              });
+                              setThumbnailPreview(null);
+                            }}
+                          >
+                            <Trash2 className="size-3.5" />
+                            Remove
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
+                </div>
 
+                <div className="flex justify-end">
+                  <Button type="submit" disabled={updateCourse.isPending} className="gap-1.5">
+                    {updateCourse.isPending && (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    )}
+                    Save details
+                  </Button>
+                </div>
+              </form>
+            </TabsContent>
+
+            {/* ── Audience ─────────────────────────────────────────── */}
+            <TabsContent value="audience">
+              <div className="space-y-5 rounded-2xl border border-border bg-card p-5 sm:p-6">
+                <DynamicList
+                  label="What learners will be able to do"
+                  placeholder="e.g. Build a full-stack application from scratch"
+                  items={outcomes}
+                  onChange={setOutcomes}
+                />
+                <DynamicList
+                  label="Who this course is for"
+                  placeholder="e.g. Beginners interested in web development"
+                  items={audience}
+                  onChange={setAudience}
+                />
+                <DynamicList
+                  label="Prerequisites"
+                  placeholder="e.g. Basic HTML & CSS"
+                  items={requirements}
+                  onChange={setRequirements}
+                />
+                <div className="flex justify-end">
+                  <Button
+                    onClick={saveAudience}
+                    disabled={audienceSaving}
+                    className="gap-1.5"
+                  >
+                    {audienceSaving && (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    )}
+                    Save audience
+                  </Button>
+                </div>
+              </div>
+            </TabsContent>
+
+            {/* ── Pricing ──────────────────────────────────────────── */}
+            <TabsContent value="pricing">
+              <form
+                onSubmit={submitPricing}
+                className="space-y-5 rounded-2xl border border-border bg-card p-5 sm:p-6"
+              >
+                <div className="grid gap-5 sm:grid-cols-2">
                   <div className="space-y-1.5">
-                    <Label htmlFor="description">Description</Label>
-                    <Textarea id="description" placeholder="Course description" {...register("description")}/>
-                    {errors.description && (<p className="text-xs text-destructive">
-                        {errors.description.message}
-                      </p>)}
+                    <Label
+                      htmlFor="price"
+                      className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground"
+                    >
+                      Final price (INR)
+                    </Label>
+                    <Input
+                      id="price"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="0"
+                      {...pricingForm.register("price", { valueAsNumber: true })}
+                    />
+                    {pricingForm.formState.errors.price && (
+                      <p className="text-xs text-destructive">
+                        {pricingForm.formState.errors.price.message}
+                      </p>
+                    )}
+                    <p className="text-[11px] text-muted-foreground">
+                      Use 0 for a free course.
+                    </p>
                   </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="price">Final Price (INR)</Label>
-                      <Input id="price" type="number" step="0.01" placeholder="0.00" {...register("price", { valueAsNumber: true })}/>
-                      {errors.price && (<p className="text-xs text-destructive">
-                          {errors.price.message}
-                        </p>)}
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="compareAtPrice">Original Price (INR) (optional)</Label>
-                      <Input id="compareAtPrice" type="number" step="0.01" placeholder="0.00" {...register("compareAtPrice", { valueAsNumber: true })}/>
-                    </div>
-                  </div>
-
                   <div className="space-y-1.5">
-                    <Label htmlFor="categoryId">Category</Label>
-                    {mounted ? (<Select value={watch("categoryId")} onValueChange={(value) => setValue("categoryId", value)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a category"/>
-                        </SelectTrigger>
-                        <SelectContent>
-                          {categories && categories.length > 0 ? (categories.map((category) => (<SelectItem key={category.categoryId} value={category.categoryId}>
-                                {category.name}
-                              </SelectItem>))) : (<SelectItem value="none" disabled>
-                              No categories available
-                            </SelectItem>)}
-                        </SelectContent>
-                      </Select>) : (<div className="h-10 w-full bg-muted animate-pulse rounded-md"/>)}
-                    {errors.categoryId && (<p className="text-xs text-destructive">
-                        {errors.categoryId.message}
-                      </p>)}
+                    <Label
+                      htmlFor="strike"
+                      className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground"
+                    >
+                      Strike-through price (optional)
+                    </Label>
+                    <Input
+                      id="strike"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="—"
+                      {...pricingForm.register("compareAtPrice", {
+                        valueAsNumber: true,
+                      })}
+                    />
+                    <p className="text-[11px] text-muted-foreground">
+                      Shown crossed-out next to the final price.
+                    </p>
                   </div>
+                </div>
 
-                  <div className="flex justify-end gap-2">
-                    <Button type="submit" disabled={updateCourse.isPending}>
-                      {updateCourse.isPending ? "Saving..." : "Save Changes"}
-                    </Button>
-                  </div>
-                </form>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                <div className="rounded-xl border border-border bg-muted/30 p-4 text-xs leading-relaxed text-muted-foreground">
+                  Instructor revenue share:{" "}
+                  <span className="font-medium text-foreground">80%</span> of
+                  every paid enrolment.
+                </div>
 
-          <TabsContent value="curriculum">
-            <CourseBuilder courseId={courseId}/>
-          </TabsContent>
+                <div className="flex justify-end">
+                  <Button type="submit" disabled={updateCourse.isPending} className="gap-1.5">
+                    {updateCourse.isPending && (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    )}
+                    Save pricing
+                  </Button>
+                </div>
+              </form>
+            </TabsContent>
 
-          <TabsContent value="settings">
-            <Card>
-              <CardHeader>
-                <CardTitle>Course Settings</CardTitle>
-                <CardDescription>
-                  Manage publication status and other settings.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2.5">
-                <div className="space-y-1.5">
-                  <Label htmlFor="status">Publication Status</Label>
-                  {mounted ? (<Select value={watch("status") || "DRAFT"} onValueChange={async (value: "DRAFT" | "PUBLISHED" | "ARCHIVED") => {
-                setValue("status", value);
-                await updateCourse.mutateAsync({
-                    id: courseId,
-                    dto: { status: value },
-                });
-                toast.success(`Status updated to ${value}`);
-            }}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="DRAFT">Draft</SelectItem>
-                        <SelectItem value="PUBLISHED">Published</SelectItem>
-                        <SelectItem value="ARCHIVED">Archived</SelectItem>
-                      </SelectContent>
-                    </Select>) : (<div className="h-10 w-full bg-muted animate-pulse rounded-md"/>)}
+            {/* ── Curriculum ───────────────────────────────────────── */}
+            <TabsContent value="curriculum">
+              <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+                <CourseBuilder courseId={courseId} />
+              </div>
+            </TabsContent>
+
+            {/* ── Settings ─────────────────────────────────────────── */}
+            <TabsContent value="settings">
+              <div className="space-y-5 rounded-2xl border border-border bg-card p-5 sm:p-6">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                    Publication status
+                  </Label>
+                  <Select
+                    value={course.status}
+                    onValueChange={(v: "DRAFT" | "PUBLISHED" | "ARCHIVED") =>
+                      setStatus(v)
+                    }
+                  >
+                    <SelectTrigger className="max-w-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="DRAFT">Draft (private)</SelectItem>
+                      <SelectItem value="PUBLISHED">
+                        Published (public)
+                      </SelectItem>
+                      <SelectItem value="ARCHIVED">Archived</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <p className="text-xs text-muted-foreground">
-                    Note: Publishing a course will make it visible to students
-                    immediately if approved.
+                    Publishing makes the course visible to learners. Submit
+                    for review first to get the &ldquo;Approved&rdquo; badge.
                   </p>
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+
+                <div className="border-t border-border pt-5">
+                  <p className="font-display text-base font-medium text-foreground">
+                    Danger zone
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Archived courses no longer appear in catalogue searches but
+                    remain accessible to existing learners. There is no
+                    in-platform delete — contact admin if you need permanent
+                    removal.
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setStatus("ARCHIVED")}
+                    disabled={course.status === "ARCHIVED"}
+                    className="mt-3"
+                  >
+                    {course.status === "ARCHIVED"
+                      ? "Already archived"
+                      : "Archive course"}
+                  </Button>
+                </div>
+
+                <div className="flex justify-end pt-2">
+                  <Button
+                    variant="ghost"
+                    onClick={() => router.push("/instructor/courses")}
+                  >
+                    Done
+                  </Button>
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </div>
       </PageLayout>
-    </PageTransition>);
+    </PageTransition>
+  );
 }

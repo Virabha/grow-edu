@@ -1,7 +1,13 @@
 "use client";
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { CheckCircle2, CopyIcon, ExternalLink, Loader2, XCircle } from "lucide-react";
+import {
+  CheckCircle2,
+  CopyIcon,
+  ExternalLink,
+  Loader2,
+  XCircle,
+} from "lucide-react";
 import { toast } from "sonner";
 import {
   Sheet,
@@ -24,10 +30,7 @@ import {
 } from "@/components/ui/dialog";
 import { PaymentStatusBadge } from "./payment-status-badge";
 import type { PaymentDetail } from "../api/payments.api";
-import {
-  useApprovePayment,
-  useRejectPayment,
-} from "../hooks/use-payments";
+import { useApprovePayment, useRejectPayment } from "../hooks/use-payments";
 
 type Action = "approve" | "reject" | null;
 
@@ -154,7 +157,7 @@ export function PaymentDetailSheet({
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent className="sm:max-w-xl">
-          <SheetHeader>
+          <SheetHeader className="py-2">
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               Payment
             </p>
@@ -166,7 +169,7 @@ export function PaymentDetailSheet({
             {payment && <PaymentStatusBadge status={payment.status} />}
           </SheetHeader>
 
-          <SheetBody>
+          <SheetBody className="scrollbar-hide">
             {isLoading ? (
               <div className="space-y-3">
                 <Skeleton className="h-5 w-3/4" />
@@ -177,7 +180,12 @@ export function PaymentDetailSheet({
             ) : payment ? (
               <div className="space-y-7">
                 <Section title="Identifiers">
-                  <Row label="Payment ID" value={payment.paymentId} mono copyable />
+                  <Row
+                    label="Payment ID"
+                    value={payment.paymentId}
+                    mono
+                    copyable
+                  />
                   {payment.transactionId && (
                     <Row
                       label="Transaction ID / UTR"
@@ -186,7 +194,9 @@ export function PaymentDetailSheet({
                       copyable
                     />
                   )}
-                  {payment.gateway && <Row label="Gateway" value={payment.gateway} />}
+                  {payment.gateway && (
+                    <Row label="Gateway" value={payment.gateway} />
+                  )}
                 </Section>
 
                 <Section title="Amount">
@@ -221,22 +231,26 @@ export function PaymentDetailSheet({
                 {(payment.payerName || payment.user) && (
                   <Section title="Payer">
                     {payment.payerName && (
-                      <Row label="Payer name (declared)" value={payment.payerName} />
+                      <Row
+                        label="Payer name (declared)"
+                        value={payment.payerName}
+                      />
                     )}
                     {payment.user && (
                       <>
                         <Row
                           label="Account holder"
                           value={
-                            [
-                              payment.user.firstName,
-                              payment.user.lastName,
-                            ]
+                            [payment.user.firstName, payment.user.lastName]
                               .filter(Boolean)
                               .join(" ") || "—"
                           }
                         />
-                        <Row label="Email" value={payment.user.email} copyable />
+                        <Row
+                          label="Email"
+                          value={payment.user.email}
+                          copyable
+                        />
                       </>
                     )}
                   </Section>
@@ -317,8 +331,7 @@ export function PaymentDetailSheet({
               <div className="flex w-full items-center justify-end gap-2">
                 <Button
                   variant="outline"
-                  size="sm"
-                  className="gap-1.5"
+                  className="gap-1.5 flex-1"
                   onClick={() => {
                     setAction("reject");
                     setNotes("");
@@ -328,8 +341,7 @@ export function PaymentDetailSheet({
                   Reject
                 </Button>
                 <Button
-                  size="sm"
-                  className="gap-1.5"
+                  className="gap-1.5 flex-1"
                   onClick={() => {
                     setAction("approve");
                     setNotes("");
@@ -371,8 +383,7 @@ export function PaymentDetailSheet({
                 {payment.course?.title || payment.section?.title || "Course"}
               </p>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                {payment.user?.email} · ₹
-                {Number(payment.amount).toFixed(2)} ·{" "}
+                {payment.user?.email} · ₹{Number(payment.amount).toFixed(2)} ·{" "}
                 {payment.transactionId
                   ? `txn ${payment.transactionId}`
                   : "no txn id"}

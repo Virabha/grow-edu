@@ -24,8 +24,6 @@ const footerLinks = {
   ],
   Company: [
     { label: "Become an instructor", href: "/become-teacher" },
-    { label: "Services", href: "/services" },
-    { label: "Careers", href: "/careers" },
     { label: "Privacy policy", href: "/privacy-policy" },
     { label: "Terms of service", href: "/terms" },
   ],

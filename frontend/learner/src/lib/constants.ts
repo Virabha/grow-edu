@@ -22,7 +22,7 @@ export const NAV_LINKS = [
   { href: "/", label: "Home" },
   { href: "/courses", label: "Courses" },
   { href: "/instructors", label: "Instructors" },
-  { href: "/services", label: "Services" },
+  { href: "/become-teacher", label: "Teach" },
 ] as const;
 
 // ── External URLs ────────────────────────────────────────────────

@@ -125,33 +125,39 @@ export function WhyGrotutor() {
                 fill
                 priority={false}
                 sizes="(max-width: 1024px) 100vw, 66vw"
-                className="-z-10 object-cover opacity-30 transition-transform duration-700 group-hover:scale-105"
+                className="object-cover transition-transform duration-700 group-hover:scale-[1.04]"
               />
               <div
-                className="absolute inset-0 -z-10 bg-gradient-to-br from-primary/95 via-primary/85 to-foreground/80"
+                className="absolute inset-0 bg-gradient-to-tr from-foreground/85 via-foreground/55 to-foreground/20"
+                aria-hidden
+              />
+              <div
+                className="absolute inset-0 bg-primary/25 mix-blend-multiply"
                 aria-hidden
               />
               <div
                 className="pointer-events-none absolute -right-16 -top-16 size-56 rounded-full bg-white/10 blur-2xl"
                 aria-hidden
               />
-              <p className="font-display text-xs italic tracking-wide">
-                — A note from us
-              </p>
-              <span
-                className="font-display mt-5 block text-4xl leading-[1.05] tracking-tight sm:text-5xl"
-                dangerouslySetInnerHTML={{ __html: headline.title }}
-              />
-              <p className="mt-5 max-w-md text-base leading-relaxed text-primary-foreground/90">
-                {headline.description}
-              </p>
-              <Link
-                href="/courses"
-                className="group/btn mt-8 inline-flex items-center gap-2 text-sm font-medium text-primary-foreground transition-colors hover:text-primary-foreground/85"
-              >
-                See how we deliver
-                <ArrowUpRight className="size-4 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
-              </Link>
+              <div className="relative">
+                <p className="font-display text-xs italic tracking-wide text-white/80">
+                  — A note from us
+                </p>
+                <span
+                  className="font-display mt-5 block text-4xl leading-[1.05] tracking-tight text-white drop-shadow-sm sm:text-5xl"
+                  dangerouslySetInnerHTML={{ __html: headline.title }}
+                />
+                <p className="mt-5 max-w-md text-base leading-relaxed text-white/85">
+                  {headline.description}
+                </p>
+                <Link
+                  href="/courses"
+                  className="group/btn mt-8 inline-flex items-center gap-2 text-sm font-medium text-white transition-colors hover:text-white/85"
+                >
+                  See how we deliver
+                  <ArrowUpRight className="size-4 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
+                </Link>
+              </div>
             </motion.div>
           )}
 

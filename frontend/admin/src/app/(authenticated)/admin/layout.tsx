@@ -11,7 +11,6 @@ const sidebarItems = [
     { label: "Companies", href: "/admin/companies", icon: <Building2 className="h-4 w-4"/> },
     { label: "Enrollments", href: "/admin/enrollments", icon: <Users className="h-4 w-4"/> },
     { label: "Payments", href: "/admin/payments", icon: <CreditCard className="h-4 w-4"/> },
-    { label: "Pending Reviews", href: "/admin/payments/pending", icon: <QrCode className="h-4 w-4"/> },
     { label: "Coupons", href: "/admin/coupons", icon: <Tag className="h-4 w-4"/> },
     { label: "Moderation", href: "/admin/moderation", icon: <Shield className="h-4 w-4"/> },
     { label: "Landing Page", href: "/admin/landing", icon: <Layout className="h-4 w-4"/> },

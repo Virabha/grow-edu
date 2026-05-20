@@ -74,10 +74,6 @@ export const paymentsApi = {
         const { data } = await apiClient.get<PaymentDetail>(`/payments/${id}`);
         return data as PaymentDetail;
     },
-    async getPendingReview(page = 1, limit = 50): Promise<PaymentsResponse> {
-        const { data } = await apiClient.get<PaymentsResponse>(`/payments/pending-review?page=${page}&limit=${limit}`);
-        return data as PaymentsResponse;
-    },
     async approve(paymentId: string, notes?: string) {
         const { data } = await apiClient.post(`/payments/${paymentId}/approve`, { notes });
         return data;

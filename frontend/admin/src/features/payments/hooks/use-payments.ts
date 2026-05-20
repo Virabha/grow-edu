@@ -48,13 +48,6 @@ export function usePaymentById(id: string | null, enabled = true) {
     });
 }
 
-export function usePendingPayments(page = 1, limit = 50) {
-    return useQuery({
-        queryKey: ['payments', 'pending-review', page, limit],
-        queryFn: () => paymentsApi.getPendingReview(page, limit),
-    });
-}
-
 export function useApprovePayment() {
     const qc = useQueryClient();
     return useMutation({
@@ -62,7 +55,6 @@ export function useApprovePayment() {
             paymentsApi.approve(paymentId, notes),
         onSuccess: () => {
             qc.invalidateQueries({ queryKey: queryKeys.payments.all() });
-            qc.invalidateQueries({ queryKey: ['payments', 'pending-review'] });
         },
     });
 }
@@ -74,7 +66,6 @@ export function useRejectPayment() {
             paymentsApi.reject(paymentId, notes),
         onSuccess: () => {
             qc.invalidateQueries({ queryKey: queryKeys.payments.all() });
-            qc.invalidateQueries({ queryKey: ['payments', 'pending-review'] });
         },
     });
 }

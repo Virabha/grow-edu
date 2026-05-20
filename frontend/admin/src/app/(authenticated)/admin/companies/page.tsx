@@ -1,115 +1,210 @@
 "use client";
-import { PageLayout } from "@/components/layout/page-layout";
-import { Button } from "@/components/ui/button";
-import { Building2 as BuildingIcon, Building2 } from "lucide-react";
-import { EmptyState } from "@/components/ui/empty-state";
-import { useCompanies } from "@/features/companies/hooks/use-companies";
-import type { Company } from "@/features/companies/types";
-import { DataTableSkeleton } from "@/components/ui/data-table-skeleton";
-import { Card, CardContent } from "@/components/ui/card";
-import { PageFilters } from "@/components/layout/page-filters";
-import { useState, useCallback } from "react";
+import { useCallback, useState } from "react";
+import { Building2 } from "lucide-react";
 import { toast } from "sonner";
+
+import { PageLayout } from "@/components/layout/page-layout";
+import { PageFilters } from "@/components/layout/page-filters";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { DataTableSkeleton } from "@/components/ui/data-table-skeleton";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, } from "@/components/ui/table";
-import { useDeleteCompany } from "@/features/companies/hooks/use-companies";
-import { EditCompanyDialog } from "@/features/companies/components/edit-company-dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 import { useDebounce } from "@/hooks/use-debounce";
+import {
+  useCompanies,
+  useDeleteCompany,
+} from "@/features/companies/hooks/use-companies";
+import type { Company } from "@/features/companies/types";
+import { EditCompanyDialog } from "@/features/companies/components/edit-company-dialog";
+
 export default function CompanyManagementPage() {
-    const [search, setSearch] = useState("");
-    const debouncedSearch = useDebounce(search, 500);
-    const [page, setPage] = useState(1);
-    const limit = 20;
-    const [editingCompany, setEditingCompany] = useState<Company | null>(null);
-    const [isEditOpen, setIsEditOpen] = useState(false);
-    const { data: companiesData, isLoading, isFetching } = useCompanies({
-        enabled: true,
-        filters: {
-            search: debouncedSearch || undefined,
-            page,
-            limit,
-        },
-    });
-    const deleteCompany = useDeleteCompany();
-    const [confirmOpen, setConfirmOpen] = useState(false);
-    const [deletingCompany, setDeletingCompany] = useState<Company | null>(null);
-    const handleEditClick = (company: Company) => {
-        setEditingCompany(company);
-        setIsEditOpen(true);
-    };
-    const handleDeleteClick = useCallback((company: Company) => {
-        setDeletingCompany(company);
-        setConfirmOpen(true);
-    }, []);
-    const onConfirmDelete = useCallback(async () => {
-        if (deletingCompany) {
-            try { await deleteCompany.mutateAsync(deletingCompany.id); } catch {}
-        }
-    }, [deletingCompany, deleteCompany]);
-    return (<PageLayout header="Company Management" description="Manage corporate accounts and their enrollments." actions={<Button onClick={() => {
-                toast.info("Add company feature coming soon. You'll be able to create new corporate accounts.");
-            }}>
-          <BuildingIcon className="h-4 w-4 mr-2"/>
-          Add Company
-        </Button>} filters={
-        <PageFilters search={search} onSearchChange={setSearch} searchPlaceholder="Search companies..." />
-      }>
-        {isLoading ? (<DataTableSkeleton columnCount={5} rowCount={8} />) : !companiesData?.data?.length ? (<EmptyState title="No companies found" description="Corporate accounts will appear here once created." icon={<Building2 className="h-12 w-12"/>}/>) : (<><Card>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="min-w-[120px]">Name</TableHead>
-                      <TableHead className="min-w-[150px] hidden sm:table-cell">Email</TableHead>
-                      <TableHead className="min-w-[100px] hidden md:table-cell">Phone</TableHead>
-                      <TableHead className="min-w-[100px] hidden lg:table-cell">Created</TableHead>
-                      <TableHead className="text-right min-w-[140px]">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {companiesData.data.map((company: Company) => (<TableRow key={company.id}>
-                          <TableCell className="font-medium">
-                            {company.name}
-                          </TableCell>
-                          <TableCell className="hidden sm:table-cell truncate max-w-[200px]">{company.email || "N/A"}</TableCell>
-                          <TableCell className="hidden md:table-cell">{company.phone || "N/A"}</TableCell>
-                          <TableCell className="hidden lg:table-cell">
-                            {new Date(company.createdAt).toLocaleDateString()}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
-                              <Button variant="outline" size="sm" onClick={() => handleEditClick(company)}>
-                                Edit
-                              </Button>
-                              <Button variant="destructive" size="sm" disabled={deleteCompany.isPending} onClick={() => handleDeleteClick(company)}>
-                                <span className="hidden sm:inline">{deleteCompany.isPending ? "Deleting..." : "Delete"}</span>
-                                <span className="sm:hidden">Del</span>
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>))}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-          {companiesData.pagination.totalPages > 1 && (<div className="flex items-center justify-between px-4 py-3 border rounded-lg">
-              <span className="text-sm text-muted-foreground">
-                Page {companiesData.pagination.page} of {companiesData.pagination.totalPages} ({companiesData.pagination.total} total)
-              </span>
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 500);
+  const [page, setPage] = useState(1);
+  const limit = 20;
+
+  const [editingCompany, setEditingCompany] = useState<Company | null>(null);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [deletingCompany, setDeletingCompany] = useState<Company | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const { data, isLoading, isFetching } = useCompanies({
+    enabled: true,
+    filters: { search: debouncedSearch || undefined, page, limit },
+  });
+  const deleteCompany = useDeleteCompany();
+
+  const onDelete = useCallback(async () => {
+    if (!deletingCompany) return;
+    try {
+      await deleteCompany.mutateAsync(deletingCompany.id);
+    } catch {
+      // toast handled in hook
+    }
+  }, [deletingCompany, deleteCompany]);
+
+  const companies = data?.data ?? [];
+  const totalPages = data?.pagination?.totalPages ?? 1;
+
+  return (
+    <PageLayout
+      subtitle="Console"
+      header="Companies"
+      description="Corporate accounts and their enrolment licences."
+      actions={
+        <Button
+          size="sm"
+          className="gap-1.5"
+          onClick={() => toast.info("Add company coming soon.")}
+        >
+          <Building2 className="size-3.5" />
+          Add company
+        </Button>
+      }
+      filters={
+        <PageFilters
+          search={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Search companies…"
+        />
+      }
+    >
+      {isLoading ? (
+        <DataTableSkeleton columnCount={5} rowCount={8} />
+      ) : companies.length === 0 ? (
+        <EmptyState
+          title="No companies yet"
+          description="Corporate accounts appear here once created."
+          icon={<Building2 className="h-12 w-12" />}
+        />
+      ) : (
+        <div className="overflow-hidden rounded-2xl border border-border bg-card">
+          <div
+            className={cn(
+              "overflow-x-auto",
+              isFetching && "pointer-events-none opacity-50",
+            )}
+          >
+            <Table>
+              <TableHeader>
+                <TableRow className="border-b-border/70">
+                  <TableHead className="font-display text-xs">Name</TableHead>
+                  <TableHead className="hidden font-display text-xs sm:table-cell">
+                    Email
+                  </TableHead>
+                  <TableHead className="hidden font-display text-xs md:table-cell">
+                    Phone
+                  </TableHead>
+                  <TableHead className="hidden font-display text-xs lg:table-cell">
+                    Created
+                  </TableHead>
+                  <TableHead className="text-right font-display text-xs">
+                    Actions
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {companies.map((company) => (
+                  <TableRow
+                    key={company.id}
+                    className="border-b-border/60 transition-colors hover:bg-muted/40"
+                  >
+                    <TableCell className="font-display font-medium text-foreground">
+                      {company.name}
+                    </TableCell>
+                    <TableCell className="hidden max-w-[260px] truncate text-sm text-muted-foreground sm:table-cell">
+                      {company.email || "—"}
+                    </TableCell>
+                    <TableCell className="hidden text-sm text-muted-foreground md:table-cell">
+                      {company.phone || "—"}
+                    </TableCell>
+                    <TableCell className="hidden text-xs text-muted-foreground lg:table-cell">
+                      {new Date(company.createdAt).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setEditingCompany(company);
+                            setIsEditOpen(true);
+                          }}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-muted-foreground hover:text-destructive"
+                          disabled={deleteCompany.isPending}
+                          onClick={() => {
+                            setDeletingCompany(company);
+                            setConfirmOpen(true);
+                          }}
+                        >
+                          {deleteCompany.isPending ? "Deleting…" : "Delete"}
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          {totalPages > 1 && data?.pagination ? (
+            <div className="flex items-center justify-between border-t border-border px-4 py-3">
+              <p className="text-xs text-muted-foreground">
+                Page <span className="text-foreground">{data.pagination.page}</span> of{" "}
+                <span className="text-foreground">{totalPages}</span> ·{" "}
+                {data.pagination.total} total
+              </p>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1 || isFetching}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1 || isFetching}
+                >
                   Previous
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(companiesData.pagination.totalPages, p + 1))} disabled={page === companiesData.pagination.totalPages || isFetching}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages || isFetching}
+                >
                   Next
                 </Button>
               </div>
-            </div>)}
-          </>)}
+            </div>
+          ) : null}
+        </div>
+      )}
 
-        <EditCompanyDialog open={isEditOpen} onOpenChange={setIsEditOpen} company={editingCompany}/>
-        <ConfirmDialog open={confirmOpen} onOpenChange={setConfirmOpen} title="Delete Company" description={`Are you sure you want to delete ${deletingCompany?.name}?`} onConfirm={onConfirmDelete} confirmText="Delete" variant="destructive"/>
-    </PageLayout>);
+      <EditCompanyDialog
+        open={isEditOpen}
+        onOpenChange={setIsEditOpen}
+        company={editingCompany}
+      />
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="Delete company"
+        description={`Delete "${deletingCompany?.name}"? This cannot be undone.`}
+        onConfirm={onDelete}
+        confirmText="Delete"
+        variant="destructive"
+      />
+    </PageLayout>
+  );
 }

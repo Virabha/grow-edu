@@ -1,34 +1,91 @@
 "use client";
+import Link from "next/link";
+import {
+  ArrowUpRight,
+  Award,
+  Briefcase,
+  HelpCircle,
+  Image as ImageIcon,
+  MessageCircle,
+  Quote,
+  Users,
+} from "lucide-react";
 
 import { PageLayout } from "@/components/layout/page-layout";
-import { Card, CardContent } from "@/components/ui/card";
-import Link from "next/link";
-import { Image, MessageCircle, HelpCircle, Award, Quote, Briefcase, Users } from "lucide-react";
 
 const sections = [
-  { label: "Banners", href: "/admin/landing/banners", icon: Image },
-  { label: "FAQs", href: "/admin/landing/faqs", icon: HelpCircle },
-  { label: "Why Choose Us", href: "/admin/landing/why-choose-us", icon: Award },
-  { label: "Testimonials", href: "/admin/landing/testimonials", icon: Quote },
-  { label: "Services", href: "/admin/landing/services", icon: Briefcase },
-  { label: "About Us", href: "/admin/landing/about", icon: MessageCircle },
-  { label: "Instructors", href: "/admin/landing/instructors", icon: Users },
+  {
+    label: "Banners",
+    description: "Hero rotator on the homepage",
+    href: "/admin/landing/banners",
+    icon: ImageIcon,
+  },
+  {
+    label: "FAQs",
+    description: "Questions answered on the home page",
+    href: "/admin/landing/faqs",
+    icon: HelpCircle,
+  },
+  {
+    label: "Why choose us",
+    description: "Six promises bento block",
+    href: "/admin/landing/why-choose-us",
+    icon: Award,
+  },
+  {
+    label: "Testimonials",
+    description: "Learner quotes",
+    href: "/admin/landing/testimonials",
+    icon: Quote,
+  },
+  {
+    label: "Services",
+    description: "Service offerings (if surfaced)",
+    href: "/admin/landing/services",
+    icon: Briefcase,
+  },
+  {
+    label: "About",
+    description: "About page content",
+    href: "/admin/landing/about",
+    icon: MessageCircle,
+  },
+  {
+    label: "Instructors",
+    description: "Faculty profiles on the home page",
+    href: "/admin/landing/instructors",
+    icon: Users,
+  },
 ];
 
 export default function AdminLandingPage() {
   return (
-    <PageLayout header="Landing Page" description="Manage content shown on the learner site.">
+    <PageLayout
+      subtitle="Console"
+      header="Landing page"
+      description="Manage every block of content shown on the learner-facing site."
+    >
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {sections.map((s) => (
-          <Link key={s.href} href={s.href}>
-            <Card className="transition-colors hover:bg-muted/50">
-              <CardContent className="flex items-center gap-3 p-4">
-                <div className="flex size-12 items-center justify-center rounded-lg bg-primary/10">
-                  <s.icon className="size-6 text-primary" />
-                </div>
-                <span className="font-medium">{s.label}</span>
-              </CardContent>
-            </Card>
+          <Link
+            key={s.href}
+            href={s.href}
+            className="group flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-5 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-sm"
+          >
+            <div className="flex items-center gap-4 min-w-0">
+              <span className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/40 text-primary">
+                <s.icon className="size-5" />
+              </span>
+              <div className="min-w-0">
+                <p className="font-display text-base font-medium text-foreground">
+                  {s.label}
+                </p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {s.description}
+                </p>
+              </div>
+            </div>
+            <ArrowUpRight className="size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-primary" />
           </Link>
         ))}
       </div>

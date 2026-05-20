@@ -1,12 +1,5 @@
 "use client";
 import { PageLayout } from "@/components/layout/page-layout";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -83,65 +76,67 @@ export default function AdminSettingsPage() {
 
   return (
     <PageLayout
-      header="Platform Settings"
-      description="Configure platform-wide settings and integrations."
+      subtitle="Console"
+      header="Platform settings"
+      description="Toggle platform-wide behaviours."
     >
-      <div className="space-y-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>General Settings</CardTitle>
-            <CardDescription>
-              Basic configuration for the platform.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center justify-between space-x-2">
-              <div className="space-y-0.5">
-                <Label htmlFor="registrations">Allow New Registrations</Label>
-                <div className="text-sm text-muted-foreground">
-                  Enable or disable new user signups.
-                </div>
-              </div>
-              <Switch
-                id="registrations"
-                checked={allowRegistrations}
-                disabled={upsert.isPending}
-                onCheckedChange={(v) => {
-                  setAllowRegistrations(v);
-                  handleToggle("allowRegistrations", v);
-                }}
-              />
+      <div className="space-y-4">
+        <section className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            General
+          </p>
+          <div className="mt-4 flex items-start justify-between gap-3">
+            <div className="space-y-1">
+              <Label
+                htmlFor="registrations"
+                className="font-display text-base font-medium text-foreground"
+              >
+                Allow new registrations
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                When off, the signup page is disabled for new users.
+              </p>
             </div>
-          </CardContent>
-        </Card>
+            <Switch
+              id="registrations"
+              checked={allowRegistrations}
+              disabled={upsert.isPending}
+              onCheckedChange={(v) => {
+                setAllowRegistrations(v);
+                handleToggle("allowRegistrations", v);
+              }}
+            />
+          </div>
+        </section>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>System Maintenance</CardTitle>
-            <CardDescription>
-              Manage system availability and maintenance mode.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center justify-between space-x-2">
-              <div className="space-y-0.5">
-                <Label htmlFor="maintenance">Maintenance Mode</Label>
-                <div className="text-sm text-muted-foreground">
-                  Disable access for non-admin users.
-                </div>
-              </div>
-              <Switch
-                id="maintenance"
-                checked={maintenanceMode}
-                disabled={upsert.isPending}
-                onCheckedChange={(v) => {
-                  setMaintenanceMode(v);
-                  handleToggle("maintenanceMode", v);
-                }}
-              />
+        <section className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            Availability
+          </p>
+          <div className="mt-4 flex items-start justify-between gap-3">
+            <div className="space-y-1">
+              <Label
+                htmlFor="maintenance"
+                className="font-display text-base font-medium text-foreground"
+              >
+                Maintenance mode
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Locks the platform for non-admin users. Use for migrations or
+                planned downtime.
+              </p>
             </div>
-          </CardContent>
-        </Card>
+            <Switch
+              id="maintenance"
+              checked={maintenanceMode}
+              disabled={upsert.isPending}
+              onCheckedChange={(v) => {
+                setMaintenanceMode(v);
+                handleToggle("maintenanceMode", v);
+              }}
+            />
+          </div>
+        </section>
       </div>
     </PageLayout>
   );

@@ -3,7 +3,6 @@ import { PageLayout } from "@/components/layout/page-layout";
 import { Tag, Plus, MoreHorizontal, Pencil, Trash2, Power, PowerOff, } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageFilters } from "@/components/layout/page-filters";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, } from "@/components/ui/dropdown-menu";
@@ -57,42 +56,41 @@ export default function AdminCouponsPage() {
     const onConfirmDelete = useCallback(() => {
         if (deletingCoupon) deleteCoupon.mutate(deletingCoupon.couponId);
     }, [deletingCoupon, deleteCoupon]);
-    return (<PageLayout header="Coupon Management" description="Create and manage discount coupons for your courses" actions={
-        <Button onClick={handleCreate}>
-          <Plus className="h-4 w-4 mr-2"/>
-          Create Coupon
+    return (<PageLayout subtitle="Console" header="Coupons" description="Discount codes — create, deactivate, audit." actions={
+        <Button size="sm" onClick={handleCreate} className="gap-1.5">
+          <Plus className="size-3.5"/>
+          New coupon
         </Button>
       } filters={
-        <PageFilters search={search} onSearchChange={setSearch} searchPlaceholder="Search by coupon code...">
+        <PageFilters search={search} onSearchChange={setSearch} searchPlaceholder="Search by code…">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="h-8 text-xs w-full sm:w-[140px]">
+            <SelectTrigger className="h-8 w-full text-xs sm:w-[160px]">
               <SelectValue placeholder="Status"/>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="all">All status</SelectItem>
               <SelectItem value="active">Active</SelectItem>
               <SelectItem value="inactive">Inactive</SelectItem>
             </SelectContent>
           </Select>
         </PageFilters>
       }>
-        {isLoading ? (<DataTableSkeleton columnCount={7} rowCount={10}/>) : coupons.length === 0 ? (<EmptyState title="No coupons found" description="Create your first coupon to offer discounts." icon={<Tag className="h-12 w-12"/>}/>) : (<Card>
-            <CardContent className="p-0">
-              <div className={cn("overflow-x-auto", isFetching && "opacity-50")}>
+        {isLoading ? (<DataTableSkeleton columnCount={7} rowCount={10}/>) : coupons.length === 0 ? (<EmptyState title="No coupons yet" description="Create your first discount code." icon={<Tag className="h-12 w-12"/>}/>) : (<div className="overflow-hidden rounded-2xl border border-border bg-card">
+              <div className={cn("overflow-x-auto", isFetching && "pointer-events-none opacity-50")}>
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead>Code</TableHead>
-                      <TableHead>Discount</TableHead>
-                      <TableHead>Valid Period</TableHead>
-                      <TableHead>Usage</TableHead>
-                      <TableHead>Applies To</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                    <TableRow className="border-b-border/70">
+                      <TableHead className="font-display text-xs">Code</TableHead>
+                      <TableHead className="font-display text-xs">Discount</TableHead>
+                      <TableHead className="font-display text-xs">Valid</TableHead>
+                      <TableHead className="font-display text-xs">Usage</TableHead>
+                      <TableHead className="font-display text-xs">Applies to</TableHead>
+                      <TableHead className="font-display text-xs">Status</TableHead>
+                      <TableHead className="text-right font-display text-xs">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {coupons.map((coupon) => (<TableRow key={coupon.couponId}>
+                    {coupons.map((coupon) => (<TableRow key={coupon.couponId} className="border-b-border/60 transition-colors hover:bg-muted/40">
                         <TableCell className="font-mono font-medium">
                           {coupon.couponCode}
                         </TableCell>
@@ -167,11 +165,10 @@ export default function AdminCouponsPage() {
                   </TableBody>
                 </Table>
               </div>
-            </CardContent>
-            {pagination && pagination.totalPages > 1 && (<div className="flex items-center justify-between px-4 py-3 border-t">
-                <div className="text-sm text-muted-foreground">
-                  Page {pagination.page} of {pagination.totalPages}
-                </div>
+            {pagination && pagination.totalPages > 1 && (<div className="flex items-center justify-between border-t border-border px-4 py-3">
+                <p className="text-xs text-muted-foreground">
+                  Page <span className="text-foreground">{pagination.page}</span> of <span className="text-foreground">{pagination.totalPages}</span>
+                </p>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={pagination.page === 1}>
                     Previous
@@ -181,7 +178,7 @@ export default function AdminCouponsPage() {
                   </Button>
                 </div>
               </div>)}
-          </Card>)}
+          </div>)}
 
       <CouponFormDialog open={formOpen} onOpenChange={setFormOpen} coupon={editingCoupon}/>
       <ConfirmDialog open={confirmOpen} onOpenChange={setConfirmOpen} title="Delete Coupon" description={`Delete coupon "${deletingCoupon?.couponCode}"? This action cannot be undone.`} onConfirm={onConfirmDelete} confirmText="Delete" variant="destructive"/>

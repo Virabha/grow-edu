@@ -143,7 +143,7 @@ export default function InstructorDetailPage() {
               >
                 <motion.h1
                   variants={fadeUp}
-                  className="text-2xl font-black text-foreground sm:text-3xl md:text-4xl"
+                  className="font-display text-3xl font-medium leading-tight tracking-tight text-foreground sm:text-4xl md:text-5xl"
                 >
                   {instructor.name}
                 </motion.h1>

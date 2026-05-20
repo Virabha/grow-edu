@@ -18,6 +18,8 @@ export interface Payment {
     couponId?: string;
     metadata?: Record<string, string>;
     paymentProofUrl?: string | null;
+    transactionId?: string | null;
+    payerName?: string | null;
     proofUploadedAt?: string | null;
     reviewedAt?: string | null;
     reviewedBy?: string | null;

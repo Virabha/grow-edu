@@ -2,7 +2,6 @@
 import { PageLayout } from "@/components/layout/page-layout";
 import { Button } from "@/components/ui/button";
 import { PageFilters } from "@/components/layout/page-filters";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, } from "@/components/ui/dropdown-menu";
@@ -64,30 +63,30 @@ export default function AdminCategoriesPage() {
     const onConfirmDelete = useCallback(() => {
         if (deletingItem) deleteCategory.mutate(deletingItem.categoryId);
     }, [deletingItem, deleteCategory]);
-    return (<PageLayout header="Categories" description="Manage dynamic categories used across courses and coupons" actions={
-        <Button onClick={handleCreate}>
-          <Plus className="h-4 w-4 mr-2"/>
-          Create Category
+    return (<PageLayout subtitle="Catalogue" header="Categories" description="Categories that organise courses and coupon scopes." actions={
+        <Button size="sm" onClick={handleCreate} className="gap-1.5">
+          <Plus className="size-3.5"/>
+          Add category
         </Button>
       } filters={
-        <PageFilters search={search} onSearchChange={setSearch} searchPlaceholder="Search categories...">
+        <PageFilters search={search} onSearchChange={setSearch} searchPlaceholder="Search categories…">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="h-8 text-xs w-full sm:w-[140px]">
+            <SelectTrigger className="h-8 w-full text-xs sm:w-[160px]">
               <SelectValue placeholder="Status"/>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="all">All status</SelectItem>
               <SelectItem value="active">Active</SelectItem>
               <SelectItem value="inactive">Inactive</SelectItem>
             </SelectContent>
           </Select>
           <Select value={parentFilter} onValueChange={setParentFilter}>
-            <SelectTrigger className="h-8 text-xs w-full sm:w-[160px]">
+            <SelectTrigger className="h-8 w-full text-xs sm:w-[180px]">
               <SelectValue placeholder="Parent"/>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              <SelectItem value="root">Root Only</SelectItem>
+              <SelectItem value="all">All categories</SelectItem>
+              <SelectItem value="root">Root only</SelectItem>
               {rootCategories.map((c) => (
                 <SelectItem key={c.categoryId} value={c.categoryId}>
                   {c.name} (subs)
@@ -97,24 +96,23 @@ export default function AdminCategoriesPage() {
           </Select>
         </PageFilters>
       }>
-        {isLoading ? (<DataTableSkeleton columnCount={7} rowCount={10}/>) : categories.length === 0 ? (<EmptyState title="No categories found" description="Create your first category to organize courses." icon={<Layers className="h-12 w-12"/>}/>) : (<Card>
-            <CardContent className="p-0">
-              <div className={cn("overflow-x-auto", isFetching && "opacity-50")}>
+        {isLoading ? (<DataTableSkeleton columnCount={7} rowCount={10}/>) : categories.length === 0 ? (<EmptyState title="No categories yet" description="Create your first category to organise courses." icon={<Layers className="h-12 w-12"/>}/>) : (<div className="overflow-hidden rounded-2xl border border-border bg-card">
+              <div className={cn("overflow-x-auto", isFetching && "pointer-events-none opacity-50")}>
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead>Image</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Parent</TableHead>
-                      <TableHead>Slug</TableHead>
-                      <TableHead>Courses</TableHead>
-                      <TableHead>Order</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                    <TableRow className="border-b-border/70">
+                      <TableHead className="font-display text-xs">Image</TableHead>
+                      <TableHead className="font-display text-xs">Name</TableHead>
+                      <TableHead className="hidden font-display text-xs md:table-cell">Parent</TableHead>
+                      <TableHead className="hidden font-display text-xs lg:table-cell">Slug</TableHead>
+                      <TableHead className="hidden font-display text-xs sm:table-cell">Courses</TableHead>
+                      <TableHead className="hidden font-display text-xs lg:table-cell">Order</TableHead>
+                      <TableHead className="font-display text-xs">Status</TableHead>
+                      <TableHead className="text-right font-display text-xs">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {categories.map((c) => (<TableRow key={c.categoryId}>
+                    {categories.map((c) => (<TableRow key={c.categoryId} className="border-b-border/60 transition-colors hover:bg-muted/40">
                         <TableCell>
                           {c.imageUrl ? (
                             <SecureImage src={c.imageUrl} alt={c.name} className="h-8 w-8 rounded object-cover" />
@@ -126,14 +124,14 @@ export default function AdminCategoriesPage() {
                           {c.parentCategoryId && <span className="text-muted-foreground mr-1">&#8627;</span>}
                           {c.name}
                         </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
+                        <TableCell className="hidden text-sm text-muted-foreground md:table-cell">
                           {c.parentCategoryId ? parentNameMap.get(c.parentCategoryId) || "—" : "—"}
                         </TableCell>
-                        <TableCell className="font-mono text-sm text-muted-foreground">{c.slug}</TableCell>
-                        <TableCell>{c.coursesCount ?? 0}</TableCell>
-                        <TableCell>{c.displayOrder ?? 0}</TableCell>
+                        <TableCell className="hidden font-mono text-xs text-muted-foreground lg:table-cell">{c.slug}</TableCell>
+                        <TableCell className="hidden text-sm text-muted-foreground sm:table-cell">{c.coursesCount ?? 0}</TableCell>
+                        <TableCell className="hidden text-sm text-muted-foreground lg:table-cell">{c.displayOrder ?? 0}</TableCell>
                         <TableCell>
-                          {c.isActive ? (<Badge className="bg-green-500">Active</Badge>) : (<Badge variant="secondary">Inactive</Badge>)}
+                          {c.isActive ? (<Badge className="rounded-full bg-emerald-600 text-[10px] uppercase tracking-widest">Active</Badge>) : (<Badge variant="secondary" className="rounded-full text-[10px] uppercase tracking-widest">Inactive</Badge>)}
                         </TableCell>
                         <TableCell className="text-right">
                           <DropdownMenu>
@@ -171,11 +169,10 @@ export default function AdminCategoriesPage() {
                   </TableBody>
                 </Table>
               </div>
-            </CardContent>
-            {pagination && pagination.totalPages > 1 && (<div className="flex items-center justify-between px-4 py-3 border-t">
-                <div className="text-sm text-muted-foreground">
-                  Page {pagination.page} of {pagination.totalPages}
-                </div>
+            {pagination && pagination.totalPages > 1 && (<div className="flex items-center justify-between border-t border-border px-4 py-3">
+                <p className="text-xs text-muted-foreground">
+                  Page <span className="text-foreground">{pagination.page}</span> of <span className="text-foreground">{pagination.totalPages}</span>
+                </p>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={pagination.page === 1}>
                     Previous
@@ -185,7 +182,7 @@ export default function AdminCategoriesPage() {
                   </Button>
                 </div>
               </div>)}
-          </Card>)}
+          </div>)}
 
       <CategoryFormDialog open={formOpen} onOpenChange={setFormOpen} category={editing}/>
       <ConfirmDialog open={confirmOpen} onOpenChange={setConfirmOpen} title="Delete Category" description={`Delete category "${deletingItem?.name}"? This is a soft delete.`} onConfirm={onConfirmDelete} confirmText="Delete" variant="destructive"/>

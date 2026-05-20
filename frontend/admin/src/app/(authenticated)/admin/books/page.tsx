@@ -2,7 +2,6 @@
 
 import { PageLayout } from "@/components/layout/page-layout";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -46,11 +45,13 @@ export default function AdminBooksPage() {
 
   return (
     <PageLayout
+      subtitle="Catalogue"
       header="Books"
-      description="Manage books available for purchase."
+      description="The book catalogue — available for purchase by learners."
       actions={
-        <Button onClick={handleCreate}>
-          <Plus className="h-4 w-4 mr-2" /> Add Book
+        <Button size="sm" onClick={handleCreate} className="gap-1.5">
+          <Plus className="size-3.5" />
+          Add book
         </Button>
       }
     >
@@ -58,28 +59,28 @@ export default function AdminBooksPage() {
         <DataTableSkeleton columnCount={7} rowCount={5} />
       ) : items.length === 0 ? (
         <EmptyState
-          title="No books found"
-          description="Add your first book."
+          title="No books yet"
+          description="Add your first book to the catalogue."
           icon={<BookOpen className="h-12 w-12" />}
         />
       ) : (
-        <Card>
-          <CardContent className="p-0">
+        <div className="overflow-hidden rounded-2xl border border-border bg-card">
+          <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Title</TableHead>
-                  <TableHead className="hidden md:table-cell">Author</TableHead>
-                  <TableHead className="hidden lg:table-cell">Price</TableHead>
-                  <TableHead className="hidden lg:table-cell">Format</TableHead>
-                  <TableHead className="w-[80px]">Status</TableHead>
-                  <TableHead className="w-[80px]">Active</TableHead>
-                  <TableHead className="w-[80px]">Actions</TableHead>
+                <TableRow className="border-b-border/70">
+                  <TableHead className="font-display text-xs">Title</TableHead>
+                  <TableHead className="hidden font-display text-xs md:table-cell">Author</TableHead>
+                  <TableHead className="hidden font-display text-xs lg:table-cell">Price</TableHead>
+                  <TableHead className="hidden font-display text-xs lg:table-cell">Format</TableHead>
+                  <TableHead className="font-display text-xs">Status</TableHead>
+                  <TableHead className="hidden font-display text-xs sm:table-cell">Active</TableHead>
+                  <TableHead className="text-right font-display text-xs">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {items.map((item) => (
-                  <TableRow key={item.bookId}>
+                  <TableRow key={item.bookId} className="border-b-border/60 transition-colors hover:bg-muted/40">
                     <TableCell className="font-medium">{item.title}</TableCell>
                     <TableCell className="hidden md:table-cell text-muted-foreground">
                       {item.author}
@@ -107,14 +108,14 @@ export default function AdminBooksPage() {
                         {item.status}
                       </Badge>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       {item.isActive ? (
-                        <Badge className="bg-green-500">Active</Badge>
+                        <Badge className="rounded-full bg-emerald-600 text-[10px] uppercase tracking-widest">Active</Badge>
                       ) : (
-                        <Badge variant="secondary">Inactive</Badge>
+                        <Badge variant="secondary" className="rounded-full text-[10px] uppercase tracking-widest">Inactive</Badge>
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="sm">
@@ -138,8 +139,8 @@ export default function AdminBooksPage() {
                 ))}
               </TableBody>
             </Table>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
       <BookFormDialog open={formOpen} onOpenChange={setFormOpen} book={editing} />

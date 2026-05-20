@@ -130,7 +130,9 @@ export default function WatchPage() {
           <div className="mx-auto mb-6 flex size-20 items-center justify-center rounded-full bg-muted/30">
             <Lock className="size-10 text-muted-foreground/50" />
           </div>
-          <h1 className="mb-3 text-3xl font-bold">Access Denied</h1>
+          <h1 className="font-display mb-3 text-3xl font-medium leading-tight tracking-tight">
+            Access denied.
+          </h1>
           <p className="mx-auto mb-8 max-w-md text-muted-foreground">
             You need to be enrolled in this course to access the content.
             Please enroll first to start learning.
@@ -159,7 +161,7 @@ export default function WatchPage() {
       <motion.h1
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-6 text-xl font-bold tracking-tight md:text-2xl"
+        className="font-display mb-6 text-2xl font-medium leading-tight tracking-tight md:text-3xl"
       >
         {course?.title}
       </motion.h1>
@@ -201,7 +203,9 @@ export default function WatchPage() {
               animate={{ opacity: 1 }}
               className="mt-4"
             >
-              <h2 className="text-lg font-semibold">{currentLesson.title}</h2>
+              <h2 className="font-display text-xl font-medium leading-snug">
+                {currentLesson.title}
+              </h2>
               {currentLesson.duration && (
                 <p className="mt-1 text-sm text-muted-foreground">
                   {Math.ceil(currentLesson.duration / 60)} min
@@ -216,12 +220,15 @@ export default function WatchPage() {
           initial={{ opacity: 0, x: 16 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.2 }}
-          className="overflow-hidden rounded-xl border border-border/50"
+          className="overflow-hidden rounded-2xl border border-border bg-card"
         >
-          <div className="border-b border-border/50 bg-muted/20 px-5 py-4">
-            <h3 className="flex items-center gap-2 font-semibold">
+          <div className="border-b border-border/70 bg-muted/30 px-5 py-4">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Curriculum
+            </p>
+            <h3 className="font-display mt-1 flex items-center gap-2 text-base font-medium">
               <BookOpen className="size-4 text-primary" />
-              Course Content
+              Course content
             </h3>
             <p className="mt-1 text-xs text-muted-foreground">
               {sections.length} section{sections.length !== 1 && "s"} &middot;{" "}

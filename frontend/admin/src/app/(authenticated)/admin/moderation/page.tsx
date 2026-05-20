@@ -6,7 +6,6 @@ import { useCourses, useApproveCourse, useRejectCourse, } from "@/features/cours
 import type { Course } from "@/lib/api/services/courses";
 import type { AxiosError } from "axios";
 import { DataTableSkeleton } from "@/components/ui/data-table-skeleton";
-import { Card, CardContent } from "@/components/ui/card";
 import { PageFilters } from "@/components/layout/page-filters";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -69,27 +68,26 @@ export default function ContentModerationPage() {
         }
         return true;
     });
-    return (<PageLayout header="Content Moderation" description="Review and moderate course content before publication." filters={
-        <PageFilters search={search} onSearchChange={handleSearchChange} searchPlaceholder="Search pending courses..." />
+    return (<PageLayout subtitle="Console" header="Moderation" description="Approve or reject courses awaiting review." filters={
+        <PageFilters search={search} onSearchChange={handleSearchChange} searchPlaceholder="Search pending courses…" />
       }>
         {isLoading ? (<div className="space-y-2">
             <DataTableSkeleton columnCount={5} rowCount={6} />
           </div>) : filteredCourses.length === 0 ? (<EmptyState title="No pending reviews" description="There are no courses currently waiting for review." icon={<div className="relative h-40 w-40">
                 <Image src="/illustrations/no_data.svg" alt="No pending reviews" fill className="object-contain"/>
-              </div>}/>) : (<Card>
-            <CardContent className="p-0">
+              </div>}/>) : (<div className="overflow-hidden rounded-2xl border border-border bg-card">
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead className="min-w-[150px]">Course Title</TableHead>
-                      <TableHead className="min-w-[120px] hidden md:table-cell">Instructor</TableHead>
-                      <TableHead className="min-w-[100px] hidden sm:table-cell">Submitted</TableHead>
-                      <TableHead className="text-right min-w-[180px]">Actions</TableHead>
+                    <TableRow className="border-b-border/70">
+                      <TableHead className="font-display text-xs">Course</TableHead>
+                      <TableHead className="hidden font-display text-xs md:table-cell">Instructor</TableHead>
+                      <TableHead className="hidden font-display text-xs sm:table-cell">Submitted</TableHead>
+                      <TableHead className="text-right font-display text-xs">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredCourses.map((course: Course) => (<TableRow key={course.courseId}>
+                    {filteredCourses.map((course: Course) => (<TableRow key={course.courseId} className="border-b-border/60 transition-colors hover:bg-muted/40">
                         <TableCell className="font-medium">
                           <div className="flex flex-col">
                             <span className="line-clamp-1">{course.title}</span>
@@ -135,8 +133,7 @@ export default function ContentModerationPage() {
                   </TableBody>
                 </Table>
               </div>
-            </CardContent>
-          </Card>)}
+            </div>)}
 
       <AlertDialog open={!!courseToApprove} onOpenChange={(open) => !open && setCourseToApprove(null)}>
         <AlertDialogContent>

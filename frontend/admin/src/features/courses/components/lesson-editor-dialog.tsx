@@ -114,13 +114,13 @@ export function LessonEditorDialog({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="sm:max-w-2xl">
-        <SheetHeader>
+        <SheetHeader className="space-y-0.5 py-3">
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
             Lesson
           </p>
           <SheetTitle>Edit lesson</SheetTitle>
-          <SheetDescription>
-            Configure content and settings for this lesson.
+          <SheetDescription className="text-xs">
+            Configure content and settings.
           </SheetDescription>
         </SheetHeader>
 
@@ -129,7 +129,7 @@ export function LessonEditorDialog({
             <Loader2 className="size-6 animate-spin text-muted-foreground" />
           </SheetBody>
         ) : (
-          <SheetBody className="scrollbar-hide space-y-4">
+          <SheetBody className="scrollbar-hide space-y-3 py-3">
             <div className="space-y-1.5">
               <Label className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                 Title
@@ -154,7 +154,7 @@ export function LessonEditorDialog({
               />
             </div>
 
-            <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-muted/30 px-4 py-3">
+            <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/30 px-3 py-2">
               <div className="min-w-0">
                 <Label
                   htmlFor="free-preview"
@@ -162,8 +162,8 @@ export function LessonEditorDialog({
                 >
                   Free preview
                 </Label>
-                <p className="text-xs text-muted-foreground">
-                  Let learners watch this without enrolling.
+                <p className="text-[11px] text-muted-foreground">
+                  Watchable without enrolling.
                 </p>
               </div>
               <Switch

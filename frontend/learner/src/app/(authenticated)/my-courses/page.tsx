@@ -60,9 +60,10 @@ export default function MyCoursesPage() {
     <PageLayout
       header="My Courses"
       description="Continue your learning journey with your enrolled courses."
+      className="space-y-4"
     >
-      <div className="space-y-4">
-        <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
+      <div className="space-y-3">
+        <div className="flex flex-col gap-2 sm:flex-row">
           <div className="relative max-w-md flex-1">
             <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -125,9 +126,9 @@ export default function MyCoursesPage() {
             {filtered.map((enrollment) => (
               <Card
                 key={enrollment.enrollmentId}
-                className="group overflow-hidden py-0 gap-0 transition-shadow hover:shadow-lg"
+                className="group gap-0 overflow-hidden py-0 transition-shadow hover:shadow-md"
               >
-                <div className="relative h-32 w-full overflow-hidden bg-gradient-to-br from-primary/20 to-primary/5">
+                <div className="relative h-28 w-full overflow-hidden bg-muted">
                   {enrollment.course?.thumbnail ? (
                     <SecureImage
                       src={enrollment.course.thumbnail}
@@ -136,7 +137,7 @@ export default function MyCoursesPage() {
                     />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center">
-                      <BookOpen className="size-10 text-primary/30" />
+                      <BookOpen className="size-9 text-muted-foreground/30" />
                     </div>
                   )}
                   {enrollment.accessType === "SECTION" && (
@@ -146,9 +147,9 @@ export default function MyCoursesPage() {
                     </div>
                   )}
                 </div>
-                <CardContent className="space-y-1.5 px-3 pb-2.5 pt-0">
-                  <div>
-                    <h3 className="line-clamp-2 text-sm font-semibold">
+                <CardContent className="space-y-2 px-3 pb-2 pt-2">
+                  <div className="space-y-0.5">
+                    <h3 className="font-display line-clamp-2 text-sm font-medium leading-snug">
                       {enrollment.course?.title || "Unknown course"}
                     </h3>
                     <p className="text-[11px] text-muted-foreground">
@@ -162,17 +163,15 @@ export default function MyCoursesPage() {
                   {enrollment.accessType === "SECTION" &&
                     enrollment.accessedSections &&
                     enrollment.accessedSections.length > 0 && (
-                      <div
-                        className="rounded bg-amber-50 px-1.5 py-1 text-[10px] text-amber-600 dark:bg-amber-900/20 dark:text-amber-400"
+                      <p
+                        className="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-900/20 dark:text-amber-300"
                         title={`Sections: ${enrollment.accessedSections
                           .map((s) => s.title)
                           .join(", ")}`}
                       >
-                        <span className="font-medium">
-                          {enrollment.accessedSections.length} section
-                          {enrollment.accessedSections.length > 1 ? "s" : ""}
-                        </span>
-                      </div>
+                        {enrollment.accessedSections.length} section
+                        {enrollment.accessedSections.length > 1 ? "s" : ""}
+                      </p>
                     )}
 
                   <div className="flex flex-wrap items-center gap-1.5">
@@ -180,46 +179,36 @@ export default function MyCoursesPage() {
                       <StatusChip tone="amber" icon={<Layers className="size-2.5" />}>
                         Section
                       </StatusChip>
-                    ) : (
-                      <>
-                        {enrollment.status === "ACTIVE" && (
-                          <StatusChip tone="blue">In progress</StatusChip>
-                        )}
-                        {enrollment.status === "COMPLETED" && (
-                          <StatusChip
-                            tone="green"
-                            icon={<CheckCircle className="size-2.5" />}
-                          >
-                            Done
-                          </StatusChip>
-                        )}
-                        {enrollment.status === "REVOKED" && (
-                          <StatusChip tone="red">Revoked</StatusChip>
-                        )}
-                      </>
-                    )}
+                    ) : enrollment.status === "ACTIVE" ? (
+                      <StatusChip tone="blue">In progress</StatusChip>
+                    ) : enrollment.status === "COMPLETED" ? (
+                      <StatusChip
+                        tone="green"
+                        icon={<CheckCircle className="size-2.5" />}
+                      >
+                        Done
+                      </StatusChip>
+                    ) : enrollment.status === "REVOKED" ? (
+                      <StatusChip tone="red">Revoked</StatusChip>
+                    ) : null}
                   </div>
 
-                  <Link
-                    href={`/courses/${enrollment.courseId}/watch`}
-                    className="block"
+                  <Button
+                    asChild
+                    size="sm"
+                    className="h-8 w-full text-xs"
+                    variant={
+                      enrollment.status === "COMPLETED" ? "outline" : "default"
+                    }
                   >
-                    <Button
-                      className="h-8 w-full text-xs"
-                      size="sm"
-                      variant={
-                        enrollment.status === "COMPLETED"
-                          ? "outline"
-                          : "default"
-                      }
-                    >
+                    <Link href={`/courses/${enrollment.courseId}/watch`}>
                       {enrollment.accessType === "SECTION"
                         ? "Watch"
                         : enrollment.status === "COMPLETED"
                           ? "Review"
                           : "Resume"}
-                    </Button>
-                  </Link>
+                    </Link>
+                  </Button>
                 </CardContent>
               </Card>
             ))}
@@ -227,16 +216,14 @@ export default function MyCoursesPage() {
         )}
 
         {pagination && (pagination.totalPages ?? 0) > 1 && (
-          <div className="mt-6">
-            <Pagination
-              currentPage={pagination.page}
-              totalPages={pagination.totalPages}
-              onPageChange={(p) => {
-                setPage(p);
-                window.scrollTo({ top: 0, behavior: "smooth" });
-              }}
-            />
-          </div>
+          <Pagination
+            currentPage={pagination.page}
+            totalPages={pagination.totalPages}
+            onPageChange={(p) => {
+              setPage(p);
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+          />
         )}
       </div>
     </PageLayout>

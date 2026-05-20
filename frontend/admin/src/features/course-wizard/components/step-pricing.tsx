@@ -22,6 +22,8 @@ export function StepPricing() {
   const [priceType, setPriceType] = useState<PriceType>("FREE");
   const [price, setPrice] = useState("0");
   const [compareAtPrice, setCompareAtPrice] = useState("");
+  const [priceError, setPriceError] = useState<string | null>(null);
+  const [compareError, setCompareError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!course) return;
@@ -39,29 +41,34 @@ export function StepPricing() {
 
   const onContinue = async () => {
     if (!courseId) return;
-    try {
-      const finalPrice = priceType === "FREE" ? 0 : parseFloat(price);
-      const parsedCompareAt = compareAtPrice.trim()
-        ? parseFloat(compareAtPrice)
+    setPriceError(null);
+    setCompareError(null);
+
+    const finalPrice = priceType === "FREE" ? 0 : parseFloat(price);
+    const parsedCompareAt = compareAtPrice.trim()
+      ? parseFloat(compareAtPrice)
+      : undefined;
+    const finalCompareAt =
+      parsedCompareAt !== undefined && !Number.isNaN(parsedCompareAt)
+        ? parsedCompareAt
         : undefined;
-      const finalCompareAt =
-        parsedCompareAt !== undefined && !Number.isNaN(parsedCompareAt)
-          ? parsedCompareAt
-          : undefined;
 
-      if (priceType === "PAID" && (isNaN(finalPrice) || finalPrice < 1)) {
-        toast.error("Enter a valid price (minimum ₹1).");
-        return;
-      }
-      if (
-        priceType === "PAID" &&
-        finalCompareAt !== undefined &&
-        finalCompareAt < finalPrice
-      ) {
-        toast.error("Original price must be greater than or equal to the final price.");
-        return;
-      }
+    if (priceType === "PAID" && (isNaN(finalPrice) || finalPrice < 1)) {
+      setPriceError("Enter a valid price (minimum ₹1).");
+      return;
+    }
+    if (
+      priceType === "PAID" &&
+      finalCompareAt !== undefined &&
+      finalCompareAt < finalPrice
+    ) {
+      setCompareError(
+        "Original price must be greater than or equal to the final price.",
+      );
+      return;
+    }
 
+    try {
       await updateCourse.mutateAsync({
         id: courseId,
         dto: {
@@ -77,7 +84,9 @@ export function StepPricing() {
         response?: { data?: { message?: string } };
         message?: string;
       };
-      toast.error(err?.response?.data?.message || err?.message || "Couldn't save pricing.");
+      toast.error(
+        err?.response?.data?.message || err?.message || "Couldn't save pricing.",
+      );
     }
   };
 
@@ -153,17 +162,30 @@ export function StepPricing() {
                   htmlFor="final-price"
                   className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground"
                 >
-                  Final price (INR)
+                  Final price (INR){" "}
+                  <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="final-price"
                   type="number"
                   value={price}
-                  onChange={(e) => setPrice(e.target.value)}
+                  onChange={(e) => {
+                    setPrice(e.target.value);
+                    if (priceError) setPriceError(null);
+                  }}
                   min="1"
                   step="0.01"
                   placeholder="199"
+                  aria-invalid={!!priceError}
+                  className={
+                    priceError
+                      ? "border-destructive focus-visible:ring-destructive/30"
+                      : undefined
+                  }
                 />
+                {priceError && (
+                  <p className="text-xs text-destructive">{priceError}</p>
+                )}
               </div>
               <div className="space-y-1.5">
                 <Label
@@ -176,15 +198,28 @@ export function StepPricing() {
                   id="strike-price"
                   type="number"
                   value={compareAtPrice}
-                  onChange={(e) => setCompareAtPrice(e.target.value)}
+                  onChange={(e) => {
+                    setCompareAtPrice(e.target.value);
+                    if (compareError) setCompareError(null);
+                  }}
                   min="0"
                   step="0.01"
                   placeholder="249"
+                  aria-invalid={!!compareError}
+                  className={
+                    compareError
+                      ? "border-destructive focus-visible:ring-destructive/30"
+                      : undefined
+                  }
                 />
+                {compareError && (
+                  <p className="text-xs text-destructive">{compareError}</p>
+                )}
               </div>
             </div>
             <p className="mt-3 text-xs text-muted-foreground">
-              Instructor revenue share: <span className="font-medium text-foreground">80%</span>.
+              Instructor revenue share:{" "}
+              <span className="font-medium text-foreground">80%</span>.
             </p>
           </div>
         )}

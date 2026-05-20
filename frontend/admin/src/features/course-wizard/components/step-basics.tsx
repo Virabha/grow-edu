@@ -88,11 +88,14 @@ export function StepBasics() {
     control,
     setValue,
     watch,
-    formState: { errors },
+    formState: { errors, isSubmitted },
   } = useForm<BasicsFormData>({
     resolver: zodResolver(basicsSchema),
     defaultValues: { language: "English", level: "BEGINNER" },
+    shouldFocusError: true,
   });
+
+  const errorCount = Object.keys(errors).length;
 
   const mainCategoryId = watch("mainCategoryId");
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
@@ -182,6 +185,16 @@ export function StepBasics() {
         className="space-y-4"
         noValidate
       >
+        {isSubmitted && errorCount > 0 && (
+          <div
+            role="alert"
+            className="rounded-xl border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+          >
+            Please fix {errorCount} field
+            {errorCount === 1 ? "" : "s"} before continuing.
+          </div>
+        )}
+
         <Field
           label="Title"
           required

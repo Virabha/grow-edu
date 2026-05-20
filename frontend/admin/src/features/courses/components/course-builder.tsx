@@ -323,16 +323,16 @@ export function CourseBuilder({ courseId }: CourseBuilderProps) {
         }}
       >
         <SheetContent className="sm:max-w-md">
-          <SheetHeader>
+          <SheetHeader className="space-y-0.5 py-3">
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               Lesson
             </p>
             <SheetTitle>Add new lesson</SheetTitle>
-            <SheetDescription>
+            <SheetDescription className="text-xs">
               Create a new lesson in this section.
             </SheetDescription>
           </SheetHeader>
-          <SheetBody className="scrollbar-hide space-y-4">
+          <SheetBody className="scrollbar-hide space-y-3 py-3">
             <div className="space-y-1.5">
               <Label className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                 Lesson title

@@ -106,7 +106,7 @@ export function StepPricing() {
       onContinue={onContinue}
       loading={updateCourse.isPending}
     >
-      <div className="space-y-5">
+      <div className="space-y-4">
         <RadioGroup
           value={priceType}
           onValueChange={(v: PriceType) => {

@@ -179,7 +179,7 @@ export function StepBasics() {
       <form
         id={FORM_ID}
         onSubmit={handleSubmit(onSubmit)}
-        className="space-y-5"
+        className="space-y-4"
         noValidate
       >
         <Field
@@ -213,8 +213,8 @@ export function StepBasics() {
           />
         </Field>
 
-        <div className="grid gap-5 md:grid-cols-2">
-          <div className="space-y-5">
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-4">
             <Field
               label="Main category"
               required

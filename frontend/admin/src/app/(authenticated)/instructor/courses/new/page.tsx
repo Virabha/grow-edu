@@ -59,9 +59,8 @@ function CourseCreationContent() {
   return (
     <PageTransition>
       <div className="min-h-[calc(100dvh-4rem)] bg-background">
-        {/* ── Top bar ───────────────────────────────────────────── */}
         <div className="sticky top-0 z-30 border-b border-border bg-background/85 backdrop-blur-md">
-          <div className="mx-auto flex max-w-[1600px] flex-col gap-3 px-4 py-3 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="mx-auto flex max-w-[1600px] flex-col gap-2 px-4 py-2 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex min-w-0 items-center gap-3">
               <BackButton href="/instructor/courses" />
               <div className="min-w-0">
@@ -78,8 +77,7 @@ function CourseCreationContent() {
             </p>
           </div>
 
-          {/* Mobile / tablet stepper */}
-          <div className="border-t border-border/60 px-4 py-2 sm:px-6 lg:hidden">
+          <div className="border-t border-border/60 px-4 py-1.5 sm:px-6 lg:hidden">
             <WizardStepperPills
               steps={steps}
               currentStep={currentStep}
@@ -88,20 +86,18 @@ function CourseCreationContent() {
           </div>
         </div>
 
-        {/* ── Body ──────────────────────────────────────────────── */}
-        <div className="mx-auto grid max-w-[1600px] grid-cols-1 gap-6 px-4 py-6 sm:px-6 lg:grid-cols-12 lg:gap-8 lg:py-10">
-          {/* Desktop sidebar */}
+        <div className="mx-auto grid max-w-[1600px] grid-cols-1 gap-4 px-4 py-4 sm:px-6 lg:grid-cols-12 lg:gap-6 lg:py-6">
           <aside className="hidden lg:col-span-3 lg:block xl:col-span-3">
-            <div className="sticky top-24 space-y-5">
+            <div className="scrollbar-hide sticky top-20 max-h-[calc(100dvh-6rem)] space-y-3 overflow-y-auto pr-1">
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                   — Wizard —
                 </p>
-                <h2 className="font-display mt-2 text-2xl font-medium leading-tight tracking-tight text-foreground">
+                <h2 className="font-display mt-1.5 text-xl font-medium leading-tight tracking-tight text-foreground">
                   Build your course.
                 </h2>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  Each step saves a draft. You can come back anytime.
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                  Each step saves a draft. Come back anytime.
                 </p>
               </div>
               <WizardStepperSidebar
@@ -112,16 +108,15 @@ function CourseCreationContent() {
             </div>
           </aside>
 
-          {/* Step content */}
           <main className="lg:col-span-9 xl:col-span-9">
             <div className="mx-auto w-full max-w-3xl">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={currentStep}
-                  initial={{ opacity: 0, y: 12 }}
+                  initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.25, ease: "easeOut" }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
                 >
                   {renderStep()}
                 </motion.div>

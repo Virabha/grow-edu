@@ -53,7 +53,7 @@ export function WizardShell({
       form={submitForm}
       onClick={submitForm ? undefined : onContinue}
       disabled={continueDisabled || loading}
-      className="group h-11 gap-2 rounded-full px-6"
+      className="group h-10 gap-2 rounded-full px-5"
     >
       {loading ? (
         <>
@@ -70,18 +70,18 @@ export function WizardShell({
   ) : null;
 
   return (
-    <div className={cn("space-y-5", className)}>
-      <header className="space-y-2">
-        <div className="flex items-center gap-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+    <div className={cn("space-y-4", className)}>
+      <header className="space-y-1.5">
+        <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
           {typeof step === "number" && (
             <span className="font-display text-sm italic text-primary">
               {String(step).padStart(2, "0")}
             </span>
           )}
-          <span className="inline-block h-px w-8 bg-border" />
+          <span className="inline-block h-px w-6 bg-border" />
           {eyebrow}
         </div>
-        <h2 className="font-display text-2xl font-medium leading-tight tracking-tight text-foreground sm:text-3xl">
+        <h2 className="font-display text-xl font-medium leading-tight tracking-tight text-foreground sm:text-2xl">
           {title}
         </h2>
         {description && (
@@ -94,19 +94,19 @@ export function WizardShell({
       {bare ? (
         children
       ) : (
-        <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+        <div className="rounded-2xl border border-border bg-card p-4 sm:p-5">
           {children}
         </div>
       )}
 
-      <footer className="flex items-center justify-between gap-3 pt-1">
+      <footer className="flex items-center justify-between gap-2">
         {!hideBack && onBack ? (
           <Button
             type="button"
             variant="ghost"
             onClick={onBack}
             disabled={loading}
-            className="h-11 gap-2 rounded-full px-4 text-muted-foreground hover:bg-muted hover:text-foreground"
+            className="h-10 gap-2 rounded-full px-4 text-muted-foreground hover:bg-muted hover:text-foreground"
           >
             <ArrowLeft className="size-4" />
             Back

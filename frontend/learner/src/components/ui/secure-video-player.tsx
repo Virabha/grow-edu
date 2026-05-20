@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Loader2, Lock, RefreshCw } from "lucide-react";
+import { Hourglass, Loader2, Lock, RefreshCw } from "lucide-react";
 import { AxiosError } from "axios";
 import { apiClient } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
@@ -13,13 +13,20 @@ interface SecureVideoPlayerProps {
   autoPlay?: boolean;
 }
 
+type ErrorKind = "auth" | "processing" | "generic";
+
+interface PlayerError {
+  kind: ErrorKind;
+  message: string;
+}
+
 export function SecureVideoPlayer({
   lessonId,
   className,
   autoPlay = false,
 }: SecureVideoPlayerProps) {
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<PlayerError | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -51,13 +58,20 @@ export function SecureVideoPlayer({
       } catch (err: unknown) {
         if (isMounted) {
           const axiosErr = err as AxiosError<{ message?: string }>;
+          const status = axiosErr.response?.status;
           const msg =
             axiosErr.response?.data?.message ?? axiosErr.message ?? "Unknown error";
-          setError(
-            axiosErr.response?.status === 401
-              ? "Authentication required"
-              : `Failed to load: ${msg}`
-          );
+          if (status === 401) {
+            setError({ kind: "auth", message: "Authentication required." });
+          } else if (/not ready/i.test(msg)) {
+            setError({
+              kind: "processing",
+              message:
+                "This lesson is still being prepared. Check back in a few minutes.",
+            });
+          } else {
+            setError({ kind: "generic", message: msg });
+          }
         }
       } finally {
         if (isMounted) setIsLoading(false);
@@ -73,33 +87,38 @@ export function SecureVideoPlayer({
     return (
       <div
         className={cn(
-          "flex items-center justify-center bg-black/90 aspect-video rounded-md",
+          "flex aspect-video items-center justify-center rounded-xl bg-black/90",
           className
         )}
       >
-        <Loader2 className="h-8 w-8 animate-spin text-white" />
-        <span className="ml-2 text-sm text-white">Loading...</span>
+        <Loader2 className="size-7 animate-spin text-white/80" />
       </div>
     );
   }
 
   if (error || !signedUrl) {
+    const kind = error?.kind ?? "generic";
+    const Icon = kind === "processing" ? Hourglass : Lock;
+    const accent =
+      kind === "processing" ? "text-amber-300" : "text-rose-300";
     return (
       <div
         className={cn(
-          "flex flex-col items-center justify-center bg-gray-900 aspect-video rounded-md p-4 text-white",
+          "flex aspect-video flex-col items-center justify-center gap-3 rounded-xl bg-neutral-900 p-6 text-center text-white",
           className
         )}
       >
-        <Lock className="mb-2 h-8 w-8 text-red-400" />
-        <p className="mb-3 text-sm">{error ?? "Video not found"}</p>
+        <Icon className={cn("size-9", accent)} />
+        <p className="max-w-sm text-sm text-white/80">
+          {error?.message ?? "Video not found."}
+        </p>
         <Button
           variant="outline"
           size="sm"
           onClick={() => window.location.reload()}
-          className="text-xs"
+          className="gap-1.5 border-white/20 bg-transparent text-white hover:bg-white/10"
         >
-          <RefreshCw className="mr-1 h-3 w-3" />
+          <RefreshCw className="size-3.5" />
           Retry
         </Button>
       </div>
@@ -114,7 +133,7 @@ export function SecureVideoPlayer({
     <div
       ref={containerRef}
       className={cn(
-        "relative aspect-video select-none overflow-hidden rounded-md bg-black",
+        "relative aspect-video select-none overflow-hidden rounded-xl bg-black",
         className
       )}
       style={{ userSelect: "none", WebkitUserSelect: "none" }}

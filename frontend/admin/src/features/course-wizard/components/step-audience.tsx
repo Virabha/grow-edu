@@ -140,7 +140,7 @@ export function StepAudience() {
       onContinue={onContinue}
       loading={updateCourse.isPending}
     >
-      <div className="space-y-6">
+      <div className="space-y-4">
         <DynamicList
           label="What learners will be able to do"
           placeholder="e.g. Build a full-stack app from scratch"

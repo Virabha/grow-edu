@@ -9,7 +9,16 @@ import { toast } from "sonner";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger, } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, } from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetBody,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Label } from "@/components/ui/label";
 import { LessonEditorDialog } from "./lesson-editor-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -285,52 +294,13 @@ export function CourseBuilder({ courseId }: CourseBuilderProps) {
                   </div>)}
 
                 <div className="ml-8 mt-2">
-                  <Dialog open={isAddingLessonFor === module.sectionId} onOpenChange={(open) => !open && setIsAddingLessonFor(null)}>
-                    <DialogTrigger asChild>
-                      <Button variant="ghost" size="sm" onClick={() => setIsAddingLessonFor(module.sectionId)}>
-                        <Plus className="h-3 w-3 mr-2"/> Add Lesson
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Add New Lesson</DialogTitle>
-                        <DialogDescription>
-                          Create a new lesson in this section.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="space-y-2.5 py-2">
-                        <div className="space-y-1.5">
-                          <Label>Lesson Title</Label>
-                          <Input value={lessonTitle} onChange={(e) => setLessonTitle(e.target.value)} placeholder="Lesson Title"/>
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label>Type</Label>
-                          <Select value={lessonType} onValueChange={(val) => setLessonType(val as "VIDEO" | "TEXT" | "QUIZ")}>
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="VIDEO">Video</SelectItem>
-                              <SelectItem value="TEXT">
-                                Text / Article
-                              </SelectItem>
-                              <SelectItem value="QUIZ">Quiz</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                      <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsAddingLessonFor(null)} disabled={createLessonMutation.isPending}>
-                          Cancel
-                        </Button>
-                        <Button onClick={handleAddLesson} disabled={createLessonMutation.isPending}>
-                          {createLessonMutation.isPending
-                ? "Adding..."
-                : "Add Lesson"}
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsAddingLessonFor(module.sectionId)}
+                  >
+                    <Plus className="h-3 w-3 mr-2"/> Add Lesson
+                  </Button>
                 </div>
               </div>
             </CollapsibleContent>
@@ -341,6 +311,82 @@ export function CourseBuilder({ courseId }: CourseBuilderProps) {
       </div>
 
       <LessonEditorDialog open={!!editingLessonId} onOpenChange={(open) => !open && setEditingLessonId(null)} lessonId={editingLessonId} courseId={courseId}/>
+
+      <Sheet
+        open={!!isAddingLessonFor}
+        onOpenChange={(open) => {
+          if (!open) {
+            setIsAddingLessonFor(null);
+            setLessonTitle("");
+            setLessonType("VIDEO");
+          }
+        }}
+      >
+        <SheetContent className="sm:max-w-md">
+          <SheetHeader>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Lesson
+            </p>
+            <SheetTitle>Add new lesson</SheetTitle>
+            <SheetDescription>
+              Create a new lesson in this section.
+            </SheetDescription>
+          </SheetHeader>
+          <SheetBody className="scrollbar-hide space-y-4">
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                Lesson title
+              </Label>
+              <Input
+                value={lessonTitle}
+                onChange={(e) => setLessonTitle(e.target.value)}
+                placeholder="Lesson title"
+                autoFocus
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                Type
+              </Label>
+              <Select
+                value={lessonType}
+                onValueChange={(val) =>
+                  setLessonType(val as "VIDEO" | "TEXT" | "QUIZ")
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="VIDEO">Video</SelectItem>
+                  <SelectItem value="TEXT">Text / article</SelectItem>
+                  <SelectItem value="QUIZ">Quiz</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </SheetBody>
+          <SheetFooter>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setIsAddingLessonFor(null);
+                setLessonTitle("");
+              }}
+              disabled={createLessonMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAddLesson}
+              disabled={
+                createLessonMutation.isPending || !lessonTitle.trim()
+              }
+            >
+              {createLessonMutation.isPending ? "Adding…" : "Add lesson"}
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
 
       <Dialog open={!!previewLessonId} onOpenChange={(open) => !open && setPreviewLessonId(null)}>
         <DialogContent className="max-w-4xl max-h-[90vh]">

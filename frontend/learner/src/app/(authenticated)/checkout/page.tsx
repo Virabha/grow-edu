@@ -80,15 +80,6 @@ function CheckoutContent() {
     autoAttempted.current = false;
   }, [courseId, sectionId, itemType]);
 
-  // Single effect: auto-enrol if free, auto-create pending order if paid.
-  // Idempotent — backend reuses any existing PENDING/PROOF_UPLOADED.
-  // No cleanup-based `cancelled` flag here. In React StrictMode the cleanup
-  // from the first mount runs *before* the mutation Promise resolves, which
-  // caused setPending() to be skipped even though the API call succeeded
-  // (the user saw "Preparing your payment details…" forever).
-  // The autoAttempted ref persists across strict remounts, so the request
-  // fires at most once. Setting state on the "wrong" mount is fine — React
-  // discards it and the alive mount sees the result.
   useEffect(() => {
     if (!course || autoAttempted.current) return;
     autoAttempted.current = true;
@@ -106,7 +97,6 @@ function CheckoutContent() {
           router.push("/my-courses");
         })
         .catch((err) => {
-          autoAttempted.current = false;
           toast.error(getApiErrorMessage(err, "Failed to enrol."));
         });
       return;
@@ -122,20 +112,14 @@ function CheckoutContent() {
         setPending(res);
       })
       .catch((err) => {
-        autoAttempted.current = false;
         const msg = getApiErrorMessage(err, "Couldn't start the payment.");
         setPaymentError(msg);
         toast.error(msg);
       });
-  }, [
-    course,
-    baseAmount,
-    itemType,
-    sectionId,
-    freeEnroll,
-    createPayment,
-    router,
-  ]);
+    // freeEnroll/createPayment are mutation objects (new reference every render);
+    // re-running on them would loop on failure. The ref guard makes this safe.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [course, baseAmount, itemType, sectionId, router]);
 
   // Live-validate coupon as user types.
   useEffect(() => {

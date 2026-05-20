@@ -191,7 +191,7 @@ export function StepReview() {
         </div>
       }
     >
-      <div className="space-y-4">
+      <div className="space-y-3">
         {validationErrors.length > 0 && showSubmit && (
           <Alert variant="destructive">
             <AlertCircle className="size-4" />

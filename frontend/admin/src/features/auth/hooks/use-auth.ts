@@ -4,14 +4,20 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { authApi } from "../api/auth.api";
 import { LoginDto, RegisterDto, ForgotPasswordDto, ResetPasswordDto, } from "../types";
-function getDashboardRoute(role: string): string {
-    const roleToPath = {
-        LEARNER: "/learner/dashboard",
+import { env } from "@/lib/env";
+
+function getPostLoginDestination(role: string): string {
+    // LEARNERs live in a different app (port 6002) — bounce them there.
+    if (role === "LEARNER") {
+        const base = env.NEXT_PUBLIC_LEARNER_URL.replace(/\/$/, "");
+        return `${base}/my-courses`;
+    }
+    const roleToPath: Record<string, string> = {
         PLATFORM_ADMIN: "/admin/dashboard",
         INSTRUCTOR: "/instructor/dashboard",
         CORPORATE_ADMIN: "/corporate/dashboard",
     };
-    return roleToPath[role] || "/learner/dashboard";
+    return roleToPath[role] || "/admin/dashboard";
 }
 export function useLogin() {
     const { setUser, setToken } = useAuthStore();
@@ -28,8 +34,7 @@ export function useLogin() {
                 document.cookie = `auth-token=${data.access_token}; expires=${expires.toUTCString()}; path=/; SameSite=Lax`;
             }
             queryClient.invalidateQueries();
-            const dashboardRoute = getDashboardRoute(data.user.role);
-            window.location.href = dashboardRoute;
+            window.location.href = getPostLoginDestination(data.user.role);
         },
     });
 }

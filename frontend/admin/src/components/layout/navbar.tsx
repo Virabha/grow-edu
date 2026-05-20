@@ -1,136 +1,266 @@
 "use client";
 import { useState } from "react";
-import { motion, useScroll, useMotionValueEvent } from "framer-motion";
+import {
+  motion,
+  useScroll,
+  useMotionValueEvent,
+  AnimatePresence,
+} from "framer-motion";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ModeToggle } from "@/components/theme-toggle";
 import { useAuthStore } from "@/lib/store/auth-store";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { User, LogOut, Settings } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  User,
+  LogOut,
+  LayoutDashboard,
+  Menu,
+  X,
+  ArrowUpRight,
+} from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+
+const navItems = [
+  { label: "Why grotutor", href: "#why-grotutor" },
+  { label: "Categories", href: "#categories" },
+  { label: "Courses", href: "#courses" },
+  { label: "How it works", href: "#how-it-works" },
+];
+
+function dashboardForRole(role?: string): string {
+  switch (role) {
+    case "PLATFORM_ADMIN":
+      return "/admin/dashboard";
+    case "INSTRUCTOR":
+      return "/instructor/dashboard";
+    case "CORPORATE_ADMIN":
+      return "/corporate/dashboard";
+    default:
+      return "/learner/dashboard";
+  }
+}
+
 export function Navbar() {
-    const router = useRouter();
-    const { scrollY } = useScroll();
-    const [hidden, setHidden] = useState(false);
-    const [scrolled, setScrolled] = useState(false);
-    const { user, logout } = useAuthStore();
-    const queryClient = useQueryClient();
-    useMotionValueEvent(scrollY, "change", (latest) => {
-        const previous = scrollY.getPrevious() ?? 0;
-        if (latest > previous && latest > 150) {
-            setHidden(true);
-        }
-        else {
-            setHidden(false);
-        }
-        setScrolled(latest > 50);
-    });
-    const handleLogout = () => {
-        logout();
-        queryClient.clear();
-        if (typeof window !== 'undefined') {
-            window.location.href = '/login';
-        }
-    };
-    const getUserInitials = () => {
-        if (!user)
-            return "U";
-        const firstName = user.firstName || "";
-        const lastName = user.lastName || "";
-        if (firstName && lastName) {
-            return `${firstName[0]}${lastName[0]}`.toUpperCase();
-        }
-        return user.email ? user.email[0].toUpperCase() : "U";
-    };
-    return (<motion.header variants={{
-            visible: { y: 0 },
-            hidden: { y: "-100%" },
-        }} animate={hidden ? "hidden" : "visible"} transition={{ duration: 0.35, ease: "easeInOut" }} className={cn("fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-3 sm:px-4 md:px-5 py-2 transition-colors duration-300 h-12 sm:h-14", scrolled
-            ? "bg-background/80 backdrop-blur-md border-b border-border"
-            : "bg-transparent")}>
+  const router = useRouter();
+  const { scrollY } = useScroll();
+  const [hidden, setHidden] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const { user, logout } = useAuthStore();
+  const queryClient = useQueryClient();
 
-      <Link href="/" className="text-sm sm:text-base font-bold tracking-tighter text-foreground">
-        <span className="hidden sm:inline">gro</span>
-        <span className="text-primary hidden sm:inline">tutor</span>
-        <span className="sm:hidden">grotutor</span>
-      </Link>
+  useMotionValueEvent(scrollY, "change", (latest) => {
+    const previous = scrollY.getPrevious() ?? 0;
+    setHidden(latest > previous && latest > 150);
+    setScrolled(latest > 32);
+  });
 
+  const handleLogout = () => {
+    logout();
+    queryClient.clear();
+    if (typeof window !== "undefined") window.location.href = "/login";
+  };
 
-      <nav className="hidden md:flex items-center gap-4 lg:gap-6">
-        {[
-            { label: "Why grotutor", href: "#why-grotutor" },
-            { label: "Categories", href: "#categories" },
-            { label: "Courses", href: "#courses" },
-            { label: "How It Works", href: "#how-it-works" },
-        ].map((item) => (<Link key={item.label} href={item.href} className="text-xs font-medium text-muted-foreground hover:text-primary transition-colors">
-            {item.label}
-          </Link>))}
-      </nav>
+  const initials = (() => {
+    if (!user) return "G";
+    const first = user.firstName?.[0] ?? "";
+    const last = user.lastName?.[0] ?? "";
+    return (first + last || user.email?.[0] || "G").toUpperCase();
+  })();
 
+  return (
+    <motion.header
+      variants={{
+        visible: { y: 0 },
+        hidden: { y: "-100%" },
+      }}
+      animate={hidden ? "hidden" : "visible"}
+      transition={{ duration: 0.3, ease: "easeInOut" }}
+      className={cn(
+        "fixed inset-x-0 top-0 z-50 transition-colors duration-300",
+        scrolled
+          ? "border-b border-border bg-background/85 backdrop-blur-md"
+          : "border-b border-transparent bg-transparent",
+      )}
+    >
+      <div className="mx-auto flex h-14 max-w-[1600px] items-center justify-between gap-3 px-3 sm:h-16 sm:px-5">
+        {/* Brand */}
+        <Link
+          href="/"
+          className="flex items-center gap-2.5"
+          aria-label="grotutor home"
+        >
+          <Image
+            src="/logo.jpeg"
+            alt=""
+            width={32}
+            height={32}
+            className="size-8 shrink-0 rounded-lg object-cover"
+            priority
+          />
+          <span className="font-display text-base font-medium tracking-tight text-foreground sm:text-lg">
+            grotutor
+          </span>
+        </Link>
 
-      <div className="flex items-center gap-1.5 sm:gap-2">
-        <ModeToggle />
-        {user ? (<DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                    {getUserInitials()}
-                  </AvatarFallback>
-                </Avatar>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" align="end" forceMount>
-              <DropdownMenuLabel className="font-normal">
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">
+        {/* Desktop nav */}
+        <nav className="hidden items-center gap-6 md:flex">
+          {navItems.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <ModeToggle />
+
+          {user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="size-9 rounded-full border border-border bg-card p-0"
+                  aria-label="Account menu"
+                >
+                  <span className="font-display text-xs font-medium text-foreground">
+                    {initials}
+                  </span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-60" align="end" forceMount>
+                <DropdownMenuLabel className="font-normal">
+                  <p className="font-display text-sm font-medium text-foreground">
                     {user.firstName && user.lastName
-                ? `${user.firstName} ${user.lastName}`
-                : "User"}
+                      ? `${user.firstName} ${user.lastName}`
+                      : "Signed in"}
                   </p>
-                  <p className="text-xs leading-none text-muted-foreground">
+                  <p className="truncate text-xs text-muted-foreground">
                     {user.email}
                   </p>
-                </div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href={user?.role === 'LEARNER' ? "/learner/profile" : "/profile"} className="cursor-pointer">
-                  <User className="mr-2 h-4 w-4"/>
-                  <span>Profile</span>
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href={user?.role === 'PLATFORM_ADMIN' ? "/admin/dashboard" :
-                user?.role === 'INSTRUCTOR' ? "/instructor/dashboard" :
-                    user?.role === 'CORPORATE_ADMIN' ? "/corporate/dashboard" :
-                        "/learner/dashboard"} className="cursor-pointer">
-                  <Settings className="mr-2 h-4 w-4"/>
-                  <span>Dashboard</span>
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive">
-                <LogOut className="mr-2 h-4 w-4"/>
-                <span>Log out</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>) : (<>
-            <Link href="/login">
-              <Button variant="outline" className="hidden md:flex border-primary text-primary hover:bg-primary hover:text-primary-foreground text-xs">
-                Login
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => router.push(dashboardForRole(user.role))}
+                  className="cursor-pointer"
+                >
+                  <LayoutDashboard className="size-4" />
+                  Dashboard
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => router.push("/profile")}
+                  className="cursor-pointer"
+                >
+                  <User className="size-4" />
+                  Profile
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={handleLogout}
+                  className="cursor-pointer text-destructive focus:text-destructive"
+                >
+                  <LogOut className="size-4" />
+                  Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <div className="hidden items-center gap-2 md:flex">
+              <Button
+                asChild
+                variant="ghost"
+                size="sm"
+                className="h-9 rounded-full px-4 text-[13px] font-medium"
+              >
+                <Link href="/login">Sign in</Link>
               </Button>
-            </Link>
-            <Link href="/signup">
-              <Button className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold text-xs px-3 py-1.5">
-                <span className="hidden sm:inline">Start Learning Today</span>
-                <span className="sm:hidden">Start</span>
+              <Button
+                asChild
+                size="sm"
+                className="group h-9 gap-1.5 rounded-full bg-foreground px-4 text-[13px] font-medium text-background hover:bg-foreground/90"
+              >
+                <Link href="/signup">
+                  Get started
+                  <ArrowUpRight className="size-3.5 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                </Link>
               </Button>
-            </Link>
-          </>)}
+            </div>
+          )}
+
+          {/* Mobile menu trigger */}
+          <button
+            onClick={() => setMenuOpen((v) => !v)}
+            aria-label={menuOpen ? "Close menu" : "Open menu"}
+            className="flex size-9 items-center justify-center rounded-full border border-border bg-card text-foreground transition-colors hover:bg-muted md:hidden"
+          >
+            {menuOpen ? <X className="size-4" /> : <Menu className="size-4" />}
+          </button>
+        </div>
       </div>
-    </motion.header>);
+
+      {/* Mobile menu */}
+      <AnimatePresence>
+        {menuOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2, ease: "easeInOut" }}
+            className="overflow-hidden border-t border-border bg-background md:hidden"
+          >
+            <nav className="space-y-1 px-3 py-3">
+              {navItems.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMenuOpen(false)}
+                  className="block rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                >
+                  {item.label}
+                </Link>
+              ))}
+              {!user && (
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 rounded-full"
+                  >
+                    <Link href="/login" onClick={() => setMenuOpen(false)}>
+                      Sign in
+                    </Link>
+                  </Button>
+                  <Button
+                    asChild
+                    size="sm"
+                    className="flex-1 rounded-full bg-foreground text-background hover:bg-foreground/90"
+                  >
+                    <Link href="/signup" onClick={() => setMenuOpen(false)}>
+                      Get started
+                    </Link>
+                  </Button>
+                </div>
+              )}
+            </nav>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.header>
+  );
 }

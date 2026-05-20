@@ -25,7 +25,7 @@ function DashboardLayoutContent({ children, showNavbar = true, customNavbar, sho
       {showNavbar && (customNavbar || <Navbar />)}
       <div className={cn("flex flex-1", showNavbar && "pt-12 sm:pt-14")}>
         {showSidebar && <ModernSidebar items={sidebarItems}/>}
-        <main className={cn("flex-1 transition-all duration-300 w-full max-w-full overflow-x-hidden", showSidebar && (collapsed ? "lg:ml-14" : "lg:ml-[220px]"))}>
+        <main className={cn("flex-1 transition-all duration-300 w-full max-w-full overflow-x-hidden", showSidebar && (collapsed ? "lg:ml-[60px]" : "lg:ml-[232px]"))}>
           <div className="w-full max-w-full">{children}</div>
         </main>
       </div>

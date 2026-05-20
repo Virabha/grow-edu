@@ -37,27 +37,33 @@ export function PageLayout({
     >
       {/* Sticky header — never scrolls */}
       {hasHeader && (
-        <div className="shrink-0 border-b border-border bg-background/95 backdrop-blur-sm px-3 sm:px-4 md:px-5 py-2.5">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2">
-            <div className="space-y-0.5 flex-1 min-w-0">
+        <div
+          className={cn(
+            "shrink-0 border-b border-border bg-background/95 backdrop-blur-sm py-2.5",
+            /* Below lg, sidebar menu is fixed top-left — inset title row so it does not sit under the toggle */
+            "pl-11 pr-3 sm:pl-12 sm:pr-4 md:pl-11 md:pr-5 lg:px-5",
+          )}
+        >
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-x-3 sm:gap-y-2 md:items-center">
+            <div className="min-w-0 flex-1 space-y-0.5 pr-1">
               {subtitle && (
-                <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground sm:text-xs">
                   {subtitle}
                 </p>
               )}
               {header && (
-                <h1 className="text-lg sm:text-xl font-bold tracking-tight text-foreground">
+                <h1 className="font-display truncate text-lg font-medium tracking-tight text-foreground sm:text-xl md:text-2xl">
                   {header}
                 </h1>
               )}
               {description && (
-                <p className="text-sm font-medium text-muted-foreground">
+                <p className="text-pretty text-xs text-muted-foreground sm:text-sm">
                   {description}
                 </p>
               )}
             </div>
             {actions && (
-              <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap">
+              <div className="flex min-w-0 w-full flex-wrap items-center gap-2 sm:w-auto sm:max-w-[min(100%,24rem)] sm:flex-initial sm:justify-end md:max-w-none">
                 {actions}
               </div>
             )}

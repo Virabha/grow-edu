@@ -25,10 +25,10 @@ import {
   Award,
 } from "lucide-react";
 import { toast } from "sonner";
-import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCourseBySlug, useCourses } from "@/lib/hooks/use-courses";
+import { useLessonPreview } from "@/lib/hooks/use-lessons";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { useEnrollments } from "@/lib/hooks/use-enrollments";
 import { useFreeEnroll } from "@/lib/hooks/use-payments";
@@ -44,12 +44,12 @@ export default function CourseDetailPage() {
   const [openSection, setOpenSection] = useState<number | null>(0);
   const [previewLessonId, setPreviewLessonId] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [previewLoading, setPreviewLoading] = useState(false);
   const [previewEnded, setPreviewEnded] = useState(false);
   const previewIframeRef = useRef<HTMLIFrameElement>(null);
   const [activeTab, setActiveTab] = useState<"about" | "curriculum" | "related">("about");
 
   const freeEnroll = useFreeEnroll();
+  const lessonPreview = useLessonPreview();
   const { data: course, isLoading, error } = useCourseBySlug(slug);
   const { data: enrollmentsData } = useEnrollments({
     enabled: isLoggedIn && !!course?.courseId,
@@ -67,22 +67,25 @@ export default function CourseDetailPage() {
     setPreviewEnded(false);
   }, []);
 
-  const openPreview = useCallback(async (lessonId: string) => {
-    setPreviewLessonId(lessonId);
-    setPreviewLoading(true);
-    setPreviewEnded(false);
-    try {
-      const { data } = await axios.get(`/api/lessons/${lessonId}/preview`);
-      setPreviewUrl(
-        `${data.signedUrl}${data.signedUrl.includes("?") ? "&" : "?"}autoplay=true&preload=true&responsive=true`,
-      );
-    } catch {
-      toast.error("Failed to load preview");
-      setPreviewLessonId(null);
-    } finally {
-      setPreviewLoading(false);
-    }
-  }, []);
+  const openPreview = useCallback(
+    async (lessonId: string) => {
+      setPreviewLessonId(lessonId);
+      setPreviewEnded(false);
+      try {
+        const { signedUrl } = await lessonPreview.mutateAsync(lessonId);
+        const separator = signedUrl.includes("?") ? "&" : "?";
+        setPreviewUrl(
+          `${signedUrl}${separator}autoplay=true&preload=true&responsive=true`,
+        );
+      } catch {
+        toast.error("Failed to load preview");
+        setPreviewLessonId(null);
+      }
+    },
+    [lessonPreview],
+  );
+
+  const previewLoading = lessonPreview.isPending;
 
   useEffect(() => {
     if (!previewLessonId) return;
@@ -201,8 +204,8 @@ export default function CourseDetailPage() {
 
   const sections = course.sections ?? [];
   const totalLessons = sections.reduce((sum, s) => sum + (s.lessons?.length ?? 0), 0);
-  const learningOutcomes = (course as unknown as Record<string, unknown>).learningOutcomes as string[] | undefined;
-  const requirements = (course as unknown as Record<string, unknown>).requirements as string[] | undefined;
+  const learningOutcomes = course.learningOutcomes;
+  const requirements = course.requirements;
 
   const tabs = [
     { key: "about" as const, label: "About" },

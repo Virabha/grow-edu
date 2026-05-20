@@ -1,13 +1,21 @@
 import { apiClient } from '../client';
+export type UserRole =
+    | "LEARNER"
+    | "INSTRUCTOR"
+    | "CORPORATE_ADMIN"
+    | "PLATFORM_ADMIN";
+
 export interface User {
     id: string;
     email: string;
     firstName?: string;
     lastName?: string;
-    role: string;
+    role: UserRole;
     profileImage?: string | null;
     emailVerified: boolean;
     companyId?: string;
+    createdAt?: string;
+    updatedAt?: string;
 }
 export interface UsersResponse {
     data: User[];

@@ -4,7 +4,6 @@ import type { NextRequest } from "next/server";
 const PROTECTED_PATHS = [
   "/profile",
   "/my-courses",
-  "/cart",
   "/checkout",
   "/payment",
 ];
@@ -57,7 +56,6 @@ export const config = {
     "/dashboard/:path*",
     "/profile/:path*",
     "/my-courses/:path*",
-    "/cart/:path*",
     "/checkout/:path*",
     "/payment/:path*",
     "/courses/:path*/watch",

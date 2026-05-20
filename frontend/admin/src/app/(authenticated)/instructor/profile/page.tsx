@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { PageLayout } from "@/components/layout/page-layout";
 import {
   Card,
@@ -20,12 +21,34 @@ import { apiClient } from "@/lib/api/client";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { toast } from "sonner";
 
+interface AvatarUploadResponse {
+  url: string;
+  key: string;
+}
+
+function useUploadAvatar() {
+  return useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("folder", "profiles");
+      const { data } = await apiClient.post<AvatarUploadResponse>(
+        "/files/storage/upload-url",
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } },
+      );
+      return data;
+    },
+  });
+}
+
 export default function InstructorProfilePage() {
   const { data: profile, isLoading } = useProfile();
   const updateProfile = useUpdateProfile();
+  const uploadAvatar = useUploadAvatar();
   const { user } = useAuthStore();
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
+  const uploading = uploadAvatar.isPending;
   const {
     register,
     formState: { errors },
@@ -38,30 +61,16 @@ export default function InstructorProfilePage() {
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file || !user?.id) return;
-
-    setUploading(true);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("folder", "profiles");
-
-      const { data } = await apiClient.post<{ url: string; key: string }>(
-        "/files/storage/upload-url",
-        formData,
-        { headers: { "Content-Type": "multipart/form-data" } },
-      );
-
+      const { url, key } = await uploadAvatar.mutateAsync(file);
       await updateProfile.mutateAsync({
         userId: user.id,
-        data: { profileImage: data.key },
+        data: { profileImage: key },
       });
-
-      setImagePreview(data.url);
+      setImagePreview(url);
       toast.success("Profile image updated");
     } catch {
       toast.error("Failed to upload image");
-    } finally {
-      setUploading(false);
     }
   }
 

@@ -62,3 +62,29 @@ export function useRegister() {
     },
   });
 }
+
+export function useForgotPassword() {
+  return useMutation({
+    mutationKey: ["forgot-password"],
+    mutationFn: async (email: string) => {
+      const { data } = await apiClient.post<{ message?: string }>(
+        "/auth/forgot-password",
+        { email },
+      );
+      return data;
+    },
+  });
+}
+
+export function useResetPassword() {
+  return useMutation({
+    mutationKey: ["reset-password"],
+    mutationFn: async (payload: { token: string; newPassword: string }) => {
+      const { data } = await apiClient.post<{ message?: string }>(
+        "/auth/reset-password",
+        payload,
+      );
+      return data;
+    },
+  });
+}

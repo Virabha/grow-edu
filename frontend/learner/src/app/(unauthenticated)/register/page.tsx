@@ -11,6 +11,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useRegister } from "@/lib/hooks/use-auth";
+import { getApiErrorMessage } from "@/lib/utils";
 
 const registerSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -58,11 +59,10 @@ export default function RegisterPage() {
         password: data.password,
       });
       toast.success("Account created! Please sign in.");
-    } catch (err: unknown) {
-      const message =
-        (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message || "Registration failed. Please try again.";
-      toast.error(message);
+    } catch (err) {
+      toast.error(
+        getApiErrorMessage(err, "Registration failed. Please try again."),
+      );
     }
   };
 

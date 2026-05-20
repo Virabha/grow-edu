@@ -5,6 +5,7 @@ export interface Course {
     title: string;
     slug: string;
     description: string;
+    shortDescription?: string | null;
     thumbnail?: string;
     price: string;
     compareAtPrice?: string | null;

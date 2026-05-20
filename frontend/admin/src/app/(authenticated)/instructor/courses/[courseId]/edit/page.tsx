@@ -42,7 +42,7 @@ import {
 import { useCategories } from "@/features/categories/hooks/use-categories";
 import { CourseBuilder } from "@/features/courses/components/course-builder";
 import type { UpdateCourseDto } from "@/lib/api/services/courses";
-import { generateSlug } from "@/lib/utils";
+import { generateSlug, getApiErrorMessage } from "@/lib/utils";
 
 const LEVELS = [
   { value: "BEGINNER", label: "Beginner" },
@@ -60,8 +60,20 @@ const LANGUAGES = [
   "German",
 ] as const;
 
+const SLUG_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
 const detailsSchema = z.object({
   title: z.string().min(1, "Title is required"),
+  slug: z
+    .string()
+    .min(3, "Slug must be at least 3 characters")
+    .max(120, "Slug must be 120 characters or less")
+    .regex(SLUG_REGEX, "Lowercase letters, numbers, and hyphens only"),
+  shortDescription: z
+    .string()
+    .max(200, "Card preview must be 200 characters or less")
+    .optional()
+    .or(z.literal("")),
   description: z
     .string()
     .min(10, "Description must be at least 10 characters"),
@@ -118,6 +130,8 @@ export default function CourseEditPage({
     resolver: zodResolver(detailsSchema),
     defaultValues: {
       title: "",
+      slug: "",
+      shortDescription: "",
       description: "",
       thumbnail: "",
       mainCategoryId: "",
@@ -164,6 +178,8 @@ export default function CourseEditPage({
 
     detailsForm.reset({
       title: course.title,
+      slug: course.slug,
+      shortDescription: course.shortDescription || "",
       description: course.description,
       thumbnail: course.thumbnail || "",
       mainCategoryId: mainId,
@@ -203,23 +219,20 @@ export default function CourseEditPage({
     const categoryId = values.subCategoryId || values.mainCategoryId;
     const dto: UpdateCourseDto = {
       title: values.title,
+      slug: values.slug,
+      shortDescription: values.shortDescription?.trim() || undefined,
       description: values.description,
-      shortDescription: values.description,
       thumbnail: values.thumbnail || undefined,
       categoryId,
       level: values.level,
       language: values.language,
-      slug: generateSlug(values.title),
       currency: "INR",
     };
     try {
       await updateCourse.mutateAsync({ id: courseId, dto });
       toast.success("Details saved.");
     } catch (err) {
-      const msg =
-        (err as { response?: { data?: { message?: string | string[] } } })
-          ?.response?.data?.message;
-      toast.error(Array.isArray(msg) ? msg.join(", ") : msg || "Save failed");
+      toast.error(getApiErrorMessage(err, "Save failed"));
     }
   });
 
@@ -240,9 +253,7 @@ export default function CourseEditPage({
       });
       toast.success("Pricing saved.");
     } catch (err) {
-      toast.error(
-        (err as Error)?.message || "Couldn't save pricing.",
-      );
+      toast.error(getApiErrorMessage(err, "Couldn't save pricing."));
     }
   });
 
@@ -281,8 +292,7 @@ export default function CourseEditPage({
       await submitForReview.mutateAsync(courseId);
       toast.success("Submitted for review.");
     } catch (err) {
-      const msg = (err as Error)?.message || "Submission failed.";
-      toast.error(msg);
+      toast.error(getApiErrorMessage(err, "Submission failed."));
     }
   };
 
@@ -378,16 +388,82 @@ export default function CourseEditPage({
                 </div>
 
                 <div className="space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <Label
+                      htmlFor="slug"
+                      className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground"
+                    >
+                      URL slug
+                    </Label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const t = detailsForm.getValues("title");
+                        if (!t) return;
+                        detailsForm.setValue("slug", generateSlug(t), {
+                          shouldDirty: true,
+                          shouldValidate: true,
+                        });
+                      }}
+                      className="text-[10px] font-medium uppercase tracking-widest text-primary hover:underline"
+                    >
+                      Generate from title
+                    </button>
+                  </div>
+                  <Input
+                    id="slug"
+                    placeholder="my-course-title"
+                    className="font-mono text-sm"
+                    {...detailsForm.register("slug")}
+                  />
+                  {detailsForm.formState.errors.slug ? (
+                    <p className="text-xs text-destructive">
+                      {detailsForm.formState.errors.slug.message}
+                    </p>
+                  ) : (
+                    <p className="text-[11px] text-muted-foreground">
+                      Used in the public URL. Changing this breaks old links.
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="short-description"
+                    className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground"
+                  >
+                    Card preview (optional)
+                  </Label>
+                  <Textarea
+                    id="short-description"
+                    rows={2}
+                    maxLength={200}
+                    placeholder="One-liner shown on catalogue cards."
+                    className="resize-none"
+                    {...detailsForm.register("shortDescription")}
+                  />
+                  {detailsForm.formState.errors.shortDescription ? (
+                    <p className="text-xs text-destructive">
+                      {detailsForm.formState.errors.shortDescription.message}
+                    </p>
+                  ) : (
+                    <p className="text-[11px] text-muted-foreground">
+                      Leave blank to use the start of the full description.
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
                   <Label
                     htmlFor="description"
                     className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground"
                   >
-                    Description
+                    Full description
                   </Label>
                   <Textarea
                     id="description"
-                    rows={4}
-                    placeholder="Describe the value of the course in 2–3 sentences."
+                    rows={5}
+                    placeholder="Describe the value of the course in detail — what learners walk away with, prerequisites, the journey."
                     className="resize-none"
                     {...detailsForm.register("description")}
                   />

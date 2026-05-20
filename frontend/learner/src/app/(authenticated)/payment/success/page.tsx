@@ -1,9 +1,9 @@
 "use client";
 import { Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import { CheckCircle2, Clock, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { useMyPayment } from "@/lib/hooks/use-payments";
 
 function PaymentSuccessContent() {
@@ -14,11 +14,7 @@ function PaymentSuccessContent() {
   const { data: payment, isLoading } = useMyPayment(paymentId);
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-10 h-10 animate-spin text-primary" />
-      </div>
-    );
+    return <PageLoader />;
   }
 
   const status = payment?.status;
@@ -26,57 +22,83 @@ function PaymentSuccessContent() {
   const isPending = status === "PROOF_UPLOADED" || status === "PENDING";
 
   return (
-    <div className="flex items-center justify-center min-h-[60vh] p-4">
-      <Card className="w-full max-w-md">
-        <CardContent className="flex flex-col items-center gap-3 py-8 text-center">
+    <div className="flex min-h-[70vh] items-center justify-center px-4 py-12">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ type: "spring", stiffness: 200, damping: 22 }}
+        className="w-full max-w-md rounded-3xl border border-border bg-card p-8 text-center sm:p-10"
+      >
+        <span
+          className={
+            isCompleted
+              ? "mx-auto flex size-16 items-center justify-center rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-600"
+              : isPending
+                ? "mx-auto flex size-16 items-center justify-center rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-600"
+                : "mx-auto flex size-16 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-primary"
+          }
+        >
+          {isPending ? (
+            <Clock className="size-7" />
+          ) : (
+            <CheckCircle2 className="size-7" />
+          )}
+        </span>
+
+        <h1 className="font-display mt-5 text-3xl font-medium leading-tight tracking-tight text-foreground sm:text-4xl">
           {isCompleted ? (
             <>
-              <CheckCircle2 className="h-12 w-12 text-green-600" />
-              <h2 className="text-xl font-semibold">Payment verified</h2>
-              <p className="text-sm text-muted-foreground">
-                You&apos;re enrolled. Jump in and start learning.
-              </p>
+              Payment <em className="text-primary">verified.</em>
             </>
           ) : isPending ? (
             <>
-              <Clock className="h-12 w-12 text-amber-500" />
-              <h2 className="text-xl font-semibold">Awaiting verification</h2>
-              <p className="text-sm text-muted-foreground">
-                Your proof is in the queue. You&apos;ll get an email as soon as it&apos;s verified.
-              </p>
+              Awaiting <em className="text-primary">verification.</em>
             </>
           ) : (
             <>
-              <CheckCircle2 className="h-12 w-12 text-primary" />
-              <h2 className="text-xl font-semibold">Thank you</h2>
-              <p className="text-sm text-muted-foreground">
-                Your payment was recorded.
-              </p>
+              Thank <em className="text-primary">you.</em>
             </>
           )}
-          <div className="flex gap-2 pt-2">
-            <Button variant="outline" onClick={() => router.push("/courses")}>
-              Browse more
-            </Button>
-            <Button onClick={() => router.push("/my-courses")}>
-              My courses
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+        </h1>
+        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+          {isCompleted
+            ? "You're enrolled. Jump in and start learning."
+            : isPending
+              ? "Your proof is in the queue. We'll email you as soon as it's verified."
+              : "Your payment was recorded."}
+        </p>
+
+        <div className="mt-7 flex flex-col gap-2 sm:flex-row sm:justify-center">
+          <Button
+            variant="outline"
+            onClick={() => router.push("/courses")}
+            className="rounded-full"
+          >
+            Browse more
+          </Button>
+          <Button
+            onClick={() => router.push("/my-courses")}
+            className="rounded-full"
+          >
+            My courses
+          </Button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+function PageLoader() {
+  return (
+    <div className="flex min-h-[60vh] items-center justify-center">
+      <Loader2 className="size-9 animate-spin text-primary" />
     </div>
   );
 }
 
 export default function PaymentSuccessPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <Loader2 className="w-10 h-10 animate-spin text-primary" />
-        </div>
-      }
-    >
+    <Suspense fallback={<PageLoader />}>
       <PaymentSuccessContent />
     </Suspense>
   );

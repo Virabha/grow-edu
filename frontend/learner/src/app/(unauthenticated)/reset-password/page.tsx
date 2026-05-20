@@ -11,7 +11,8 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { apiClient } from "@/lib/api/client";
+import { useResetPassword } from "@/lib/hooks/use-auth";
+import { getApiErrorMessage } from "@/lib/utils";
 
 const resetSchema = z
   .object({
@@ -37,7 +38,8 @@ function ResetPasswordForm() {
   const [showPass, setShowPass] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const reset = useResetPassword();
+  const loading = reset.isPending;
 
   const {
     register,
@@ -53,21 +55,14 @@ function ResetPasswordForm() {
       toast.error("Invalid or missing reset token.");
       return;
     }
-    setLoading(true);
     try {
-      await apiClient.post("/auth/reset-password", {
-        token,
-        newPassword: data.password,
-      });
+      await reset.mutateAsync({ token, newPassword: data.password });
       setSubmitted(true);
       toast.success("Password reset successfully!");
-    } catch (err: unknown) {
-      const message =
-        (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message || "Reset failed. The link may have expired.";
-      toast.error(message);
-    } finally {
-      setLoading(false);
+    } catch (err) {
+      toast.error(
+        getApiErrorMessage(err, "Reset failed. The link may have expired."),
+      );
     }
   };
 

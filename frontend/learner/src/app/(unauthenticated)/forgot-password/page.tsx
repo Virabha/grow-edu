@@ -10,7 +10,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { apiClient } from "@/lib/api/client";
+import { useForgotPassword } from "@/lib/hooks/use-auth";
+import { getApiErrorMessage } from "@/lib/utils";
 
 const forgotSchema = z.object({
   email: z.string().min(1, "Email is required").email("Enter a valid email"),
@@ -20,7 +21,7 @@ type ForgotFormValues = z.infer<typeof forgotSchema>;
 
 export default function ForgotPasswordPage() {
   const [submitted, setSubmitted] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const forgot = useForgotPassword();
 
   const {
     register,
@@ -31,19 +32,17 @@ export default function ForgotPasswordPage() {
     defaultValues: { email: "" },
   });
 
+  const loading = forgot.isPending;
+
   const onSubmit = async (data: ForgotFormValues) => {
-    setLoading(true);
     try {
-      await apiClient.post("/auth/forgot-password", { email: data.email });
+      await forgot.mutateAsync(data.email);
       setSubmitted(true);
       toast.success("Reset link sent to your email.");
-    } catch (err: unknown) {
-      const message =
-        (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message || "Something went wrong. Please try again.";
-      toast.error(message);
-    } finally {
-      setLoading(false);
+    } catch (err) {
+      toast.error(
+        getApiErrorMessage(err, "Something went wrong. Please try again."),
+      );
     }
   };
 

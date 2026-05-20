@@ -26,7 +26,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useUsers } from "@/features/users/hooks/use-users";
-import type { User, UsersResponse } from "@/features/users/types";
+import type { User } from "@/features/users/types";
 import { EditUserDialog } from "@/features/users/components/edit-user-dialog";
 
 const ROLE_STYLES: Record<string, string> = {
@@ -78,10 +78,9 @@ export default function AdminUserManagementPage() {
     },
   });
 
-  const typed = data as UsersResponse | undefined;
-  const users = typed?.data ?? [];
-  const totalPages = typed?.pagination?.totalPages ?? 1;
-  const currentPage = typed?.pagination?.page ?? 1;
+  const users = data?.data ?? [];
+  const totalPages = data?.pagination?.totalPages ?? 1;
+  const currentPage = data?.pagination?.page ?? 1;
 
   return (
     <PageLayout

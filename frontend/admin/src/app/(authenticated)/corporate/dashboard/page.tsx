@@ -10,7 +10,6 @@ import { StatsCardSkeleton } from "@/components/cards/stats-card-skeleton";
 import { useUsers } from "@/features/users/hooks/use-users";
 import { useEnrollments } from "@/features/enrollments/hooks/use-enrollments";
 import type { Enrollment } from "@/features/enrollments/types";
-import type { UsersResponse } from "@/features/users/types";
 import { useAuthStore } from "@/lib/store/auth-store";
 
 export default function CorporateDashboardPage() {
@@ -24,7 +23,7 @@ export default function CorporateDashboardPage() {
     filters: { companyId: user?.companyId ?? undefined, limit: 1000 },
   });
 
-  const users = (usersData as UsersResponse | undefined)?.data ?? [];
+  const users = usersData?.data ?? [];
   const enrollments = enrollmentsData?.data ?? [];
   const active = enrollments.filter((e: Enrollment) => e.status === "ACTIVE").length;
   const completed = enrollments.filter(

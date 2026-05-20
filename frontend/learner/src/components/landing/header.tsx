@@ -94,7 +94,6 @@ export function Header() {
 
   const LOGGED_IN_LINKS = [
     { href: "/my-courses", label: "My Courses" },
-    { href: "/cart", label: "Cart" },
     { href: "/profile", label: "Profile" },
   ];
 

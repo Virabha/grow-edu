@@ -30,6 +30,7 @@ export interface Course {
   title: string;
   slug: string;
   description?: string;
+  shortDescription?: string | null;
   thumbnail: string | null;
   price: string;
   compareAtPrice: string | null;
@@ -37,6 +38,7 @@ export interface Course {
   categoryId: string;
   instructorId: string;
   level?: string;
+  language?: string;
   status: string;
   createdAt: string;
   updatedAt: string;
@@ -44,6 +46,9 @@ export interface Course {
   instructor?: { id: string; firstName: string | null; lastName: string | null; email: string };
   sections?: Section[];
   accessibleSectionIds?: string[];
+  learningOutcomes?: string[];
+  requirements?: string[];
+  targetAudience?: string[];
 }
 
 export interface CoursesResponse {

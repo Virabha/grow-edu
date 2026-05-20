@@ -11,6 +11,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useLogin } from "@/lib/hooks/use-auth";
+import { getApiErrorMessage } from "@/lib/utils";
 
 const loginSchema = z.object({
   email: z.string().min(1, "Email is required").email("Enter a valid email"),
@@ -35,11 +36,13 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginFormValues) => {
     try {
       await login.mutateAsync(data);
-    } catch (err: unknown) {
-      const message =
-        (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message || "Login failed. Please check your credentials.";
-      toast.error(message);
+    } catch (err) {
+      toast.error(
+        getApiErrorMessage(
+          err,
+          "Login failed. Please check your credentials.",
+        ),
+      );
     }
   };
 

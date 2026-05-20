@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation } from "@tanstack/react-query";
 import { z } from "zod/v3";
 import {
   Users,
@@ -21,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { useCategories } from "@/lib/hooks/use-categories";
 import { teacherApplicationsApi } from "@/lib/api/services/teacher-applications";
 import { toast } from "sonner";
+import { getApiErrorMessage } from "@/lib/utils";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
@@ -74,10 +76,16 @@ export default function BecomeTeacherPage() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [cvFile, setCvFile] = useState<File | null>(null);
   const [cvUrl, setCvUrl] = useState("");
-  const [uploading, setUploading] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+
+  const uploadCv = useMutation({
+    mutationFn: (file: File) => teacherApplicationsApi.uploadCv(file),
+  });
+  const submitApplication = useMutation({
+    mutationFn: teacherApplicationsApi.submit,
+  });
+  const uploading = uploadCv.isPending;
+  const submitting = submitApplication.isPending;
 
   const { data: categories = [] } = useCategories();
 
@@ -105,37 +113,37 @@ export default function BecomeTeacherPage() {
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
-      const allowed = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
+      const allowed = [
+        "application/pdf",
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+      ];
       if (!allowed.includes(file.type)) {
-        setError("Invalid file type. Use PDF, JPEG, PNG, or WebP.");
+        toast.error("Invalid file type. Use PDF, JPEG, PNG, or WebP.");
         return;
       }
       setCvFile(file);
-      setUploading(true);
-      setError(null);
       try {
-        const { url } = await teacherApplicationsApi.uploadCv(file);
+        const { url } = await uploadCv.mutateAsync(file);
         setCvUrl(url);
-      } catch {
-        setError("CV upload failed. Please try again.");
-        toast.error("CV upload failed");
+      } catch (err) {
+        toast.error(getApiErrorMessage(err, "CV upload failed."));
         setCvFile(null);
-      } finally {
-        setUploading(false);
       }
     },
-    []
+    [uploadCv],
   );
 
   const onSubmit = async (data: TeacherFormData) => {
-    setError(null);
-    setSubmitting(true);
     try {
-      await teacherApplicationsApi.submit({
+      await submitApplication.mutateAsync({
         fullName: data.fullName.trim(),
         email: data.email.trim(),
         phone: data.phone?.trim() || undefined,
-        experienceYears: data.experienceYears ? Number(data.experienceYears) : undefined,
+        experienceYears: data.experienceYears
+          ? Number(data.experienceYears)
+          : undefined,
         skills: skills.length ? skills : undefined,
         categories: selectedCategories.length ? selectedCategories : undefined,
         cvUrl: cvUrl || undefined,
@@ -147,12 +155,11 @@ export default function BecomeTeacherPage() {
       setSelectedCategories([]);
       setCvFile(null);
       setCvUrl("");
-      toast.success("Application submitted successfully");
-    } catch {
-      setError("Submission failed. Please try again.");
-      toast.error("Submission failed");
-    } finally {
-      setSubmitting(false);
+      toast.success("Application submitted successfully.");
+    } catch (err) {
+      toast.error(
+        getApiErrorMessage(err, "Submission failed. Please try again."),
+      );
     }
   };
 
@@ -275,9 +282,6 @@ export default function BecomeTeacherPage() {
               </div>
 
               <form onSubmit={rhfHandleSubmit(onSubmit)} className="space-y-4 rounded-2xl border border-border bg-card p-6">
-                {error && (
-                  <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>
-                )}
                 <div>
                   <label htmlFor="fullName" className="mb-1 block text-sm font-medium text-foreground">
                     Full Name <span className="text-destructive">*</span>

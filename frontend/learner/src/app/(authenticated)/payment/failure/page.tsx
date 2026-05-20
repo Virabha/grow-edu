@@ -1,7 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { AlertTriangle, ArrowLeft, RefreshCw } from "lucide-react";
+import { AlertTriangle, ArrowLeft, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function PaymentFailurePage() {
@@ -29,11 +29,11 @@ export default function PaymentFailurePage() {
 
         <div className="mt-7 flex flex-col gap-2 sm:flex-row sm:justify-center">
           <Button
-            onClick={() => router.push("/cart")}
+            onClick={() => router.push("/courses")}
             className="gap-2 rounded-full"
           >
-            <RefreshCw className="size-4" />
-            Try again
+            <BookOpen className="size-4" />
+            Browse courses
           </Button>
           <Button
             variant="outline"

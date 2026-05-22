@@ -38,6 +38,16 @@ export interface PaymentsResponse {
     pagination?: { page: number; limit: number; total: number; totalPages?: number };
 }
 
+export interface QRPaymentSettings {
+    qrImageUrl: string | null;
+    upiId: string | null;
+    bankName: string | null;
+    bankAccountNumber: string | null;
+    bankIfsc: string | null;
+    bankAccountHolder: string | null;
+    instructions: string | null;
+}
+
 export const paymentsApi = {
     async getAll(filters?: {
         search?: string;
@@ -63,5 +73,21 @@ export const paymentsApi = {
     async getById(id: string): Promise<PaymentDetail> {
         const { data } = await apiClient.get<PaymentDetail>(`/payments/${id}`);
         return data as PaymentDetail;
+    },
+    async approve(paymentId: string, notes?: string) {
+        const { data } = await apiClient.post(`/payments/${paymentId}/approve`, { notes });
+        return data;
+    },
+    async reject(paymentId: string, notes: string) {
+        const { data } = await apiClient.post(`/payments/${paymentId}/reject`, { notes });
+        return data;
+    },
+    async getQRSettings(): Promise<QRPaymentSettings> {
+        const { data } = await apiClient.get<QRPaymentSettings>('/payments/qr-settings');
+        return data as QRPaymentSettings;
+    },
+    async updateQRSettings(input: Partial<QRPaymentSettings>): Promise<QRPaymentSettings> {
+        const { data } = await apiClient.patch<QRPaymentSettings>('/payments/qr-settings', input);
+        return data as QRPaymentSettings;
     },
 };

@@ -40,12 +40,6 @@ export const configSchema = z
     RAZORPAY_KEY_ID: z.string().optional(),
     RAZORPAY_KEY_SECRET: z.string().optional(),
 
-    PHONEPE_MERCHANT_ID: z.string().optional(),
-    PHONEPE_SALT_KEY: z.string().optional(),
-    PHONEPE_SALT_INDEX: z.string().optional(),
-    PHONEPE_BASE_URL: z.string().url().optional(),
-    PHONEPE_REDIRECT_URL: z.string().url().optional(),
-
     EMAIL_PROVIDER: z.enum(["ses", "sendgrid"]).default("sendgrid"),
     EMAIL_FROM_NAME: z.string().default("grotutor"),
     EMAIL_FROM_ADDRESS: z.string().email().optional(),

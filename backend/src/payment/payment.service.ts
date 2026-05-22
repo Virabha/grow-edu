@@ -17,11 +17,11 @@ import {
   enrollments,
   sectionAccess,
   users,
+  siteSettings,
 } from '../database/schema';
 import { eq, and, inArray, desc, like, sql } from 'drizzle-orm';
 import { EmailService } from '../email/email.service';
 import { CouponsService } from '../coupons/coupons.service';
-import { PhonePeService } from './phonepe/phonepe.service';
 
 const MAX_PAGE_LIMIT = 50;
 const PLATFORM_CURRENCY = 'INR';
@@ -32,8 +32,28 @@ const Razorpay = (RazorpayLib.default || RazorpayLib) as typeof RazorpayType;
 
 export enum PaymentGateway {
   RAZORPAY = 'RAZORPAY',
-  PHONEPE = 'PHONEPE',
+  MANUAL_QR = 'MANUAL_QR',
   FREE = 'FREE',
+}
+
+const QR_SETTING_KEYS = {
+  qrImageUrl: 'payment.qr.image_url',
+  upiId: 'payment.qr.upi_id',
+  bankName: 'payment.qr.bank_name',
+  bankAccountNumber: 'payment.qr.bank_account_number',
+  bankIfsc: 'payment.qr.bank_ifsc',
+  bankAccountHolder: 'payment.qr.bank_account_holder',
+  instructions: 'payment.qr.instructions',
+} as const;
+
+export interface QRPaymentSettings {
+  qrImageUrl: string | null;
+  upiId: string | null;
+  bankName: string | null;
+  bankAccountNumber: string | null;
+  bankIfsc: string | null;
+  bankAccountHolder: string | null;
+  instructions: string | null;
 }
 
 @Injectable()
@@ -46,7 +66,6 @@ export class PaymentService {
     private readonly db: PostgresJsDatabase<typeof schema>,
     private emailService: EmailService,
     private couponsService: CouponsService,
-    private phonepeService: PhonePeService,
   ) {
     const razorpayKeyId = this.configService.razorpayKeyId;
     const razorpayKeySecret = this.configService.razorpayKeySecret;
@@ -237,6 +256,406 @@ export class PaymentService {
     return { success: true, paymentId: payment.paymentId, message: 'Enrolled successfully' };
   }
 
+  /**
+   * Create a manual-QR pending payment.
+   * Learner is shown QR code/bank details, then uploads proof. Admin reviews and approves.
+   */
+  async createManualQRPayment(payload: {
+    userId: string;
+    itemType: 'COURSE' | 'SECTION';
+    courseId?: string;
+    sectionId?: string;
+    couponCode?: string;
+  }) {
+    const { courseId, sectionId, originalAmount, amount, couponId, discountAmount } =
+      await this.resolveItemAndCoupon(payload);
+
+    if (amount <= 0) {
+      throw new BadRequestException('Item is free. Use the free-enroll endpoint instead.');
+    }
+
+    // Already-paid guard — block creating a new pending order when the user
+    // already has a completed payment for this exact item.
+    const itemCondition = courseId
+      ? eq(payments.courseId, courseId)
+      : sectionId
+      ? eq(payments.sectionId, sectionId)
+      : null;
+    if (itemCondition) {
+      const completed = await this.db.query.payments.findFirst({
+        where: and(
+          eq(payments.userId, payload.userId),
+          itemCondition,
+          eq(payments.status, 'COMPLETED'),
+        ),
+      });
+      if (completed) {
+        throw new BadRequestException(
+          'You have already paid for this item. Check My Courses for access.',
+        );
+      }
+      // If there's an existing PENDING or PROOF_UPLOADED payment for this
+      // user+item, reuse it instead of creating a duplicate order.
+      const existing = await this.db.query.payments.findFirst({
+        where: and(
+          eq(payments.userId, payload.userId),
+          itemCondition,
+          eq(payments.gateway, PaymentGateway.MANUAL_QR),
+        ),
+        orderBy: (p, { desc }) => [desc(p.createdAt)],
+      });
+      if (
+        existing &&
+        (existing.status === 'PENDING' || existing.status === 'PROOF_UPLOADED')
+      ) {
+        return {
+          paymentId: existing.paymentId,
+          amount: Number(existing.amount),
+          currency: PLATFORM_CURRENCY,
+          status: existing.status,
+          qrSettings: await this.getQRSettings(),
+          reused: true,
+        };
+      }
+    }
+
+    const [payment] = await this.db
+      .insert(payments)
+      .values({
+        userId: payload.userId,
+        courseId,
+        sectionId,
+        itemType: payload.itemType,
+        amount: String(amount),
+        originalAmount: String(originalAmount),
+        discountAmount: String(discountAmount),
+        couponId,
+        currency: PLATFORM_CURRENCY,
+        gateway: PaymentGateway.MANUAL_QR,
+        status: 'PENDING',
+        metadata: {
+          mode: payload.itemType,
+          couponCode: payload.couponCode || null,
+        },
+      })
+      .returning();
+
+    if (couponId && courseId) {
+      try {
+        await this.couponsService.reserveUsageForPayment({
+          couponId,
+          userId: payload.userId,
+          courseId,
+          paymentId: payment.paymentId,
+          originalAmount,
+          discountAmount,
+          finalAmount: amount,
+        });
+      } catch (e) {
+        await this.db
+          .update(payments)
+          .set({ status: 'FAILED', updatedAt: new Date() })
+          .where(eq(payments.paymentId, payment.paymentId));
+        throw e;
+      }
+    }
+
+    return {
+      paymentId: payment.paymentId,
+      amount,
+      currency: PLATFORM_CURRENCY,
+      status: payment.status,
+      qrSettings: await this.getQRSettings(),
+    };
+  }
+
+  /**
+   * Learner uploads proof of QR payment (screenshot URL + transaction id).
+   * Enforces:
+   *  - payment belongs to user, is MANUAL_QR, and is in a state that accepts proof
+   *  - transactionId is unique across all payments (prevents one screenshot/txn
+   *    being reused on a second checkout)
+   *  - same (courseId|sectionId, user) doesn't already have a COMPLETED payment
+   *    — covers the "already paid" case before bothering an admin
+   */
+  async uploadPaymentProof(payload: {
+    paymentId: string;
+    userId: string;
+    proofUrl: string;
+    transactionId: string;
+    payerName?: string;
+  }) {
+    const payment = await this.db.query.payments.findFirst({
+      where: and(
+        eq(payments.paymentId, payload.paymentId),
+        eq(payments.userId, payload.userId),
+      ),
+    });
+
+    if (!payment) {
+      throw new NotFoundException('Payment not found');
+    }
+
+    if (payment.gateway !== 'MANUAL_QR') {
+      throw new BadRequestException('Proof upload only applies to manual QR payments');
+    }
+
+    if (payment.status !== 'PENDING' && payment.status !== 'PROOF_UPLOADED') {
+      throw new BadRequestException(`Cannot upload proof for ${payment.status} payment`);
+    }
+
+    // Already-paid guard: same user + same item with a completed payment.
+    const itemCondition = payment.courseId
+      ? eq(payments.courseId, payment.courseId)
+      : payment.sectionId
+      ? eq(payments.sectionId, payment.sectionId)
+      : null;
+
+    if (itemCondition) {
+      const alreadyPaid = await this.db.query.payments.findFirst({
+        where: and(
+          eq(payments.userId, payload.userId),
+          itemCondition,
+          eq(payments.status, 'COMPLETED'),
+        ),
+      });
+      if (alreadyPaid && alreadyPaid.paymentId !== payment.paymentId) {
+        throw new BadRequestException(
+          'You have already paid for this item. No further payment is required.',
+        );
+      }
+    }
+
+    // Transaction ID uniqueness — case-insensitive trim.
+    const normalisedTxn = payload.transactionId.trim();
+    if (normalisedTxn.length < 4) {
+      throw new BadRequestException('Transaction ID is too short');
+    }
+    const duplicate = await this.db.query.payments.findFirst({
+      where: and(
+        eq(payments.transactionId, normalisedTxn),
+        // ignore the current payment row itself (re-upload after correction)
+      ),
+    });
+    if (duplicate && duplicate.paymentId !== payment.paymentId) {
+      throw new BadRequestException(
+        'This transaction ID has already been submitted with another payment.',
+      );
+    }
+
+    const now = new Date();
+    const [updated] = await this.db
+      .update(payments)
+      .set({
+        paymentProofUrl: payload.proofUrl,
+        transactionId: normalisedTxn,
+        payerName: payload.payerName?.trim() || null,
+        proofUploadedAt: now,
+        status: 'PROOF_UPLOADED',
+        updatedAt: now,
+      })
+      .where(eq(payments.paymentId, payload.paymentId))
+      .returning();
+
+    return updated;
+  }
+
+  /**
+   * Admin approves a manual-QR payment after reviewing proof.
+   */
+  async approvePayment(paymentId: string, reviewerId: string, notes?: string) {
+    const payment = await this.db.query.payments.findFirst({
+      where: eq(payments.paymentId, paymentId),
+    });
+
+    if (!payment) throw new NotFoundException('Payment not found');
+    if (payment.status === 'COMPLETED') {
+      return { success: true, message: 'Payment already completed' };
+    }
+    if (payment.status !== 'PROOF_UPLOADED' && payment.status !== 'PENDING') {
+      throw new BadRequestException(`Cannot approve a ${payment.status} payment`);
+    }
+
+    const now = new Date();
+    await this.db
+      .update(payments)
+      .set({
+        status: 'COMPLETED',
+        reviewedAt: now,
+        reviewedBy: reviewerId,
+        reviewNotes: notes || null,
+        updatedAt: now,
+      })
+      .where(eq(payments.paymentId, paymentId));
+
+    await this.grantAccessForPayment(
+      paymentId,
+      payment.itemType,
+      payment.userId,
+      payment.courseId || undefined,
+      payment.sectionId || undefined,
+    );
+
+    // Consume coupon reservation if any
+    if (payment.couponId) {
+      try {
+        await this.couponsService.consumeReservationByPayment(paymentId);
+      } catch {}
+    }
+
+    // Confirmation email
+    try {
+      const [user] = await this.db
+        .select()
+        .from(users)
+        .where(eq(users.userId, payment.userId))
+        .limit(1);
+
+      if (user) {
+        const items: Array<{ name: string; type: 'COURSE' | 'SECTION' }> = [];
+        if (payment.itemType === 'COURSE' && payment.courseId) {
+          const [course] = await this.db
+            .select()
+            .from(courses)
+            .where(eq(courses.courseId, payment.courseId))
+            .limit(1);
+          if (course) items.push({ name: course.title, type: 'COURSE' });
+        } else if (payment.itemType === 'SECTION' && payment.sectionId) {
+          const [section] = await this.db
+            .select()
+            .from(courseSections)
+            .where(eq(courseSections.sectionId, payment.sectionId))
+            .limit(1);
+          if (section) items.push({ name: section.title, type: 'SECTION' });
+        }
+        if (items.length > 0) {
+          await this.emailService.sendPaymentConfirmationEmail({
+            firstName: user.firstName,
+            email: user.email,
+            paymentId: payment.paymentId,
+            amount: payment.amount,
+            currency: payment.currency,
+            items,
+          });
+        }
+      }
+    } catch {}
+
+    return { success: true, message: 'Payment approved and access granted' };
+  }
+
+  /**
+   * Admin rejects a manual-QR payment.
+   */
+  async rejectPayment(paymentId: string, reviewerId: string, notes: string) {
+    const payment = await this.db.query.payments.findFirst({
+      where: eq(payments.paymentId, paymentId),
+    });
+    if (!payment) throw new NotFoundException('Payment not found');
+    if (payment.status === 'COMPLETED') {
+      throw new BadRequestException('Cannot reject a completed payment');
+    }
+
+    const now = new Date();
+    await this.db
+      .update(payments)
+      .set({
+        status: 'REJECTED',
+        reviewedAt: now,
+        reviewedBy: reviewerId,
+        reviewNotes: notes,
+        updatedAt: now,
+      })
+      .where(eq(payments.paymentId, paymentId));
+
+    // Cancel coupon reservation
+    if (payment.couponId) {
+      try {
+        await this.couponsService.cancelReservationByPayment(paymentId);
+      } catch {}
+    }
+
+    return { success: true, message: 'Payment rejected' };
+  }
+
+  /**
+   * Admin lists payments awaiting review (status = PROOF_UPLOADED).
+   */
+  async getPendingReviewPayments(filters?: { page?: number; limit?: number }) {
+    const limit = Math.min(filters?.limit ?? 50, MAX_PAGE_LIMIT);
+    const page = filters?.page ?? 1;
+    const offset = (page - 1) * limit;
+
+    const [rows, countRes] = await Promise.all([
+      this.db.query.payments.findMany({
+        where: eq(payments.status, 'PROOF_UPLOADED'),
+        with: { user: true, course: true, section: true },
+        orderBy: [desc(payments.proofUploadedAt)],
+        limit,
+        offset,
+      }),
+      this.db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(payments)
+        .where(eq(payments.status, 'PROOF_UPLOADED')),
+    ]);
+
+    const total = Number(countRes[0]?.count ?? 0);
+    return {
+      data: rows,
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    };
+  }
+
+  /**
+   * QR/Bank settings stored in site_settings table (key-value).
+   */
+  async getQRSettings(): Promise<QRPaymentSettings> {
+    const keys = Object.values(QR_SETTING_KEYS);
+    const rows = await this.db
+      .select()
+      .from(siteSettings)
+      .where(inArray(siteSettings.key, keys));
+
+    const map = new Map(rows.map((r) => [r.key, r.value]));
+    return {
+      qrImageUrl: (map.get(QR_SETTING_KEYS.qrImageUrl) as string) ?? null,
+      upiId: (map.get(QR_SETTING_KEYS.upiId) as string) ?? null,
+      bankName: (map.get(QR_SETTING_KEYS.bankName) as string) ?? null,
+      bankAccountNumber: (map.get(QR_SETTING_KEYS.bankAccountNumber) as string) ?? null,
+      bankIfsc: (map.get(QR_SETTING_KEYS.bankIfsc) as string) ?? null,
+      bankAccountHolder: (map.get(QR_SETTING_KEYS.bankAccountHolder) as string) ?? null,
+      instructions: (map.get(QR_SETTING_KEYS.instructions) as string) ?? null,
+    };
+  }
+
+  async updateQRSettings(input: Partial<QRPaymentSettings>): Promise<QRPaymentSettings> {
+    const entries: Array<[string, string | null]> = [
+      [QR_SETTING_KEYS.qrImageUrl, input.qrImageUrl ?? null],
+      [QR_SETTING_KEYS.upiId, input.upiId ?? null],
+      [QR_SETTING_KEYS.bankName, input.bankName ?? null],
+      [QR_SETTING_KEYS.bankAccountNumber, input.bankAccountNumber ?? null],
+      [QR_SETTING_KEYS.bankIfsc, input.bankIfsc ?? null],
+      [QR_SETTING_KEYS.bankAccountHolder, input.bankAccountHolder ?? null],
+      [QR_SETTING_KEYS.instructions, input.instructions ?? null],
+    ];
+
+    for (const [key, value] of entries) {
+      if (value === undefined) continue;
+      await this.db
+        .insert(siteSettings)
+        .values({
+          key,
+          value,
+        })
+        .onConflictDoUpdate({
+          target: siteSettings.key,
+          set: { value, updatedAt: new Date() },
+        });
+    }
+
+    return this.getQRSettings();
+  }
 
   /**
    * Razorpay (kept for future re-enable; not used by checkout currently).
@@ -494,191 +913,5 @@ export class PaymentService {
       data: results,
       pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
     };
-  }
-
-  async initiatePhonePePayment(payload: {
-    userId: string;
-    itemType: 'COURSE' | 'SECTION';
-    courseId?: string;
-    sectionId?: string;
-    couponCode?: string;
-  }) {
-    const { courseId, sectionId, originalAmount, amount, couponId, discountAmount } =
-      await this.resolveItemAndCoupon(payload);
-
-    if (amount <= 0) {
-      throw new BadRequestException(
-        'This item is free. Use the free-enrolment endpoint.',
-      );
-    }
-
-    if (payload.itemType === 'COURSE' && courseId) {
-      const [existing] = await this.db
-        .select({ id: enrollments.enrollmentId })
-        .from(enrollments)
-        .where(
-          and(
-            eq(enrollments.courseId, courseId),
-            eq(enrollments.userId, payload.userId),
-            inArray(enrollments.status, ['ACTIVE', 'COMPLETED']),
-          ),
-        )
-        .limit(1);
-      if (existing) {
-        throw new ConflictException('Already enrolled');
-      }
-    } else if (payload.itemType === 'SECTION' && sectionId) {
-      const [existing] = await this.db
-        .select({ id: sectionAccess.sectionAccessId })
-        .from(sectionAccess)
-        .where(
-          and(
-            eq(sectionAccess.userId, payload.userId),
-            eq(sectionAccess.sectionId, sectionId),
-          ),
-        )
-        .limit(1);
-      if (existing) {
-        throw new ConflictException('Already purchased');
-      }
-    }
-
-    const [payment] = await this.db
-      .insert(payments)
-      .values({
-        userId: payload.userId,
-        courseId,
-        sectionId,
-        itemType: payload.itemType,
-        amount: String(amount),
-        originalAmount: String(originalAmount),
-        discountAmount: String(discountAmount),
-        couponId,
-        currency: PLATFORM_CURRENCY,
-        gateway: PaymentGateway.PHONEPE,
-        status: 'PENDING',
-        metadata: {
-          couponCode: payload.couponCode || null,
-        },
-      })
-      .returning();
-
-    const merchantTransactionId = payment.paymentId;
-    const amountInPaise = Math.round(amount * 100);
-    const backendUrl = this.configService.backendUrl;
-
-    const result = await this.phonepeService.initiate({
-      merchantTransactionId,
-      amountInPaise,
-      userId: payload.userId,
-      redirectUrl: `${this.configService.phonepeRedirectUrl}?paymentId=${merchantTransactionId}`,
-      callbackUrl: `${backendUrl}/payments/phonepe/webhook`,
-    });
-
-    await this.db
-      .update(payments)
-      .set({ gatewayId: merchantTransactionId, updatedAt: new Date() })
-      .where(eq(payments.paymentId, payment.paymentId));
-
-    return {
-      paymentId: payment.paymentId,
-      paymentUrl: result.paymentUrl,
-      amount,
-      currency: PLATFORM_CURRENCY,
-    };
-  }
-
-  async finalizePhonePePayment(merchantTransactionId: string) {
-    const [payment] = await this.db
-      .select()
-      .from(payments)
-      .where(eq(payments.paymentId, merchantTransactionId))
-      .limit(1);
-
-    if (!payment) {
-      throw new NotFoundException('Payment not found');
-    }
-    if (payment.gateway !== PaymentGateway.PHONEPE) {
-      throw new BadRequestException('Not a PhonePe payment');
-    }
-
-    if (payment.status === 'COMPLETED') {
-      return { status: 'COMPLETED' as const, paymentId: payment.paymentId };
-    }
-    if (payment.status === 'FAILED' || payment.status === 'REFUNDED') {
-      return { status: payment.status, paymentId: payment.paymentId };
-    }
-
-    const result = await this.phonepeService.checkStatus(merchantTransactionId);
-
-    if (result.status === 'PENDING') {
-      return { status: 'PENDING' as const, paymentId: payment.paymentId };
-    }
-
-    if (result.status === 'FAILED') {
-      await this.db
-        .update(payments)
-        .set({ status: 'FAILED', updatedAt: new Date() })
-        .where(eq(payments.paymentId, payment.paymentId));
-      return { status: 'FAILED' as const, paymentId: payment.paymentId };
-    }
-
-    await this.db
-      .update(payments)
-      .set({
-        status: 'COMPLETED',
-        transactionId: result.providerTransactionId ?? null,
-        updatedAt: new Date(),
-      })
-      .where(eq(payments.paymentId, payment.paymentId));
-
-    await this.grantAccessForPayment(
-      payment.paymentId,
-      payment.itemType as 'COURSE' | 'SECTION',
-      payment.userId,
-      payment.courseId || undefined,
-      payment.sectionId || undefined,
-    );
-
-    if (payment.couponId && payment.courseId) {
-      try {
-        await this.couponsService.recordConsumedUsageLegacy({
-          couponId: payment.couponId,
-          userId: payment.userId,
-          courseId: payment.courseId,
-          paymentId: payment.paymentId,
-          originalAmount: Number(payment.originalAmount ?? payment.amount),
-          discountAmount: Number(payment.discountAmount ?? 0),
-          finalAmount: Number(payment.amount),
-        });
-      } catch {}
-    }
-
-    return { status: 'COMPLETED' as const, paymentId: payment.paymentId };
-  }
-
-  async getPhonePeStatus(paymentId: string, userId: string) {
-    const [payment] = await this.db
-      .select({
-        paymentId: payments.paymentId,
-        userId: payments.userId,
-        status: payments.status,
-        gateway: payments.gateway,
-      })
-      .from(payments)
-      .where(eq(payments.paymentId, paymentId))
-      .limit(1);
-
-    if (!payment || payment.userId !== userId) {
-      throw new NotFoundException('Payment not found');
-    }
-    if (payment.gateway !== PaymentGateway.PHONEPE) {
-      throw new BadRequestException('Not a PhonePe payment');
-    }
-
-    if (payment.status === 'PENDING') {
-      return this.finalizePhonePePayment(paymentId);
-    }
-    return { status: payment.status, paymentId: payment.paymentId };
   }
 }

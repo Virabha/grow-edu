@@ -3,50 +3,40 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 
-interface InitiatePhonePeParams {
-  itemType: "COURSE" | "SECTION";
-  courseId: string;
+export interface QRPaymentSettings {
+  qrImageUrl: string | null;
+  upiId: string | null;
+  bankName: string | null;
+  bankAccountNumber: string | null;
+  bankIfsc: string | null;
+  bankAccountHolder: string | null;
+  instructions: string | null;
+}
+
+interface CreatePaymentParams {
+  courseId?: string;
   sectionId?: string;
+  itemType: "COURSE" | "SECTION";
   couponCode?: string;
 }
 
-export interface InitiatePhonePeResponse {
+export interface CreateManualQRResponse {
   paymentId: string;
-  paymentUrl: string;
   amount: number;
   currency: string;
+  status: string;
+  qrSettings: QRPaymentSettings;
 }
 
-export interface PhonePeStatusResponse {
-  paymentId: string;
-  status: "PENDING" | "COMPLETED" | "FAILED" | "REFUNDED" | string;
-}
-
-export function useInitiatePhonePe() {
+export function useCreatePayment() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (params: InitiatePhonePeParams) =>
+    mutationFn: (params: CreatePaymentParams) =>
       apiClient
-        .post<InitiatePhonePeResponse>("/payments/phonepe/initiate", params)
+        .post<CreateManualQRResponse>("/payments", params)
         .then((r) => r.data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["enrollments"] });
-    },
-  });
-}
-
-export function usePhonePeStatus(paymentId: string | null) {
-  return useQuery<PhonePeStatusResponse>({
-    queryKey: ["payments", "phonepe", "status", paymentId],
-    enabled: !!paymentId,
-    queryFn: () =>
-      apiClient
-        .get<PhonePeStatusResponse>(`/payments/phonepe/status/${paymentId}`)
-        .then((r) => r.data),
-    refetchInterval: (query) => {
-      const data = query.state.data;
-      if (!data) return 2_000;
-      return data.status === "PENDING" ? 2_000 : false;
     },
   });
 }
@@ -66,6 +56,33 @@ export function useFreeEnroll() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["enrollments"] });
     },
+  });
+}
+
+interface UploadProofParams {
+  paymentId: string;
+  proofUrl: string;
+  transactionId: string;
+  payerName?: string;
+}
+
+export function useUploadProof() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ paymentId, ...body }: UploadProofParams) =>
+      apiClient
+        .post(`/payments/${paymentId}/upload-proof`, body)
+        .then((r) => r.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["payments"] });
+    },
+  });
+}
+
+export function useQRSettings() {
+  return useQuery<QRPaymentSettings>({
+    queryKey: ["payments", "qr-settings"],
+    queryFn: () => apiClient.get<QRPaymentSettings>("/payments/qr-settings").then((r) => r.data),
   });
 }
 

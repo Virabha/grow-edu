@@ -1,8 +1,8 @@
 "use client";
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/query-keys';
 import { axiosGet } from '@/lib/api/client';
-import { paymentsApi, type PaymentsResponse } from '../api/payments.api';
+import { paymentsApi, type PaymentsResponse, type QRPaymentSettings } from '../api/payments.api';
 
 interface UsePaymentsFilters {
     search?: string;
@@ -45,5 +45,44 @@ export function usePaymentById(id: string | null, enabled = true) {
         queryKey: queryKeys.payments.detail(id ?? undefined),
         queryFn: () => paymentsApi.getById(id!),
         enabled: !!id && enabled,
+    });
+}
+
+export function useApprovePayment() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: ({ paymentId, notes }: { paymentId: string; notes?: string }) =>
+            paymentsApi.approve(paymentId, notes),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: queryKeys.payments.all() });
+        },
+    });
+}
+
+export function useRejectPayment() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: ({ paymentId, notes }: { paymentId: string; notes: string }) =>
+            paymentsApi.reject(paymentId, notes),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: queryKeys.payments.all() });
+        },
+    });
+}
+
+export function useQRSettings() {
+    return useQuery<QRPaymentSettings>({
+        queryKey: ['payments', 'qr-settings'],
+        queryFn: () => paymentsApi.getQRSettings(),
+    });
+}
+
+export function useUpdateQRSettings() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (input: Partial<QRPaymentSettings>) => paymentsApi.updateQRSettings(input),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ['payments', 'qr-settings'] });
+        },
     });
 }

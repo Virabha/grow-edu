@@ -1,10 +1,12 @@
 "use client";
+import Link from "next/link";
 import { PageLayout } from "@/components/layout/page-layout";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useEffect, useState, useCallback } from "react";
 import { toast } from "sonner";
+import { CreditCard, ChevronRight } from "lucide-react";
 import {
   useSiteSettingsAdmin,
   useUpsertSiteSetting,
@@ -81,6 +83,24 @@ export default function AdminSettingsPage() {
       description="Toggle platform-wide behaviours."
     >
       <div className="space-y-4">
+        <Link href="/admin/settings/payments">
+          <section className="group flex cursor-pointer items-center justify-between rounded-2xl border border-border bg-card p-5 transition-colors hover:bg-muted/40 sm:p-6">
+            <div className="flex items-center gap-4">
+              <div className="flex size-10 items-center justify-center rounded-xl border border-border bg-background">
+                <CreditCard className="size-5 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="font-display text-base font-medium text-foreground">
+                  Payment settings
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  QR code, UPI ID, and bank transfer details for checkout.
+                </p>
+              </div>
+            </div>
+            <ChevronRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+          </section>
+        </Link>
         <section className="rounded-2xl border border-border bg-card p-5 sm:p-6">
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
             General

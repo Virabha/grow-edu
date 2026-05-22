@@ -641,17 +641,17 @@ export class PaymentService {
     ];
 
     for (const [key, value] of entries) {
-      if (value === undefined) continue;
-      await this.db
-        .insert(siteSettings)
-        .values({
-          key,
-          value,
-        })
-        .onConflictDoUpdate({
-          target: siteSettings.key,
-          set: { value, updatedAt: new Date() },
-        });
+      if (value === null) {
+        await this.db.delete(siteSettings).where(eq(siteSettings.key, key));
+      } else {
+        await this.db
+          .insert(siteSettings)
+          .values({ key, value })
+          .onConflictDoUpdate({
+            target: siteSettings.key,
+            set: { value, updatedAt: new Date() },
+          });
+      }
     }
 
     return this.getQRSettings();

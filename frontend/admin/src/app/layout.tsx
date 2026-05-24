@@ -112,7 +112,7 @@ export default function RootLayout({
     name: siteName,
     alternateName: "grotutor",
     url: siteUrl,
-    logo: `${siteUrl}/logo.jpeg`,
+    logo: `${siteUrl}/logo.png`,
     description: siteDescription,
     sameAs: [
       siteConfig.social.facebook,
@@ -145,6 +145,7 @@ export default function RootLayout({
       <head>
         <link rel="canonical" href={siteUrl} />
         <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="icon" href="/favicon-48.png" type="image/png" sizes="48x48" />
         <link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192" />
         <link rel="icon" href="/icon-512.png" type="image/png" sizes="512x512" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />

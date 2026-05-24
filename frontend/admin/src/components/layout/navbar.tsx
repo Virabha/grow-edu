@@ -102,7 +102,7 @@ export function Navbar() {
           aria-label="grotutor home"
         >
           <Image
-            src="/logo.jpeg"
+            src="/logo.png"
             alt=""
             width={32}
             height={32}

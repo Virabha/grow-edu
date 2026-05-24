@@ -100,7 +100,7 @@ export default function SignupPage() {
         <div className="relative flex items-center justify-between p-10">
           <Link href="/" className="inline-flex items-center gap-2.5">
             <Image
-              src="/logo.jpeg"
+              src="/logo.png"
               alt="grotutor"
               width={40}
               height={40}
@@ -147,7 +147,7 @@ export default function SignupPage() {
         <div className="flex items-center justify-between px-6 py-4 lg:hidden">
           <Link href="/" className="flex items-center gap-2">
             <Image
-              src="/logo.jpeg"
+              src="/logo.png"
               alt="grotutor"
               width={36}
               height={36}

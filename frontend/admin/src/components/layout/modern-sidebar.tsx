@@ -73,7 +73,7 @@ export function ModernSidebar({ items, className }: ModernSidebarProps) {
       onClick={() => setMobileOpen(false)}
     >
       <Image
-        src="/logo.jpeg"
+        src="/logo.png"
         alt="grotutor"
         width={32}
         height={32}

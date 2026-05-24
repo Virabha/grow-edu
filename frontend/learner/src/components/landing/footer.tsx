@@ -52,7 +52,7 @@ export function Footer() {
           <div className="lg:col-span-5">
             <Link href="/" className="inline-flex items-center gap-3">
               <Image
-                src="/logo.jpeg"
+                src="/logo.png"
                 alt="grotutor"
                 width={52}
                 height={52}

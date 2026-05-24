@@ -68,6 +68,7 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon-48.png", type: "image/png", sizes: "48x48" },
       { url: "/icon-192.png", type: "image/png", sizes: "192x192" },
       { url: "/icon-512.png", type: "image/png", sizes: "512x512" },
     ],
@@ -102,7 +103,7 @@ export default function RootLayout({
               "@type": "EducationalOrganization",
               name: "grotutor",
               url: "https://grotutor.com",
-              logo: "https://grotutor.com/logo.jpeg",
+              logo: "https://grotutor.com/logo.png",
               description:
                 "India's leading online education platform — redefining the future of learning.",
               address: {

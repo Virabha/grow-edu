@@ -133,7 +133,7 @@ export function Header() {
             <Image
               width={120}
               height={120}
-              src="/logo.jpeg"
+              src="/logo.png"
               alt="grotutor Logo"
               className="h-11 w-11 rounded-lg object-cover shadow-sm transition-transform group-hover:scale-105"
               priority

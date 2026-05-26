@@ -154,4 +154,20 @@ export const queryKeys = {
             [...queryKeys.teacherApplications.all(), "list", filters] as const,
         detail: (id?: string) => [...queryKeys.teacherApplications.all(), "detail", id] as const,
     },
+    batches: {
+        all: () => ["batches"] as const,
+        list: (filters?: { search?: string; status?: string; targetExam?: string; categoryId?: string; page?: number; limit?: number }) =>
+            [...queryKeys.batches.all(), "list", filters] as const,
+        detail: (idOrSlug?: string) => [...queryKeys.batches.all(), "detail", idOrSlug] as const,
+        subjects: (batchId?: string) => [...queryKeys.batches.all(), "subjects", batchId] as const,
+        sessions: (batchId?: string, type?: string) =>
+            [...queryKeys.batches.all(), "sessions", batchId, type] as const,
+        session: (batchId?: string, sessionId?: string) =>
+            [...queryKeys.batches.all(), "session", batchId, sessionId] as const,
+        enrollments: (batchId?: string, params?: { page?: number; limit?: number; search?: string }) =>
+            [...queryKeys.batches.all(), "enrollments", batchId, params] as const,
+        announcements: (batchId?: string) =>
+            [...queryKeys.batches.all(), "announcements", batchId] as const,
+        mine: () => [...queryKeys.batches.all(), "mine"] as const,
+    },
 } as const;

@@ -94,12 +94,13 @@ export function Header() {
 
   const LOGGED_IN_LINKS = [
     { href: "/my-courses", label: "My Courses" },
+    { href: "/my-batches", label: "My Batches" },
     { href: "/profile", label: "Profile" },
   ];
 
   const navLinks = isLoggedIn
-    ? [{ href: "/courses", label: "Courses" }, ...LOGGED_IN_LINKS]
-    : NAV_LINKS;
+    ? [{ href: "/courses", label: "Courses" }, { href: "/batches", label: "Batches" }, ...LOGGED_IN_LINKS]
+    : [...NAV_LINKS, { href: "/batches", label: "Batches" }];
 
   const navLinksWithoutCourses = navLinks.filter((l) => l.href !== "/courses");
 

@@ -120,6 +120,20 @@
       "when": 1779282615450,
       "tag": "0016_flippant_lila_cheney",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "5",
+      "when": 1779804947918,
+      "tag": "0017_sour_expediter",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "5",
+      "when": 1779806557225,
+      "tag": "0018_eminent_daredevil",
+      "breakpoints": true
     }
   ]
 }

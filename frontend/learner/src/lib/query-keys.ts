@@ -1,5 +1,6 @@
 import type { CoursesParams } from "@/lib/api/services/courses";
 import type { BooksParams } from "@/lib/api/services/books";
+import type { BatchesListParams, BatchSessionType } from "@/lib/api/services/batches";
 
 export const queryKeys = {
   cms: {
@@ -33,5 +34,16 @@ export const queryKeys = {
     byId: (id: string) => ["books", "detail", id] as const,
     bySlug: (slug: string) => ["books", "slug", slug] as const,
     purchases: () => ["books", "purchases"] as const,
+  },
+  batches: {
+    list: (params?: BatchesListParams) => ["batches", "list", params] as const,
+    bySlug: (slug: string) => ["batches", "slug", slug] as const,
+    mine: () => ["batches", "mine"] as const,
+    sessions: (batchId: string, type?: BatchSessionType) =>
+      ["batches", "sessions", batchId, type] as const,
+    session: (batchId: string, sessionId: string) =>
+      ["batches", "session", batchId, sessionId] as const,
+    announcements: (batchId: string) =>
+      ["batches", "announcements", batchId] as const,
   },
 } as const;

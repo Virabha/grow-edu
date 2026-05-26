@@ -30,6 +30,7 @@ import { ContactModule } from "./contact/contact.module";
 import { SubscribeModule } from "./subscribe/subscribe.module";
 import { AppCacheModule } from "./cache/cache.module";
 import { BooksModule } from "./books/books.module";
+import { BatchesModule } from "./batches/batches.module";
 
 @Module({
   imports: [
@@ -64,6 +65,7 @@ import { BooksModule } from "./books/books.module";
     ContactModule,
     SubscribeModule,
     BooksModule,
+    BatchesModule,
   ],
   controllers: [AppController],
   providers: [

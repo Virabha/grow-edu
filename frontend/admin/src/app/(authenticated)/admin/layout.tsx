@@ -1,11 +1,12 @@
 "use client";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { AdminNavbar } from "@/components/layout/admin-navbar";
-import { LayoutDashboard, Users, BookOpen, Building2, CreditCard, Shield, Settings, Tag, Layers, Layout, FileText, Library, QrCode } from "lucide-react";
+import { LayoutDashboard, Users, BookOpen, Building2, CreditCard, Shield, Settings, Tag, Layers, Layout, FileText, Library, QrCode, GraduationCap } from "lucide-react";
 const sidebarItems = [
     { label: "Dashboard", href: "/admin/dashboard", icon: <LayoutDashboard className="h-4 w-4"/> },
     { label: "Users", href: "/admin/users", icon: <Users className="h-4 w-4"/> },
     { label: "Courses", href: "/admin/courses", icon: <BookOpen className="h-4 w-4"/> },
+    { label: "Batches", href: "/admin/batches", icon: <GraduationCap className="h-4 w-4"/> },
     { label: "Books", href: "/admin/books", icon: <Library className="h-4 w-4"/> },
     { label: "Categories", href: "/admin/categories", icon: <Layers className="h-4 w-4"/> },
     { label: "Companies", href: "/admin/companies", icon: <Building2 className="h-4 w-4"/> },

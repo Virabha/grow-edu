@@ -36,8 +36,9 @@ function Calendar({
         months: "flex flex-col sm:flex-row gap-4",
         month: "space-y-3",
         month_caption: "flex justify-center pt-1 relative items-center",
-        caption_label: "text-sm font-medium",
+        caption_label: "sr-only",
         dropdowns: "flex items-center gap-1.5",
+        dropdown_root: "relative",
         dropdown:
           "h-8 rounded-md border border-input bg-background px-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-ring",
         nav: "absolute inset-x-0 top-1 flex items-center justify-between px-1",

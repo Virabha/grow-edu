@@ -119,7 +119,7 @@ export default function AdminBatchesPage() {
           value={status}
           onValueChange={(v) => setStatus(v as BatchStatus | "ALL")}
         >
-          <SelectTrigger className="h-8 text-xs sm:w-[160px]">
+          <SelectTrigger className="h-8 w-full text-xs sm:w-[160px]">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
@@ -240,17 +240,17 @@ export default function AdminBatchesPage() {
 
       <BatchFormDialog
         open={formOpen}
-        onOpenChange={setFormOpen}
         batch={editing}
+        onOpenChange={setFormOpen}
       />
       <ConfirmDialog
         open={confirmOpen}
-        onOpenChange={setConfirmOpen}
         title="Delete batch"
-        description={`Delete "${deleting?.title}"? Enrolled students will lose access.`}
-        onConfirm={onConfirmDelete}
         confirmText="Delete"
         variant="destructive"
+        onConfirm={onConfirmDelete}
+        onOpenChange={setConfirmOpen}
+        description={`Delete "${deleting?.title}"? Enrolled students will lose access.`}
       />
     </PageLayout>
   );

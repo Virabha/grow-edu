@@ -89,6 +89,9 @@ const defaults: Values = {
   status: "DRAFT",
 };
 
+const FIELD_CLS = "h-8 text-xs";
+const LABEL_CLS = "text-xs font-medium";
+
 function DatePickerField({
   value,
   onChange,
@@ -104,11 +107,11 @@ function DatePickerField({
           type="button"
           variant="outline"
           className={cn(
-            "h-10 w-full justify-start text-left font-normal",
+            "h-8 w-full justify-start px-3 text-left text-xs font-normal",
             !value && "text-muted-foreground",
           )}
         >
-          <CalendarIcon className="mr-2 size-4" />
+          <CalendarIcon className="mr-2 size-3.5" />
           {date
             ? date.toLocaleDateString(undefined, {
                 day: "numeric",
@@ -152,22 +155,22 @@ function toDateInput(iso: string | null | undefined): string {
 
 function batchToValues(b: Batch): Values {
   return {
-    title: b.title,
     slug: b.slug,
-    description: b.description ?? "",
-    shortDescription: b.shortDescription ?? "",
-    targetExam: b.targetExam ?? "",
-    language: b.language,
-    thumbnail: b.thumbnail ?? "",
-    bannerImage: b.bannerImage ?? "",
+    title: b.title,
     price: b.price,
-    compareAtPrice: b.compareAtPrice ?? undefined,
+    status: b.status,
+    language: b.language,
     currency: b.currency,
+    thumbnail: b.thumbnail ?? "",
+    categoryId: b.categoryId ?? "",
+    endDate: toDateInput(b.endDate),
+    targetExam: b.targetExam ?? "",
+    description: b.description ?? "",
+    bannerImage: b.bannerImage ?? "",
     capacity: b.capacity ?? undefined,
     startDate: toDateInput(b.startDate),
-    endDate: toDateInput(b.endDate),
-    categoryId: b.categoryId ?? "",
-    status: b.status,
+    shortDescription: b.shortDescription ?? "",
+    compareAtPrice: b.compareAtPrice ?? undefined,
   };
 }
 
@@ -186,23 +189,6 @@ export function BatchFormDialog(props: {
     resolver: zodResolver(schema),
     defaultValues: defaults,
   });
-
-  useEffect(() => {
-    if (batch) {
-      form.reset(batchToValues(batch));
-      setThumbnailPreview(batch.thumbnail);
-    } else {
-      form.reset(defaults);
-      setThumbnailPreview(null);
-    }
-  }, [batch, form]);
-
-  useEffect(() => {
-    if (!open) {
-      form.reset(defaults);
-      setThumbnailPreview(null);
-    }
-  }, [open, form]);
 
   const isPending = create.isPending || update.isPending;
 
@@ -227,15 +213,30 @@ export function BatchFormDialog(props: {
       status: values.status as BatchStatus,
     };
 
-    if (isEditing && batch) {
+    if (isEditing && batch)
       update.mutate(
         { batchId: batch.batchId, dto: payload },
         { onSuccess: () => onOpenChange(false) },
       );
-    } else {
-      create.mutate(payload, { onSuccess: () => onOpenChange(false) });
-    }
+    else create.mutate(payload, { onSuccess: () => onOpenChange(false) });
   }
+
+  useEffect(() => {
+    if (batch) {
+      form.reset(batchToValues(batch));
+      setThumbnailPreview(batch.thumbnail);
+    } else {
+      form.reset(defaults);
+      setThumbnailPreview(null);
+    }
+  }, [batch, form]);
+
+  useEffect(() => {
+    if (!open) {
+      form.reset(defaults);
+      setThumbnailPreview(null);
+    }
+  }, [open, form]);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -247,17 +248,18 @@ export function BatchFormDialog(props: {
           <Form {...form}>
             <form
               onSubmit={form.handleSubmit(handleSubmitForm)}
-              className="space-y-3"
+              className="space-y-2.5"
             >
               <FormField
                 control={form.control}
                 name="title"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Title</FormLabel>
+                    <FormLabel className={LABEL_CLS}>Title</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
+                        className={FIELD_CLS}
                         placeholder="NEET 2026 Aakarshan Batch"
                       />
                     </FormControl>
@@ -271,9 +273,13 @@ export function BatchFormDialog(props: {
                   name="slug"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Slug</FormLabel>
+                      <FormLabel className={LABEL_CLS}>Slug</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="neet-2026-aakarshan" />
+                        <Input
+                          {...field}
+                          className={FIELD_CLS}
+                          placeholder="neet-2026-aakarshan"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -284,9 +290,13 @@ export function BatchFormDialog(props: {
                   name="targetExam"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Target Exam</FormLabel>
+                      <FormLabel className={LABEL_CLS}>Target Exam</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="NEET 2026" />
+                        <Input
+                          {...field}
+                          className={FIELD_CLS}
+                          placeholder="NEET 2026"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -298,10 +308,13 @@ export function BatchFormDialog(props: {
                 name="shortDescription"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Short description</FormLabel>
+                    <FormLabel className={LABEL_CLS}>
+                      Short description
+                    </FormLabel>
                     <FormControl>
                       <Input
                         {...field}
+                        className={FIELD_CLS}
                         placeholder="One-line pitch for cards"
                       />
                     </FormControl>
@@ -314,11 +327,12 @@ export function BatchFormDialog(props: {
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Description</FormLabel>
+                    <FormLabel className={LABEL_CLS}>Description</FormLabel>
                     <FormControl>
                       <Textarea
                         {...field}
                         rows={3}
+                        className="min-h-[64px] text-xs"
                         placeholder="Detailed batch description"
                       />
                     </FormControl>
@@ -331,7 +345,7 @@ export function BatchFormDialog(props: {
                 name="thumbnail"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Thumbnail</FormLabel>
+                    <FormLabel className={LABEL_CLS}>Thumbnail</FormLabel>
                     <div className="space-y-2">
                       {(thumbnailPreview || field.value) && (
                         <div className="relative w-28 aspect-video rounded-lg overflow-hidden border bg-muted">
@@ -358,7 +372,7 @@ export function BatchFormDialog(props: {
                         }}
                         folder="batches"
                         label="Upload thumbnail"
-                        className="w-full"
+                        compact
                       />
                     </div>
                     <FormMessage />
@@ -371,7 +385,7 @@ export function BatchFormDialog(props: {
                   name="startDate"
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
-                      <FormLabel>Start date</FormLabel>
+                      <FormLabel className={LABEL_CLS}>Start date</FormLabel>
                       <DatePickerField
                         value={field.value}
                         onChange={field.onChange}
@@ -385,7 +399,7 @@ export function BatchFormDialog(props: {
                   name="endDate"
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
-                      <FormLabel>End date</FormLabel>
+                      <FormLabel className={LABEL_CLS}>End date</FormLabel>
                       <DatePickerField
                         value={field.value}
                         onChange={field.onChange}
@@ -401,9 +415,15 @@ export function BatchFormDialog(props: {
                   name="price"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Price</FormLabel>
+                      <FormLabel className={LABEL_CLS}>Price</FormLabel>
                       <FormControl>
-                        <Input type="number" min={0} step="0.01" {...field} />
+                        <Input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          className={FIELD_CLS}
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -414,12 +434,13 @@ export function BatchFormDialog(props: {
                   name="compareAtPrice"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Compare price</FormLabel>
+                      <FormLabel className={LABEL_CLS}>Compare price</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
                           min={0}
                           step="0.01"
+                          className={FIELD_CLS}
                           {...field}
                           value={field.value ?? ""}
                         />
@@ -433,9 +454,13 @@ export function BatchFormDialog(props: {
                   name="currency"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Currency</FormLabel>
+                      <FormLabel className={LABEL_CLS}>Currency</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="INR" />
+                        <Input
+                          {...field}
+                          className={FIELD_CLS}
+                          placeholder="INR"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -448,11 +473,12 @@ export function BatchFormDialog(props: {
                   name="capacity"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Capacity</FormLabel>
+                      <FormLabel className={LABEL_CLS}>Capacity</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
                           min={1}
+                          className={FIELD_CLS}
                           {...field}
                           value={field.value ?? ""}
                           placeholder="Optional"
@@ -467,9 +493,13 @@ export function BatchFormDialog(props: {
                   name="language"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Language</FormLabel>
+                      <FormLabel className={LABEL_CLS}>Language</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="English" />
+                        <Input
+                          {...field}
+                          className={FIELD_CLS}
+                          placeholder="English"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -481,10 +511,10 @@ export function BatchFormDialog(props: {
                 name="status"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Status</FormLabel>
+                    <FormLabel className={LABEL_CLS}>Status</FormLabel>
                     <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger className="h-8 text-xs">
                           <SelectValue />
                         </SelectTrigger>
                       </FormControl>

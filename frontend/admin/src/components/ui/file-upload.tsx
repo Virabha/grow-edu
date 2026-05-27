@@ -8,11 +8,12 @@ import { AxiosError } from "axios";
 
 interface FileUploadProps {
   onUploadComplete: (key: string, url: string) => void;
-  onFileSelect?: (file: File) => void;
+  label?: string;
   folder?: string;
   accept?: string;
-  label?: string;
+  compact?: boolean;
   className?: string;
+  onFileSelect?: (file: File) => void;
 }
 
 export function FileUpload({
@@ -22,6 +23,7 @@ export function FileUpload({
   accept = "image/*",
   label = "Upload File",
   className,
+  compact = false,
 }: FileUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -74,13 +76,34 @@ export function FileUpload({
     }
   };
 
+  if (compact)
+    return (
+      <div className={cn("relative w-full", className)}>
+        <div className="group relative flex h-8 w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-muted-foreground/40 bg-background px-3 text-xs text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground">
+          <input
+            type="file"
+            accept={accept}
+            onChange={handleFileChange}
+            disabled={uploading}
+            className="absolute inset-0 z-10 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+          />
+          {uploading ? (
+            <>
+              <Loader2 className="size-3.5 animate-spin text-primary" />
+              <span className="font-medium">{progress}%</span>
+            </>
+          ) : (
+            <>
+              <UploadCloud className="size-3.5 group-hover:text-primary transition-colors" />
+              <span className="font-medium">{label}</span>
+            </>
+          )}
+        </div>
+      </div>
+    );
+
   return (
-    <div
-      className={cn(
-        "grid w-full max-w-sm items-center gap-1.5",
-        className,
-      )}
-    >
+    <div className={cn("grid w-full max-w-sm items-center gap-1.5", className)}>
       <div className="relative group cursor-pointer border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 hover:border-primary/50 transition-colors">
         <input
           type="file"
@@ -94,9 +117,7 @@ export function FileUpload({
             <div className="flex flex-col items-center w-full space-y-2">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
               <Progress value={progress} className="w-[60%]" />
-              <span className="text-sm text-muted-foreground">
-                {progress}%
-              </span>
+              <span className="text-sm text-muted-foreground">{progress}%</span>
             </div>
           ) : (
             <>

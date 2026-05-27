@@ -248,7 +248,7 @@ export function BatchFormDialog(props: {
           <Form {...form}>
             <form
               onSubmit={form.handleSubmit(handleSubmitForm)}
-              className="space-y-2.5"
+              className="space-y-2.5 px-1"
             >
               <FormField
                 control={form.control}

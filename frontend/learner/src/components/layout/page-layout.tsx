@@ -15,7 +15,7 @@ interface PageLayoutProps {
 }
 
 const DEFAULT_CONTAINER =
-  "container mx-auto px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10";
+  "container mx-auto px-4 pt-2 pb-6 sm:px-6 sm:pt-2 sm:pb-8 lg:px-8 lg:pt-3 lg:pb-10";
 
 function PageLayout({
   children,
@@ -27,18 +27,18 @@ function PageLayout({
 }: PageLayoutProps) {
   return (
     <div className={cn(containerClassName ?? DEFAULT_CONTAINER)}>
-      <div className={cn("space-y-6", className)}>
-        <header className="space-y-1">
+      <div className={cn("space-y-4", className)}>
+        <header className="space-y-0.5">
           {subtitle && (
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               {subtitle}
             </p>
           )}
-          <h1 className="font-display text-3xl font-medium leading-tight tracking-tight text-foreground sm:text-4xl">
+          <h1 className="font-display text-2xl font-medium leading-tight tracking-tight text-foreground sm:text-3xl">
             {header}
           </h1>
           {description && (
-            <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">
+            <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
               {description}
             </p>
           )}

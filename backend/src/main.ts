@@ -42,13 +42,15 @@ async function bootstrap() {
       transform: true,
       forbidNonWhitelisted: true,
       transformOptions: { enableImplicitConversion: true },
-    })
+    }),
   );
 
   if (!configService.isProduction()) {
     const swaggerConfig = new DocumentBuilder()
       .setTitle("grotutor API")
-      .setDescription("API documentation for grotutor — Online Learning Platform")
+      .setDescription(
+        "API documentation for grotutor — Online Learning Platform",
+      )
       .setVersion("1.0.0")
       .addBearerAuth()
       .addTag("auth", "Authentication endpoints")

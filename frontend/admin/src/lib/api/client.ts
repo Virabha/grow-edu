@@ -41,7 +41,7 @@ apiClient.interceptors.request.use(
 
 apiClient.interceptors.response.use(
   (response) => response,
-  (error: AxiosError) => {
+  (error: AxiosError<{ message?: string | string[]; error?: string }>) => {
     if (error.response?.status === 401) {
       useAuthStore.getState().logout();
     }
@@ -54,6 +54,13 @@ apiClient.interceptors.response.use(
       Object.assign(error, {
         message: `Network Error calling ${url}. ${hint}`,
       });
+    } else if (error.response?.data) {
+      // Lift NestJS-style { message } into the error so mutations can show it
+      const raw = error.response.data.message ?? error.response.data.error;
+      if (raw) {
+        const msg = Array.isArray(raw) ? raw.join(", ") : String(raw);
+        Object.assign(error, { message: msg });
+      }
     }
     return Promise.reject(error);
   }

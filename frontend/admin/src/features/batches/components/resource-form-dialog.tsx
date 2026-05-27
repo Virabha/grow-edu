@@ -5,13 +5,6 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   Form,
   FormControl,
   FormField,
@@ -28,20 +21,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
+import { FormSheet } from "@/components/ui/form-sheet";
 import { FileUpload } from "@/components/ui/file-upload";
+import { FileText } from "lucide-react";
 import {
   useCreateBatchResource,
   useUpdateBatchResource,
 } from "../hooks/use-batches";
 import type { BatchResource, BatchResourceType, BatchSubject } from "../types";
 
+const FIELD_CLS = "h-8 text-xs";
+const LABEL_CLS = "text-xs font-medium";
+
 const schema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
   type: z.enum(["DPP", "NOTES", "REFERENCE"]),
   subjectId: z.string().optional(),
-  fileKey: z.string().min(1, "Upload a file"),
+  fileKey: z.string().min(1, "Upload a PDF"),
   dayNumber: z.coerce.number().int().min(1).optional(),
 });
 
@@ -67,7 +64,7 @@ export function ResourceFormDialog(props: {
   const isEditing = !!resource;
   const create = useCreateBatchResource(batchId);
   const update = useUpdateBatchResource(batchId);
-  const [filePreview, setFilePreview] = useState<string | null>(null);
+  const [filePreviewKey, setFilePreviewKey] = useState<string | null>(null);
 
   const form = useForm<Values>({
     resolver: zodResolver(schema),
@@ -76,6 +73,7 @@ export function ResourceFormDialog(props: {
   const type = form.watch("type");
 
   useEffect(() => {
+    if (!open) return;
     if (resource) {
       form.reset({
         title: resource.title,
@@ -85,19 +83,12 @@ export function ResourceFormDialog(props: {
         fileKey: resource.fileKey,
         dayNumber: resource.dayNumber ?? undefined,
       });
-      setFilePreview(resource.fileUrl);
+      setFilePreviewKey(resource.fileKey);
     } else {
       form.reset({ ...defaults, type: defaultType ?? "NOTES" });
-      setFilePreview(null);
+      setFilePreviewKey(null);
     }
-  }, [resource, defaultType, form]);
-
-  useEffect(() => {
-    if (!open) {
-      form.reset({ ...defaults, type: defaultType ?? "NOTES" });
-      setFilePreview(null);
-    }
-  }, [open, defaultType, form]);
+  }, [open, resource, defaultType, form]);
 
   const isPending = create.isPending || update.isPending;
 
@@ -113,7 +104,7 @@ export function ResourceFormDialog(props: {
     if (isEditing && resource) {
       update.mutate(
         { resourceId: resource.resourceId, dto: payload },
-        { onSuccess: () => onOpenChange(false) }
+        { onSuccess: () => onOpenChange(false) },
       );
     } else {
       create.mutate(payload, { onSuccess: () => onOpenChange(false) });
@@ -121,30 +112,33 @@ export function ResourceFormDialog(props: {
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>
-            {isEditing ? "Edit resource" : "Upload resource"}
-          </DialogTitle>
-        </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
+    <FormSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      title={isEditing ? "Edit resource" : "Upload resource"}
+      description="PDFs for DPP, notes, and references."
+      onSubmit={form.handleSubmit(onSubmit)}
+      submitLabel={isEditing ? "Save" : "Upload"}
+      submitting={isPending}
+    >
+      <Form {...form}>
+        <div className="space-y-2.5">
+          <div className="grid grid-cols-2 gap-2">
             <FormField
               control={form.control}
               name="type"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Type</FormLabel>
+                  <FormLabel className={LABEL_CLS}>Type</FormLabel>
                   <Select value={field.value} onValueChange={field.onChange}>
                     <FormControl>
-                      <SelectTrigger>
+                      <SelectTrigger className={FIELD_CLS}>
                         <SelectValue />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="DPP">DPP (daily practice)</SelectItem>
-                      <SelectItem value="NOTES">Notes / Study material</SelectItem>
+                      <SelectItem value="DPP">DPP</SelectItem>
+                      <SelectItem value="NOTES">Notes</SelectItem>
                       <SelectItem value="REFERENCE">Reference</SelectItem>
                     </SelectContent>
                   </Select>
@@ -154,118 +148,126 @@ export function ResourceFormDialog(props: {
             />
             <FormField
               control={form.control}
-              name="title"
+              name="subjectId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Title</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="e.g. Kinematics — DPP 01" />
-                  </FormControl>
+                  <FormLabel className={LABEL_CLS}>Subject</FormLabel>
+                  <Select
+                    value={field.value || "_none"}
+                    onValueChange={(v) => field.onChange(v === "_none" ? "" : v)}
+                  >
+                    <FormControl>
+                      <SelectTrigger className={FIELD_CLS}>
+                        <SelectValue placeholder="—" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="_none">— None —</SelectItem>
+                      {subjects.map((s) => (
+                        <SelectItem key={s.subjectId} value={s.subjectId}>
+                          {s.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
             />
+          </div>
+
+          <FormField
+            control={form.control}
+            name="title"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className={LABEL_CLS}>Title</FormLabel>
+                <FormControl>
+                  <Input
+                    {...field}
+                    className={FIELD_CLS}
+                    placeholder="e.g. Kinematics — DPP 01"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {type === "DPP" && (
             <FormField
               control={form.control}
-              name="description"
+              name="dayNumber"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel className={LABEL_CLS}>Day number</FormLabel>
                   <FormControl>
-                    <Textarea {...field} rows={2} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <div className="grid grid-cols-2 gap-3">
-              <FormField
-                control={form.control}
-                name="subjectId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Subject</FormLabel>
-                    <Select
-                      value={field.value || "_none"}
-                      onValueChange={(v) => field.onChange(v === "_none" ? "" : v)}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="—" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="_none">— None —</SelectItem>
-                        {subjects.map((s) => (
-                          <SelectItem key={s.subjectId} value={s.subjectId}>
-                            {s.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              {type === "DPP" && (
-                <FormField
-                  control={form.control}
-                  name="dayNumber"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Day number</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          min={1}
-                          {...field}
-                          value={field.value ?? ""}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
-            </div>
-            <FormField
-              control={form.control}
-              name="fileKey"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>PDF file</FormLabel>
-                  <div className="space-y-2">
-                    {(filePreview || field.value) && (
-                      <p className="rounded-lg border border-dashed border-border bg-muted/40 p-2 text-xs text-muted-foreground line-clamp-1">
-                        {field.value}
-                      </p>
-                    )}
-                    <FileUpload
-                      onUploadComplete={(key, url) => {
-                        field.onChange(key);
-                        setFilePreview(url);
-                      }}
-                      folder="batch-resources"
-                      label="Upload PDF"
-                      accept="application/pdf"
-                      className="w-full"
+                    <Input
+                      type="number"
+                      min={1}
+                      {...field}
+                      value={field.value ?? ""}
+                      className={FIELD_CLS}
+                      placeholder="1"
                     />
-                  </div>
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isPending}>
-                {isEditing ? "Save" : "Upload"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+          )}
+
+          <FormField
+            control={form.control}
+            name="description"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className={LABEL_CLS}>Description</FormLabel>
+                <FormControl>
+                  <Textarea
+                    {...field}
+                    rows={2}
+                    className="min-h-[56px] text-xs"
+                    placeholder="Optional"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="fileKey"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className={LABEL_CLS}>PDF file</FormLabel>
+                {filePreviewKey && (
+                  <div className="mb-1 flex items-center gap-2 rounded-md border border-border bg-muted/40 px-2 py-1.5 text-xs">
+                    <FileText className="size-3.5 text-muted-foreground" />
+                    <span className="line-clamp-1 font-mono text-[11px] text-muted-foreground">
+                      {filePreviewKey.split("/").pop()}
+                    </span>
+                  </div>
+                )}
+                <FormControl>
+                  <FileUpload
+                    onUploadComplete={(key) => {
+                      field.onChange(key);
+                      setFilePreviewKey(key);
+                    }}
+                    folder="batch-resources"
+                    label={filePreviewKey ? "Replace PDF" : "Upload PDF"}
+                    accept="application/pdf"
+                    compact
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+      </Form>
+    </FormSheet>
   );
 }

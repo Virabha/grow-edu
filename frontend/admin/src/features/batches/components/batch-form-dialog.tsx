@@ -222,6 +222,7 @@ export function BatchFormDialog(props: {
   }
 
   useEffect(() => {
+    if (!open) return;
     if (batch) {
       form.reset(batchToValues(batch));
       setThumbnailPreview(batch.thumbnail);
@@ -229,14 +230,7 @@ export function BatchFormDialog(props: {
       form.reset(defaults);
       setThumbnailPreview(null);
     }
-  }, [batch, form]);
-
-  useEffect(() => {
-    if (!open) {
-      form.reset(defaults);
-      setThumbnailPreview(null);
-    }
-  }, [open, form]);
+  }, [open, batch, form]);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>

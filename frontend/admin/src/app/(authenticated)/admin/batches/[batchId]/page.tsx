@@ -42,6 +42,7 @@ import {
   PlayCircle,
   Plus,
   Radio,
+  Search,
   Trash2,
   UserPlus,
   Users,
@@ -108,6 +109,49 @@ function formatDate(iso: string): string {
     month: "short",
     year: "numeric",
   });
+}
+
+function StatCard({
+  label,
+  value,
+  tone,
+  small,
+  progress,
+}: {
+  label: string;
+  value: string | number;
+  tone?: "badge";
+  small?: boolean;
+  progress?: number;
+}) {
+  return (
+    <div className="rounded-xl border border-border bg-card p-3">
+      <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+        {label}
+      </p>
+      {tone === "badge" ? (
+        <Badge className="mt-1.5">{value}</Badge>
+      ) : (
+        <p
+          className={
+            small
+              ? "mt-1 text-xs font-medium leading-tight text-foreground"
+              : "mt-1 font-display text-base font-semibold leading-tight text-foreground"
+          }
+        >
+          {value}
+        </p>
+      )}
+      {progress !== undefined && (
+        <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-muted">
+          <div
+            className="h-full bg-primary transition-all"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function AdminBatchDetailPage(props: {
@@ -227,36 +271,43 @@ export default function AdminBatchDetailPage(props: {
         </div>
       }
     >
-      <div className="mb-6 grid gap-4 sm:grid-cols-4">
-        <div className="rounded-2xl border border-border bg-card p-4">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-            Status
-          </p>
-          <p className="mt-1 font-display text-lg font-semibold">{batch.status}</p>
-        </div>
-        <div className="rounded-2xl border border-border bg-card p-4">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-            Window
-          </p>
-          <p className="mt-1 text-sm">
-            {formatDate(batch.startDate)} – {formatDate(batch.endDate)}
-          </p>
-        </div>
-        <div className="rounded-2xl border border-border bg-card p-4">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-            Enrolled
-          </p>
-          <p className="mt-1 font-display text-lg font-semibold">
-            {enrollmentsData?.pagination.total ?? 0}
-            {batch.capacity ? ` / ${batch.capacity}` : ""}
-          </p>
-        </div>
-        <div className="rounded-2xl border border-border bg-card p-4">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-            Sessions
-          </p>
-          <p className="mt-1 font-display text-lg font-semibold">{sessions.length}</p>
-        </div>
+      <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+        <StatCard label="Status" value={batch.status} tone="badge" />
+        <StatCard
+          label="Window"
+          value={`${formatDate(batch.startDate)} – ${formatDate(batch.endDate)}`}
+          small
+        />
+        <StatCard
+          label="Enrolled"
+          value={`${enrollmentsData?.pagination.total ?? 0}${
+            batch.capacity ? ` / ${batch.capacity}` : ""
+          }`}
+          progress={
+            batch.capacity
+              ? Math.min(
+                  100,
+                  ((enrollmentsData?.pagination.total ?? 0) / batch.capacity) *
+                    100,
+                )
+              : undefined
+          }
+        />
+        <StatCard
+          label="Price"
+          value={
+            batch.price === 0
+              ? "Free"
+              : `${batch.currency} ${batch.price.toFixed(0)}`
+          }
+        />
+        <StatCard
+          label="Revenue"
+          value={`${batch.currency} ${(
+            (enrollmentsData?.pagination.total ?? 0) * batch.price
+          ).toLocaleString()}`}
+        />
+        <StatCard label="Sessions" value={sessions.length} />
       </div>
 
       <Tabs defaultValue="content">
@@ -467,12 +518,15 @@ export default function AdminBatchDetailPage(props: {
         {/* ─── Enrollments tab ─────────────────────────────────────────── */}
         <TabsContent value="enrollments" className="space-y-3">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <Input
-              placeholder="Search students…"
-              value={enrollmentSearch}
-              onChange={(e) => setEnrollmentSearch(e.target.value)}
-              className="sm:max-w-xs"
-            />
+            <div className="relative w-full sm:max-w-xs">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search students…"
+                value={enrollmentSearch}
+                onChange={(e) => setEnrollmentSearch(e.target.value)}
+                className="h-8 pl-8 text-xs"
+              />
+            </div>
             <Button size="sm" onClick={() => setEnrollOpen(true)}>
               <UserPlus className="size-3.5 mr-1.5" />
               Enroll students

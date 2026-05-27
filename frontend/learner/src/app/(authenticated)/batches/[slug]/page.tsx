@@ -234,16 +234,16 @@ export default function BatchDetailPage(props: { params: Promise<{ slug: string 
       header={batch.title}
       description={batch.shortDescription ?? batch.targetExam ?? ""}
     >
-      <div className="-mt-4 mb-2">
-        <Button asChild variant="outline" size="sm">
+      <div className="-mt-2 mb-2">
+        <Button asChild variant="outline" size="sm" className="h-7 text-xs">
           <Link href="/my-batches">
-            <ArrowLeft className="size-3.5 mr-1.5" />
+            <ArrowLeft className="size-3 mr-1" />
             My Batches
           </Link>
         </Button>
       </div>
       {batch.bannerImage && (
-        <div className="relative mb-6 aspect-[16/5] w-full overflow-hidden rounded-2xl bg-muted">
+        <div className="relative mb-3 aspect-[16/4] w-full overflow-hidden rounded-xl bg-muted sm:aspect-[16/3]">
           <SecureImage
             src={batch.bannerImage}
             alt={batch.title}
@@ -253,76 +253,78 @@ export default function BatchDetailPage(props: { params: Promise<{ slug: string 
       )}
 
       {progress && batch.isEnrolled && (
-        <section className="mb-6 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-2xl border border-border bg-card p-4">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+        <section className="mb-3 grid grid-cols-3 gap-2">
+          <div className="rounded-xl border border-border bg-card p-3">
+            <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               Attendance
             </p>
-            <p className="mt-1 font-display text-2xl font-semibold">
+            <p className="mt-0.5 font-display text-base font-semibold leading-tight">
               {progress.sessions.attendancePercent}%
             </p>
-            <p className="text-xs text-muted-foreground">
-              {progress.sessions.attended} of {progress.sessions.liveTotal} live
+            <p className="text-[11px] text-muted-foreground">
+              {progress.sessions.attended}/{progress.sessions.liveTotal} live
             </p>
           </div>
-          <div className="rounded-2xl border border-border bg-card p-4">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          <div className="rounded-xl border border-border bg-card p-3">
+            <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               Tests
             </p>
-            <p className="mt-1 font-display text-2xl font-semibold">
+            <p className="mt-0.5 font-display text-base font-semibold leading-tight">
               {progress.quizzes.attempted}
-              <span className="text-base font-normal text-muted-foreground">
+              <span className="text-xs font-normal text-muted-foreground">
                 {" "}
                 / {progress.quizzes.total}
               </span>
             </p>
-            <p className="text-xs text-muted-foreground">attempted</p>
+            <p className="text-[11px] text-muted-foreground">attempted</p>
           </div>
-          <div className="rounded-2xl border border-border bg-card p-4">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              Average score
+          <div className="rounded-xl border border-border bg-card p-3">
+            <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Avg score
             </p>
-            <p className="mt-1 font-display text-2xl font-semibold">
+            <p className="mt-0.5 font-display text-base font-semibold leading-tight">
               {progress.quizzes.averageScorePercent != null
                 ? `${progress.quizzes.averageScorePercent}%`
                 : "—"}
             </p>
-            <p className="text-xs text-muted-foreground">across tests</p>
+            <p className="text-[11px] text-muted-foreground">across tests</p>
           </div>
         </section>
       )}
 
       <Tabs defaultValue="today">
-        <TabsList className="flex flex-wrap h-auto">
-          <TabsTrigger value="today">
-            <Radio className="size-3.5 mr-1.5" />
-            Today
-          </TabsTrigger>
-          <TabsTrigger value="schedule">
-            <CalendarDays className="size-3.5 mr-1.5" />
-            Schedule
-          </TabsTrigger>
-          <TabsTrigger value="recordings">
-            <Library className="size-3.5 mr-1.5" />
-            Recordings
-          </TabsTrigger>
-          <TabsTrigger value="resources">
-            <FileText className="size-3.5 mr-1.5" />
-            Resources
-          </TabsTrigger>
-          <TabsTrigger value="quizzes">
-            <ClipboardList className="size-3.5 mr-1.5" />
-            Tests
-          </TabsTrigger>
-          <TabsTrigger value="doubts">
-            <MessageCircleQuestion className="size-3.5 mr-1.5" />
-            Doubts
-          </TabsTrigger>
-          <TabsTrigger value="announcements">
-            <Megaphone className="size-3.5 mr-1.5" />
-            Announcements
-          </TabsTrigger>
-        </TabsList>
+        <div className="scrollbar-hide -mx-1 overflow-x-auto">
+          <TabsList className="inline-flex h-9 w-auto items-center justify-start gap-1 px-1">
+            <TabsTrigger value="today" className="h-7 gap-1.5 px-2.5 text-xs">
+              <Radio className="size-3" />
+              Today
+            </TabsTrigger>
+            <TabsTrigger value="schedule" className="h-7 gap-1.5 px-2.5 text-xs">
+              <CalendarDays className="size-3" />
+              Schedule
+            </TabsTrigger>
+            <TabsTrigger value="recordings" className="h-7 gap-1.5 px-2.5 text-xs">
+              <Library className="size-3" />
+              Recordings
+            </TabsTrigger>
+            <TabsTrigger value="resources" className="h-7 gap-1.5 px-2.5 text-xs">
+              <FileText className="size-3" />
+              Resources
+            </TabsTrigger>
+            <TabsTrigger value="quizzes" className="h-7 gap-1.5 px-2.5 text-xs">
+              <ClipboardList className="size-3" />
+              Tests
+            </TabsTrigger>
+            <TabsTrigger value="doubts" className="h-7 gap-1.5 px-2.5 text-xs">
+              <MessageCircleQuestion className="size-3" />
+              Doubts
+            </TabsTrigger>
+            <TabsTrigger value="announcements" className="h-7 gap-1.5 px-2.5 text-xs">
+              <Megaphone className="size-3" />
+              News
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="today" className="space-y-3">
           {liveJoinable.length === 0 && liveUpcoming.length === 0 ? (

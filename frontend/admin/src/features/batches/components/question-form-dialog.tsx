@@ -5,14 +5,6 @@ import { useFieldArray, useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import {
   Form,
   FormControl,
   FormField,
@@ -32,12 +24,16 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { FormSheet } from "@/components/ui/form-sheet";
 import { Plus, Trash2 } from "lucide-react";
 import {
   useCreateQuizQuestion,
   useUpdateQuizQuestion,
 } from "../hooks/use-batches";
 import type { QuizQuestion } from "../types";
+
+const FIELD_CLS = "h-8 text-xs";
+const LABEL_CLS = "text-xs font-medium";
 
 const optionSchema = z.object({
   id: z.string().min(1),
@@ -147,6 +143,7 @@ export function QuestionFormDialog(props: {
   const type = form.watch("type");
 
   useEffect(() => {
+    if (!open) return;
     if (question) {
       const v: Values = {
         order: question.order,
@@ -176,11 +173,7 @@ export function QuestionFormDialog(props: {
     } else {
       form.reset(defaultValues(nextOrder));
     }
-  }, [question, nextOrder, form]);
-
-  useEffect(() => {
-    if (!open) form.reset(defaultValues(nextOrder));
-  }, [open, nextOrder, form]);
+  }, [open, question, nextOrder, form]);
 
   const isPending = create.isPending || update.isPending;
 
@@ -215,213 +208,262 @@ export function QuestionFormDialog(props: {
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl flex flex-col gap-0 p-0">
-        <DialogHeader className="px-6 py-4 border-b shrink-0">
-          <DialogTitle>{isEditing ? "Edit question" : "Add question"}</DialogTitle>
-        </DialogHeader>
-        <ScrollArea className="max-h-[75vh] px-6 py-4">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
-              <div className="grid grid-cols-3 gap-3">
-                <FormField
-                  control={form.control}
-                  name="type"
-                  render={({ field }) => (
-                    <FormItem className="col-span-2">
-                      <FormLabel>Type</FormLabel>
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="MCQ_SINGLE">MCQ — single answer</SelectItem>
-                          <SelectItem value="MCQ_MULTI">MCQ — multiple answers</SelectItem>
-                          <SelectItem value="NUMERICAL">Numerical</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="marks"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Marks</FormLabel>
-                      <FormControl>
-                        <Input type="number" min={0} step="0.5" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <FormField
-                control={form.control}
-                name="prompt"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Question</FormLabel>
+    <FormSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      title={isEditing ? "Edit question" : "Add question"}
+      onSubmit={form.handleSubmit(onSubmit)}
+      submitLabel={isEditing ? "Save" : "Add"}
+      submitting={isPending}
+      size="lg"
+    >
+      <Form {...form}>
+        <div className="space-y-2.5">
+          <div className="grid grid-cols-3 gap-2">
+            <FormField
+              control={form.control}
+              name="type"
+              render={({ field }) => (
+                <FormItem className="col-span-2">
+                  <FormLabel className={LABEL_CLS}>Type</FormLabel>
+                  <Select value={field.value} onValueChange={field.onChange}>
                     <FormControl>
-                      <Textarea {...field} rows={3} placeholder="What is the SI unit of force?" />
+                      <SelectTrigger className={FIELD_CLS}>
+                        <SelectValue />
+                      </SelectTrigger>
                     </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {type !== "NUMERICAL" ? (
-                <FormField
-                  control={form.control}
-                  name="options"
-                  render={() => (
-                    <FormItem>
-                      <FormLabel>Options + correct answer</FormLabel>
-                      <div className="space-y-2">
-                        {type === "MCQ_SINGLE" ? (
-                          <FormField
-                            control={form.control}
-                            name="correctSingle"
-                            render={({ field: correctField }) => (
-                              <RadioGroup
-                                value={correctField.value}
-                                onValueChange={correctField.onChange}
-                                className="space-y-2"
-                              >
-                                {fields.map((opt, idx) => (
-                                  <div key={opt.id} className="flex items-center gap-2">
-                                    <RadioGroupItem value={opt.id} id={`opt-${opt.id}`} />
-                                    <Input
-                                      placeholder={`Option ${idx + 1}`}
-                                      {...form.register(`options.${idx}.text`)}
-                                    />
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => fields.length > 2 && remove(idx)}
-                                      disabled={fields.length <= 2}
-                                    >
-                                      <Trash2 className="size-3.5" />
-                                    </Button>
-                                  </div>
-                                ))}
-                              </RadioGroup>
-                            )}
-                          />
-                        ) : (
-                          <FormField
-                            control={form.control}
-                            name="correctMulti"
-                            render={({ field: correctField }) => (
-                              <div className="space-y-2">
-                                {fields.map((opt, idx) => (
-                                  <div key={opt.id} className="flex items-center gap-2">
-                                    <Checkbox
-                                      checked={correctField.value?.includes(opt.id) ?? false}
-                                      onCheckedChange={(checked) => {
-                                        const current = correctField.value ?? [];
-                                        correctField.onChange(
-                                          checked
-                                            ? [...current, opt.id]
-                                            : current.filter((v) => v !== opt.id)
-                                        );
-                                      }}
-                                    />
-                                    <Input
-                                      placeholder={`Option ${idx + 1}`}
-                                      {...form.register(`options.${idx}.text`)}
-                                    />
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => fields.length > 2 && remove(idx)}
-                                      disabled={fields.length <= 2}
-                                    >
-                                      <Trash2 className="size-3.5" />
-                                    </Button>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          />
-                        )}
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => append({ id: makeId(), text: "" })}
-                        >
-                          <Plus className="size-3.5 mr-1.5" />
-                          Add option
-                        </Button>
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              ) : (
-                <div className="grid grid-cols-2 gap-3">
-                  <FormField
-                    control={form.control}
-                    name="numericalValue"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Correct value</FormLabel>
-                        <FormControl>
-                          <Input type="number" step="any" {...field} value={field.value ?? ""} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="numericalTolerance"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Tolerance (±)</FormLabel>
-                        <FormControl>
-                          <Input type="number" min={0} step="any" {...field} value={field.value ?? 0} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                    <SelectContent>
+                      <SelectItem value="MCQ_SINGLE">MCQ — single</SelectItem>
+                      <SelectItem value="MCQ_MULTI">MCQ — multiple</SelectItem>
+                      <SelectItem value="NUMERICAL">Numerical</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
               )}
+            />
+            <FormField
+              control={form.control}
+              name="marks"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className={LABEL_CLS}>Marks</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.5"
+                      {...field}
+                      className={FIELD_CLS}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
 
+          <FormField
+            control={form.control}
+            name="prompt"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className={LABEL_CLS}>Question</FormLabel>
+                <FormControl>
+                  <Textarea
+                    {...field}
+                    rows={3}
+                    className="min-h-[72px] text-xs"
+                    placeholder="What is the SI unit of force?"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {type !== "NUMERICAL" ? (
+            <FormField
+              control={form.control}
+              name="options"
+              render={() => (
+                <FormItem>
+                  <FormLabel className={LABEL_CLS}>
+                    Options{" "}
+                    <span className="font-normal text-muted-foreground">
+                      (mark correct
+                      {type === "MCQ_MULTI" ? "s" : ""})
+                    </span>
+                  </FormLabel>
+                  <div className="space-y-1.5">
+                    {type === "MCQ_SINGLE" ? (
+                      <FormField
+                        control={form.control}
+                        name="correctSingle"
+                        render={({ field: correctField }) => (
+                          <RadioGroup
+                            value={correctField.value}
+                            onValueChange={correctField.onChange}
+                            className="space-y-1.5"
+                          >
+                            {fields.map((opt, idx) => (
+                              <div
+                                key={opt.id}
+                                className="flex items-center gap-2"
+                              >
+                                <RadioGroupItem
+                                  value={opt.id}
+                                  id={`opt-${opt.id}`}
+                                />
+                                <Input
+                                  className={FIELD_CLS}
+                                  placeholder={`Option ${idx + 1}`}
+                                  {...form.register(`options.${idx}.text`)}
+                                />
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 text-destructive"
+                                  onClick={() => fields.length > 2 && remove(idx)}
+                                  disabled={fields.length <= 2}
+                                >
+                                  <Trash2 className="size-3.5" />
+                                </Button>
+                              </div>
+                            ))}
+                          </RadioGroup>
+                        )}
+                      />
+                    ) : (
+                      <FormField
+                        control={form.control}
+                        name="correctMulti"
+                        render={({ field: correctField }) => (
+                          <div className="space-y-1.5">
+                            {fields.map((opt, idx) => (
+                              <div
+                                key={opt.id}
+                                className="flex items-center gap-2"
+                              >
+                                <Checkbox
+                                  checked={
+                                    correctField.value?.includes(opt.id) ?? false
+                                  }
+                                  onCheckedChange={(checked) => {
+                                    const current = correctField.value ?? [];
+                                    correctField.onChange(
+                                      checked
+                                        ? [...current, opt.id]
+                                        : current.filter((v) => v !== opt.id),
+                                    );
+                                  }}
+                                />
+                                <Input
+                                  className={FIELD_CLS}
+                                  placeholder={`Option ${idx + 1}`}
+                                  {...form.register(`options.${idx}.text`)}
+                                />
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 text-destructive"
+                                  onClick={() => fields.length > 2 && remove(idx)}
+                                  disabled={fields.length <= 2}
+                                >
+                                  <Trash2 className="size-3.5" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      />
+                    )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 w-full text-xs"
+                      onClick={() => append({ id: makeId(), text: "" })}
+                    >
+                      <Plus className="size-3.5 mr-1.5" />
+                      Add option
+                    </Button>
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          ) : (
+            <div className="grid grid-cols-2 gap-2">
               <FormField
                 control={form.control}
-                name="explanation"
+                name="numericalValue"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Explanation (shown after submit)</FormLabel>
+                    <FormLabel className={LABEL_CLS}>Correct value</FormLabel>
                     <FormControl>
-                      <Textarea {...field} rows={2} />
+                      <Input
+                        type="number"
+                        step="any"
+                        {...field}
+                        value={field.value ?? ""}
+                        className={FIELD_CLS}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+              <FormField
+                control={form.control}
+                name="numericalTolerance"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className={LABEL_CLS}>Tolerance (±)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min={0}
+                        step="any"
+                        {...field}
+                        value={field.value ?? 0}
+                        className={FIELD_CLS}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          )}
 
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={isPending}>
-                  {isEditing ? "Save" : "Add question"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </ScrollArea>
-      </DialogContent>
-    </Dialog>
+          <FormField
+            control={form.control}
+            name="explanation"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className={LABEL_CLS}>
+                  Explanation{" "}
+                  <span className="font-normal text-muted-foreground">
+                    (shown after submit)
+                  </span>
+                </FormLabel>
+                <FormControl>
+                  <Textarea
+                    {...field}
+                    rows={2}
+                    className="min-h-[56px] text-xs"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+      </Form>
+    </FormSheet>
   );
 }
+

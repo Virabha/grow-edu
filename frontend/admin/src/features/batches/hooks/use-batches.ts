@@ -1,8 +1,20 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { queryKeys } from "@/lib/query-keys";
 import { batchesApi } from "../api/batches.api";
+
+function showError(verb: string) {
+  return (err: unknown) => {
+    const msg = err instanceof Error ? err.message : `Failed to ${verb}`;
+    toast.error(msg);
+  };
+}
+
+function showSuccess(verb: string) {
+  return () => toast.success(verb);
+}
 import type {
   BatchFilters,
   BatchResourceType,
@@ -48,7 +60,11 @@ export function useCreateBatch() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (dto: CreateBatchDto) => batchesApi.create(dto),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.batches.all() }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.batches.all() });
+      toast.success("Batch created");
+    },
+    onError: showError("create batch"),
   });
 }
 
@@ -57,7 +73,11 @@ export function useUpdateBatch() {
   return useMutation({
     mutationFn: ({ batchId, dto }: { batchId: string; dto: UpdateBatchDto }) =>
       batchesApi.update(batchId, dto),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.batches.all() }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.batches.all() });
+      toast.success("Batch updated");
+    },
+    onError: showError("update batch"),
   });
 }
 
@@ -65,7 +85,11 @@ export function useDeleteBatch() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (batchId: string) => batchesApi.remove(batchId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.batches.all() }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.batches.all() });
+      toast.success("Batch deleted");
+    },
+    onError: showError("delete batch"),
   });
 }
 

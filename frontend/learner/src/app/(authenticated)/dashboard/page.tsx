@@ -98,33 +98,47 @@ export default function LearnerDashboardPage() {
           <GraduationCap className="size-4" />
           My batches
         </h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {data.batches.map((b) => (
             <Link
               key={b.batchId}
               href={`/batches/${b.slug}`}
-              className="group overflow-hidden rounded-2xl border border-border bg-card transition-shadow hover:shadow-md"
+              className="group flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
             >
-              <div className="aspect-video w-full bg-muted">
+              <div className="relative aspect-[4/3] overflow-hidden bg-muted">
                 {b.thumbnail ? (
                   <SecureImage
                     src={b.thumbnail}
                     alt={b.title}
-                    className="h-full w-full object-cover"
+                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center">
-                    <GraduationCap className="size-10 text-muted-foreground" />
+                  <div className="flex h-full items-center justify-center">
+                    <GraduationCap className="size-8 text-muted-foreground/30" />
                   </div>
                 )}
+                <span
+                  className={
+                    "absolute right-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide " +
+                    (b.status === "ONGOING"
+                      ? "bg-emerald-500/95 text-white"
+                      : b.status === "UPCOMING"
+                        ? "bg-amber-500/95 text-white"
+                        : "bg-zinc-500/95 text-white")
+                  }
+                >
+                  {b.status}
+                </span>
               </div>
-              <div className="p-3">
-                <p className="font-display text-sm font-medium line-clamp-1">
+              <div className="flex flex-1 flex-col gap-1 p-3">
+                {b.targetExam && (
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">
+                    {b.targetExam}
+                  </p>
+                )}
+                <p className="font-display line-clamp-2 text-sm font-medium leading-snug text-foreground group-hover:text-primary">
                   {b.title}
                 </p>
-                <Badge variant="outline" className="mt-1">
-                  {b.status}
-                </Badge>
               </div>
             </Link>
           ))}

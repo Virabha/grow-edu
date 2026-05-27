@@ -5,13 +5,6 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   Form,
   FormControl,
   FormField,
@@ -22,16 +15,19 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/ui/button";
+import { FormSheet } from "@/components/ui/form-sheet";
 import {
   useCreateBatchAnnouncement,
   useUpdateBatchAnnouncement,
 } from "../hooks/use-batches";
 import type { BatchAnnouncement } from "../types";
 
+const FIELD_CLS = "h-8 text-xs";
+const LABEL_CLS = "text-xs font-medium";
+
 const schema = z.object({
-  title: z.string().min(1),
-  body: z.string().min(1),
+  title: z.string().min(1, "Title is required"),
+  body: z.string().min(1, "Message is required"),
   pinned: z.boolean().default(false),
 });
 
@@ -55,6 +51,7 @@ export function AnnouncementFormDialog(props: {
   });
 
   useEffect(() => {
+    if (!open) return;
     if (announcement) {
       form.reset({
         title: announcement.title,
@@ -64,11 +61,7 @@ export function AnnouncementFormDialog(props: {
     } else {
       form.reset(defaults);
     }
-  }, [announcement, form]);
-
-  useEffect(() => {
-    if (!open) form.reset(defaults);
-  }, [open, form]);
+  }, [open, announcement, form]);
 
   const isPending = create.isPending || update.isPending;
 
@@ -76,7 +69,7 @@ export function AnnouncementFormDialog(props: {
     if (isEditing && announcement) {
       update.mutate(
         { announcementId: announcement.announcementId, dto: values },
-        { onSuccess: () => onOpenChange(false) }
+        { onSuccess: () => onOpenChange(false) },
       );
     } else {
       create.mutate(values, { onSuccess: () => onOpenChange(false) });
@@ -84,71 +77,70 @@ export function AnnouncementFormDialog(props: {
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>
-            {isEditing ? "Edit announcement" : "Post announcement"}
-          </DialogTitle>
-        </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Title</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="Live class postponed" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="body"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Message</FormLabel>
-                  <FormControl>
-                    <Textarea {...field} rows={5} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="pinned"
-              render={({ field }) => (
-                <FormItem className="flex items-center gap-3">
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                  <FormLabel className="!mt-0">Pin to top</FormLabel>
-                </FormItem>
-              )}
-            />
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isPending}>
-                {isEditing ? "Save" : "Post"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+    <FormSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      title={isEditing ? "Edit announcement" : "Post announcement"}
+      description="Notify enrolled students and trigger an email."
+      onSubmit={form.handleSubmit(onSubmit)}
+      submitLabel={isEditing ? "Save" : "Post"}
+      submitting={isPending}
+      size="sm"
+    >
+      <Form {...form}>
+        <div className="space-y-2.5">
+          <FormField
+            control={form.control}
+            name="title"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className={LABEL_CLS}>Title</FormLabel>
+                <FormControl>
+                  <Input
+                    {...field}
+                    className={FIELD_CLS}
+                    placeholder="Live class postponed"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="body"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className={LABEL_CLS}>Message</FormLabel>
+                <FormControl>
+                  <Textarea
+                    {...field}
+                    rows={6}
+                    className="min-h-[120px] text-xs"
+                    placeholder="What's the update?"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="pinned"
+            render={({ field }) => (
+              <FormItem className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-3 pt-2">
+                <FormLabel className={LABEL_CLS}>Pin to top</FormLabel>
+                <FormControl>
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        </div>
+      </Form>
+    </FormSheet>
   );
 }

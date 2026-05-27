@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useState } from "react";
 import { PageLayout } from "@/components/layout/page-layout";
+import { PageFilters } from "@/components/layout/page-filters";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -22,7 +23,6 @@ import {
 import { DataTableSkeleton } from "@/components/ui/data-table-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -38,7 +38,10 @@ import {
   Trash2,
   ExternalLink,
 } from "lucide-react";
-import { useBatches, useDeleteBatch } from "@/features/batches/hooks/use-batches";
+import {
+  useBatches,
+  useDeleteBatch,
+} from "@/features/batches/hooks/use-batches";
 import { BatchFormDialog } from "@/features/batches/components/batch-form-dialog";
 import type { Batch, BatchStatus } from "@/features/batches/types";
 
@@ -106,15 +109,17 @@ export default function AdminBatchesPage() {
         </Button>
       }
     >
-      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
-        <Input
-          placeholder="Search title, exam…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="sm:max-w-xs"
-        />
-        <Select value={status} onValueChange={(v) => setStatus(v as BatchStatus | "ALL")}>
-          <SelectTrigger className="sm:max-w-[180px]">
+      <PageFilters
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search title, exam…"
+        className="mb-4"
+      >
+        <Select
+          value={status}
+          onValueChange={(v) => setStatus(v as BatchStatus | "ALL")}
+        >
+          <SelectTrigger className="h-8 text-xs sm:w-[160px]">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
@@ -126,7 +131,7 @@ export default function AdminBatchesPage() {
             <SelectItem value="ARCHIVED">Archived</SelectItem>
           </SelectContent>
         </Select>
-      </div>
+      </PageFilters>
 
       {isLoading ? (
         <DataTableSkeleton columnCount={6} rowCount={5} />
@@ -193,7 +198,9 @@ export default function AdminBatchesPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <Badge className={STATUS_TONE[b.status]}>{b.status}</Badge>
+                      <Badge className={STATUS_TONE[b.status]}>
+                        {b.status}
+                      </Badge>
                     </TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>

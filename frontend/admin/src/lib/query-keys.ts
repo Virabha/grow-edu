@@ -169,5 +169,23 @@ export const queryKeys = {
         announcements: (batchId?: string) =>
             [...queryKeys.batches.all(), "announcements", batchId] as const,
         mine: () => [...queryKeys.batches.all(), "mine"] as const,
+        resources: (batchId?: string, params?: { type?: string; subjectId?: string }) =>
+            [...queryKeys.batches.all(), "resources", batchId, params] as const,
+        doubts: (batchId?: string, params?: { mine?: boolean; status?: string }) =>
+            [...queryKeys.batches.all(), "doubts", batchId, params] as const,
+        doubt: (batchId?: string, doubtId?: string) =>
+            [...queryKeys.batches.all(), "doubt", batchId, doubtId] as const,
+        attendance: (batchId?: string, sessionId?: string) =>
+            [...queryKeys.batches.all(), "attendance", batchId, sessionId] as const,
+        quizzes: (batchId?: string) =>
+            [...queryKeys.batches.all(), "quizzes", batchId] as const,
+        quiz: (batchId?: string, quizId?: string) =>
+            [...queryKeys.batches.all(), "quiz", batchId, quizId] as const,
+        attempts: (batchId?: string, quizId?: string) =>
+            [...queryKeys.batches.all(), "attempts", batchId, quizId] as const,
+        attempt: (batchId?: string, quizId?: string, attemptId?: string) =>
+            [...queryKeys.batches.all(), "attempt", batchId, quizId, attemptId] as const,
+        leaderboard: (batchId?: string, quizId?: string) =>
+            [...queryKeys.batches.all(), "leaderboard", batchId, quizId] as const,
     },
 } as const;

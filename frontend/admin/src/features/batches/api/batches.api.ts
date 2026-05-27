@@ -1,23 +1,43 @@
 import { apiClient } from "@/lib/api/client";
 import type {
+  AttendanceRow,
   Batch,
   BatchAnnouncement,
   BatchDetail,
+  BatchDoubt,
+  BatchDoubtDetail,
+  BatchDoubtReply,
   BatchEnrollment,
   BatchFilters,
+  BatchQuiz,
+  BatchQuizDetail,
+  BatchResource,
+  BatchResourceType,
   BatchesResponse,
   BatchSession,
   BatchSubject,
   CreateBatchAnnouncementDto,
+  CreateBatchDoubtDto,
   CreateBatchDto,
   CreateBatchEnrollmentsDto,
+  CreateBatchQuizDto,
+  CreateBatchResourceDto,
   CreateBatchSessionDto,
   CreateBatchSubjectDto,
+  CreateDoubtReplyDto,
+  CreateQuizQuestionDto,
   EnrollmentsResponse,
+  LeaderboardEntry,
+  QuizAttempt,
+  QuizQuestion,
   UpdateBatchAnnouncementDto,
+  UpdateBatchDoubtDto,
   UpdateBatchDto,
+  UpdateBatchQuizDto,
+  UpdateBatchResourceDto,
   UpdateBatchSessionDto,
   UpdateBatchSubjectDto,
+  UpdateQuizQuestionDto,
 } from "../types";
 
 export const batchesApi = {
@@ -109,5 +129,146 @@ export const batchesApi = {
   deleteAnnouncement: (batchId: string, announcementId: string) =>
     apiClient
       .delete<{ success: boolean }>(`/batches/${batchId}/announcements/${announcementId}`)
+      .then((r) => r.data),
+
+  // Resources
+  listResources: (batchId: string, params?: { type?: BatchResourceType; subjectId?: string }) =>
+    apiClient
+      .get<BatchResource[]>(`/batches/${batchId}/resources`, { params })
+      .then((r) => r.data),
+  createResource: (batchId: string, dto: CreateBatchResourceDto) =>
+    apiClient
+      .post<BatchResource>(`/batches/${batchId}/resources`, dto)
+      .then((r) => r.data),
+  updateResource: (batchId: string, resourceId: string, dto: UpdateBatchResourceDto) =>
+    apiClient
+      .patch<BatchResource>(`/batches/${batchId}/resources/${resourceId}`, dto)
+      .then((r) => r.data),
+  deleteResource: (batchId: string, resourceId: string) =>
+    apiClient
+      .delete<{ success: boolean }>(`/batches/${batchId}/resources/${resourceId}`)
+      .then((r) => r.data),
+
+  // Doubts
+  listDoubts: (batchId: string, params?: { mine?: boolean; status?: string }) =>
+    apiClient
+      .get<BatchDoubt[]>(`/batches/${batchId}/doubts`, { params })
+      .then((r) => r.data),
+  getDoubt: (batchId: string, doubtId: string) =>
+    apiClient
+      .get<BatchDoubtDetail>(`/batches/${batchId}/doubts/${doubtId}`)
+      .then((r) => r.data),
+  createDoubt: (batchId: string, dto: CreateBatchDoubtDto) =>
+    apiClient
+      .post<BatchDoubt>(`/batches/${batchId}/doubts`, dto)
+      .then((r) => r.data),
+  updateDoubt: (batchId: string, doubtId: string, dto: UpdateBatchDoubtDto) =>
+    apiClient
+      .patch<BatchDoubt>(`/batches/${batchId}/doubts/${doubtId}`, dto)
+      .then((r) => r.data),
+  deleteDoubt: (batchId: string, doubtId: string) =>
+    apiClient
+      .delete<{ success: boolean }>(`/batches/${batchId}/doubts/${doubtId}`)
+      .then((r) => r.data),
+  replyToDoubt: (batchId: string, doubtId: string, dto: CreateDoubtReplyDto) =>
+    apiClient
+      .post<BatchDoubtReply>(`/batches/${batchId}/doubts/${doubtId}/replies`, dto)
+      .then((r) => r.data),
+  deleteDoubtReply: (batchId: string, doubtId: string, replyId: string) =>
+    apiClient
+      .delete<{ success: boolean }>(
+        `/batches/${batchId}/doubts/${doubtId}/replies/${replyId}`
+      )
+      .then((r) => r.data),
+
+  // Attendance
+  listAttendance: (batchId: string, sessionId: string) =>
+    apiClient
+      .get<AttendanceRow[]>(`/batches/${batchId}/sessions/${sessionId}/attendance`)
+      .then((r) => r.data),
+
+  // Quizzes
+  listQuizzes: (batchId: string) =>
+    apiClient.get<BatchQuiz[]>(`/batches/${batchId}/quizzes`).then((r) => r.data),
+  getQuiz: (batchId: string, quizId: string) =>
+    apiClient
+      .get<BatchQuizDetail>(`/batches/${batchId}/quizzes/${quizId}`)
+      .then((r) => r.data),
+  createQuiz: (batchId: string, dto: CreateBatchQuizDto) =>
+    apiClient
+      .post<BatchQuiz>(`/batches/${batchId}/quizzes`, dto)
+      .then((r) => r.data),
+  updateQuiz: (batchId: string, quizId: string, dto: UpdateBatchQuizDto) =>
+    apiClient
+      .patch<BatchQuiz>(`/batches/${batchId}/quizzes/${quizId}`, dto)
+      .then((r) => r.data),
+  deleteQuiz: (batchId: string, quizId: string) =>
+    apiClient
+      .delete<{ success: boolean }>(`/batches/${batchId}/quizzes/${quizId}`)
+      .then((r) => r.data),
+  createQuizQuestion: (batchId: string, quizId: string, dto: CreateQuizQuestionDto) =>
+    apiClient
+      .post<QuizQuestion>(`/batches/${batchId}/quizzes/${quizId}/questions`, dto)
+      .then((r) => r.data),
+  updateQuizQuestion: (
+    batchId: string,
+    quizId: string,
+    questionId: string,
+    dto: UpdateQuizQuestionDto
+  ) =>
+    apiClient
+      .patch<QuizQuestion>(
+        `/batches/${batchId}/quizzes/${quizId}/questions/${questionId}`,
+        dto
+      )
+      .then((r) => r.data),
+  deleteQuizQuestion: (batchId: string, quizId: string, questionId: string) =>
+    apiClient
+      .delete<{ success: boolean }>(
+        `/batches/${batchId}/quizzes/${quizId}/questions/${questionId}`
+      )
+      .then((r) => r.data),
+  startAttempt: (batchId: string, quizId: string) =>
+    apiClient
+      .post<QuizAttempt>(`/batches/${batchId}/quizzes/${quizId}/attempts`, {})
+      .then((r) => r.data),
+  submitAttempt: (
+    batchId: string,
+    quizId: string,
+    attemptId: string,
+    answers: Record<string, unknown>
+  ) =>
+    apiClient
+      .post<QuizAttempt>(
+        `/batches/${batchId}/quizzes/${quizId}/attempts/${attemptId}/submit`,
+        { answers }
+      )
+      .then((r) => r.data),
+  getAttempt: (batchId: string, quizId: string, attemptId: string) =>
+    apiClient
+      .get<QuizAttempt>(`/batches/${batchId}/quizzes/${quizId}/attempts/${attemptId}`)
+      .then((r) => r.data),
+  myAttempts: (batchId: string, quizId: string) =>
+    apiClient
+      .get<QuizAttempt[]>(`/batches/${batchId}/quizzes/${quizId}/attempts`)
+      .then((r) => r.data),
+  leaderboard: (batchId: string, quizId: string) =>
+    apiClient
+      .get<LeaderboardEntry[]>(`/batches/${batchId}/quizzes/${quizId}/leaderboard`)
+      .then((r) => r.data),
+
+  analytics: (batchId: string) =>
+    apiClient
+      .get<{
+        enrollmentCount: number;
+        liveSessions: number;
+        recordings: number;
+        resources: number;
+        doubts: number;
+        openDoubts: number;
+        quizzes: number;
+        avgAttendancePercent: number;
+        avgQuizScorePercent: number | null;
+      }>(`/batches/${batchId}/analytics`)
       .then((r) => r.data),
 };

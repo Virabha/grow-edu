@@ -1,17 +1,17 @@
 "use client";
 import Link from "next/link";
 import { PageLayout } from "@/components/layout/page-layout";
-import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useEffect, useState, useCallback } from "react";
 import { toast } from "sonner";
-import { CreditCard, ChevronRight } from "lucide-react";
+import { ChevronRight, CreditCard, ShieldAlert, UserPlus } from "lucide-react";
 import {
   useSiteSettingsAdmin,
   useUpsertSiteSetting,
 } from "@/features/cms/hooks/use-cms";
 import type { SiteSetting } from "@/features/cms/types";
+import type { ReactNode } from "react";
 
 function getSettingValue(
   settings: SiteSetting[],
@@ -23,6 +23,35 @@ function getSettingValue(
   if (!found) return fallback;
   const val = found.value as Record<string, unknown>;
   return typeof val[field] === "boolean" ? (val[field] as boolean) : fallback;
+}
+
+function SettingRow({
+  icon,
+  title,
+  description,
+  control,
+}: {
+  icon: ReactNode;
+  title: string;
+  description: string;
+  control: ReactNode;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4 rounded-2xl border border-border bg-card px-4 py-3.5">
+      <div className="flex min-w-0 items-center gap-3">
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-background">
+          {icon}
+        </div>
+        <div className="min-w-0">
+          <p className="font-display text-sm font-medium text-foreground">
+            {title}
+          </p>
+          <p className="truncate text-xs text-muted-foreground">{description}</p>
+        </div>
+      </div>
+      <div className="shrink-0">{control}</div>
+    </div>
+  );
 }
 
 export default function AdminSettingsPage() {
@@ -65,12 +94,14 @@ export default function AdminSettingsPage() {
   if (isLoading) {
     return (
       <PageLayout
-        header="Platform Settings"
-        description="Configure platform-wide settings and integrations."
+        subtitle="Console"
+        header="Platform settings"
+        description="Toggle platform-wide behaviours."
       >
         <div className="space-y-2">
-          <Skeleton className="h-40 w-full" />
-          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-16 w-full rounded-2xl" />
+          <Skeleton className="h-16 w-full rounded-2xl" />
+          <Skeleton className="h-16 w-full rounded-2xl" />
         </div>
       </PageLayout>
     );
@@ -82,41 +113,23 @@ export default function AdminSettingsPage() {
       header="Platform settings"
       description="Toggle platform-wide behaviours."
     >
-      <div className="space-y-4">
-        <Link href="/admin/settings/payments">
-          <section className="group flex cursor-pointer items-center justify-between rounded-2xl border border-border bg-card p-5 transition-colors hover:bg-muted/40 sm:p-6">
-            <div className="flex items-center gap-4">
-              <div className="flex size-10 items-center justify-center rounded-xl border border-border bg-background">
-                <CreditCard className="size-5 text-muted-foreground" />
-              </div>
-              <div>
-                <p className="font-display text-base font-medium text-foreground">
-                  Payment settings
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  QR code, UPI ID, and bank transfer details for checkout.
-                </p>
-              </div>
-            </div>
-            <ChevronRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-          </section>
+      <div className="space-y-2">
+        <Link href="/admin/settings/payments" className="block">
+          <SettingRow
+            icon={<CreditCard className="size-4 text-muted-foreground" />}
+            title="Payment settings"
+            description="QR code, UPI ID, and bank transfer details for checkout."
+            control={
+              <ChevronRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+            }
+          />
         </Link>
-        <section className="rounded-2xl border border-border bg-card p-5 sm:p-6">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-            General
-          </p>
-          <div className="mt-4 flex items-start justify-between gap-3">
-            <div className="space-y-1">
-              <Label
-                htmlFor="registrations"
-                className="font-display text-base font-medium text-foreground"
-              >
-                Allow new registrations
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                When off, the signup page is disabled for new users.
-              </p>
-            </div>
+
+        <SettingRow
+          icon={<UserPlus className="size-4 text-muted-foreground" />}
+          title="Allow new registrations"
+          description="When off, the signup page is disabled for new users."
+          control={
             <Switch
               id="registrations"
               checked={allowRegistrations}
@@ -126,26 +139,14 @@ export default function AdminSettingsPage() {
                 handleToggle("allowRegistrations", v);
               }}
             />
-          </div>
-        </section>
+          }
+        />
 
-        <section className="rounded-2xl border border-border bg-card p-5 sm:p-6">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-            Availability
-          </p>
-          <div className="mt-4 flex items-start justify-between gap-3">
-            <div className="space-y-1">
-              <Label
-                htmlFor="maintenance"
-                className="font-display text-base font-medium text-foreground"
-              >
-                Maintenance mode
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                Locks the platform for non-admin users. Use for migrations or
-                planned downtime.
-              </p>
-            </div>
+        <SettingRow
+          icon={<ShieldAlert className="size-4 text-muted-foreground" />}
+          title="Maintenance mode"
+          description="Locks the platform for non-admin users."
+          control={
             <Switch
               id="maintenance"
               checked={maintenanceMode}
@@ -155,8 +156,8 @@ export default function AdminSettingsPage() {
                 handleToggle("maintenanceMode", v);
               }}
             />
-          </div>
-        </section>
+          }
+        />
       </div>
     </PageLayout>
   );

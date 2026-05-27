@@ -56,9 +56,21 @@ export interface QRPaymentSettings {
   instructions: string | null;
 }
 
+type BatchEnrollHandler = (
+  batchId: string,
+  userId: string,
+  paymentId: string
+) => Promise<void> | void;
+
 @Injectable()
 export class PaymentService {
   private razorpay: InstanceType<typeof Razorpay> | null = null;
+  private batchEnrollHandler: BatchEnrollHandler | null = null;
+
+  /** Registered at module init by BatchesService to avoid circular deps. */
+  registerBatchEnrollHandler(handler: BatchEnrollHandler): void {
+    this.batchEnrollHandler = handler;
+  }
 
   constructor(
     private configService: AppConfigService,
@@ -758,11 +770,23 @@ export class PaymentService {
 
   async grantAccessForPayment(
     paymentId: string,
-    itemType: 'COURSE' | 'SECTION',
+    itemType: 'COURSE' | 'SECTION' | 'BATCH',
     userId: string,
     courseId?: string,
     sectionId?: string,
   ) {
+    if (itemType === 'BATCH') {
+      // Resolve batchId from payment metadata and enroll
+      const payment = await this.db.query.payments.findFirst({
+        where: eq(payments.paymentId, paymentId),
+      });
+      const meta = (payment?.metadata ?? {}) as Record<string, string>;
+      const batchId = meta.batchId;
+      if (batchId && this.batchEnrollHandler) {
+        await this.batchEnrollHandler(batchId, userId, paymentId);
+      }
+      return;
+    }
     if (itemType === 'COURSE' && courseId) {
       const [existingActive] = await this.db
         .select({ id: enrollments.enrollmentId })

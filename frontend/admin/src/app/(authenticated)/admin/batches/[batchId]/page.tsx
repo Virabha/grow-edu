@@ -28,9 +28,14 @@ import { Input } from "@/components/ui/input";
 import { SecureImage } from "@/components/ui/secure-image";
 import {
   ArrowLeft,
+  BarChart3,
   CalendarDays,
+  ClipboardList,
+  FileQuestion,
+  FileText,
   Layers,
   Megaphone,
+  MessageCircleQuestion,
   MoreHorizontal,
   Pencil,
   Pin,
@@ -45,11 +50,18 @@ import {
 } from "lucide-react";
 import {
   useBatch,
+  useBatchAnalytics,
   useBatchAnnouncements,
+  useBatchDoubts,
   useBatchEnrollments,
+  useBatchQuizzes,
+  useBatchResources,
   useBatchSessions,
   useBatchSubjects,
   useDeleteBatchAnnouncement,
+  useDeleteBatchDoubt,
+  useDeleteBatchQuiz,
+  useDeleteBatchResource,
   useDeleteBatchSession,
   useDeleteBatchSubject,
   useRemoveBatchEnrollment,
@@ -58,10 +70,16 @@ import { BatchFormDialog } from "@/features/batches/components/batch-form-dialog
 import { SubjectFormDialog } from "@/features/batches/components/subject-form-dialog";
 import { SessionFormDialog } from "@/features/batches/components/session-form-dialog";
 import { EnrollStudentsDialog } from "@/features/batches/components/enroll-students-dialog";
+import { ResourceFormDialog } from "@/features/batches/components/resource-form-dialog";
+import { QuizFormDialog } from "@/features/batches/components/quiz-form-dialog";
 import { AnnouncementFormDialog } from "@/features/batches/components/announcement-form-dialog";
 import type {
   BatchAnnouncement,
+  BatchDoubt,
   BatchEnrollment,
+  BatchQuiz,
+  BatchResource,
+  BatchResourceType,
   BatchSession,
   BatchSubject,
 } from "@/features/batches/types";
@@ -105,11 +123,18 @@ export default function AdminBatchDetailPage(props: {
     limit: 50,
   });
   const { data: announcements = [] } = useBatchAnnouncements(batchId);
+  const { data: resources = [] } = useBatchResources(batchId);
+  const { data: doubts = [] } = useBatchDoubts(batchId);
+  const { data: quizzes = [] } = useBatchQuizzes(batchId);
+  const { data: analytics } = useBatchAnalytics(batchId);
 
   const deleteSubject = useDeleteBatchSubject(batchId);
   const deleteSession = useDeleteBatchSession(batchId);
   const removeEnrollment = useRemoveBatchEnrollment(batchId);
   const deleteAnnouncement = useDeleteBatchAnnouncement(batchId);
+  const deleteResource = useDeleteBatchResource(batchId);
+  const deleteDoubt = useDeleteBatchDoubt(batchId);
+  const deleteQuiz = useDeleteBatchQuiz(batchId);
 
   const [batchEditOpen, setBatchEditOpen] = useState(false);
   const [subjectFormOpen, setSubjectFormOpen] = useState(false);
@@ -132,6 +157,16 @@ export default function AdminBatchDetailPage(props: {
     useState<BatchEnrollment | null>(null);
   const [confirmAnnouncementDelete, setConfirmAnnouncementDelete] =
     useState<BatchAnnouncement | null>(null);
+  const [resourceFormOpen, setResourceFormOpen] = useState(false);
+  const [editingResource, setEditingResource] = useState<BatchResource | null>(null);
+  const [resourceDefaultType, setResourceDefaultType] =
+    useState<BatchResourceType>("NOTES");
+  const [confirmResourceDelete, setConfirmResourceDelete] =
+    useState<BatchResource | null>(null);
+  const [quizFormOpen, setQuizFormOpen] = useState(false);
+  const [editingQuiz, setEditingQuiz] = useState<BatchQuiz | null>(null);
+  const [confirmQuizDelete, setConfirmQuizDelete] = useState<BatchQuiz | null>(null);
+  const [confirmDoubtDelete, setConfirmDoubtDelete] = useState<BatchDoubt | null>(null);
 
   const openSubject = useCallback((s: BatchSubject | null) => {
     setEditingSubject(s);
@@ -225,10 +260,26 @@ export default function AdminBatchDetailPage(props: {
       </div>
 
       <Tabs defaultValue="content">
-        <TabsList>
+        <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="content">
             <Layers className="size-3.5 mr-1.5" />
             Content
+          </TabsTrigger>
+          <TabsTrigger value="analytics">
+            <BarChart3 className="size-3.5 mr-1.5" />
+            Analytics
+          </TabsTrigger>
+          <TabsTrigger value="resources">
+            <FileText className="size-3.5 mr-1.5" />
+            Resources
+          </TabsTrigger>
+          <TabsTrigger value="quizzes">
+            <ClipboardList className="size-3.5 mr-1.5" />
+            Quizzes
+          </TabsTrigger>
+          <TabsTrigger value="doubts">
+            <MessageCircleQuestion className="size-3.5 mr-1.5" />
+            Doubts
           </TabsTrigger>
           <TabsTrigger value="enrollments">
             <Users className="size-3.5 mr-1.5" />
@@ -499,6 +550,344 @@ export default function AdminBatchDetailPage(props: {
           )}
         </TabsContent>
 
+        {/* ─── Analytics tab ──────────────────────────────────────────── */}
+        <TabsContent value="analytics" className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-2xl border border-border bg-card p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                Enrolled
+              </p>
+              <p className="mt-1 font-display text-2xl font-semibold">
+                {analytics?.enrollmentCount ?? "—"}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-border bg-card p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                Avg attendance
+              </p>
+              <p className="mt-1 font-display text-2xl font-semibold">
+                {analytics?.avgAttendancePercent ?? "—"}%
+              </p>
+            </div>
+            <div className="rounded-2xl border border-border bg-card p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                Avg quiz score
+              </p>
+              <p className="mt-1 font-display text-2xl font-semibold">
+                {analytics?.avgQuizScorePercent != null
+                  ? `${analytics.avgQuizScorePercent}%`
+                  : "—"}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-border bg-card p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                Open doubts
+              </p>
+              <p className="mt-1 font-display text-2xl font-semibold">
+                {analytics?.openDoubts ?? "—"}
+              </p>
+            </div>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-2xl border border-border bg-card p-4">
+              <p className="text-xs text-muted-foreground">Live sessions</p>
+              <p className="mt-1 font-display text-lg font-semibold">
+                {analytics?.liveSessions ?? 0}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-border bg-card p-4">
+              <p className="text-xs text-muted-foreground">Recordings</p>
+              <p className="mt-1 font-display text-lg font-semibold">
+                {analytics?.recordings ?? 0}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-border bg-card p-4">
+              <p className="text-xs text-muted-foreground">Resources (PDFs)</p>
+              <p className="mt-1 font-display text-lg font-semibold">
+                {analytics?.resources ?? 0}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-border bg-card p-4">
+              <p className="text-xs text-muted-foreground">Quizzes</p>
+              <p className="mt-1 font-display text-lg font-semibold">
+                {analytics?.quizzes ?? 0}
+              </p>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* ─── Resources tab ──────────────────────────────────────────── */}
+        <TabsContent value="resources" className="space-y-3">
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setEditingResource(null);
+                setResourceDefaultType("DPP");
+                setResourceFormOpen(true);
+              }}
+            >
+              <Plus className="size-3.5 mr-1.5" />
+              DPP
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setEditingResource(null);
+                setResourceDefaultType("NOTES");
+                setResourceFormOpen(true);
+              }}
+            >
+              <Plus className="size-3.5 mr-1.5" />
+              Notes
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setEditingResource(null);
+                setResourceDefaultType("REFERENCE");
+                setResourceFormOpen(true);
+              }}
+            >
+              <Plus className="size-3.5 mr-1.5" />
+              Reference
+            </Button>
+          </div>
+          {resources.length === 0 ? (
+            <EmptyState
+              title="No resources yet"
+              description="Upload PDFs for DPP, Notes, and references."
+              icon={<FileText className="h-10 w-10" />}
+            />
+          ) : (
+            (["DPP", "NOTES", "REFERENCE"] as const).map((type) => {
+              const list = resources.filter((r) => r.type === type);
+              if (list.length === 0) return null;
+              return (
+                <section key={type} className="rounded-2xl border border-border bg-card p-5">
+                  <h3 className="font-display text-base font-medium mb-2">
+                    {type === "DPP"
+                      ? "Daily Practice Problems"
+                      : type === "NOTES"
+                        ? "Notes / Study material"
+                        : "Reference"}
+                  </h3>
+                  <ul className="space-y-2">
+                    {list.map((r) => (
+                      <li
+                        key={r.resourceId}
+                        className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-background p-3"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium line-clamp-1">
+                            {r.dayNumber ? `Day ${r.dayNumber} — ` : ""}
+                            {r.title}
+                          </p>
+                          {r.description && (
+                            <p className="text-xs text-muted-foreground line-clamp-1">
+                              {r.description}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Button asChild size="sm" variant="ghost">
+                            <a href={r.fileUrl} target="_blank" rel="noreferrer">
+                              <ExternalLink className="size-3.5" />
+                            </a>
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setEditingResource(r);
+                              setResourceFormOpen(true);
+                            }}
+                          >
+                            <Pencil className="size-3.5" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-destructive"
+                            onClick={() => setConfirmResourceDelete(r)}
+                          >
+                            <Trash2 className="size-3.5" />
+                          </Button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              );
+            })
+          )}
+        </TabsContent>
+
+        {/* ─── Quizzes tab ────────────────────────────────────────────── */}
+        <TabsContent value="quizzes" className="space-y-3">
+          <div className="flex justify-end">
+            <Button
+              size="sm"
+              onClick={() => {
+                setEditingQuiz(null);
+                setQuizFormOpen(true);
+              }}
+            >
+              <Plus className="size-3.5 mr-1.5" />
+              New quiz
+            </Button>
+          </div>
+          {quizzes.length === 0 ? (
+            <EmptyState
+              title="No quizzes yet"
+              description="Create your first quiz or test for students."
+              icon={<ClipboardList className="h-10 w-10" />}
+            />
+          ) : (
+            <div className="overflow-hidden rounded-2xl border border-border bg-card">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="font-display text-xs">Title</TableHead>
+                    <TableHead className="hidden font-display text-xs md:table-cell">
+                      Duration
+                    </TableHead>
+                    <TableHead className="hidden font-display text-xs lg:table-cell">
+                      Attempts
+                    </TableHead>
+                    <TableHead className="font-display text-xs">Status</TableHead>
+                    <TableHead className="text-right font-display text-xs">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {quizzes.map((q) => (
+                    <TableRow key={q.quizId}>
+                      <TableCell>
+                        <Link
+                          href={`/admin/batches/${batchId}/quizzes/${q.quizId}`}
+                          className="font-medium hover:underline"
+                        >
+                          {q.title}
+                        </Link>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell text-muted-foreground">
+                        {q.durationMinutes} min
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell text-muted-foreground">
+                        Max {q.maxAttempts}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={q.publishedAt ? "default" : "outline"}>
+                          {q.publishedAt ? "Published" : "Draft"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem asChild>
+                              <Link href={`/admin/batches/${batchId}/quizzes/${q.quizId}`}>
+                                <FileQuestion className="size-3.5 mr-2" />
+                                Manage questions
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setEditingQuiz(q);
+                                setQuizFormOpen(true);
+                              }}
+                            >
+                              <Pencil className="size-3.5 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={() => setConfirmQuizDelete(q)}
+                            >
+                              <Trash2 className="size-3.5 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </TabsContent>
+
+        {/* ─── Doubts tab ─────────────────────────────────────────────── */}
+        <TabsContent value="doubts" className="space-y-3">
+          {doubts.length === 0 ? (
+            <EmptyState
+              title="No doubts posted yet"
+              description="Student doubts will appear here. Answers from admins/instructors are marked official."
+              icon={<MessageCircleQuestion className="h-10 w-10" />}
+            />
+          ) : (
+            <ul className="space-y-3">
+              {doubts.map((d) => (
+                <li
+                  key={d.doubtId}
+                  className="rounded-2xl border border-border bg-card p-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <Link
+                          href={`/admin/batches/${batchId}/doubts/${d.doubtId}`}
+                          className="font-display text-base font-medium hover:underline"
+                        >
+                          {d.title}
+                        </Link>
+                        <Badge
+                          variant={
+                            d.status === "OPEN"
+                              ? "secondary"
+                              : d.status === "ANSWERED"
+                                ? "default"
+                                : "outline"
+                          }
+                        >
+                          {d.status}
+                        </Badge>
+                      </div>
+                      <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+                        {d.body}
+                      </p>
+                      <p className="mt-2 text-[10px] uppercase tracking-widest text-muted-foreground">
+                        {[d.author.firstName, d.author.lastName].filter(Boolean).join(" ") ||
+                          "Student"}
+                        {" • "}
+                        {formatDateTime(d.createdAt)}
+                        {" • "}
+                        {d.replyCount} repl{d.replyCount === 1 ? "y" : "ies"}
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-destructive"
+                      onClick={() => setConfirmDoubtDelete(d)}
+                    >
+                      <Trash2 className="size-3.5" />
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </TabsContent>
+
         {/* ─── Announcements tab ───────────────────────────────────────── */}
         <TabsContent value="announcements" className="space-y-3">
           <div className="flex justify-end">
@@ -587,6 +976,21 @@ export default function AdminBatchDetailPage(props: {
         onOpenChange={setAnnounceFormOpen}
         announcement={editingAnnouncement}
       />
+      <ResourceFormDialog
+        batchId={batchId}
+        subjects={subjects}
+        open={resourceFormOpen}
+        onOpenChange={setResourceFormOpen}
+        resource={editingResource}
+        defaultType={resourceDefaultType}
+      />
+      <QuizFormDialog
+        batchId={batchId}
+        subjects={subjects}
+        open={quizFormOpen}
+        onOpenChange={setQuizFormOpen}
+        quiz={editingQuiz}
+      />
 
       {/* Confirmations */}
       <ConfirmDialog
@@ -643,6 +1047,51 @@ export default function AdminBatchDetailPage(props: {
           if (confirmAnnouncementDelete) {
             deleteAnnouncement.mutate(confirmAnnouncementDelete.announcementId, {
               onSuccess: () => toast.success("Announcement deleted"),
+            });
+          }
+        }}
+        confirmText="Delete"
+        variant="destructive"
+      />
+      <ConfirmDialog
+        open={!!confirmResourceDelete}
+        onOpenChange={(o) => !o && setConfirmResourceDelete(null)}
+        title="Delete resource"
+        description={`Delete "${confirmResourceDelete?.title}"?`}
+        onConfirm={() => {
+          if (confirmResourceDelete) {
+            deleteResource.mutate(confirmResourceDelete.resourceId, {
+              onSuccess: () => toast.success("Resource deleted"),
+            });
+          }
+        }}
+        confirmText="Delete"
+        variant="destructive"
+      />
+      <ConfirmDialog
+        open={!!confirmQuizDelete}
+        onOpenChange={(o) => !o && setConfirmQuizDelete(null)}
+        title="Delete quiz"
+        description={`Delete "${confirmQuizDelete?.title}"? All attempts will be lost.`}
+        onConfirm={() => {
+          if (confirmQuizDelete) {
+            deleteQuiz.mutate(confirmQuizDelete.quizId, {
+              onSuccess: () => toast.success("Quiz deleted"),
+            });
+          }
+        }}
+        confirmText="Delete"
+        variant="destructive"
+      />
+      <ConfirmDialog
+        open={!!confirmDoubtDelete}
+        onOpenChange={(o) => !o && setConfirmDoubtDelete(null)}
+        title="Delete doubt"
+        description={`Delete "${confirmDoubtDelete?.title}"?`}
+        onConfirm={() => {
+          if (confirmDoubtDelete) {
+            deleteDoubt.mutate(confirmDoubtDelete.doubtId, {
+              onSuccess: () => toast.success("Doubt deleted"),
             });
           }
         }}

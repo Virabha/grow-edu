@@ -4,7 +4,12 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Form,
@@ -26,6 +31,14 @@ import {
 } from "@/components/ui/select";
 import { FileUpload } from "@/components/ui/file-upload";
 import { SecureImage } from "@/components/ui/secure-image";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useCreateBatch, useUpdateBatch } from "../hooks/use-batches";
 import type { Batch, BatchStatus } from "../types";
 
@@ -46,7 +59,9 @@ const schema = z
     startDate: z.string().min(1, "Start date is required"),
     endDate: z.string().min(1, "End date is required"),
     categoryId: z.string().optional(),
-    status: z.enum(["DRAFT", "UPCOMING", "ONGOING", "COMPLETED", "ARCHIVED"]).default("DRAFT"),
+    status: z
+      .enum(["DRAFT", "UPCOMING", "ONGOING", "COMPLETED", "ARCHIVED"])
+      .default("DRAFT"),
   })
   .refine((v) => new Date(v.endDate) > new Date(v.startDate), {
     message: "End date must be after start date",
@@ -73,6 +88,52 @@ const defaults: Values = {
   categoryId: "",
   status: "DRAFT",
 };
+
+function DatePickerField({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const date = value ? new Date(value) : undefined;
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          className={cn(
+            "h-10 w-full justify-start text-left font-normal",
+            !value && "text-muted-foreground",
+          )}
+        >
+          <CalendarIcon className="mr-2 size-4" />
+          {date
+            ? date.toLocaleDateString(undefined, {
+                day: "numeric",
+                month: "short",
+                year: "numeric",
+              })
+            : "Pick a date"}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start">
+        <Calendar
+          selected={date}
+          onSelect={(d) => {
+            if (!d) return;
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, "0");
+            const dd = String(d.getDate()).padStart(2, "0");
+            onChange(`${yyyy}-${mm}-${dd}`);
+          }}
+          defaultMonth={date ?? new Date()}
+        />
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 function slugify(s: string) {
   return s
@@ -169,7 +230,7 @@ export function BatchFormDialog(props: {
     if (isEditing && batch) {
       update.mutate(
         { batchId: batch.batchId, dto: payload },
-        { onSuccess: () => onOpenChange(false) }
+        { onSuccess: () => onOpenChange(false) },
       );
     } else {
       create.mutate(payload, { onSuccess: () => onOpenChange(false) });
@@ -178,13 +239,16 @@ export function BatchFormDialog(props: {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-xl flex flex-col gap-0 p-0">
+      <SheetContent className="sm:max-w-lg flex flex-col gap-0 p-0">
         <SheetHeader className="px-6 py-4 border-b shrink-0">
           <SheetTitle>{isEditing ? "Edit Batch" : "New Batch"}</SheetTitle>
         </SheetHeader>
         <ScrollArea className="flex-1 px-6 py-4">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmitForm)} className="space-y-3">
+            <form
+              onSubmit={form.handleSubmit(handleSubmitForm)}
+              className="space-y-3"
+            >
               <FormField
                 control={form.control}
                 name="title"
@@ -192,7 +256,10 @@ export function BatchFormDialog(props: {
                   <FormItem>
                     <FormLabel>Title</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="NEET 2026 Aakarshan Batch" />
+                      <Input
+                        {...field}
+                        placeholder="NEET 2026 Aakarshan Batch"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -233,7 +300,10 @@ export function BatchFormDialog(props: {
                   <FormItem>
                     <FormLabel>Short description</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="One-line pitch for cards" />
+                      <Input
+                        {...field}
+                        placeholder="One-line pitch for cards"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -248,7 +318,7 @@ export function BatchFormDialog(props: {
                     <FormControl>
                       <Textarea
                         {...field}
-                        rows={4}
+                        rows={3}
                         placeholder="Detailed batch description"
                       />
                     </FormControl>
@@ -264,7 +334,7 @@ export function BatchFormDialog(props: {
                     <FormLabel>Thumbnail</FormLabel>
                     <div className="space-y-2">
                       {(thumbnailPreview || field.value) && (
-                        <div className="relative w-40 aspect-video rounded-lg overflow-hidden border bg-muted">
+                        <div className="relative w-28 aspect-video rounded-lg overflow-hidden border bg-muted">
                           {thumbnailPreview?.startsWith("http") ||
                           thumbnailPreview?.startsWith("blob:") ? (
                             <img
@@ -300,11 +370,12 @@ export function BatchFormDialog(props: {
                   control={form.control}
                   name="startDate"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="flex flex-col">
                       <FormLabel>Start date</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
+                      <DatePickerField
+                        value={field.value}
+                        onChange={field.onChange}
+                      />
                       <FormMessage />
                     </FormItem>
                   )}
@@ -313,11 +384,12 @@ export function BatchFormDialog(props: {
                   control={form.control}
                   name="endDate"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="flex flex-col">
                       <FormLabel>End date</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
+                      <DatePickerField
+                        value={field.value}
+                        onChange={field.onChange}
+                      />
                       <FormMessage />
                     </FormItem>
                   )}

@@ -138,6 +138,44 @@ export class EmailService {
     );
   }
 
+  /** Send a generic notification email. Used by NotificationsService. */
+  async sendNotificationEmail(
+    to: string,
+    title: string,
+    body: string | null,
+    link: string | null
+  ): Promise<void> {
+    const safeTitle = this.escape(title);
+    const safeBody = body ? this.escape(body) : "";
+    const linkHtml = link
+      ? `<p style="margin:24px 0;"><a href="${this.escape(link)}" style="background:#1e3a8a;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;font-family:Arial,sans-serif;font-size:14px;">View details</a></p>`
+      : "";
+    const html = `<!doctype html><html><body style="margin:0;padding:0;background:#f9fafb;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;padding:24px 0;">
+  <tr><td align="center">
+    <table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;padding:32px;font-family:Arial,sans-serif;color:#1f2937;">
+      <tr><td>
+        <h2 style="margin:0 0 12px;font-size:20px;color:#1e3a8a;">${safeTitle}</h2>
+        ${safeBody ? `<p style="margin:0;font-size:14px;line-height:1.5;color:#4b5563;">${safeBody.replace(/\n/g, "<br/>")}</p>` : ""}
+        ${linkHtml}
+        <p style="margin:24px 0 0;font-size:12px;color:#9ca3af;">You're receiving this because you have an account at Grotutor.</p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>`;
+    await this.sendEmail(to, title, html);
+  }
+
+  private escape(s: string): string {
+    return s
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
   async sendWelcomeEmail(data: WelcomeEmailData): Promise<void> {
     const template = await this.getCompiledTemplate("welcome-email");
     const templateData = this.prepareTemplateData({

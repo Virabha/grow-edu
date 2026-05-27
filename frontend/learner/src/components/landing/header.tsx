@@ -20,6 +20,7 @@ import { NAV_LINKS } from "@/lib/constants";
 import { useCategories } from "@/lib/hooks/use-categories";
 import { useCourses } from "@/lib/hooks/use-courses";
 import { useAuthStore } from "@/lib/store/auth-store";
+import { NotificationBell } from "@/components/notification-bell";
 
 const MEGA_MENU_CATEGORY_COUNT = 6;
 
@@ -93,6 +94,7 @@ export function Header() {
   };
 
   const LOGGED_IN_LINKS = [
+    { href: "/dashboard", label: "Dashboard" },
     { href: "/my-courses", label: "My Courses" },
     { href: "/my-batches", label: "My Batches" },
     { href: "/profile", label: "Profile" },
@@ -378,6 +380,11 @@ export function Header() {
             <Search className="size-4" />
           </button>
 
+          {isLoggedIn && (
+            <div className="hidden lg:block">
+              <NotificationBell />
+            </div>
+          )}
           {isLoggedIn ? (
             <div ref={userMenuRef} className="relative hidden lg:block">
               <button

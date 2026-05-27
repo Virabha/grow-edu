@@ -31,6 +31,7 @@ import { SubscribeModule } from "./subscribe/subscribe.module";
 import { AppCacheModule } from "./cache/cache.module";
 import { BooksModule } from "./books/books.module";
 import { BatchesModule } from "./batches/batches.module";
+import { NotificationsModule } from "./notifications/notifications.module";
 
 @Module({
   imports: [
@@ -66,6 +67,7 @@ import { BatchesModule } from "./batches/batches.module";
     SubscribeModule,
     BooksModule,
     BatchesModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [

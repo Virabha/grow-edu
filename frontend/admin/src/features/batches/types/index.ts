@@ -206,3 +206,222 @@ export interface CreateBatchAnnouncementDto {
 }
 
 export type UpdateBatchAnnouncementDto = Partial<CreateBatchAnnouncementDto>;
+
+// ─── Resources ──────────────────────────────────────────────────────────────
+
+export type BatchResourceType = "DPP" | "NOTES" | "REFERENCE";
+
+export interface BatchResource {
+  resourceId: string;
+  batchId: string;
+  subjectId: string | null;
+  title: string;
+  description: string | null;
+  type: BatchResourceType;
+  fileKey: string;
+  fileUrl: string;
+  fileSize: number | null;
+  pageCount: number | null;
+  dayNumber: number | null;
+  publishAt: string | null;
+  uploadedBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateBatchResourceDto {
+  title: string;
+  description?: string;
+  type: BatchResourceType;
+  fileKey: string;
+  subjectId?: string;
+  fileSize?: number;
+  pageCount?: number;
+  dayNumber?: number;
+  publishAt?: string;
+}
+
+export type UpdateBatchResourceDto = Partial<CreateBatchResourceDto>;
+
+// ─── Doubts ─────────────────────────────────────────────────────────────────
+
+export type BatchDoubtStatus = "OPEN" | "ANSWERED" | "CLOSED";
+
+export interface DoubtAuthor {
+  userId: string;
+  firstName: string | null;
+  lastName: string | null;
+  profileImage: string | null;
+  role?: string;
+}
+
+export interface BatchDoubt {
+  doubtId: string;
+  batchId: string;
+  subjectId: string | null;
+  askedBy: string;
+  title: string;
+  body: string;
+  attachments: string[];
+  status: BatchDoubtStatus;
+  replyCount: number;
+  createdAt: string;
+  updatedAt: string;
+  author: DoubtAuthor;
+}
+
+export interface BatchDoubtReply {
+  replyId: string;
+  doubtId: string;
+  authorId: string;
+  body: string;
+  attachments: string[];
+  isOfficial: boolean;
+  createdAt: string;
+  author: DoubtAuthor;
+}
+
+export interface BatchDoubtDetail extends BatchDoubt {
+  replies: BatchDoubtReply[];
+}
+
+export interface CreateBatchDoubtDto {
+  title: string;
+  body: string;
+  subjectId?: string;
+  attachments?: string[];
+}
+
+export interface UpdateBatchDoubtDto extends Partial<CreateBatchDoubtDto> {
+  status?: BatchDoubtStatus;
+}
+
+export interface CreateDoubtReplyDto {
+  body: string;
+  attachments?: string[];
+}
+
+// ─── Attendance ─────────────────────────────────────────────────────────────
+
+export interface AttendanceRow {
+  attendanceId: string;
+  batchId: string;
+  sessionId: string;
+  userId: string;
+  joinedAt: string;
+  durationSeconds: number | null;
+  user: {
+    userId: string;
+    email: string;
+    firstName: string | null;
+    lastName: string | null;
+    profileImage: string | null;
+  };
+}
+
+// ─── Quizzes ────────────────────────────────────────────────────────────────
+
+export type QuizQuestionType = "MCQ_SINGLE" | "MCQ_MULTI" | "NUMERICAL";
+export type QuizAttemptStatus = "IN_PROGRESS" | "SUBMITTED" | "EXPIRED";
+
+export interface QuizOption {
+  id: string;
+  text: string;
+}
+
+export interface QuizQuestion {
+  questionId: string;
+  quizId: string;
+  order: number;
+  type: QuizQuestionType;
+  prompt: string;
+  options: QuizOption[];
+  correctAnswer: unknown;
+  marks: string;
+  explanation: string | null;
+  createdAt: string;
+}
+
+export interface BatchQuiz {
+  quizId: string;
+  batchId: string;
+  subjectId: string | null;
+  title: string;
+  description: string | null;
+  durationMinutes: number;
+  maxAttempts: number;
+  negativeMarkPercent: string;
+  passingPercent: string;
+  showLeaderboard: boolean;
+  showSolutions: boolean;
+  opensAt: string | null;
+  closesAt: string | null;
+  publishedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  myBestAttempt?: {
+    score: number | null;
+    maxScore: number | null;
+    submittedAt: string | null;
+    status: string;
+  } | null;
+}
+
+export interface BatchQuizDetail extends BatchQuiz {
+  questions: QuizQuestion[];
+}
+
+export interface QuizAttempt {
+  attemptId: string;
+  quizId: string;
+  userId: string;
+  status: QuizAttemptStatus;
+  startedAt: string;
+  submittedAt: string | null;
+  expiresAt: string;
+  score: string | null;
+  maxScore: string | null;
+  correctCount: number | null;
+  wrongCount: number | null;
+  skippedCount: number | null;
+  answers: Record<string, unknown>;
+}
+
+export interface CreateBatchQuizDto {
+  title: string;
+  description?: string;
+  subjectId?: string;
+  durationMinutes: number;
+  maxAttempts: number;
+  negativeMarkPercent: number;
+  passingPercent: number;
+  showLeaderboard?: boolean;
+  showSolutions?: boolean;
+  opensAt?: string;
+  closesAt?: string;
+  publish?: boolean;
+}
+
+export type UpdateBatchQuizDto = Partial<CreateBatchQuizDto>;
+
+export interface CreateQuizQuestionDto {
+  order: number;
+  type: QuizQuestionType;
+  prompt: string;
+  options?: QuizOption[];
+  correctAnswer: unknown;
+  marks: number;
+  explanation?: string;
+}
+
+export type UpdateQuizQuestionDto = Partial<CreateQuizQuestionDto>;
+
+export interface LeaderboardEntry {
+  userId: string;
+  name: string;
+  profileImage: string | null;
+  score: number | null;
+  maxScore: number | null;
+  submittedAt: string | null;
+  rank: number;
+}

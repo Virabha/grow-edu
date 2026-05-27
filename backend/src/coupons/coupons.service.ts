@@ -653,7 +653,7 @@ export class CouponsService {
   async reserveUsageForPayment(params: {
     couponId: string;
     userId: string;
-    courseId: string;
+    courseId?: string | null;
     paymentId: string;
     originalAmount: number;
     discountAmount: number;
@@ -718,7 +718,7 @@ export class CouponsService {
         .values({
           couponId: params.couponId,
           userId: params.userId,
-          courseId: params.courseId,
+          courseId: params.courseId ?? null,
           paymentId: params.paymentId,
           status: 'RESERVED' as CouponUsageStatus,
           reservedExpiresAt,

@@ -134,6 +134,13 @@
       "when": 1779806557225,
       "tag": "0018_eminent_daredevil",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "5",
+      "when": 1779816885365,
+      "tag": "0019_cynical_scalphunter",
+      "breakpoints": true
     }
   ]
 }

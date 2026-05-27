@@ -5,7 +5,10 @@ import { use, useMemo, useState } from "react";
 import {
   ArrowLeft,
   CalendarDays,
+  ClipboardList,
+  FileText,
   Megaphone,
+  MessageCircleQuestion,
   PlayCircle,
   Pin,
   Radio,
@@ -13,6 +16,7 @@ import {
   ExternalLink,
   Clock,
   Library,
+  ShieldCheck,
 } from "lucide-react";
 import { PageLayout } from "@/components/layout/page-layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -24,10 +28,19 @@ import { SecureImage } from "@/components/ui/secure-image";
 import {
   useBatchAnnouncements,
   useBatchBySlug,
+  useBatchDoubts,
+  useBatchQuizzes,
+  useBatchResources,
   useBatchSession,
   useBatchSessions,
+  useCreateDoubt,
+  useMyBatchProgress,
+  useRecordAttendance,
 } from "@/lib/hooks/use-batches";
 import type { BatchSession } from "@/lib/api/services/batches";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 
 const JOIN_WINDOW_MS = 15 * 60 * 1000; // 15 min before start
 
@@ -112,6 +125,17 @@ export default function BatchDetailPage(props: { params: Promise<{ slug: string 
   const { data: batch, isLoading: batchLoading } = useBatchBySlug(slug);
   const { data: sessions = [] } = useBatchSessions(batch?.batchId ?? null);
   const { data: announcements = [] } = useBatchAnnouncements(batch?.batchId ?? null);
+  const { data: resources = [] } = useBatchResources(batch?.batchId ?? null);
+  const { data: doubts = [] } = useBatchDoubts(batch?.batchId ?? null);
+  const { data: quizzes = [] } = useBatchQuizzes(batch?.batchId ?? null);
+  const { data: progress } = useMyBatchProgress(
+    batch?.batchId ?? null,
+    !!batch && (batch.isEnrolled || batch.canManage)
+  );
+  const recordAttendance = useRecordAttendance(batch?.batchId ?? "");
+  const createDoubt = useCreateDoubt(batch?.batchId ?? "");
+  const [doubtTitle, setDoubtTitle] = useState("");
+  const [doubtBody, setDoubtBody] = useState("");
   const [playingSessionId, setPlayingSessionId] = useState<string | null>(null);
 
   const { liveJoinable, liveUpcoming, recordings } = useMemo(() => {
@@ -150,12 +174,55 @@ export default function BatchDetailPage(props: { params: Promise<{ slug: string 
       <PageLayout
         subtitle="Batch"
         header={batch.title}
-        description={batch.shortDescription ?? "You don't have access to this batch yet."}
+        description={batch.shortDescription ?? batch.targetExam ?? ""}
       >
-        <div className="rounded-2xl border border-border bg-card p-6 text-center">
-          <p className="text-sm text-muted-foreground">
-            You're not enrolled. Contact your admin or purchase access.
-          </p>
+        <div className="grid gap-6 lg:grid-cols-2">
+          {batch.bannerImage && (
+            <div className="aspect-[16/9] overflow-hidden rounded-2xl bg-muted">
+              <img
+                src={batch.bannerImage}
+                alt={batch.title}
+                className="h-full w-full object-cover"
+              />
+            </div>
+          )}
+          <section className="rounded-2xl border border-border bg-card p-5">
+            <h2 className="font-display text-lg font-medium">Enroll to access</h2>
+            {batch.description && (
+              <p className="mt-2 line-clamp-4 text-sm text-muted-foreground">
+                {batch.description}
+              </p>
+            )}
+            <ul className="mt-3 space-y-1 text-xs text-muted-foreground">
+              <li>Live classes and recordings</li>
+              <li>DPP, notes and reference material</li>
+              <li>Tests with auto-grading and leaderboards</li>
+              <li>Doubt resolution from instructors</li>
+            </ul>
+            <div className="mt-4 flex items-baseline gap-2">
+              {batch.price === 0 ? (
+                <span className="font-display text-2xl font-semibold text-emerald-600">
+                  Free
+                </span>
+              ) : (
+                <>
+                  <span className="font-display text-3xl font-semibold">
+                    {batch.currency} {batch.price.toFixed(0)}
+                  </span>
+                  {batch.compareAtPrice && batch.compareAtPrice > batch.price && (
+                    <span className="text-sm text-muted-foreground line-through">
+                      {batch.currency} {batch.compareAtPrice.toFixed(0)}
+                    </span>
+                  )}
+                </>
+              )}
+            </div>
+            <Button asChild className="mt-4 w-full">
+              <Link href={`/batches/${slug}/checkout`}>
+                {batch.price === 0 ? "Enroll free" : "Enroll now"}
+              </Link>
+            </Button>
+          </section>
         </div>
       </PageLayout>
     );
@@ -185,8 +252,48 @@ export default function BatchDetailPage(props: { params: Promise<{ slug: string 
         </div>
       )}
 
+      {progress && batch.isEnrolled && (
+        <section className="mb-6 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-2xl border border-border bg-card p-4">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Attendance
+            </p>
+            <p className="mt-1 font-display text-2xl font-semibold">
+              {progress.sessions.attendancePercent}%
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {progress.sessions.attended} of {progress.sessions.liveTotal} live
+            </p>
+          </div>
+          <div className="rounded-2xl border border-border bg-card p-4">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Tests
+            </p>
+            <p className="mt-1 font-display text-2xl font-semibold">
+              {progress.quizzes.attempted}
+              <span className="text-base font-normal text-muted-foreground">
+                {" "}
+                / {progress.quizzes.total}
+              </span>
+            </p>
+            <p className="text-xs text-muted-foreground">attempted</p>
+          </div>
+          <div className="rounded-2xl border border-border bg-card p-4">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Average score
+            </p>
+            <p className="mt-1 font-display text-2xl font-semibold">
+              {progress.quizzes.averageScorePercent != null
+                ? `${progress.quizzes.averageScorePercent}%`
+                : "—"}
+            </p>
+            <p className="text-xs text-muted-foreground">across tests</p>
+          </div>
+        </section>
+      )}
+
       <Tabs defaultValue="today">
-        <TabsList>
+        <TabsList className="flex flex-wrap h-auto">
           <TabsTrigger value="today">
             <Radio className="size-3.5 mr-1.5" />
             Today
@@ -198,6 +305,18 @@ export default function BatchDetailPage(props: { params: Promise<{ slug: string 
           <TabsTrigger value="recordings">
             <Library className="size-3.5 mr-1.5" />
             Recordings
+          </TabsTrigger>
+          <TabsTrigger value="resources">
+            <FileText className="size-3.5 mr-1.5" />
+            Resources
+          </TabsTrigger>
+          <TabsTrigger value="quizzes">
+            <ClipboardList className="size-3.5 mr-1.5" />
+            Tests
+          </TabsTrigger>
+          <TabsTrigger value="doubts">
+            <MessageCircleQuestion className="size-3.5 mr-1.5" />
+            Doubts
           </TabsTrigger>
           <TabsTrigger value="announcements">
             <Megaphone className="size-3.5 mr-1.5" />
@@ -233,7 +352,14 @@ export default function BatchDetailPage(props: { params: Promise<{ slug: string 
                       </div>
                       {s.joinUrl ? (
                         <Button asChild>
-                          <a href={s.joinUrl} target="_blank" rel="noreferrer">
+                          <a
+                            href={s.joinUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            onClick={() => {
+                              recordAttendance.mutate({ sessionId: s.sessionId });
+                            }}
+                          >
                             <ExternalLink className="size-3.5 mr-1.5" />
                             Join class
                           </a>
@@ -384,6 +510,190 @@ export default function BatchDetailPage(props: { params: Promise<{ slug: string 
                 </button>
               );
             })
+          )}
+        </TabsContent>
+
+        <TabsContent value="resources" className="space-y-4">
+          {resources.length === 0 ? (
+            <EmptyState
+              title="No resources yet"
+              description="DPP, notes, and reference PDFs will appear here."
+              icon={<FileText className="h-10 w-10" />}
+            />
+          ) : (
+            (["DPP", "NOTES", "REFERENCE"] as const).map((type) => {
+              const list = resources.filter((r) => r.type === type);
+              if (list.length === 0) return null;
+              return (
+                <section key={type}>
+                  <h3 className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    {type === "DPP"
+                      ? "Daily Practice"
+                      : type === "NOTES"
+                        ? "Notes"
+                        : "Reference"}
+                  </h3>
+                  <ul className="space-y-2">
+                    {list.map((r) => (
+                      <li
+                        key={r.resourceId}
+                        className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium line-clamp-1">
+                            {r.dayNumber ? `Day ${r.dayNumber} — ` : ""}
+                            {r.title}
+                          </p>
+                          {r.description && (
+                            <p className="text-xs text-muted-foreground line-clamp-1">
+                              {r.description}
+                            </p>
+                          )}
+                        </div>
+                        <Button asChild size="sm" variant="outline">
+                          <a href={r.fileUrl} target="_blank" rel="noreferrer">
+                            <ExternalLink className="size-3.5 mr-1.5" />
+                            Open
+                          </a>
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              );
+            })
+          )}
+        </TabsContent>
+
+        <TabsContent value="quizzes" className="space-y-3">
+          {quizzes.length === 0 ? (
+            <EmptyState
+              title="No tests scheduled"
+              description="When tests are published, they appear here."
+              icon={<ClipboardList className="h-10 w-10" />}
+            />
+          ) : (
+            quizzes.map((q) => {
+              const score = q.myBestAttempt?.score;
+              const max = q.myBestAttempt?.maxScore;
+              const pct = score != null && max ? (score / max) * 100 : null;
+              const passed = pct != null && pct >= Number(q.passingPercent);
+              return (
+                <Link
+                  key={q.quizId}
+                  href={`/batches/${batch.slug}/quizzes/${q.quizId}`}
+                  className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4 transition-colors hover:bg-muted/40"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="font-display text-base font-medium line-clamp-1">
+                      {q.title}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {q.durationMinutes} min · Max {q.maxAttempts} attempt
+                      {q.maxAttempts === 1 ? "" : "s"}
+                    </p>
+                  </div>
+                  {q.myBestAttempt && score != null && max != null ? (
+                    <div className="text-right">
+                      <p className="font-display text-base font-semibold">
+                        {score} / {max}
+                      </p>
+                      <Badge variant={passed ? "default" : "destructive"} className="mt-1">
+                        {passed ? "Passed" : "Below pass"}
+                      </Badge>
+                    </div>
+                  ) : (
+                    <Badge variant="outline">Not attempted</Badge>
+                  )}
+                </Link>
+              );
+            })
+          )}
+        </TabsContent>
+
+        <TabsContent value="doubts" className="space-y-4">
+          <section className="rounded-2xl border border-border bg-card p-4">
+            <h3 className="mb-2 font-display text-base font-medium">Ask a doubt</h3>
+            <div className="space-y-2">
+              <Input
+                placeholder="Doubt title"
+                value={doubtTitle}
+                onChange={(e) => setDoubtTitle(e.target.value)}
+              />
+              <Textarea
+                rows={3}
+                placeholder="Describe your doubt clearly…"
+                value={doubtBody}
+                onChange={(e) => setDoubtBody(e.target.value)}
+              />
+              <div className="flex justify-end">
+                <Button
+                  size="sm"
+                  disabled={
+                    !doubtTitle.trim() || !doubtBody.trim() || createDoubt.isPending
+                  }
+                  onClick={async () => {
+                    try {
+                      await createDoubt.mutateAsync({
+                        title: doubtTitle.trim(),
+                        body: doubtBody.trim(),
+                      });
+                      setDoubtTitle("");
+                      setDoubtBody("");
+                      toast.success("Doubt posted");
+                    } catch {
+                      toast.error("Failed to post doubt");
+                    }
+                  }}
+                >
+                  Post
+                </Button>
+              </div>
+            </div>
+          </section>
+          {doubts.length === 0 ? (
+            <EmptyState
+              title="No doubts yet"
+              description="Be the first to ask. Official answers come from teachers/admins."
+              icon={<MessageCircleQuestion className="h-10 w-10" />}
+            />
+          ) : (
+            <ul className="space-y-2">
+              {doubts.map((d) => (
+                <li key={d.doubtId}>
+                  <Link
+                    href={`/batches/${batch.slug}/doubts/${d.doubtId}`}
+                    className="block rounded-2xl border border-border bg-card p-4 transition-colors hover:bg-muted/40"
+                  >
+                    <div className="flex items-center gap-2">
+                      <p className="font-display text-base font-medium line-clamp-1">
+                        {d.title}
+                      </p>
+                      <Badge
+                        variant={
+                          d.status === "OPEN"
+                            ? "secondary"
+                            : d.status === "ANSWERED"
+                              ? "default"
+                              : "outline"
+                        }
+                      >
+                        {d.status}
+                      </Badge>
+                    </div>
+                    <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                      {d.body}
+                    </p>
+                    <p className="mt-2 text-[10px] uppercase tracking-widest text-muted-foreground">
+                      {[d.author.firstName, d.author.lastName].filter(Boolean).join(" ") ||
+                        "Student"}
+                      {" • "}
+                      {d.replyCount} repl{d.replyCount === 1 ? "y" : "ies"}
+                    </p>
+                  </Link>
+                </li>
+              ))}
+            </ul>
           )}
         </TabsContent>
 

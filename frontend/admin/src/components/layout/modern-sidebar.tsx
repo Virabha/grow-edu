@@ -19,6 +19,7 @@ import { useSidebar } from "@/components/ui/sidebar-provider";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTheme } from "next-themes";
+import { SidebarNotificationsItem } from "@/features/notifications/components/sidebar-notifications-item";
 
 interface SidebarItem {
   label: string;
@@ -183,6 +184,7 @@ export function ModernSidebar({ items, className }: ModernSidebarProps) {
 
       {/* Footer actions */}
       <div className="space-y-0.5 border-t border-border bg-card px-2 py-2">
+        <SidebarNotificationsItem collapsed={collapsed} />
         <button
           onClick={toggleTheme}
           title={collapsed ? "Toggle theme" : undefined}

@@ -67,7 +67,7 @@ export const courseReviewStatusEnum = pgEnum("course_review_status", [
   "APPROVED",
   "REJECTED",
 ]);
-export const itemTypeEnum = pgEnum("item_type", ["COURSE", "SECTION"]);
+export const itemTypeEnum = pgEnum("item_type", ["COURSE", "SECTION", "BATCH"]);
 export const accessSourceEnum = pgEnum("access_source", [
   "SECTION_PURCHASE",
   "COURSE_PURCHASE",
@@ -1747,3 +1747,83 @@ export const batchQuizAttemptsRelations = relations(
     }),
   })
 );
+
+// ─── Notifications ──────────────────────────────────────────────────────────
+
+export const notificationTypeEnum = pgEnum("notification_type", [
+  "BATCH_ANNOUNCEMENT",
+  "BATCH_DOUBT_REPLY",
+  "BATCH_SESSION_SCHEDULED",
+  "BATCH_QUIZ_PUBLISHED",
+  "BATCH_RESOURCE_ADDED",
+  "BATCH_ENROLLMENT",
+  "BATCH_CERTIFICATE",
+  "PAYMENT_APPROVED",
+  "PAYMENT_REJECTED",
+  "GENERIC",
+]);
+
+export const notifications = pgTable(
+  "notifications",
+  {
+    notificationId: text("notification_id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id").notNull(),
+    type: notificationTypeEnum("type").notNull(),
+    title: text("title").notNull(),
+    body: text("body"),
+    link: text("link"),
+    batchId: text("batch_id"),
+    read: boolean("read").notNull().default(false),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    userIdx: index("notifications_user_idx").on(table.userId),
+    userReadIdx: index("notifications_user_read_idx").on(table.userId, table.read),
+    createdAtIdx: index("notifications_created_at_idx").on(table.createdAt),
+  })
+);
+
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  user: one(users, {
+    fields: [notifications.userId],
+    references: [users.userId],
+  }),
+}));
+
+// ─── Batch certificates ─────────────────────────────────────────────────────
+
+export const batchCertificates = pgTable(
+  "batch_certificates",
+  {
+    certificateId: text("certificate_id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    batchId: text("batch_id").notNull(),
+    userId: text("user_id").notNull(),
+    certificateNumber: text("certificate_number").notNull().unique(),
+    issuedAt: timestamp("issued_at").notNull().defaultNow(),
+    revokedAt: timestamp("revoked_at"),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
+  },
+  (table) => ({
+    batchIdx: index("batch_certificates_batch_idx").on(table.batchId),
+    userIdx: index("batch_certificates_user_idx").on(table.userId),
+    uniqueBatchUser: unique("batch_certificates_batch_user_unique").on(
+      table.batchId,
+      table.userId
+    ),
+  })
+);
+
+export const batchCertificatesRelations = relations(batchCertificates, ({ one }) => ({
+  batch: one(batches, {
+    fields: [batchCertificates.batchId],
+    references: [batches.batchId],
+  }),
+  user: one(users, {
+    fields: [batchCertificates.userId],
+    references: [users.userId],
+  }),
+}));

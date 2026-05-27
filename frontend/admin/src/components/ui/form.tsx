@@ -67,7 +67,7 @@ const FormMessage = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<
     if (!body) {
         return null;
     }
-    return (<p ref={ref} id={formMessageId} className={cn("text-sm font-medium text-destructive", className)} {...props}/>);
+    return (<p ref={ref} id={formMessageId} className={cn("text-xs font-medium text-destructive", className)} {...props}>{body}</p>);
 });
 FormMessage.displayName = "FormMessage";
 export { useFormField, Form, FormItem, FormLabel, FormControl, FormDescription, FormMessage, FormField, };

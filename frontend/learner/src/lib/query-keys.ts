@@ -45,5 +45,18 @@ export const queryKeys = {
       ["batches", "session", batchId, sessionId] as const,
     announcements: (batchId: string) =>
       ["batches", "announcements", batchId] as const,
+    resources: (batchId: string, params?: { type?: string }) =>
+      ["batches", "resources", batchId, params] as const,
+    doubts: (batchId: string, params?: { mine?: boolean; status?: string }) =>
+      ["batches", "doubts", batchId, params] as const,
+    doubt: (batchId: string, doubtId: string) =>
+      ["batches", "doubt", batchId, doubtId] as const,
+    quizzes: (batchId: string) => ["batches", "quizzes", batchId] as const,
+    quiz: (batchId: string, quizId: string) =>
+      ["batches", "quiz", batchId, quizId] as const,
+    attempt: (batchId: string, quizId: string, attemptId: string) =>
+      ["batches", "attempt", batchId, quizId, attemptId] as const,
+    leaderboard: (batchId: string, quizId: string) =>
+      ["batches", "leaderboard", batchId, quizId] as const,
   },
 } as const;

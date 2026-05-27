@@ -183,6 +183,10 @@ export function BatchFormDialog(props: {
   const isEditing = !!batch;
   const create = useCreateBatch();
   const update = useUpdateBatch();
+  // The original thumbnail URL the backend served us when the form opened.
+  // We compare against this on submit so a thumbnail that wasn't re-uploaded
+  // is omitted from the PATCH payload (backend keeps its original storage key).
+  const [thumbnailInitial, setThumbnailInitial] = useState<string | null>(null);
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
 
   const form = useForm<Values>({
@@ -194,6 +198,18 @@ export function BatchFormDialog(props: {
 
   function handleSubmitForm(values: Values) {
     const slug = values.slug.trim() || slugify(values.title);
+    const trimmedThumb = values.thumbnail?.trim() ?? "";
+    // Only forward the thumbnail when:
+    //   - creating (always include if set), OR
+    //   - editing AND the user uploaded a new file (value differs from what we loaded).
+    // This avoids overwriting the backend's storage key with a resolved CDN URL.
+    const thumbnailChanged = trimmedThumb !== (thumbnailInitial ?? "");
+    const thumbnailToSend = !isEditing
+      ? trimmedThumb || undefined
+      : thumbnailChanged
+        ? trimmedThumb || undefined
+        : undefined;
+
     const payload = {
       title: values.title.trim(),
       slug,
@@ -201,7 +217,7 @@ export function BatchFormDialog(props: {
       shortDescription: values.shortDescription?.trim() || undefined,
       targetExam: values.targetExam?.trim() || undefined,
       language: values.language.trim(),
-      thumbnail: values.thumbnail?.trim() || undefined,
+      thumbnail: thumbnailToSend,
       bannerImage: values.bannerImage?.trim() || undefined,
       price: values.price,
       compareAtPrice: values.compareAtPrice,
@@ -226,9 +242,11 @@ export function BatchFormDialog(props: {
     if (batch) {
       form.reset(batchToValues(batch));
       setThumbnailPreview(batch.thumbnail);
+      setThumbnailInitial(batch.thumbnail ?? "");
     } else {
       form.reset(defaults);
       setThumbnailPreview(null);
+      setThumbnailInitial(null);
     }
   }, [open, batch, form]);
 

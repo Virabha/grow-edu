@@ -7,6 +7,7 @@ import {
   CalendarDays,
   ClipboardList,
   FileText,
+  GraduationCap,
   Megaphone,
   MessageCircleQuestion,
   PlayCircle,
@@ -156,73 +157,199 @@ export default function BatchDetailPage(props: { params: Promise<{ slug: string 
   if (batchLoading) {
     return (
       <PageLayout header="Loading batch…">
-        <Skeleton className="h-48 w-full" />
+        <div className="space-y-3">
+          <Skeleton className="aspect-[16/4] w-full rounded-xl" />
+          <Skeleton className="h-10 w-full rounded-lg" />
+          <Skeleton className="h-40 w-full rounded-xl" />
+        </div>
       </PageLayout>
     );
   }
 
   if (!batch) {
     return (
-      <PageLayout header="Not found">
-        <EmptyState title="Batch not found" description="It may have been removed." />
-      </PageLayout>
+      <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 py-10">
+        <div className="mx-auto mb-6 flex size-20 items-center justify-center rounded-full bg-muted/30">
+          <GraduationCap className="size-10 text-muted-foreground/50" />
+        </div>
+        <h1 className="mb-3 font-display text-2xl font-medium text-foreground sm:text-3xl">
+          Batch not found
+        </h1>
+        <p className="mx-auto mb-6 max-w-md text-center text-sm text-muted-foreground">
+          The batch you&apos;re looking for doesn&apos;t exist or may have been
+          removed.
+        </p>
+        <Button asChild size="sm">
+          <Link href="/batches">
+            <ArrowLeft className="size-3.5 mr-1.5" />
+            Browse all batches
+          </Link>
+        </Button>
+      </div>
     );
   }
 
   if (!batch.isEnrolled && !batch.canManage) {
+    const discount =
+      batch.compareAtPrice && batch.compareAtPrice > batch.price
+        ? Math.round(
+            ((batch.compareAtPrice - batch.price) / batch.compareAtPrice) * 100,
+          )
+        : null;
     return (
       <PageLayout
         subtitle="Batch"
         header={batch.title}
         description={batch.shortDescription ?? batch.targetExam ?? ""}
       >
-        <div className="grid gap-6 lg:grid-cols-2">
-          {batch.bannerImage && (
-            <div className="aspect-[16/9] overflow-hidden rounded-2xl bg-muted">
-              <img
-                src={batch.bannerImage}
-                alt={batch.title}
-                className="h-full w-full object-cover"
-              />
-            </div>
-          )}
-          <section className="rounded-2xl border border-border bg-card p-5">
-            <h2 className="font-display text-lg font-medium">Enroll to access</h2>
-            {batch.description && (
-              <p className="mt-2 line-clamp-4 text-sm text-muted-foreground">
-                {batch.description}
-              </p>
-            )}
-            <ul className="mt-3 space-y-1 text-xs text-muted-foreground">
-              <li>Live classes and recordings</li>
-              <li>DPP, notes and reference material</li>
-              <li>Tests with auto-grading and leaderboards</li>
-              <li>Doubt resolution from instructors</li>
-            </ul>
-            <div className="mt-4 flex items-baseline gap-2">
-              {batch.price === 0 ? (
-                <span className="font-display text-2xl font-semibold text-emerald-600">
-                  Free
-                </span>
+        <div className="-mt-2 mb-3">
+          <Button asChild variant="outline" size="sm" className="h-7 text-xs">
+            <Link href="/batches">
+              <ArrowLeft className="size-3 mr-1" />
+              All batches
+            </Link>
+          </Button>
+        </div>
+        <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+          <div className="space-y-3">
+            <div className="relative aspect-[16/9] overflow-hidden rounded-xl bg-muted">
+              {batch.bannerImage || batch.thumbnail ? (
+                <SecureImage
+                  src={batch.bannerImage ?? batch.thumbnail ?? ""}
+                  alt={batch.title}
+                  className="h-full w-full object-cover"
+                />
               ) : (
-                <>
-                  <span className="font-display text-3xl font-semibold">
-                    {batch.currency} {batch.price.toFixed(0)}
-                  </span>
-                  {batch.compareAtPrice && batch.compareAtPrice > batch.price && (
-                    <span className="text-sm text-muted-foreground line-through">
-                      {batch.currency} {batch.compareAtPrice.toFixed(0)}
-                    </span>
-                  )}
-                </>
+                <div className="flex h-full items-center justify-center">
+                  <GraduationCap className="size-12 text-muted-foreground/30" />
+                </div>
+              )}
+              <span
+                className={
+                  "absolute right-3 top-3 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide " +
+                  (batch.status === "ONGOING"
+                    ? "bg-emerald-500/95 text-white"
+                    : batch.status === "UPCOMING"
+                      ? "bg-amber-500/95 text-white"
+                      : "bg-zinc-500/95 text-white")
+                }
+              >
+                {batch.status}
+              </span>
+              {batch.targetExam && (
+                <span className="absolute left-3 top-3 rounded-full bg-foreground/85 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-background backdrop-blur">
+                  {batch.targetExam}
+                </span>
               )}
             </div>
-            <Button asChild className="mt-4 w-full">
-              <Link href={`/batches/${slug}/checkout`}>
-                {batch.price === 0 ? "Enroll free" : "Enroll now"}
-              </Link>
-            </Button>
-          </section>
+            {batch.description && (
+              <section className="rounded-xl border border-border bg-card p-4">
+                <h2 className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  About this batch
+                </h2>
+                <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-foreground/85">
+                  {batch.description}
+                </p>
+              </section>
+            )}
+            <section className="rounded-xl border border-border bg-card p-4">
+              <h2 className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                What you&apos;ll get
+              </h2>
+              <ul className="mt-2 grid gap-1.5 sm:grid-cols-2">
+                {[
+                  "Scheduled live classes",
+                  "Recorded lecture library",
+                  "DPP, notes and references",
+                  "Tests with auto-grading",
+                  "Leaderboards",
+                  "Instructor doubt support",
+                ].map((item) => (
+                  <li
+                    key={item}
+                    className="flex items-center gap-2 text-xs text-foreground/80"
+                  >
+                    <span className="grid size-4 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+                      ✓
+                    </span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          </div>
+
+          <aside className="lg:sticky lg:top-20 lg:self-start">
+            <div className="rounded-xl border border-border bg-card p-4">
+              <div className="flex items-baseline gap-2">
+                {batch.price === 0 ? (
+                  <span className="font-display text-2xl font-semibold text-emerald-600">
+                    Free
+                  </span>
+                ) : (
+                  <>
+                    <span className="font-display text-2xl font-semibold">
+                      {batch.currency} {batch.price.toFixed(0)}
+                    </span>
+                    {batch.compareAtPrice &&
+                      batch.compareAtPrice > batch.price && (
+                        <span className="text-xs text-muted-foreground line-through">
+                          {batch.currency} {batch.compareAtPrice.toFixed(0)}
+                        </span>
+                      )}
+                    {discount && (
+                      <span className="ml-auto rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 dark:text-emerald-400">
+                        −{discount}%
+                      </span>
+                    )}
+                  </>
+                )}
+              </div>
+
+              <Button asChild className="mt-3 h-9 w-full">
+                <Link href={`/batches/${slug}/checkout`}>
+                  {batch.price === 0 ? "Enroll for free" : "Enroll now"}
+                </Link>
+              </Button>
+
+              <dl className="mt-4 space-y-2 border-t border-border/60 pt-3 text-xs">
+                <div className="flex items-center justify-between">
+                  <dt className="text-muted-foreground">Starts</dt>
+                  <dd className="font-medium text-foreground">
+                    {new Date(batch.startDate).toLocaleDateString(undefined, {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </dd>
+                </div>
+                <div className="flex items-center justify-between">
+                  <dt className="text-muted-foreground">Ends</dt>
+                  <dd className="font-medium text-foreground">
+                    {new Date(batch.endDate).toLocaleDateString(undefined, {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </dd>
+                </div>
+                <div className="flex items-center justify-between">
+                  <dt className="text-muted-foreground">Language</dt>
+                  <dd className="font-medium text-foreground">
+                    {batch.language}
+                  </dd>
+                </div>
+                {batch.capacity && (
+                  <div className="flex items-center justify-between">
+                    <dt className="text-muted-foreground">Seats</dt>
+                    <dd className="font-medium text-foreground">
+                      {batch.capacity}
+                    </dd>
+                  </div>
+                )}
+              </dl>
+            </div>
+          </aside>
         </div>
       </PageLayout>
     );

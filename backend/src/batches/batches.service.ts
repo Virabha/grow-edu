@@ -1407,9 +1407,19 @@ export class BatchesService implements OnModuleInit {
     if (!this.isAdmin(userRole)) {
       await this.assertEnrolled(batchId, userId);
     }
-    const [doubt] = await this.db
-      .select()
+    const [doubtRow] = await this.db
+      .select({
+        doubt: batchDoubts,
+        author: {
+          userId: users.userId,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          profileImage: users.profileImage,
+          role: users.role,
+        },
+      })
       .from(batchDoubts)
+      .innerJoin(users, eq(batchDoubts.askedBy, users.userId))
       .where(
         and(
           eq(batchDoubts.doubtId, doubtId),
@@ -1418,7 +1428,7 @@ export class BatchesService implements OnModuleInit {
         )
       )
       .limit(1);
-    if (!doubt) throw new NotFoundException("Doubt not found");
+    if (!doubtRow) throw new NotFoundException("Doubt not found");
 
     const replies = await this.db
       .select({
@@ -1442,7 +1452,13 @@ export class BatchesService implements OnModuleInit {
       .orderBy(asc(batchDoubtReplies.createdAt));
 
     return {
-      ...doubt,
+      ...doubtRow.doubt,
+      author: {
+        ...doubtRow.author,
+        profileImage: doubtRow.author.profileImage
+          ? this.filesService.getDownloadUrl(doubtRow.author.profileImage)
+          : null,
+      },
       replies: replies.map((r) => ({
         ...r.reply,
         author: {

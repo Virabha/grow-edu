@@ -15,18 +15,22 @@ import {
   FileText,
   Library,
   GraduationCap,
+  Video,
+  User,
 } from "lucide-react";
 import { useAuthStore } from "@/lib/store/auth-store";
+
+type Role = "PLATFORM_ADMIN" | "INSTRUCTOR";
 
 interface NavItem {
   label: string;
   href: string;
   icon: React.ReactNode;
   /** Defaults to PLATFORM_ADMIN only when omitted. */
-  roles?: Array<"PLATFORM_ADMIN" | "INSTRUCTOR">;
+  roles?: Role[];
 }
 
-const NAV_ITEMS: NavItem[] = [
+const ADMIN_NAV: NavItem[] = [
   {
     label: "Dashboard",
     href: "/admin/dashboard",
@@ -36,7 +40,6 @@ const NAV_ITEMS: NavItem[] = [
     label: "Batches",
     href: "/admin/batches",
     icon: <GraduationCap className="h-4 w-4" />,
-    roles: ["PLATFORM_ADMIN", "INSTRUCTOR"],
   },
   {
     label: "Users",
@@ -100,19 +103,45 @@ const NAV_ITEMS: NavItem[] = [
   },
 ];
 
+const INSTRUCTOR_NAV: NavItem[] = [
+  {
+    label: "Dashboard",
+    href: "/instructor/dashboard",
+    icon: <LayoutDashboard className="h-4 w-4" />,
+  },
+  {
+    label: "Batches",
+    href: "/admin/batches",
+    icon: <GraduationCap className="h-4 w-4" />,
+  },
+  {
+    label: "My Courses",
+    href: "/instructor/courses",
+    icon: <BookOpen className="h-4 w-4" />,
+  },
+  {
+    label: "My Videos",
+    href: "/instructor/videos",
+    icon: <Video className="h-4 w-4" />,
+  },
+  {
+    label: "Profile",
+    href: "/instructor/profile",
+    icon: <User className="h-4 w-4" />,
+  },
+];
+
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const { user } = useAuthStore();
-  const role = user?.role;
+  const role = user?.role as Role | undefined;
 
   const sidebarItems = useMemo(() => {
-    return NAV_ITEMS.filter((item) => {
-      const allowed = item.roles ?? ["PLATFORM_ADMIN"];
-      return role ? allowed.includes(role as "PLATFORM_ADMIN" | "INSTRUCTOR") : false;
-    });
+    if (role === "INSTRUCTOR") return INSTRUCTOR_NAV;
+    return ADMIN_NAV;
   }, [role]);
 
   return (

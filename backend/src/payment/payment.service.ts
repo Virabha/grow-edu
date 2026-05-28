@@ -776,7 +776,6 @@ export class PaymentService {
     sectionId?: string,
   ) {
     if (itemType === 'BATCH') {
-      // Resolve batchId from payment metadata and enroll
       const payment = await this.db.query.payments.findFirst({
         where: eq(payments.paymentId, paymentId),
       });

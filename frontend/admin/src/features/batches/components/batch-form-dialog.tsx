@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -37,10 +37,15 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import {
+  AsyncMultiSelect,
+  type AsyncMultiSelectOption,
+} from "@/components/ui/async-multi-select";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCreateBatch, useUpdateBatch } from "../hooks/use-batches";
-import type { Batch, BatchStatus } from "../types";
+import { usersApi } from "@/features/users/api/users.api";
+import type { Batch, BatchStatus, BatchDetail } from "../types";
 
 const schema = z
   .object({
@@ -59,6 +64,7 @@ const schema = z
     startDate: z.string().min(1, "Start date is required"),
     endDate: z.string().min(1, "End date is required"),
     categoryId: z.string().optional(),
+    teacherIds: z.array(z.string()).default([]),
     status: z
       .enum(["DRAFT", "UPCOMING", "ONGOING", "COMPLETED", "ARCHIVED"])
       .default("DRAFT"),
@@ -86,6 +92,7 @@ const defaults: Values = {
   startDate: "",
   endDate: "",
   categoryId: "",
+  teacherIds: [],
   status: "DRAFT",
 };
 
@@ -171,13 +178,14 @@ function batchToValues(b: Batch): Values {
     startDate: toDateInput(b.startDate),
     shortDescription: b.shortDescription ?? "",
     compareAtPrice: b.compareAtPrice ?? undefined,
+    teacherIds: b.teacherIds ?? [],
   };
 }
 
 export function BatchFormDialog(props: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  batch?: Batch | null;
+  batch?: (Batch & Partial<Pick<BatchDetail, "teachers">>) | null;
 }) {
   const { open, onOpenChange, batch } = props;
   const isEditing = !!batch;
@@ -186,6 +194,9 @@ export function BatchFormDialog(props: {
   // Tracks original value so unchanged thumbnails are omitted from the PATCH (preserves storage key).
   const [thumbnailInitial, setThumbnailInitial] = useState<string | null>(null);
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
+  const [teacherOptions, setTeacherOptions] = useState<AsyncMultiSelectOption[]>(
+    [],
+  );
 
   const form = useForm<Values>({
     resolver: zodResolver(schema),
@@ -220,6 +231,7 @@ export function BatchFormDialog(props: {
       startDate: new Date(values.startDate).toISOString(),
       endDate: new Date(values.endDate).toISOString(),
       categoryId: values.categoryId?.trim() || undefined,
+      teacherIds: values.teacherIds,
       status: values.status as BatchStatus,
     };
 
@@ -237,12 +249,65 @@ export function BatchFormDialog(props: {
       form.reset(batchToValues(batch));
       setThumbnailPreview(batch.thumbnail);
       setThumbnailInitial(batch.thumbnail ?? "");
+
+      if (batch.teachers?.length) {
+        setTeacherOptions(
+          batch.teachers.map((t) => ({
+            value: t.userId,
+            label:
+              [t.firstName, t.lastName].filter(Boolean).join(" ") || t.email,
+            secondary: t.email,
+          })),
+        );
+      } else if (batch.teacherIds?.length) {
+        setTeacherOptions(
+          batch.teacherIds.map((id) => ({ value: id, label: id })),
+        );
+        Promise.all(
+          batch.teacherIds.map((id) =>
+            usersApi.getById(id).catch(() => null),
+          ),
+        ).then((users) => {
+          setTeacherOptions(
+            users
+              .filter((u): u is NonNullable<typeof u> => !!u)
+              .map((u) => ({
+                value: u.id,
+                label:
+                  [u.firstName, u.lastName].filter(Boolean).join(" ") ||
+                  u.email,
+                secondary: u.email,
+              })),
+          );
+        });
+      } else {
+        setTeacherOptions([]);
+      }
     } else {
       form.reset(defaults);
       setThumbnailPreview(null);
       setThumbnailInitial(null);
+      setTeacherOptions([]);
     }
   }, [open, batch, form]);
+
+  const loadInstructors = useCallback(
+    async (query: string): Promise<AsyncMultiSelectOption[]> => {
+      const res = await usersApi.getAll({
+        search: query || undefined,
+        role: "INSTRUCTOR",
+        limit: 20,
+        page: 1,
+      });
+      return res.data.map((u) => ({
+        value: u.id,
+        label:
+          [u.firstName, u.lastName].filter(Boolean).join(" ") || u.email,
+        secondary: u.email,
+      }));
+    },
+    [],
+  );
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -532,6 +597,27 @@ export function BatchFormDialog(props: {
                         <SelectItem value="ARCHIVED">Archived</SelectItem>
                       </SelectContent>
                     </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="teacherIds"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className={LABEL_CLS}>Instructors</FormLabel>
+                    <AsyncMultiSelect
+                      value={teacherOptions}
+                      onChange={(next) => {
+                        setTeacherOptions(next);
+                        field.onChange(next.map((o) => o.value));
+                      }}
+                      loadOptions={loadInstructors}
+                      placeholder="Assign instructors…"
+                      searchPlaceholder="Search by name or email"
+                      emptyMessage="No instructors match"
+                    />
                     <FormMessage />
                   </FormItem>
                 )}

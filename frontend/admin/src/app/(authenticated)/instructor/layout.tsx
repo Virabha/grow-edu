@@ -6,7 +6,7 @@ import {
   BookOpen,
   Video,
   User,
-  PlusCircle,
+  GraduationCap,
 } from "lucide-react";
 
 const sidebarItems = [
@@ -14,6 +14,11 @@ const sidebarItems = [
     label: "Dashboard",
     href: "/instructor/dashboard",
     icon: <LayoutDashboard className="h-4 w-4" />,
+  },
+  {
+    label: "Batches",
+    href: "/admin/batches",
+    icon: <GraduationCap className="h-4 w-4" />,
   },
   {
     label: "My Courses",

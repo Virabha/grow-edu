@@ -40,28 +40,24 @@ export function EnrollStudentsDialog(props: {
 
   const loadOptions = useCallback(
     async (query: string): Promise<AsyncMultiSelectOption[]> => {
-      try {
-        const res = await usersApi.getAll({
-          search: query || undefined,
-          role: "LEARNER",
-          limit: 20,
-          page: 1,
-        });
-        return res.data.map((user) => {
-          const name =
-            [user.firstName, user.lastName].filter(Boolean).join(" ") ||
-            user.email;
-          const opt: SelectedStudent = {
-            value: `user:${user.id}`,
-            label: name,
-            secondary: user.email,
-            userId: user.id,
-          };
-          return opt;
-        });
-      } catch {
-        return [];
-      }
+      const res = await usersApi.getAll({
+        search: query || undefined,
+        role: "LEARNER",
+        limit: 20,
+        page: 1,
+      });
+      return res.data.map((user) => {
+        const name =
+          [user.firstName, user.lastName].filter(Boolean).join(" ") ||
+          user.email;
+        const opt: SelectedStudent = {
+          value: `user:${user.id}`,
+          label: name,
+          secondary: user.email,
+          userId: user.id,
+        };
+        return opt;
+      });
     },
     [],
   );

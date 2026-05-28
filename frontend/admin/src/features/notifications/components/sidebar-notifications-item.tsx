@@ -43,7 +43,6 @@ export function SidebarNotificationsItem({
     mounted && open
   );
   const markAllRead = useMarkAllRead();
-  // System notifications when tab is in background or laptop wakes up.
   useBrowserNotifications(mounted);
 
   useEffect(() => {

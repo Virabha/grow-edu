@@ -44,6 +44,7 @@ import {
 } from "@/features/batches/hooks/use-batches";
 import { BatchFormDialog } from "@/features/batches/components/batch-form-dialog";
 import type { Batch, BatchStatus } from "@/features/batches/types";
+import { useAuthStore } from "@/lib/store/auth-store";
 
 const STATUS_TONE: Record<BatchStatus, string> = {
   DRAFT: "bg-zinc-500",
@@ -62,6 +63,8 @@ function formatDate(iso: string): string {
 }
 
 export default function AdminBatchesPage() {
+  const { user } = useAuthStore();
+  const isAdmin = user?.role === "PLATFORM_ADMIN";
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Batch | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -103,10 +106,12 @@ export default function AdminBatchesPage() {
       header="Batches"
       description="Live cohorts with schedules, recordings, and dedicated student rosters."
       actions={
-        <Button size="sm" onClick={handleCreate} className="gap-1.5">
-          <Plus className="size-3.5" />
-          New batch
-        </Button>
+        isAdmin ? (
+          <Button size="sm" onClick={handleCreate} className="gap-1.5">
+            <Plus className="size-3.5" />
+            New batch
+          </Button>
+        ) : null
       }
     >
       <PageFilters
@@ -216,17 +221,21 @@ export default function AdminBatchesPage() {
                               Manage
                             </Link>
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleEdit(b)}>
-                            <Pencil className="h-4 w-4 mr-2" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="text-destructive"
-                            onClick={() => handleDelete(b)}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
+                          {isAdmin && (
+                            <DropdownMenuItem onClick={() => handleEdit(b)}>
+                              <Pencil className="h-4 w-4 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
+                          )}
+                          {isAdmin && (
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={() => handleDelete(b)}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>

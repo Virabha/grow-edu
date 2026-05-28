@@ -74,6 +74,7 @@ import { EnrollStudentsDialog } from "@/features/batches/components/enroll-stude
 import { ResourceFormDialog } from "@/features/batches/components/resource-form-dialog";
 import { QuizFormDialog } from "@/features/batches/components/quiz-form-dialog";
 import { AnnouncementFormDialog } from "@/features/batches/components/announcement-form-dialog";
+import { useAuthStore } from "@/lib/store/auth-store";
 import type {
   BatchAnnouncement,
   BatchDoubt,
@@ -158,6 +159,8 @@ export default function AdminBatchDetailPage(props: {
   params: Promise<{ batchId: string }>;
 }) {
   const { batchId } = use(props.params);
+  const { user } = useAuthStore();
+  const isAdmin = user?.role === "PLATFORM_ADMIN";
   const { data: batch, isLoading } = useBatch(batchId);
   const { data: subjects = [] } = useBatchSubjects(batchId);
   const { data: sessions = [] } = useBatchSessions(batchId);
@@ -264,10 +267,12 @@ export default function AdminBatchDetailPage(props: {
               All batches
             </Link>
           </Button>
-          <Button size="sm" onClick={() => setBatchEditOpen(true)}>
-            <Pencil className="size-3.5 mr-1.5" />
-            Edit
-          </Button>
+          {isAdmin && (
+            <Button size="sm" onClick={() => setBatchEditOpen(true)}>
+              <Pencil className="size-3.5 mr-1.5" />
+              Edit
+            </Button>
+          )}
         </div>
       }
     >
@@ -527,10 +532,12 @@ export default function AdminBatchDetailPage(props: {
                 className="h-8 pl-8 text-xs"
               />
             </div>
-            <Button size="sm" onClick={() => setEnrollOpen(true)}>
-              <UserPlus className="size-3.5 mr-1.5" />
-              Enroll students
-            </Button>
+            {isAdmin && (
+              <Button size="sm" onClick={() => setEnrollOpen(true)}>
+                <UserPlus className="size-3.5 mr-1.5" />
+                Enroll students
+              </Button>
+            )}
           </div>
           {enrollments.length === 0 ? (
             <EmptyState
@@ -586,14 +593,16 @@ export default function AdminBatchDetailPage(props: {
                           {e.accessEndsAt ? formatDate(e.accessEndsAt) : "—"}
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-destructive"
-                            onClick={() => setConfirmEnrollmentRemove(e)}
-                          >
-                            Revoke
-                          </Button>
+                          {isAdmin && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-destructive"
+                              onClick={() => setConfirmEnrollmentRemove(e)}
+                            >
+                              Revoke
+                            </Button>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}

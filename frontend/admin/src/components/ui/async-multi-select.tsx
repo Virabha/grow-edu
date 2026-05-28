@@ -53,17 +53,23 @@ export function AsyncMultiSelect({
   const debounced = useDebounce(query, 250);
   const [results, setResults] = React.useState<AsyncMultiSelectOption[]>([]);
   const [loading, setLoading] = React.useState(false);
+  const [loadError, setLoadError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     if (!open) return;
     let cancelled = false;
     setLoading(true);
+    setLoadError(null);
     loadOptions(debounced)
       .then((r) => {
         if (!cancelled) setResults(r);
       })
-      .catch(() => {
-        if (!cancelled) setResults([]);
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setResults([]);
+        const msg = err instanceof Error ? err.message : "Failed to load";
+        setLoadError(msg);
+        console.error("[AsyncMultiSelect] load failed:", err);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -137,7 +143,12 @@ export function AsyncMultiSelect({
                   Searching…
                 </div>
               )}
-              {!loading && results.length === 0 && !adHoc && (
+              {!loading && loadError && (
+                <div className="px-3 py-3 text-xs text-destructive">
+                  {loadError}
+                </div>
+              )}
+              {!loading && !loadError && results.length === 0 && !adHoc && (
                 <CommandEmpty>{emptyMessage}</CommandEmpty>
               )}
               {!loading && adHoc && !adHocAlreadyListed && (

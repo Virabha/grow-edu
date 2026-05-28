@@ -85,6 +85,11 @@ export class BatchesController {
     @Query() query: FilterBatchesDto,
     @CurrentUser() user?: AuthedUser
   ) {
+    if (user?.role === "INSTRUCTOR") {
+      return this.batchesService.findAll(query, user.role, {
+        teacherId: user.userId,
+      });
+    }
     return this.batchesService.findAll(query, user?.role);
   }
 

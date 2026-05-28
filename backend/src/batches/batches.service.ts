@@ -347,13 +347,23 @@ export class BatchesService implements OnModuleInit {
 
   // ─── Batches CRUD ──────────────────────────────────────────────────────────
 
-  async findAll(filters: FilterBatchesDto, userRole?: string) {
+  async findAll(
+    filters: FilterBatchesDto,
+    userRole?: string,
+    scope?: { teacherId?: string },
+  ) {
     const page = filters.page ?? 1;
     const limit = Math.min(filters.limit ?? 20, MAX_PAGE_LIMIT);
     const offset = (page - 1) * limit;
 
-    const isPublic = !this.isAdmin(userRole);
-    const cacheKey = `${CACHE_PREFIX}list:${isPublic ? "public" : "admin"}:${JSON.stringify(filters)}`;
+    const isPublic = !this.isAdmin(userRole) && !scope?.teacherId;
+    const cacheKey = `${CACHE_PREFIX}list:${
+      scope?.teacherId
+        ? `teacher:${scope.teacherId}`
+        : isPublic
+          ? "public"
+          : "admin"
+    }:${JSON.stringify(filters)}`;
     if (isPublic) {
       const cached = await this.cacheService.get(cacheKey);
       if (cached) return cached;
@@ -375,6 +385,11 @@ export class BatchesService implements OnModuleInit {
           ilike(batches.shortDescription, pattern),
           ilike(batches.targetExam, pattern)
         )!
+      );
+    }
+    if (scope?.teacherId) {
+      conditions.push(
+        sql`${batches.teacherIds} @> ${JSON.stringify([scope.teacherId])}::jsonb`,
       );
     }
 

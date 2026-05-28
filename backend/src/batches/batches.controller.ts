@@ -59,6 +59,7 @@ import { RolesGuard } from "../auth/guards/roles.guard";
 import { Public } from "../auth/decorators/public.decorator";
 import { Roles, UserRole } from "../auth/decorators/roles.decorator";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
+import { BatchManagerGuard } from "./guards/batch-manager.guard";
 
 interface AuthedUser {
   userId: string;
@@ -117,10 +118,9 @@ export class BatchesController {
     });
   }
 
-  @ApiOperation({ summary: "Batch analytics (admin)" })
+  @ApiOperation({ summary: "Batch analytics (admin or batch teacher)" })
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.PLATFORM_ADMIN)
+  @UseGuards(JwtAuthGuard, BatchManagerGuard)
   @Get(":batchId/analytics")
   async analytics(@Param("batchId") batchId: string) {
     return this.batchesService.analytics(batchId);
@@ -187,10 +187,9 @@ export class BatchesController {
     return this.batchesService.listSubjects(batchId);
   }
 
-  @ApiOperation({ summary: "Create a subject (admin)" })
+  @ApiOperation({ summary: "Create a subject (admin or batch teacher)" })
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.PLATFORM_ADMIN)
+  @UseGuards(JwtAuthGuard, BatchManagerGuard)
   @Post(":batchId/subjects")
   async createSubject(
     @Param("batchId") batchId: string,
@@ -199,10 +198,9 @@ export class BatchesController {
     return this.batchesService.createSubject(batchId, dto);
   }
 
-  @ApiOperation({ summary: "Update a subject (admin)" })
+  @ApiOperation({ summary: "Update a subject (admin or batch teacher)" })
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.PLATFORM_ADMIN)
+  @UseGuards(JwtAuthGuard, BatchManagerGuard)
   @Patch(":batchId/subjects/:subjectId")
   async updateSubject(
     @Param("batchId") batchId: string,
@@ -212,10 +210,9 @@ export class BatchesController {
     return this.batchesService.updateSubject(batchId, subjectId, dto);
   }
 
-  @ApiOperation({ summary: "Delete a subject (admin)" })
+  @ApiOperation({ summary: "Delete a subject (admin or batch teacher)" })
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.PLATFORM_ADMIN)
+  @UseGuards(JwtAuthGuard, BatchManagerGuard)
   @Delete(":batchId/subjects/:subjectId")
   async deleteSubject(
     @Param("batchId") batchId: string,
@@ -260,10 +257,11 @@ export class BatchesController {
     );
   }
 
-  @ApiOperation({ summary: "Schedule a live session or add a recording (admin)" })
+  @ApiOperation({
+    summary: "Schedule a live session or add a recording (admin or teacher)",
+  })
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.PLATFORM_ADMIN)
+  @UseGuards(JwtAuthGuard, BatchManagerGuard)
   @Post(":batchId/sessions")
   async createSession(
     @Param("batchId") batchId: string,
@@ -272,10 +270,9 @@ export class BatchesController {
     return this.batchesService.createSession(batchId, dto);
   }
 
-  @ApiOperation({ summary: "Update a session (admin)" })
+  @ApiOperation({ summary: "Update a session (admin or batch teacher)" })
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.PLATFORM_ADMIN)
+  @UseGuards(JwtAuthGuard, BatchManagerGuard)
   @Patch(":batchId/sessions/:sessionId")
   async updateSession(
     @Param("batchId") batchId: string,
@@ -285,10 +282,9 @@ export class BatchesController {
     return this.batchesService.updateSession(batchId, sessionId, dto);
   }
 
-  @ApiOperation({ summary: "Delete a session (admin)" })
+  @ApiOperation({ summary: "Delete a session (admin or batch teacher)" })
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.PLATFORM_ADMIN)
+  @UseGuards(JwtAuthGuard, BatchManagerGuard)
   @Delete(":batchId/sessions/:sessionId")
   async deleteSession(
     @Param("batchId") batchId: string,
@@ -299,10 +295,9 @@ export class BatchesController {
 
   // ─── Enrollments ───────────────────────────────────────────────────────────
 
-  @ApiOperation({ summary: "List enrolled students in a batch (admin)" })
+  @ApiOperation({ summary: "List enrolled students in a batch (admin or teacher)" })
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.PLATFORM_ADMIN)
+  @UseGuards(JwtAuthGuard, BatchManagerGuard)
   @Get(":batchId/enrollments")
   async listEnrollments(
     @Param("batchId") batchId: string,
@@ -358,10 +353,9 @@ export class BatchesController {
     });
   }
 
-  @ApiOperation({ summary: "Post a batch announcement (admin)" })
+  @ApiOperation({ summary: "Post a batch announcement (admin or teacher)" })
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.PLATFORM_ADMIN)
+  @UseGuards(JwtAuthGuard, BatchManagerGuard)
   @Post(":batchId/announcements")
   async createAnnouncement(
     @Param("batchId") batchId: string,
@@ -371,10 +365,9 @@ export class BatchesController {
     return this.batchesService.createAnnouncement(batchId, dto, user.userId);
   }
 
-  @ApiOperation({ summary: "Update an announcement (admin)" })
+  @ApiOperation({ summary: "Update an announcement (admin or batch teacher)" })
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.PLATFORM_ADMIN)
+  @UseGuards(JwtAuthGuard, BatchManagerGuard)
   @Patch(":batchId/announcements/:announcementId")
   async updateAnnouncement(
     @Param("batchId") batchId: string,
@@ -384,10 +377,9 @@ export class BatchesController {
     return this.batchesService.updateAnnouncement(batchId, announcementId, dto);
   }
 
-  @ApiOperation({ summary: "Delete an announcement (admin)" })
+  @ApiOperation({ summary: "Delete an announcement (admin or batch teacher)" })
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.PLATFORM_ADMIN)
+  @UseGuards(JwtAuthGuard, BatchManagerGuard)
   @Delete(":batchId/announcements/:announcementId")
   async deleteAnnouncement(
     @Param("batchId") batchId: string,
@@ -418,10 +410,9 @@ export class BatchesController {
     });
   }
 
-  @ApiOperation({ summary: "Upload a PDF resource (admin)" })
+  @ApiOperation({ summary: "Upload a PDF resource (admin or batch teacher)" })
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.PLATFORM_ADMIN)
+  @UseGuards(JwtAuthGuard, BatchManagerGuard)
   @Post(":batchId/resources")
   async createResource(
     @Param("batchId") batchId: string,
@@ -431,10 +422,9 @@ export class BatchesController {
     return this.batchesService.createResource(batchId, dto, user.userId);
   }
 
-  @ApiOperation({ summary: "Update a resource (admin)" })
+  @ApiOperation({ summary: "Update a resource (admin or batch teacher)" })
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.PLATFORM_ADMIN)
+  @UseGuards(JwtAuthGuard, BatchManagerGuard)
   @Patch(":batchId/resources/:resourceId")
   async updateResource(
     @Param("batchId") batchId: string,
@@ -444,10 +434,9 @@ export class BatchesController {
     return this.batchesService.updateResource(batchId, resourceId, dto);
   }
 
-  @ApiOperation({ summary: "Delete a resource (admin)" })
+  @ApiOperation({ summary: "Delete a resource (admin or batch teacher)" })
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.PLATFORM_ADMIN)
+  @UseGuards(JwtAuthGuard, BatchManagerGuard)
   @Delete(":batchId/resources/:resourceId")
   async deleteResource(
     @Param("batchId") batchId: string,
@@ -586,10 +575,9 @@ export class BatchesController {
     return this.batchesService.recordAttendance(batchId, sessionId, user.userId, dto);
   }
 
-  @ApiOperation({ summary: "List attendance for a session (admin)" })
+  @ApiOperation({ summary: "List attendance for a session (admin or teacher)" })
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.PLATFORM_ADMIN)
+  @UseGuards(JwtAuthGuard, BatchManagerGuard)
   @Get(":batchId/sessions/:sessionId/attendance")
   async listAttendance(
     @Param("batchId") batchId: string,
@@ -629,10 +617,9 @@ export class BatchesController {
     });
   }
 
-  @ApiOperation({ summary: "Create a quiz (admin)" })
+  @ApiOperation({ summary: "Create a quiz (admin or batch teacher)" })
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.PLATFORM_ADMIN)
+  @UseGuards(JwtAuthGuard, BatchManagerGuard)
   @Post(":batchId/quizzes")
   async createQuiz(
     @Param("batchId") batchId: string,
@@ -642,10 +629,9 @@ export class BatchesController {
     return this.batchesService.createQuiz(batchId, dto, user.userId);
   }
 
-  @ApiOperation({ summary: "Update a quiz (admin)" })
+  @ApiOperation({ summary: "Update a quiz (admin or batch teacher)" })
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.PLATFORM_ADMIN)
+  @UseGuards(JwtAuthGuard, BatchManagerGuard)
   @Patch(":batchId/quizzes/:quizId")
   async updateQuiz(
     @Param("batchId") batchId: string,
@@ -655,10 +641,9 @@ export class BatchesController {
     return this.batchesService.updateQuiz(batchId, quizId, dto);
   }
 
-  @ApiOperation({ summary: "Delete a quiz (admin)" })
+  @ApiOperation({ summary: "Delete a quiz (admin or batch teacher)" })
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.PLATFORM_ADMIN)
+  @UseGuards(JwtAuthGuard, BatchManagerGuard)
   @Delete(":batchId/quizzes/:quizId")
   async deleteQuiz(
     @Param("batchId") batchId: string,
@@ -668,10 +653,9 @@ export class BatchesController {
   }
 
   // Quiz questions
-  @ApiOperation({ summary: "Add a question to a quiz (admin)" })
+  @ApiOperation({ summary: "Add a question to a quiz (admin or teacher)" })
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.PLATFORM_ADMIN)
+  @UseGuards(JwtAuthGuard, BatchManagerGuard)
   @Post(":batchId/quizzes/:quizId/questions")
   async createQuizQuestion(
     @Param("batchId") batchId: string,
@@ -681,10 +665,9 @@ export class BatchesController {
     return this.batchesService.createQuizQuestion(batchId, quizId, dto);
   }
 
-  @ApiOperation({ summary: "Update a quiz question (admin)" })
+  @ApiOperation({ summary: "Update a quiz question (admin or teacher)" })
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.PLATFORM_ADMIN)
+  @UseGuards(JwtAuthGuard, BatchManagerGuard)
   @Patch(":batchId/quizzes/:quizId/questions/:questionId")
   async updateQuizQuestion(
     @Param("batchId") batchId: string,
@@ -695,10 +678,9 @@ export class BatchesController {
     return this.batchesService.updateQuizQuestion(batchId, quizId, questionId, dto);
   }
 
-  @ApiOperation({ summary: "Delete a quiz question (admin)" })
+  @ApiOperation({ summary: "Delete a quiz question (admin or teacher)" })
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.PLATFORM_ADMIN)
+  @UseGuards(JwtAuthGuard, BatchManagerGuard)
   @Delete(":batchId/quizzes/:quizId/questions/:questionId")
   async deleteQuizQuestion(
     @Param("batchId") batchId: string,

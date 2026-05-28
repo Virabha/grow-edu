@@ -9,6 +9,7 @@ import {
   useNotifications,
   useUnreadCount,
 } from "@/lib/hooks/use-notifications";
+import { useBrowserNotifications } from "@/lib/hooks/use-browser-notifications";
 import { useAuthStore } from "@/lib/store/auth-store";
 
 function timeAgo(iso: string): string {
@@ -31,6 +32,7 @@ export function NotificationBell() {
   const { data: unread } = useUnreadCount(isLoggedIn);
   const { data: list, isLoading } = useNotifications({ limit: 15 }, isLoggedIn && open);
   const markAllRead = useMarkAllRead();
+  useBrowserNotifications(isLoggedIn);
 
   useEffect(() => {
     if (!open) return;

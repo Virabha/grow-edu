@@ -323,6 +323,28 @@ export class BatchesService implements OnModuleInit {
     return role === "PLATFORM_ADMIN";
   }
 
+  private isInstructor(role?: string): boolean {
+    return role === "INSTRUCTOR";
+  }
+
+  /** Allows admin, or instructor listed on the batch's `teacherIds`. Returns the batch. */
+  async assertCanManageBatch(
+    batchId: string,
+    userId: string,
+    userRole: string,
+  ) {
+    const batch = await this.getBatchOrThrow(batchId);
+    if (this.isAdmin(userRole)) return batch;
+    if (
+      this.isInstructor(userRole) &&
+      Array.isArray(batch.teacherIds) &&
+      (batch.teacherIds as string[]).includes(userId)
+    ) {
+      return batch;
+    }
+    throw new ForbiddenException("You can't manage this batch");
+  }
+
   // ─── Batches CRUD ──────────────────────────────────────────────────────────
 
   async findAll(filters: FilterBatchesDto, userRole?: string) {
@@ -1594,7 +1616,6 @@ export class BatchesService implements OnModuleInit {
       })
       .where(eq(batchDoubts.doubtId, doubtId));
 
-    // Notify the doubt author when someone else replies
     if (doubt.askedBy !== userId) {
       const batch = await this.getBatchOrThrow(batchId);
       await this.notificationsService.create({
@@ -1757,7 +1778,6 @@ export class BatchesService implements OnModuleInit {
 
     if (isAdmin) return quizzes;
 
-    // For learners, also fetch their best attempt per quiz
     const userAttempts = await this.db
       .select({
         quizId: batchQuizAttempts.quizId,
@@ -2121,7 +2141,6 @@ export class BatchesService implements OnModuleInit {
       throw new BadRequestException("Quiz has closed");
     }
 
-    // Check existing in-progress
     const [inProgress] = await this.db
       .select()
       .from(batchQuizAttempts)
@@ -2135,7 +2154,6 @@ export class BatchesService implements OnModuleInit {
       .limit(1);
     if (inProgress) return inProgress;
 
-    // Check max attempts
     const finished = await this.db
       .select({ count: sql<number>`count(*)::int` })
       .from(batchQuizAttempts)
@@ -2356,7 +2374,6 @@ export class BatchesService implements OnModuleInit {
       .orderBy(desc(batchQuizAttempts.score), asc(batchQuizAttempts.submittedAt))
       .limit(50);
 
-    // Keep only best per user
     const seen = new Set<string>();
     const leaderboard: Array<{
       userId: string;

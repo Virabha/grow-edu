@@ -11,11 +11,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-/**
- * Standard form sheet: sticky header, scrolling form body, sticky footer with
- * two half-width buttons. Use for every admin form dialog so layout/spacing is
- * uniform across the app.
- */
 export function FormSheet({
   open,
   onOpenChange,

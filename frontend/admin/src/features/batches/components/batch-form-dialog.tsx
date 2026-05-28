@@ -183,9 +183,7 @@ export function BatchFormDialog(props: {
   const isEditing = !!batch;
   const create = useCreateBatch();
   const update = useUpdateBatch();
-  // The original thumbnail URL the backend served us when the form opened.
-  // We compare against this on submit so a thumbnail that wasn't re-uploaded
-  // is omitted from the PATCH payload (backend keeps its original storage key).
+  // Tracks original value so unchanged thumbnails are omitted from the PATCH (preserves storage key).
   const [thumbnailInitial, setThumbnailInitial] = useState<string | null>(null);
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
 
@@ -199,10 +197,6 @@ export function BatchFormDialog(props: {
   function handleSubmitForm(values: Values) {
     const slug = values.slug.trim() || slugify(values.title);
     const trimmedThumb = values.thumbnail?.trim() ?? "";
-    // Only forward the thumbnail when:
-    //   - creating (always include if set), OR
-    //   - editing AND the user uploaded a new file (value differs from what we loaded).
-    // This avoids overwriting the backend's storage key with a resolved CDN URL.
     const thumbnailChanged = trimmedThumb !== (thumbnailInitial ?? "");
     const thumbnailToSend = !isEditing
       ? trimmedThumb || undefined

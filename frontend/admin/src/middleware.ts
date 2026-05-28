@@ -10,7 +10,7 @@ const publicRoutes = [
 ];
 
 const roleBasedRoutes: Record<string, string[]> = {
-  INSTRUCTOR: ["/instructor"],
+  INSTRUCTOR: ["/instructor", "/admin/batches"],
   CORPORATE_ADMIN: ["/corporate"],
   PLATFORM_ADMIN: ["/admin", "/instructor"],
 };

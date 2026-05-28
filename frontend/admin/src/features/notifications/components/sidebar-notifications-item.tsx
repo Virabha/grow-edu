@@ -16,6 +16,7 @@ import {
   useNotifications,
   useUnreadCount,
 } from "../hooks/use-notifications";
+import { useBrowserNotifications } from "../hooks/use-browser-notifications";
 
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -42,6 +43,8 @@ export function SidebarNotificationsItem({
     mounted && open
   );
   const markAllRead = useMarkAllRead();
+  // System notifications when tab is in background or laptop wakes up.
+  useBrowserNotifications(mounted);
 
   useEffect(() => {
     setMounted(true);

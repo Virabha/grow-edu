@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { BatchesController } from "./batches.controller";
 import { BatchesService } from "./batches.service";
 import { CertificateService } from "./certificate.service";
+import { BatchManagerGuard } from "./guards/batch-manager.guard";
 import { DatabaseModule } from "../database/database.module";
 import { FilesModule } from "../files/files.module";
 import { CdnModule } from "../cdn/cdn.module";
@@ -21,7 +22,7 @@ import { CouponsModule } from "../coupons/coupons.module";
     CouponsModule,
   ],
   controllers: [BatchesController],
-  providers: [BatchesService, CertificateService],
+  providers: [BatchesService, CertificateService, BatchManagerGuard],
   exports: [BatchesService, CertificateService],
 })
 export class BatchesModule {}

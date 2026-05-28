@@ -20,29 +20,20 @@ import {
 import { useDebounce } from "@/hooks/use-debounce";
 
 export interface AsyncMultiSelectOption {
-  /** Stable identifier (used internally, as the "selected" key). */
   value: string;
-  /** Primary line shown in the dropdown + the chip. */
   label: string;
-  /** Optional second line shown in the dropdown only. */
   secondary?: string;
-  /** Arbitrary payload — handy for callers that want richer data later. */
   meta?: Record<string, unknown>;
 }
 
 interface Props {
-  /** Currently-selected options (controlled). */
   value: AsyncMultiSelectOption[];
   onChange: (next: AsyncMultiSelectOption[]) => void;
-  /**
-   * Called with the debounced search query (or empty string for the initial
-   * "show recent" list). Returns the matching options.
-   */
   loadOptions: (query: string) => Promise<AsyncMultiSelectOption[]>;
   placeholder?: string;
   searchPlaceholder?: string;
   emptyMessage?: string;
-  /** Optional ability to add a raw value not in the result list — e.g. emails. */
+  /** Returns an option for the typed query when it's a valid ad-hoc value (e.g. email). */
   allowAdHoc?: (query: string) => AsyncMultiSelectOption | null;
   className?: string;
 }

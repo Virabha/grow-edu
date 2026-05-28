@@ -139,6 +139,9 @@ export function useDeleteBatchSubject(batchId: string) {
 
 // ─── Sessions ───────────────────────────────────────────────────────────────
 
+const LIVE_REFETCH_INTERVAL_MS = 60_000;
+const THREAD_REFETCH_INTERVAL_MS = 20_000;
+
 export function useBatchSessions(
   batchId: string | null,
   type?: "LIVE" | "RECORDING"
@@ -147,6 +150,8 @@ export function useBatchSessions(
     queryKey: queryKeys.batches.sessions(batchId ?? undefined, type),
     queryFn: () => batchesApi.listSessions(batchId!, type),
     enabled: !!batchId,
+    refetchInterval: LIVE_REFETCH_INTERVAL_MS,
+    refetchIntervalInBackground: false,
   });
 }
 

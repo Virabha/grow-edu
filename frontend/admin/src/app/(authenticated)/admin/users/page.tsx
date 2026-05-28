@@ -161,7 +161,11 @@ export default function AdminUserManagementPage() {
                 {users.map((user: User) => (
                   <TableRow
                     key={user.id}
-                    className="border-b-border/60 transition-colors hover:bg-muted/40"
+                    className="cursor-pointer border-b-border/60 transition-colors hover:bg-muted/40"
+                    onClick={() => {
+                      setEditingUser(user);
+                      setIsEditOpen(true);
+                    }}
                   >
                     <TableCell className="font-medium text-foreground">
                       {[user.firstName, user.lastName]

@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Eye } from "lucide-react";
 
 import { PageLayout } from "@/components/layout/page-layout";
@@ -67,6 +68,7 @@ function StatusBadge({
 }
 
 export default function AdminCourseManagementPage() {
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 500);
   const [statusFilter, setStatusFilter] = useState<StatusFilterValue>("all");
@@ -181,7 +183,8 @@ export default function AdminCourseManagementPage() {
                 {courses.map((course) => (
                   <TableRow
                     key={course.courseId}
-                    className="border-b-border/60 transition-colors hover:bg-muted/40"
+                    className="cursor-pointer border-b-border/60 transition-colors hover:bg-muted/40"
+                    onClick={() => router.push(`/admin/courses/${course.courseId}`)}
                   >
                     <TableCell className="font-medium text-foreground">
                       {course.title}

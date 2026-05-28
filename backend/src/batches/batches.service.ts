@@ -345,6 +345,39 @@ export class BatchesService implements OnModuleInit {
     throw new ForbiddenException("You can't manage this batch");
   }
 
+  /** True for admins and instructors listed on the batch — i.e. staff who see unpublished content and bypass enrollment. */
+  private isBatchStaff(
+    batch: { teacherIds: unknown },
+    userId: string | undefined,
+    userRole: string | undefined,
+  ): boolean {
+    if (this.isAdmin(userRole)) return true;
+    if (
+      this.isInstructor(userRole) &&
+      userId &&
+      Array.isArray(batch.teacherIds) &&
+      (batch.teacherIds as string[]).includes(userId)
+    ) {
+      return true;
+    }
+    return false;
+  }
+
+  /** Loads the batch and asserts the caller can read its content. Returns `{ batch, isStaff }`. */
+  private async assertCanViewBatch(
+    batchId: string,
+    userId: string | undefined,
+    userRole: string | undefined,
+  ) {
+    const batch = await this.getBatchOrThrow(batchId);
+    const isStaff = this.isBatchStaff(batch, userId, userRole);
+    if (!isStaff) {
+      if (!userId) throw new ForbiddenException("Authentication required");
+      await this.assertEnrolled(batchId, userId);
+    }
+    return { batch, isStaff };
+  }
+
   // ─── Batches CRUD ──────────────────────────────────────────────────────────
 
   async findAll(
@@ -537,7 +570,7 @@ export class BatchesService implements OnModuleInit {
         profileImage: this.resolveImageUrl(t.profileImage),
       })),
       isEnrolled,
-      canManage: isAdmin,
+      canManage: this.isBatchStaff(batch, userId, userRole),
     };
   }
 
@@ -731,13 +764,7 @@ export class BatchesService implements OnModuleInit {
     batchId: string,
     opts: { userId?: string; userRole?: string; type?: "LIVE" | "RECORDING" }
   ) {
-    await this.getBatchOrThrow(batchId);
-
-    const canSeeAll = this.isAdmin(opts.userRole);
-    if (!canSeeAll) {
-      if (!opts.userId) throw new ForbiddenException("Authentication required");
-      await this.assertEnrolled(batchId, opts.userId);
-    }
+    await this.assertCanViewBatch(batchId, opts.userId, opts.userRole);
 
     const conditions = [
       eq(batchSessions.batchId, batchId),
@@ -765,12 +792,7 @@ export class BatchesService implements OnModuleInit {
     userId: string | undefined,
     userRole: string | undefined
   ) {
-    await this.getBatchOrThrow(batchId);
-    const canSeeAll = this.isAdmin(userRole);
-    if (!canSeeAll) {
-      if (!userId) throw new ForbiddenException("Authentication required");
-      await this.assertEnrolled(batchId, userId);
-    }
+    await this.assertCanViewBatch(batchId, userId, userRole);
 
     const [session] = await this.db
       .select()
@@ -1157,11 +1179,7 @@ export class BatchesService implements OnModuleInit {
     batchId: string,
     opts: { userId?: string; userRole?: string }
   ) {
-    await this.getBatchOrThrow(batchId);
-    if (!this.isAdmin(opts.userRole)) {
-      if (!opts.userId) throw new ForbiddenException("Authentication required");
-      await this.assertEnrolled(batchId, opts.userId);
-    }
+    await this.assertCanViewBatch(batchId, opts.userId, opts.userRole);
     return this.db
       .select()
       .from(batchAnnouncements)
@@ -1262,18 +1280,18 @@ export class BatchesService implements OnModuleInit {
       subjectId?: string;
     }
   ) {
-    await this.getBatchOrThrow(batchId);
-    if (!this.isAdmin(opts.userRole)) {
-      if (!opts.userId) throw new ForbiddenException("Authentication required");
-      await this.assertEnrolled(batchId, opts.userId);
-    }
+    const { isStaff } = await this.assertCanViewBatch(
+      batchId,
+      opts.userId,
+      opts.userRole,
+    );
     const conditions = [
       eq(batchResources.batchId, batchId),
       eq(batchResources.isDeleted, false),
     ];
     if (opts.type) conditions.push(eq(batchResources.type, opts.type));
     if (opts.subjectId) conditions.push(eq(batchResources.subjectId, opts.subjectId));
-    if (!this.isAdmin(opts.userRole)) {
+    if (!isStaff) {
       conditions.push(
         or(
           sql`${batchResources.publishAt} IS NULL`,
@@ -1398,10 +1416,7 @@ export class BatchesService implements OnModuleInit {
     batchId: string,
     opts: { userId: string; userRole: string; mine?: boolean; status?: string }
   ) {
-    await this.getBatchOrThrow(batchId);
-    if (!this.isAdmin(opts.userRole)) {
-      await this.assertEnrolled(batchId, opts.userId);
-    }
+    await this.assertCanViewBatch(batchId, opts.userId, opts.userRole);
     const conditions = [
       eq(batchDoubts.batchId, batchId),
       eq(batchDoubts.isDeleted, false),
@@ -1440,10 +1455,7 @@ export class BatchesService implements OnModuleInit {
   }
 
   async getDoubt(batchId: string, doubtId: string, userId: string, userRole: string) {
-    await this.getBatchOrThrow(batchId);
-    if (!this.isAdmin(userRole)) {
-      await this.assertEnrolled(batchId, userId);
-    }
+    await this.assertCanViewBatch(batchId, userId, userRole);
     const [doubtRow] = await this.db
       .select({
         doubt: batchDoubts,
@@ -1594,7 +1606,7 @@ export class BatchesService implements OnModuleInit {
     userId: string,
     userRole: string
   ) {
-    await this.getBatchOrThrow(batchId);
+    const { isStaff } = await this.assertCanViewBatch(batchId, userId, userRole);
     const [doubt] = await this.db
       .select()
       .from(batchDoubts)
@@ -1607,10 +1619,7 @@ export class BatchesService implements OnModuleInit {
       )
       .limit(1);
     if (!doubt) throw new NotFoundException("Doubt not found");
-    const isAdmin = this.isAdmin(userRole);
-    if (!isAdmin) await this.assertEnrolled(batchId, userId);
-
-    const isOfficial = isAdmin || userRole === "INSTRUCTOR";
+    const isOfficial = isStaff;
     const [reply] = await this.db
       .insert(batchDoubtReplies)
       .values({
@@ -1773,15 +1782,17 @@ export class BatchesService implements OnModuleInit {
     batchId: string,
     opts: { userId: string; userRole: string }
   ) {
-    await this.getBatchOrThrow(batchId);
-    const isAdmin = this.isAdmin(opts.userRole);
-    if (!isAdmin) await this.assertEnrolled(batchId, opts.userId);
+    const { isStaff } = await this.assertCanViewBatch(
+      batchId,
+      opts.userId,
+      opts.userRole,
+    );
 
     const conditions = [
       eq(batchQuizzes.batchId, batchId),
       eq(batchQuizzes.isDeleted, false),
     ];
-    if (!isAdmin) {
+    if (!isStaff) {
       conditions.push(sql`${batchQuizzes.publishedAt} IS NOT NULL`);
     }
 
@@ -1791,7 +1802,7 @@ export class BatchesService implements OnModuleInit {
       .where(and(...conditions))
       .orderBy(desc(batchQuizzes.createdAt));
 
-    if (isAdmin) return quizzes;
+    if (isStaff) return quizzes;
 
     const userAttempts = await this.db
       .select({
@@ -1837,9 +1848,11 @@ export class BatchesService implements OnModuleInit {
     quizId: string,
     opts: { userId: string; userRole: string; includeAnswers?: boolean }
   ) {
-    await this.getBatchOrThrow(batchId);
-    const isAdmin = this.isAdmin(opts.userRole);
-    if (!isAdmin) await this.assertEnrolled(batchId, opts.userId);
+    const { isStaff } = await this.assertCanViewBatch(
+      batchId,
+      opts.userId,
+      opts.userRole,
+    );
 
     const [quiz] = await this.db
       .select()
@@ -1853,7 +1866,7 @@ export class BatchesService implements OnModuleInit {
       )
       .limit(1);
     if (!quiz) throw new NotFoundException("Quiz not found");
-    if (!isAdmin && !quiz.publishedAt) {
+    if (!isStaff && !quiz.publishedAt) {
       throw new NotFoundException("Quiz not found");
     }
 
@@ -1870,7 +1883,7 @@ export class BatchesService implements OnModuleInit {
 
     // Strip correctAnswer + explanation for learners during attempt
     const safeQuestions =
-      isAdmin || opts.includeAnswers
+      isStaff || opts.includeAnswers
         ? questions
         : questions.map((q) => ({
             ...q,
@@ -2317,7 +2330,7 @@ export class BatchesService implements OnModuleInit {
     userId: string,
     userRole: string
   ) {
-    await this.getBatchOrThrow(batchId);
+    const batch = await this.getBatchOrThrow(batchId);
     const [attempt] = await this.db
       .select()
       .from(batchQuizAttempts)
@@ -2329,7 +2342,8 @@ export class BatchesService implements OnModuleInit {
       )
       .limit(1);
     if (!attempt) throw new NotFoundException("Attempt not found");
-    if (attempt.userId !== userId && !this.isAdmin(userRole)) {
+    const isStaff = this.isBatchStaff(batch, userId, userRole);
+    if (attempt.userId !== userId && !isStaff) {
       throw new ForbiddenException("Not your attempt");
     }
     return attempt;

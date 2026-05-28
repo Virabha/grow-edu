@@ -197,7 +197,8 @@ export default function PaymentManagementPage() {
                   {payments.map((payment) => (
                     <TableRow
                       key={payment.paymentId}
-                      className="border-b-border/60 transition-colors hover:bg-muted/40"
+                      className="cursor-pointer border-b-border/60 transition-colors hover:bg-muted/40"
+                      onClick={() => openDetail(payment.paymentId)}
                     >
                       <TableCell className="max-w-[180px] py-3">
                         <p className="truncate font-mono text-xs text-foreground">

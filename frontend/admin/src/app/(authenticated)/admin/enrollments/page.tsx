@@ -140,7 +140,11 @@ export default function EnrollmentManagementPage() {
                 {enrollments.map((enrollment: Enrollment) => (
                   <TableRow
                     key={enrollment.enrollmentId}
-                    className="border-b-border/60 transition-colors hover:bg-muted/40"
+                    className="cursor-pointer border-b-border/60 transition-colors hover:bg-muted/40"
+                    onClick={() => {
+                      setEditing(enrollment);
+                      setIsEditOpen(true);
+                    }}
                   >
                     <TableCell className="font-medium text-foreground">
                       {enrollment.user

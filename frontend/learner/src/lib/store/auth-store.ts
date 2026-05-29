@@ -38,8 +38,8 @@ function isTokenValid(token: string): boolean {
 
 function clearAuthCookie() {
   if (typeof document !== "undefined") {
-    document.cookie = "auth-token=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;";
-    document.cookie = "auth-token=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;SameSite=Lax;";
+    document.cookie = "learner-auth-token=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;";
+    document.cookie = "learner-auth-token=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;SameSite=Lax;";
   }
 }
 
@@ -55,7 +55,7 @@ export const useAuthStore = create<AuthState>()(
           localStorage.setItem("auth-token", token);
           const expires = new Date();
           expires.setDate(expires.getDate() + 7);
-          document.cookie = `auth-token=${token}; expires=${expires.toUTCString()}; path=/; SameSite=Lax`;
+          document.cookie = `learner-auth-token=${token}; expires=${expires.toUTCString()}; path=/; SameSite=Lax`;
         }
       },
       logout: () => {
@@ -100,7 +100,7 @@ export const useAuthStore = create<AuthState>()(
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {
-          const cookie = getCookie("auth-token");
+          const cookie = getCookie("learner-auth-token");
           const cookieValid = !!cookie && isTokenValid(cookie);
 
           if (state.user && !cookieValid) {

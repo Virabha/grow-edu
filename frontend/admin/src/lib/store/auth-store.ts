@@ -49,8 +49,8 @@ export const useAuthStore = create<AuthState>()(persist((set) => ({
                     document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;SameSite=None;Secure;`;
                 }
             }
-            document.cookie = 'auth-token=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;';
-            document.cookie = 'auth-token=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;SameSite=Lax;';
+            document.cookie = 'admin-auth-token=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;';
+            document.cookie = 'admin-auth-token=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;SameSite=Lax;';
         }
     },
 }), {

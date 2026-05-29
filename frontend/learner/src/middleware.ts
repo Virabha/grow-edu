@@ -23,7 +23,7 @@ function decodeJwtPayload(token: string): { exp?: number } | null {
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const token = request.cookies.get("auth-token")?.value;
+  const token = request.cookies.get("learner-auth-token")?.value;
 
   const payload = token ? decodeJwtPayload(token) : null;
   const isExpired = payload?.exp ? payload.exp * 1000 < Date.now() : false;
@@ -39,7 +39,7 @@ export function middleware(request: NextRequest) {
       new URL(`/login?redirect=${encodeURIComponent(pathname)}`, request.url),
     );
     if (token) {
-      response.cookies.delete("auth-token");
+      response.cookies.delete("learner-auth-token");
     }
     return response;
   }

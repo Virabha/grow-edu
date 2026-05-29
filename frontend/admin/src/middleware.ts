@@ -43,7 +43,7 @@ function getDashboardRoute(role: string): string {
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const token = request.cookies.get("auth-token")?.value;
+  const token = request.cookies.get("admin-auth-token")?.value;
 
   // Static / API / internal — never gate.
   if (

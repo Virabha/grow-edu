@@ -31,7 +31,7 @@ export function useLogin() {
                 localStorage.setItem("auth-token", data.access_token);
                 const expires = new Date();
                 expires.setDate(expires.getDate() + 7);
-                document.cookie = `auth-token=${data.access_token}; expires=${expires.toUTCString()}; path=/; SameSite=Lax`;
+                document.cookie = `admin-auth-token=${data.access_token}; expires=${expires.toUTCString()}; path=/; SameSite=Lax`;
             }
             queryClient.invalidateQueries();
             window.location.href = getPostLoginDestination(data.user.role);

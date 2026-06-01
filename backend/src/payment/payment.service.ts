@@ -536,7 +536,7 @@ export class PaymentService {
     }
 
     const now = new Date();
-    await this.db
+    const [updated] = await this.db
       .update(payments)
       .set({
         status: 'COMPLETED',
@@ -546,7 +546,8 @@ export class PaymentService {
         updatedAt: now,
         ...(linkedEnrollmentId ? { enrollmentId: linkedEnrollmentId } : {}),
       })
-      .where(eq(payments.paymentId, paymentId));
+      .where(and(eq(payments.paymentId, paymentId), eq(payments.status, 'PROOF_UPLOADED')))
+      .returning({ paymentId: payments.paymentId });
 
     // Consume coupon reservation if any
     if (payment.couponId) {
@@ -555,7 +556,8 @@ export class PaymentService {
       } catch {}
     }
 
-    // Confirmation email
+    // Confirmation email — only if this request won the status-update race
+    if (!updated) return { success: true };
     try {
       const [user] = await this.db
         .select()
@@ -858,7 +860,7 @@ export class PaymentService {
             userId,
             courseId,
             status: 'ACTIVE',
-          });
+          }).onConflictDoNothing();
         }
       }
 

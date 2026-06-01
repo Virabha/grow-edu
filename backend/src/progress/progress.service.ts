@@ -57,6 +57,7 @@ export class ProgressService {
           progress: '0',
           timeSpent: 0,
         })
+        .onConflictDoNothing()
         .returning();
 
       return {
@@ -131,6 +132,7 @@ export class ProgressService {
           progress: '0',
           timeSpent: 0,
         })
+        .onConflictDoNothing()
         .returning();
     }
 

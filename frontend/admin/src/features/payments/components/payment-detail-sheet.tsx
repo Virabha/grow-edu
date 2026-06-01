@@ -332,6 +332,7 @@ export function PaymentDetailSheet({
                 <Button
                   variant="outline"
                   className="gap-1.5 flex-1"
+                  disabled={isSubmitting}
                   onClick={() => {
                     setAction("reject");
                     setNotes("");
@@ -342,6 +343,7 @@ export function PaymentDetailSheet({
                 </Button>
                 <Button
                   className="gap-1.5 flex-1"
+                  disabled={isSubmitting}
                   onClick={() => {
                     setAction("approve");
                     setNotes("");

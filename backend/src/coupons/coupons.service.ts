@@ -3,12 +3,12 @@ import {
   NotFoundException,
   ConflictException,
   BadRequestException,
-} from '@nestjs/common';
-import { Inject } from '@nestjs/common';
-import { eq, and, sql, ilike, desc, asc, inArray } from 'drizzle-orm';
-import { DATABASE_CONNECTION } from '../database/database.module';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import * as schema from '../database/schema';
+} from "@nestjs/common";
+import { Inject } from "@nestjs/common";
+import { eq, and, sql, ilike, desc, asc, inArray } from "drizzle-orm";
+import { DATABASE_CONNECTION } from "../database/database.module";
+import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import * as schema from "../database/schema";
 import {
   coupons,
   couponCategories,
@@ -17,14 +17,14 @@ import {
   courses,
   categories,
   courseSections,
-} from '../database/schema';
-import { CreateCouponDto, DiscountType } from './dto/create-coupon.dto';
-import { UpdateCouponDto } from './dto/update-coupon.dto';
-import { ValidateCouponDto } from './dto/validate-coupon.dto';
+} from "../database/schema";
+import { CreateCouponDto, DiscountType } from "./dto/create-coupon.dto";
+import { UpdateCouponDto } from "./dto/update-coupon.dto";
+import { ValidateCouponDto } from "./dto/validate-coupon.dto";
 
 const MAX_PAGE_LIMIT = 50;
 
-export type CouponUsageStatus = 'RESERVED' | 'CONSUMED' | 'CANCELLED';
+export type CouponUsageStatus = "RESERVED" | "CONSUMED" | "CANCELLED";
 
 export interface CouponValidationResult {
   valid: boolean;
@@ -87,61 +87,65 @@ export class CouponsService {
       .limit(1);
 
     if (existing.length > 0) {
-      throw new ConflictException('Coupon code already exists');
+      throw new ConflictException("Coupon code already exists");
     }
 
     // Validate date range
     const validFrom = new Date(dto.validFrom);
     const validTill = new Date(dto.validTill);
     if (validTill <= validFrom) {
-      throw new BadRequestException('validTill must be after validFrom');
+      throw new BadRequestException("validTill must be after validFrom");
     }
 
     // Validate percentage discount
-    if (dto.discountType === DiscountType.PERCENTAGE && dto.discountValue > 100) {
-      throw new BadRequestException('Percentage discount cannot exceed 100');
+    if (
+      dto.discountType === DiscountType.PERCENTAGE &&
+      dto.discountValue > 100
+    ) {
+      throw new BadRequestException("Percentage discount cannot exceed 100");
     }
 
-    // Create coupon
-    const [coupon] = await this.db
-      .insert(coupons)
-      .values({
-        couponCode: dto.couponCode.toUpperCase(),
-        discountType: dto.discountType,
-        discountValue: String(dto.discountValue),
-        maxDiscountAmount: dto.maxDiscountAmount
-          ? String(dto.maxDiscountAmount)
-          : null,
-        minPurchaseAmount: dto.minPurchaseAmount
-          ? String(dto.minPurchaseAmount)
-          : null,
-        validFrom,
-        validTill,
-        usageLimit: dto.usageLimit ?? null,
-        usageLimitPerUser: dto.usageLimitPerUser ?? 1,
-        isActive: dto.isActive ?? true,
-      })
-      .returning();
+    // All three writes are atomic: if category or course insert fails the
+    // coupon row is rolled back, preventing orphaned partial records.
+    const coupon = await this.db.transaction(async (tx) => {
+      const [newCoupon] = await tx
+        .insert(coupons)
+        .values({
+          couponCode: dto.couponCode.toUpperCase(),
+          discountType: dto.discountType,
+          discountValue: String(dto.discountValue),
+          maxDiscountAmount: dto.maxDiscountAmount
+            ? String(dto.maxDiscountAmount)
+            : null,
+          minPurchaseAmount: dto.minPurchaseAmount
+            ? String(dto.minPurchaseAmount)
+            : null,
+          validFrom,
+          validTill,
+          usageLimit: dto.usageLimit ?? null,
+          usageLimitPerUser: dto.usageLimitPerUser ?? 1,
+          isActive: dto.isActive ?? true,
+        })
+        .returning();
 
-    // Add category associations
-    if (dto.categoryIds?.length) {
-      await this.db.insert(couponCategories).values(
-        dto.categoryIds.map((categoryId) => ({
-          couponId: coupon.couponId,
-          categoryId,
-        })),
-      );
-    }
+      if (dto.categoryIds?.length)
+        await tx.insert(couponCategories).values(
+          dto.categoryIds.map((categoryId) => ({
+            couponId: newCoupon.couponId,
+            categoryId,
+          })),
+        );
 
-    // Add course associations
-    if (dto.courseIds?.length) {
-      await this.db.insert(couponCourses).values(
-        dto.courseIds.map((courseId) => ({
-          couponId: coupon.couponId,
-          courseId,
-        })),
-      );
-    }
+      if (dto.courseIds?.length)
+        await tx.insert(couponCourses).values(
+          dto.courseIds.map((courseId) => ({
+            couponId: newCoupon.couponId,
+            courseId,
+          })),
+        );
+
+      return newCoupon;
+    });
 
     return this.findOne(coupon.couponId);
   }
@@ -162,7 +166,7 @@ export class CouponsService {
       conditions.push(ilike(coupons.couponCode, `%${filters.search}%`));
     }
 
-    if (typeof filters?.isActive === 'boolean') {
+    if (typeof filters?.isActive === "boolean") {
       conditions.push(eq(coupons.isActive, filters.isActive));
     }
 
@@ -279,7 +283,7 @@ export class CouponsService {
       .limit(1);
 
     if (!coupon || coupon.isDeleted) {
-      throw new NotFoundException('Coupon not found');
+      throw new NotFoundException("Coupon not found");
     }
 
     const [categoryAssocs, courseAssocs] = await Promise.all([
@@ -316,7 +320,10 @@ export class CouponsService {
     const existing = await this.findOne(couponId);
 
     // If updating coupon code, check for duplicates
-    if (dto.couponCode && dto.couponCode.toUpperCase() !== existing.couponCode) {
+    if (
+      dto.couponCode &&
+      dto.couponCode.toUpperCase() !== existing.couponCode
+    ) {
       const duplicate = await this.db
         .select({ id: coupons.couponId })
         .from(coupons)
@@ -329,13 +336,17 @@ export class CouponsService {
         .limit(1);
 
       if (duplicate.length > 0) {
-        throw new ConflictException('Coupon code already exists');
+        throw new ConflictException("Coupon code already exists");
       }
     }
 
     // Validate percentage discount
-    if (dto.discountType === DiscountType.PERCENTAGE && dto.discountValue && dto.discountValue > 100) {
-      throw new BadRequestException('Percentage discount cannot exceed 100');
+    if (
+      dto.discountType === DiscountType.PERCENTAGE &&
+      dto.discountValue &&
+      dto.discountValue > 100
+    ) {
+      throw new BadRequestException("Percentage discount cannot exceed 100");
     }
 
     // Build update object
@@ -362,34 +373,36 @@ export class CouponsService {
       updateData.usageLimitPerUser = dto.usageLimitPerUser;
     if (dto.isActive !== undefined) updateData.isActive = dto.isActive;
 
-    await this.db
-      .update(coupons)
-      .set(updateData)
-      .where(eq(coupons.couponId, couponId));
+    // Wrap all mutations so a mid-flight failure can't leave associations
+    // in a half-deleted / half-inserted state.
+    await this.db.transaction(async (tx) => {
+      await tx
+        .update(coupons)
+        .set(updateData)
+        .where(eq(coupons.couponId, couponId));
 
-    // Update category associations if provided
-    if (dto.categoryIds !== undefined) {
-      await this.db
-        .delete(couponCategories)
-        .where(eq(couponCategories.couponId, couponId));
-      if (dto.categoryIds.length > 0) {
-        await this.db.insert(couponCategories).values(
-          dto.categoryIds.map((categoryId) => ({ couponId, categoryId })),
-        );
+      if (dto.categoryIds !== undefined) {
+        await tx
+          .delete(couponCategories)
+          .where(eq(couponCategories.couponId, couponId));
+        if (dto.categoryIds.length > 0)
+          await tx
+            .insert(couponCategories)
+            .values(
+              dto.categoryIds.map((categoryId) => ({ couponId, categoryId })),
+            );
       }
-    }
 
-    // Update course associations if provided
-    if (dto.courseIds !== undefined) {
-      await this.db
-        .delete(couponCourses)
-        .where(eq(couponCourses.couponId, couponId));
-      if (dto.courseIds.length > 0) {
-        await this.db.insert(couponCourses).values(
-          dto.courseIds.map((courseId) => ({ couponId, courseId })),
-        );
+      if (dto.courseIds !== undefined) {
+        await tx
+          .delete(couponCourses)
+          .where(eq(couponCourses.couponId, couponId));
+        if (dto.courseIds.length > 0)
+          await tx
+            .insert(couponCourses)
+            .values(dto.courseIds.map((courseId) => ({ couponId, courseId })));
       }
-    }
+    });
 
     return this.findOne(couponId);
   }
@@ -400,7 +413,7 @@ export class CouponsService {
       .update(coupons)
       .set({ isActive: true, updatedAt: new Date() })
       .where(eq(coupons.couponId, couponId));
-    return { couponId, isActive: true, message: 'Coupon activated' };
+    return { couponId, isActive: true, message: "Coupon activated" };
   }
 
   async deactivate(couponId: string) {
@@ -409,7 +422,7 @@ export class CouponsService {
       .update(coupons)
       .set({ isActive: false, updatedAt: new Date() })
       .where(eq(coupons.couponId, couponId));
-    return { couponId, isActive: false, message: 'Coupon deactivated' };
+    return { couponId, isActive: false, message: "Coupon deactivated" };
   }
 
   async softDelete(couponId: string) {
@@ -418,7 +431,7 @@ export class CouponsService {
       .update(coupons)
       .set({ isDeleted: true, isActive: false, updatedAt: new Date() })
       .where(eq(coupons.couponId, couponId));
-    return { couponId, isDeleted: true, message: 'Coupon deleted' };
+    return { couponId, isDeleted: true, message: "Coupon deleted" };
   }
 
   // ==================== VALIDATION METHODS ====================
@@ -445,8 +458,8 @@ export class CouponsService {
       return {
         valid: false,
         couponCode: code,
-        reason: 'NOT_FOUND',
-        message: 'Coupon not found',
+        reason: "NOT_FOUND",
+        message: "Coupon not found",
       };
     }
 
@@ -455,8 +468,8 @@ export class CouponsService {
       return {
         valid: false,
         couponCode: code,
-        reason: 'INACTIVE',
-        message: 'This coupon is not active',
+        reason: "INACTIVE",
+        message: "This coupon is not active",
       };
     }
 
@@ -466,16 +479,16 @@ export class CouponsService {
       return {
         valid: false,
         couponCode: code,
-        reason: 'NOT_YET_VALID',
-        message: 'This coupon is not yet valid',
+        reason: "NOT_YET_VALID",
+        message: "This coupon is not yet valid",
       };
     }
     if (now > coupon.validTill) {
       return {
         valid: false,
         couponCode: code,
-        reason: 'EXPIRED',
-        message: 'This coupon has expired',
+        reason: "EXPIRED",
+        message: "This coupon has expired",
       };
     }
 
@@ -492,8 +505,8 @@ export class CouponsService {
         return {
           valid: false,
           couponCode: code,
-          reason: 'USAGE_LIMIT_EXCEEDED',
-          message: 'This coupon has reached its usage limit',
+          reason: "USAGE_LIMIT_EXCEEDED",
+          message: "This coupon has reached its usage limit",
         };
       }
     }
@@ -517,8 +530,8 @@ export class CouponsService {
         return {
           valid: false,
           couponCode: code,
-          reason: 'USER_LIMIT_EXCEEDED',
-          message: 'You have already used this coupon',
+          reason: "USER_LIMIT_EXCEEDED",
+          message: "You have already used this coupon",
         };
       }
     }
@@ -539,14 +552,14 @@ export class CouponsService {
       return {
         valid: false,
         couponCode: code,
-        reason: 'NOT_APPLICABLE',
-        message: 'Course not found',
+        reason: "NOT_APPLICABLE",
+        message: "Course not found",
       };
     }
 
     // Calculate amount based on item type
     let originalAmount = Number(course.price);
-    if (dto.itemType === 'SECTION' && dto.sectionId) {
+    if (dto.itemType === "SECTION" && dto.sectionId) {
       const [section] = await this.db
         .select({ sectionPrice: courseSections.sectionPrice })
         .from(courseSections)
@@ -563,8 +576,8 @@ export class CouponsService {
       return {
         valid: false,
         couponCode: code,
-        reason: 'NOT_APPLICABLE',
-        message: 'Coupon cannot be applied to a free item',
+        reason: "NOT_APPLICABLE",
+        message: "Coupon cannot be applied to a free item",
       };
     }
 
@@ -576,7 +589,7 @@ export class CouponsService {
       return {
         valid: false,
         couponCode: code,
-        reason: 'MIN_AMOUNT_NOT_MET',
+        reason: "MIN_AMOUNT_NOT_MET",
         message: `Minimum purchase amount is ${course.currency} ${coupon.minPurchaseAmount}`,
       };
     }
@@ -593,7 +606,8 @@ export class CouponsService {
         .where(eq(couponCourses.couponId, coupon.couponId)),
     ]);
 
-    const hasRestrictions = categoryAssocs.length > 0 || courseAssocs.length > 0;
+    const hasRestrictions =
+      categoryAssocs.length > 0 || courseAssocs.length > 0;
 
     if (hasRestrictions) {
       const courseApplicable = courseAssocs.some(
@@ -607,17 +621,17 @@ export class CouponsService {
         return {
           valid: false,
           couponCode: code,
-          reason: 'NOT_APPLICABLE',
-          message: 'This coupon is not valid for this course',
+          reason: "NOT_APPLICABLE",
+          message: "This coupon is not valid for this course",
         };
       }
     }
 
-    // Calculate discount
+    // Calculate discount using integer arithmetic to avoid float rounding errors.
+    // Strategy: work in paise (×100), round once, convert back.
     let discountAmount: number;
-    if (coupon.discountType === 'PERCENTAGE') {
-      discountAmount = originalAmount * (Number(coupon.discountValue) / 100);
-      // Apply max discount cap
+    if (coupon.discountType === "PERCENTAGE") {
+      discountAmount = Math.round(originalAmount * Number(coupon.discountValue)) / 100;
       if (
         coupon.maxDiscountAmount &&
         discountAmount > Number(coupon.maxDiscountAmount)
@@ -628,9 +642,11 @@ export class CouponsService {
       discountAmount = Number(coupon.discountValue);
     }
 
-    // Ensure discount doesn't exceed original amount and final is not negative
     discountAmount = Math.min(discountAmount, originalAmount);
-    const finalAmount = Math.max(originalAmount - discountAmount, 0.01); // Never allow $0 or negative
+    const finalAmount = Math.max(
+      Math.round((originalAmount - discountAmount) * 100) / 100,
+      0.01,
+    );
 
     return {
       valid: true,
@@ -641,7 +657,7 @@ export class CouponsService {
       originalAmount: originalAmount.toFixed(2),
       discountAmount: discountAmount.toFixed(2),
       finalAmount: finalAmount.toFixed(2),
-      message: 'Coupon applied successfully',
+      message: "Coupon applied successfully",
     };
   }
 
@@ -675,11 +691,11 @@ export class CouponsService {
         .limit(1);
 
       if (!coupon || coupon.isDeleted || !coupon.isActive) {
-        throw new BadRequestException('Coupon is no longer valid');
+        throw new BadRequestException("Coupon is no longer valid");
       }
 
       if (now < coupon.validFrom || now > coupon.validTill) {
-        throw new BadRequestException('Coupon is not valid at this time');
+        throw new BadRequestException("Coupon is not valid at this time");
       }
 
       // Re-check limits *inside lock*
@@ -692,7 +708,9 @@ export class CouponsService {
           .where(and(eq(couponUsages.couponId, params.couponId), countable));
 
         if (Number(globalUsage?.count || 0) >= coupon.usageLimit) {
-          throw new BadRequestException('This coupon has reached its usage limit');
+          throw new BadRequestException(
+            "This coupon has reached its usage limit",
+          );
         }
       }
 
@@ -709,7 +727,7 @@ export class CouponsService {
           );
 
         if (Number(userUsage?.count || 0) >= coupon.usageLimitPerUser) {
-          throw new BadRequestException('You have already used this coupon');
+          throw new BadRequestException("You have already used this coupon");
         }
       }
 
@@ -720,7 +738,7 @@ export class CouponsService {
           userId: params.userId,
           courseId: params.courseId ?? null,
           paymentId: params.paymentId,
-          status: 'RESERVED' as CouponUsageStatus,
+          status: "RESERVED" as CouponUsageStatus,
           reservedExpiresAt,
           discountApplied: String(params.discountAmount),
           originalAmount: String(params.originalAmount),
@@ -737,13 +755,13 @@ export class CouponsService {
     const [updated] = await this.db
       .update(couponUsages)
       .set({
-        status: 'CONSUMED' as CouponUsageStatus,
+        status: "CONSUMED" as CouponUsageStatus,
         consumedAt: now,
       })
       .where(
         and(
           eq(couponUsages.paymentId, paymentId),
-          eq(couponUsages.status, 'RESERVED' as CouponUsageStatus),
+          eq(couponUsages.status, "RESERVED" as CouponUsageStatus),
         ),
       )
       .returning();
@@ -756,13 +774,13 @@ export class CouponsService {
     const [updated] = await this.db
       .update(couponUsages)
       .set({
-        status: 'CANCELLED' as CouponUsageStatus,
+        status: "CANCELLED" as CouponUsageStatus,
         cancelledAt: now,
       })
       .where(
         and(
           eq(couponUsages.paymentId, paymentId),
-          eq(couponUsages.status, 'RESERVED' as CouponUsageStatus),
+          eq(couponUsages.status, "RESERVED" as CouponUsageStatus),
         ),
       )
       .returning();
@@ -791,7 +809,7 @@ export class CouponsService {
         userId: params.userId,
         courseId: params.courseId,
         paymentId: params.paymentId,
-        status: 'CONSUMED' as CouponUsageStatus,
+        status: "CONSUMED" as CouponUsageStatus,
         consumedAt: now,
         discountApplied: String(params.discountAmount),
         originalAmount: String(params.originalAmount),

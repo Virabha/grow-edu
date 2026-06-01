@@ -43,15 +43,21 @@ export class LessonsController {
   @ApiResponse({ status: 200, description: 'Lessons reordered successfully' })
   @Post('reorder')
   @HttpCode(HttpStatus.OK)
-  async reorder(@Body() dto: ReorderLessonsDto) {
-    return this.lessonsService.reorder(dto);
+  async reorder(
+    @Body() dto: ReorderLessonsDto,
+    @CurrentUser() user: { userId: string; role: string },
+  ) {
+    return this.lessonsService.reorder(dto, user.userId, user.role);
   }
 
   @ApiOperation({ summary: 'Get lesson by ID' })
   @ApiResponse({ status: 200, description: 'Lesson details' })
   @Get(':id')
-  async getById(@Param('id') id: string) {
-    return this.lessonsService.getById(id);
+  async getById(
+    @Param('id') id: string,
+    @CurrentUser() user: { userId: string; role: string },
+  ) {
+    return this.lessonsService.getById(id, user.userId, user.role);
   }
 
   @ApiOperation({ summary: 'Update lesson' })

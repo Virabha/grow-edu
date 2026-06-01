@@ -88,6 +88,30 @@ export default function WatchPage() {
   const [currentLessonId, setCurrentLessonId] = useState<string | null>(null);
   const [openSections, setOpenSections] = useState<Set<string>>(new Set());
 
+  // Block common screenshot/screen-capture keyboard shortcuts on the watch page.
+  useEffect(() => {
+    function blockCaptureKeys(e: KeyboardEvent) {
+      const { key, code, ctrlKey, metaKey, shiftKey } = e;
+      // PrintScreen
+      if (key === "PrintScreen" || code === "PrintScreen") {
+        e.preventDefault();
+        return;
+      }
+      // Win+Shift+S (Windows Snipping Tool) / Ctrl+Shift+S
+      if (shiftKey && (key === "s" || key === "S") && (ctrlKey || metaKey)) {
+        e.preventDefault();
+        return;
+      }
+      // Ctrl+P / Cmd+P (print → Save as PDF)
+      if ((ctrlKey || metaKey) && (key === "p" || key === "P")) {
+        e.preventDefault();
+        return;
+      }
+    }
+    window.addEventListener("keydown", blockCaptureKeys, { capture: true });
+    return () => window.removeEventListener("keydown", blockCaptureKeys, { capture: true });
+  }, []);
+
   const current = useMemo(
     () =>
       flatLessons.find((f) => f.lesson.lessonId === currentLessonId) ?? null,

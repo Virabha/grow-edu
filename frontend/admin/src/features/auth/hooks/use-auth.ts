@@ -28,10 +28,10 @@ export function useLogin() {
             setToken(data.access_token);
             setUser(data.user);
             if (typeof window !== "undefined") {
-                localStorage.setItem("auth-token", data.access_token);
+                localStorage.setItem("admin-auth-token", data.access_token);
                 const expires = new Date();
                 expires.setDate(expires.getDate() + 7);
-                document.cookie = `admin-auth-token=${data.access_token}; expires=${expires.toUTCString()}; path=/; SameSite=Lax`;
+                document.cookie = `admin-auth-token=${data.access_token}; expires=${expires.toUTCString()}; path=/; SameSite=Lax; Secure`;
             }
             queryClient.invalidateQueries();
             window.location.href = getPostLoginDestination(data.user.role);

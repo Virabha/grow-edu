@@ -278,7 +278,27 @@ export class PaymentService {
     courseId?: string;
     sectionId?: string;
     couponCode?: string;
+    idempotencyKey?: string;
   }) {
+    // Idempotency: if client re-sends the same key, return the existing payment.
+    if (payload.idempotencyKey) {
+      const [existing] = await this.db
+        .select()
+        .from(payments)
+        .where(eq(payments.idempotencyKey, payload.idempotencyKey))
+        .limit(1);
+      if (existing) {
+        return {
+          paymentId: existing.paymentId,
+          amount: Number(existing.amount),
+          currency: PLATFORM_CURRENCY,
+          status: existing.status,
+          qrSettings: await this.getQRSettings(),
+          reused: true,
+        };
+      }
+    }
+
     const { courseId, sectionId, originalAmount, amount, couponId, discountAmount } =
       await this.resolveItemAndCoupon(payload);
 
@@ -345,6 +365,7 @@ export class PaymentService {
         currency: PLATFORM_CURRENCY,
         gateway: PaymentGateway.MANUAL_QR,
         status: 'PENDING',
+        idempotencyKey: payload.idempotencyKey ?? null,
         metadata: {
           mode: payload.itemType,
           couponCode: payload.couponCode || null,
@@ -488,6 +509,32 @@ export class PaymentService {
       throw new BadRequestException(`Cannot approve a ${payment.status} payment`);
     }
 
+    // Grant access before marking COMPLETED: if access grant throws, the payment stays
+    // in PROOF_UPLOADED so the admin can retry without double-granting.
+    await this.grantAccessForPayment(
+      paymentId,
+      payment.itemType,
+      payment.userId,
+      payment.courseId || undefined,
+      payment.sectionId || undefined,
+    );
+
+    // Link the resulting enrollment back to this payment row.
+    let linkedEnrollmentId: string | undefined;
+    if (payment.itemType === 'COURSE' && payment.courseId) {
+      const [enrollment] = await this.db
+        .select({ enrollmentId: enrollments.enrollmentId })
+        .from(enrollments)
+        .where(
+          and(
+            eq(enrollments.userId, payment.userId),
+            eq(enrollments.courseId, payment.courseId),
+          ),
+        )
+        .limit(1);
+      linkedEnrollmentId = enrollment?.enrollmentId;
+    }
+
     const now = new Date();
     await this.db
       .update(payments)
@@ -497,16 +544,9 @@ export class PaymentService {
         reviewedBy: reviewerId,
         reviewNotes: notes || null,
         updatedAt: now,
+        ...(linkedEnrollmentId ? { enrollmentId: linkedEnrollmentId } : {}),
       })
       .where(eq(payments.paymentId, paymentId));
-
-    await this.grantAccessForPayment(
-      paymentId,
-      payment.itemType,
-      payment.userId,
-      payment.courseId || undefined,
-      payment.sectionId || undefined,
-    );
 
     // Consume coupon reservation if any
     if (payment.couponId) {
@@ -652,19 +692,19 @@ export class PaymentService {
       [QR_SETTING_KEYS.instructions, input.instructions ?? null],
     ];
 
-    for (const [key, value] of entries) {
-      if (value === null) {
-        await this.db.delete(siteSettings).where(eq(siteSettings.key, key));
-      } else {
-        await this.db
-          .insert(siteSettings)
-          .values({ key, value })
-          .onConflictDoUpdate({
-            target: siteSettings.key,
-            set: { value, updatedAt: new Date() },
-          });
-      }
-    }
+    await Promise.all(
+      entries.map(([key, value]) =>
+        value === null
+          ? this.db.delete(siteSettings).where(eq(siteSettings.key, key))
+          : this.db
+              .insert(siteSettings)
+              .values({ key, value })
+              .onConflictDoUpdate({
+                target: siteSettings.key,
+                set: { value, updatedAt: new Date() },
+              }),
+      ),
+    );
 
     return this.getQRSettings();
   }

@@ -8,7 +8,7 @@ export const BRAND = {
   email: "contact@grotutor.com",
   phone: "+91-6309046611",
   address:
-    "Unit # 1801, Vasavi Sky City, Gachibowli X Road, Hyderabad, Telangana",
+    "House No# 2-13-58, Uppal, Hyderabad, Telangana, Pin - 500039",
   social: {
     facebook: "https://www.facebook.com/grotutor",
     linkedin: "https://www.linkedin.com/company/grotutor",

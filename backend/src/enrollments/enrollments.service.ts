@@ -1,14 +1,27 @@
-import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
-import { Inject } from '@nestjs/common';
-import { eq, and, or, ilike, desc, asc, sql, inArray } from 'drizzle-orm';
-import { enrollments, courses, users, companies, categories, sectionAccess, courseSections } from '../database/schema';
-import { DATABASE_CONNECTION } from '../database/database.module';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import * as schema from '../database/schema';
-import { CreateEnrollmentDto } from './dto/create-enrollment.dto';
-import { BulkEnrollmentDto } from './dto/bulk-enrollment.dto';
-import { EmailService } from '../email/email.service';
-import { FilesService } from '../files/files.service';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  ForbiddenException,
+} from "@nestjs/common";
+import { Inject } from "@nestjs/common";
+import { eq, and, or, ilike, desc, asc, sql, inArray } from "drizzle-orm";
+import {
+  enrollments,
+  courses,
+  users,
+  companies,
+  categories,
+  sectionAccess,
+  courseSections,
+} from "../database/schema";
+import { DATABASE_CONNECTION } from "../database/database.module";
+import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import * as schema from "../database/schema";
+import { CreateEnrollmentDto } from "./dto/create-enrollment.dto";
+import { BulkEnrollmentDto } from "./dto/bulk-enrollment.dto";
+import { EmailService } from "../email/email.service";
+import { FilesService } from "../files/files.service";
 
 const MAX_PAGE_LIMIT = 50;
 
@@ -21,9 +34,11 @@ export class EnrollmentsService {
     private filesService: FilesService,
   ) {}
 
-  private ensureThumbnailUrl(thumbnail: string | null | undefined): string | null {
+  private ensureThumbnailUrl(
+    thumbnail: string | null | undefined,
+  ): string | null {
     if (!thumbnail) return null;
-    if (thumbnail.startsWith('http')) return thumbnail;
+    if (thumbnail.startsWith("http")) return thumbnail;
     return this.filesService.getDownloadUrl(thumbnail);
   }
 
@@ -52,7 +67,12 @@ export class EnrollmentsService {
       enrollmentConditions.push(eq(enrollments.companyId, filters.companyId));
     }
     if (filters?.status) {
-      enrollmentConditions.push(eq(enrollments.status, filters.status as 'ACTIVE' | 'COMPLETED' | 'REVOKED'));
+      enrollmentConditions.push(
+        eq(
+          enrollments.status,
+          filters.status as "ACTIVE" | "COMPLETED" | "REVOKED",
+        ),
+      );
     }
     // Move search to SQL with ILIKE
     if (filters?.search) {
@@ -62,12 +82,15 @@ export class EnrollmentsService {
           ilike(courses.title, searchPattern),
           ilike(users.firstName, searchPattern),
           ilike(users.lastName, searchPattern),
-          ilike(users.email, searchPattern)
-        )!
+          ilike(users.email, searchPattern),
+        )!,
       );
     }
 
-    const enrollmentWhereClause = enrollmentConditions.length > 0 ? and(...enrollmentConditions) : undefined;
+    const enrollmentWhereClause =
+      enrollmentConditions.length > 0
+        ? and(...enrollmentConditions)
+        : undefined;
 
     // Get count and paginated enrollments in parallel using SQL LIMIT/OFFSET
     const [countResult, fullEnrollments] = await Promise.all([
@@ -118,7 +141,7 @@ export class EnrollmentsService {
         .where(enrollmentWhereClause)
         .orderBy(desc(enrollments.enrolledAt))
         .limit(limit)
-        .offset(offset)
+        .offset(offset),
     ]);
 
     const fullEnrollmentCount = Number(countResult[0]?.count || 0);
@@ -129,10 +152,10 @@ export class EnrollmentsService {
       userId: string;
       courseId: string;
       companyId: null;
-      status: 'ACTIVE';
+      status: "ACTIVE";
       enrolledAt: Date;
       completedAt: null;
-      accessType: 'SECTION';
+      accessType: "SECTION";
       accessedSections: Array<{ sectionId: string; title: string }>;
       userInfo: any;
       courseInfo: any;
@@ -143,10 +166,14 @@ export class EnrollmentsService {
     let sectionAccessCourses: SectionAccessRecord[] = [];
     let sectionAccessCount = 0;
 
-    if (filters?.userId && (!filters?.status || filters?.status === 'ACTIVE')) {
-      const sectionAccessConditions = [eq(sectionAccess.userId, filters.userId)];
+    if (filters?.userId && (!filters?.status || filters?.status === "ACTIVE")) {
+      const sectionAccessConditions = [
+        eq(sectionAccess.userId, filters.userId),
+      ];
       if (filters?.courseId) {
-        sectionAccessConditions.push(eq(sectionAccess.courseId, filters.courseId));
+        sectionAccessConditions.push(
+          eq(sectionAccess.courseId, filters.courseId),
+        );
       }
 
       // Get all enrolled course IDs for this user (not just current page) to exclude from section access
@@ -154,7 +181,9 @@ export class EnrollmentsService {
         .select({ courseId: enrollments.courseId })
         .from(enrollments)
         .where(eq(enrollments.userId, filters.userId));
-      const enrolledCourseIdSet = new Set(allEnrolledCourseIds.map(e => e.courseId));
+      const enrolledCourseIdSet = new Set(
+        allEnrolledCourseIds.map((e) => e.courseId),
+      );
 
       // Get unique course IDs with section access that don't have full enrollment
       // Apply deterministic ordering by courseId for stable pagination
@@ -165,15 +194,16 @@ export class EnrollmentsService {
         .orderBy(asc(sectionAccess.courseId));
 
       const sectionAccessCourseIds = sectionAccessCoursesQuery
-        .map(sa => sa.courseId)
-        .filter(cId => !enrolledCourseIdSet.has(cId));
+        .map((sa) => sa.courseId)
+        .filter((cId) => !enrolledCourseIdSet.has(cId));
 
       sectionAccessCount = sectionAccessCourseIds.length;
 
       // Only process section access if we need it for current page
       // Calculate if current page might include section access records
       const fullEnrollmentPages = Math.ceil(fullEnrollmentCount / limit);
-      const currentPageNeedsSectionAccess = page > fullEnrollmentPages ||
+      const currentPageNeedsSectionAccess =
+        page > fullEnrollmentPages ||
         (page === fullEnrollmentPages && fullEnrollments.length < limit);
 
       if (sectionAccessCourseIds.length > 0 && currentPageNeedsSectionAccess) {
@@ -185,69 +215,86 @@ export class EnrollmentsService {
           // Get paginated course IDs for section access
           const paginatedSectionAccessCourseIds = sectionAccessCourseIds.slice(
             sectionAccessOffset,
-            sectionAccessOffset + sectionAccessLimit
+            sectionAccessOffset + sectionAccessLimit,
           );
 
           if (paginatedSectionAccessCourseIds.length > 0) {
             // Batch fetch: course details, user info, and all section access records in parallel
-            const [courseDetails, userInfo, allSectionAccessRecords] = await Promise.all([
-              this.db
-                .select({
-                  id: courses.courseId,
-                  title: courses.title,
-                  slug: courses.slug,
-                  description: courses.description,
-                  thumbnail: courses.thumbnail,
-                  price: courses.price,
-                  currency: courses.currency,
-                  categoryId: courses.categoryId,
-                  categoryName: sql<string>`${categories.name}`,
-                  categorySlug: categories.slug,
-                  categoryDescription: categories.description,
-                })
-                .from(courses)
-                .leftJoin(categories, eq(courses.categoryId, categories.categoryId))
-                .where(inArray(courses.courseId, paginatedSectionAccessCourseIds)),
-              this.db
-                .select({
-                  id: users.userId,
-                  email: users.email,
-                  firstName: users.firstName,
-                  lastName: users.lastName,
-                })
-                .from(users)
-                .where(eq(users.userId, filters.userId))
-                .limit(1),
-              this.db
-                .select({
-                  courseId: sectionAccess.courseId,
-                  sectionId: sectionAccess.sectionId,
-                  createdAt: sectionAccess.createdAt,
-                })
-                .from(sectionAccess)
-                .where(and(
-                  eq(sectionAccess.userId, filters.userId),
-                  inArray(sectionAccess.courseId, paginatedSectionAccessCourseIds)
-                ))
-            ]);
+            const [courseDetails, userInfo, allSectionAccessRecords] =
+              await Promise.all([
+                this.db
+                  .select({
+                    id: courses.courseId,
+                    title: courses.title,
+                    slug: courses.slug,
+                    description: courses.description,
+                    thumbnail: courses.thumbnail,
+                    price: courses.price,
+                    currency: courses.currency,
+                    categoryId: courses.categoryId,
+                    categoryName: sql<string>`${categories.name}`,
+                    categorySlug: categories.slug,
+                    categoryDescription: categories.description,
+                  })
+                  .from(courses)
+                  .leftJoin(
+                    categories,
+                    eq(courses.categoryId, categories.categoryId),
+                  )
+                  .where(
+                    inArray(courses.courseId, paginatedSectionAccessCourseIds),
+                  ),
+                this.db
+                  .select({
+                    id: users.userId,
+                    email: users.email,
+                    firstName: users.firstName,
+                    lastName: users.lastName,
+                  })
+                  .from(users)
+                  .where(eq(users.userId, filters.userId))
+                  .limit(1),
+                this.db
+                  .select({
+                    courseId: sectionAccess.courseId,
+                    sectionId: sectionAccess.sectionId,
+                    createdAt: sectionAccess.createdAt,
+                  })
+                  .from(sectionAccess)
+                  .where(
+                    and(
+                      eq(sectionAccess.userId, filters.userId),
+                      inArray(
+                        sectionAccess.courseId,
+                        paginatedSectionAccessCourseIds,
+                      ),
+                    ),
+                  ),
+              ]);
 
             // Get all section IDs from section access records
-            const allSectionIds = [...new Set(allSectionAccessRecords.map(sa => sa.sectionId))];
+            const allSectionIds = [
+              ...new Set(allSectionAccessRecords.map((sa) => sa.sectionId)),
+            ];
 
             // Batch fetch all sections at once
-            const allSections = allSectionIds.length > 0
-              ? await this.db
-                  .select({
-                    sectionId: courseSections.sectionId,
-                    title: courseSections.title,
-                    courseId: courseSections.courseId,
-                  })
-                  .from(courseSections)
-                  .where(inArray(courseSections.sectionId, allSectionIds))
-              : [];
+            const allSections =
+              allSectionIds.length > 0
+                ? await this.db
+                    .select({
+                      sectionId: courseSections.sectionId,
+                      title: courseSections.title,
+                      courseId: courseSections.courseId,
+                    })
+                    .from(courseSections)
+                    .where(inArray(courseSections.sectionId, allSectionIds))
+                : [];
 
             // Create a map for quick section lookup
-            const sectionsByCourse = new Map<string, Array<{ sectionId: string; title: string }>>();
+            const sectionsByCourse = new Map<
+              string,
+              Array<{ sectionId: string; title: string }>
+            >();
             for (const section of allSections) {
               if (!sectionsByCourse.has(section.courseId)) {
                 sectionsByCourse.set(section.courseId, []);
@@ -261,13 +308,13 @@ export class EnrollmentsService {
             // Build section access records
             for (const course of courseDetails) {
               const courseAccessRecords = allSectionAccessRecords.filter(
-                sa => sa.courseId === course.id
+                (sa) => sa.courseId === course.id,
               );
 
               const earliestAccess = courseAccessRecords.reduce(
                 (earliest, record) =>
                   record.createdAt < earliest ? record.createdAt : earliest,
-                courseAccessRecords[0]?.createdAt || new Date()
+                courseAccessRecords[0]?.createdAt || new Date(),
               );
 
               const sectionAccessRecord: SectionAccessRecord = {
@@ -275,10 +322,10 @@ export class EnrollmentsService {
                 userId: filters.userId,
                 courseId: course.id,
                 companyId: null,
-                status: 'ACTIVE' as const,
+                status: "ACTIVE" as const,
                 enrolledAt: earliestAccess,
                 completedAt: null,
-                accessType: 'SECTION' as const,
+                accessType: "SECTION" as const,
                 accessedSections: sectionsByCourse.get(course.id) || [],
                 userInfo: userInfo[0] || null,
                 courseInfo: course,
@@ -301,16 +348,19 @@ export class EnrollmentsService {
       status: string;
       enrolledAt: Date;
       completedAt: Date | null;
-      accessType: 'FULL' | 'SECTION';
+      accessType: "FULL" | "SECTION";
       accessedSections: Array<{ sectionId: string; title: string }> | null;
       userInfo: any;
       courseInfo: any;
       companyInfo: any;
     }> = [
-      ...fullEnrollments.map(e => ({
+      ...fullEnrollments.map((e) => ({
         ...e,
-        accessType: 'FULL' as const,
-        accessedSections: null as Array<{ sectionId: string; title: string }> | null,
+        accessType: "FULL" as const,
+        accessedSections: null as Array<{
+          sectionId: string;
+          title: string;
+        }> | null,
       })),
       ...sectionAccessCourses,
     ];
@@ -318,18 +368,20 @@ export class EnrollmentsService {
     const totalCount = fullEnrollmentCount + sectionAccessCount;
 
     // Map to final structure (resolve thumbnail to full URL for images)
-    const mappedData = allRecords.map(e => ({
+    const mappedData = allRecords.map((e) => ({
       ...e,
       user: e.userInfo,
       course: {
         ...e.courseInfo,
         thumbnail: this.ensureThumbnailUrl(e.courseInfo?.thumbnail),
-        category: e.courseInfo ? {
-          id: e.courseInfo.categoryId,
-          name: e.courseInfo.categoryName,
-          slug: e.courseInfo.categorySlug,
-          description: e.courseInfo.categoryDescription,
-        } : null,
+        category: e.courseInfo
+          ? {
+              id: e.courseInfo.categoryId,
+              name: e.courseInfo.categoryName,
+              slug: e.courseInfo.categorySlug,
+              description: e.courseInfo.categoryDescription,
+            }
+          : null,
       },
       company: e.companyInfo,
     }));
@@ -345,7 +397,7 @@ export class EnrollmentsService {
     };
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, requestUserId?: string, requestUserRole?: string) {
     const [enrollment] = await this.db
       .select()
       .from(enrollments)
@@ -354,6 +406,17 @@ export class EnrollmentsService {
 
     if (!enrollment) {
       throw new NotFoundException(`Enrollment with ID ${id} not found`);
+    }
+
+    // Ownership check: learners can only view their own enrollments.
+    // Admins see any enrollment. requestUserId is omitted for internal service calls.
+    if (
+      requestUserId &&
+      requestUserRole !== 'PLATFORM_ADMIN' &&
+      requestUserRole !== 'CORPORATE_ADMIN' &&
+      enrollment.userId !== requestUserId
+    ) {
+      throw new ForbiddenException('You can only view your own enrollments');
     }
 
     return enrollment;
@@ -375,16 +438,26 @@ export class EnrollmentsService {
     const [existing] = await this.db
       .select()
       .from(enrollments)
-      .where(and(eq(enrollments.userId, dto.userId || userId), eq(enrollments.courseId, dto.courseId)))
+      .where(
+        and(
+          eq(enrollments.userId, dto.userId || userId),
+          eq(enrollments.courseId, dto.courseId),
+        ),
+      )
       .limit(1);
 
     if (existing) {
-      throw new ConflictException('User is already enrolled in this course');
+      throw new ConflictException("User is already enrolled in this course");
     }
 
     // Permission check: users can only enroll themselves unless admin
-    if (userRole !== 'PLATFORM_ADMIN' && userRole !== 'CORPORATE_ADMIN' && dto.userId && dto.userId !== userId) {
-      throw new ForbiddenException('You can only enroll yourself');
+    if (
+      userRole !== "PLATFORM_ADMIN" &&
+      userRole !== "CORPORATE_ADMIN" &&
+      dto.userId &&
+      dto.userId !== userId
+    ) {
+      throw new ForbiddenException("You can only enroll yourself");
     }
 
     try {
@@ -394,7 +467,7 @@ export class EnrollmentsService {
           userId: dto.userId || userId,
           courseId: dto.courseId,
           companyId: dto.companyId || null,
-          status: 'ACTIVE',
+          status: "ACTIVE",
         })
         .onConflictDoNothing()
         .returning({ enrollmentId: enrollments.enrollmentId });
@@ -403,9 +476,14 @@ export class EnrollmentsService {
         const [existingEnrollment] = await this.db
           .select()
           .from(enrollments)
-          .where(and(eq(enrollments.userId, dto.userId || userId), eq(enrollments.courseId, dto.courseId)))
+          .where(
+            and(
+              eq(enrollments.userId, dto.userId || userId),
+              eq(enrollments.courseId, dto.courseId),
+            ),
+          )
           .limit(1);
-          
+
         return existingEnrollment;
       }
 
@@ -438,8 +516,8 @@ export class EnrollmentsService {
         .where(
           and(
             eq(enrollments.userId, dto.userId || userId),
-            eq(enrollments.courseId, dto.courseId)
-          )
+            eq(enrollments.courseId, dto.courseId),
+          ),
         )
         .limit(1);
 
@@ -450,9 +528,15 @@ export class EnrollmentsService {
     }
   }
 
-  async bulkCreate(dto: BulkEnrollmentDto, companyId: string, userRole: string) {
-    if (userRole !== 'CORPORATE_ADMIN' && userRole !== 'PLATFORM_ADMIN') {
-      throw new ForbiddenException('Only corporate admins can perform bulk enrollments');
+  async bulkCreate(
+    dto: BulkEnrollmentDto,
+    companyId: string,
+    userRole: string,
+  ) {
+    if (userRole !== "CORPORATE_ADMIN" && userRole !== "PLATFORM_ADMIN") {
+      throw new ForbiddenException(
+        "Only corporate admins can perform bulk enrollments",
+      );
     }
 
     // Verify course exists
@@ -466,37 +550,29 @@ export class EnrollmentsService {
       throw new NotFoundException(`Course with ID ${dto.courseId} not found`);
     }
 
-    const results = [];
-    const errors = [];
+    // Single batch INSERT instead of 2×N sequential round-trips.
+    // onConflictDoNothing() skips users already enrolled without erroring.
+    const inserted = await this.db
+      .insert(enrollments)
+      .values(
+        dto.userIds.map((userId) => ({
+          userId,
+          courseId: dto.courseId,
+          companyId,
+          status: "ACTIVE" as const,
+        })),
+      )
+      .onConflictDoNothing()
+      .returning({
+        enrollmentId: enrollments.enrollmentId,
+        userId: enrollments.userId,
+      });
 
-    for (const userId of dto.userIds) {
-      try {
-        const [existing] = await this.db
-          .select()
-          .from(enrollments)
-          .where(and(eq(enrollments.userId, userId), eq(enrollments.courseId, dto.courseId)))
-          .limit(1);
-
-        if (existing) {
-          errors.push({ userId, error: 'Already enrolled' });
-          continue;
-        }
-
-        const [enrollment] = await this.db
-          .insert(enrollments)
-          .values({
-            userId,
-            courseId: dto.courseId,
-            companyId,
-            status: 'ACTIVE',
-          })
-          .returning({ enrollmentId: enrollments.enrollmentId });
-
-        results.push(enrollment);
-      } catch (error) {
-        errors.push({ userId, error: error instanceof Error ? error.message : 'Unknown error' });
-      }
-    }
+    const insertedUserIds = new Set(inserted.map((r) => r.userId));
+    const results = inserted;
+    const errors = dto.userIds
+      .filter((userId) => !insertedUserIds.has(userId))
+      .map((userId) => ({ userId, error: "Already enrolled" }));
 
     return {
       success: results.length,
@@ -506,7 +582,11 @@ export class EnrollmentsService {
     };
   }
 
-  async updateStatus(id: string, status: 'ACTIVE' | 'COMPLETED' | 'REVOKED', userRole: string) {
+  async updateStatus(
+    id: string,
+    status: "ACTIVE" | "COMPLETED" | "REVOKED",
+    userRole: string,
+  ) {
     const [enrollment] = await this.db
       .select()
       .from(enrollments)
@@ -517,12 +597,16 @@ export class EnrollmentsService {
       throw new NotFoundException(`Enrollment with ID ${id} not found`);
     }
 
-    if (status === 'REVOKED' && userRole !== 'PLATFORM_ADMIN' && userRole !== 'CORPORATE_ADMIN') {
-      throw new ForbiddenException('Only admins can revoke enrollments');
+    if (
+      status === "REVOKED" &&
+      userRole !== "PLATFORM_ADMIN" &&
+      userRole !== "CORPORATE_ADMIN"
+    ) {
+      throw new ForbiddenException("Only admins can revoke enrollments");
     }
 
-    const wasCompleted = enrollment.status === 'COMPLETED';
-    const completedAt = status === 'COMPLETED' ? new Date() : null;
+    const wasCompleted = enrollment.status === "COMPLETED";
+    const completedAt = status === "COMPLETED" ? new Date() : null;
 
     const [updated] = await this.db
       .update(enrollments)
@@ -533,7 +617,7 @@ export class EnrollmentsService {
       .where(eq(enrollments.enrollmentId, id))
       .returning({ enrollmentId: enrollments.enrollmentId });
 
-    if (status === 'COMPLETED' && !wasCompleted) {
+    if (status === "COMPLETED" && !wasCompleted) {
       try {
         const [user] = await this.db
           .select()
@@ -563,8 +647,8 @@ export class EnrollmentsService {
   }
 
   async delete(id: string, userRole: string) {
-    if (userRole !== 'PLATFORM_ADMIN' && userRole !== 'CORPORATE_ADMIN') {
-      throw new ForbiddenException('Only admins can delete enrollments');
+    if (userRole !== "PLATFORM_ADMIN" && userRole !== "CORPORATE_ADMIN") {
+      throw new ForbiddenException("Only admins can delete enrollments");
     }
 
     const [enrollment] = await this.db
@@ -581,11 +665,10 @@ export class EnrollmentsService {
     await this.db
       .update(enrollments)
       .set({
-        status: 'REVOKED',
+        status: "REVOKED",
       })
       .where(eq(enrollments.enrollmentId, id));
 
-    return { message: 'Enrollment revoked successfully' };
+    return { message: "Enrollment revoked successfully" };
   }
 }
-

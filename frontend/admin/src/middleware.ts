@@ -19,7 +19,7 @@ const LEARNER_APP_URL =
   process.env.NEXT_PUBLIC_LEARNER_URL?.replace(/\/$/, "") ||
   "http://localhost:6002";
 
-function decodeJwtPayload(token: string): { role?: string } | null {
+function decodeJwtPayload(token: string): { role?: string; exp?: number } | null {
   try {
     const parts = token.split(".");
     if (parts.length !== 3) return null;
@@ -65,12 +65,19 @@ export function middleware(request: NextRequest) {
 
   const payload = decodeJwtPayload(token);
   const role = payload?.role;
+  const isExpired = payload?.exp ? payload.exp * 1000 < Date.now() : false;
 
-  if (!role) {
-    if (isPublicRoute) return NextResponse.next();
+  if (!role || isExpired) {
+    if (isPublicRoute) {
+      const response = NextResponse.next();
+      if (isExpired) response.cookies.delete("admin-auth-token");
+      return response;
+    }
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirect", pathname);
-    return NextResponse.redirect(loginUrl);
+    const response = NextResponse.redirect(loginUrl);
+    if (isExpired) response.cookies.delete("admin-auth-token");
+    return response;
   }
 
   // Learners do not belong in the admin app at all — send to the learner app.

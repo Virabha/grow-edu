@@ -234,6 +234,7 @@ export const courses = pgTable(
     categoryIdx: index("courses_category_idx").on(table.categoryId),
     instructorIdx: index("courses_instructor_idx").on(table.instructorId),
     statusIdx: index("courses_status_idx").on(table.status),
+    statusReviewIdx: index("courses_status_review_idx").on(table.status, table.reviewStatus),
   })
 );
 
@@ -416,6 +417,7 @@ export const payments = pgTable(
       .$defaultFn(() => crypto.randomUUID()),
     userId: text("user_id").notNull(),
     enrollmentId: text("enrollment_id").unique(),
+    idempotencyKey: text("idempotency_key").unique(),
     courseId: text("course_id"),
     sectionId: text("section_id"),
     itemType: itemTypeEnum("item_type").notNull().default("COURSE"),
@@ -446,6 +448,7 @@ export const payments = pgTable(
     sectionIdx: index("payments_section_idx").on(table.sectionId),
     couponIdx: index("payments_coupon_idx").on(table.couponId),
     txnIdx: index("payments_transaction_id_idx").on(table.transactionId),
+    userStatusIdx: index("payments_user_status_idx").on(table.userId, table.status),
   })
 );
 

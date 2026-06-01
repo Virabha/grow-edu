@@ -52,16 +52,16 @@ export const useAuthStore = create<AuthState>()(
       login: (user: User, token: string) => {
         set({ user, token });
         if (typeof window !== "undefined") {
-          localStorage.setItem("auth-token", token);
+          localStorage.setItem("learner-auth-token", token);
           const expires = new Date();
           expires.setDate(expires.getDate() + 7);
-          document.cookie = `learner-auth-token=${token}; expires=${expires.toUTCString()}; path=/; SameSite=Lax`;
+          document.cookie = `learner-auth-token=${token}; expires=${expires.toUTCString()}; path=/; SameSite=Lax; Secure`;
         }
       },
       logout: () => {
         set({ user: null, token: null });
         if (typeof window !== "undefined") {
-          localStorage.removeItem("auth-token");
+          localStorage.removeItem("learner-auth-token");
           localStorage.removeItem("learner-auth");
           sessionStorage.clear();
           const hostname = window.location.hostname;

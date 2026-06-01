@@ -4,8 +4,7 @@ import { emailTokens } from '../database/schema';
 import { DATABASE_CONNECTION } from '../database/database.module';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../database/schema';
-import * as bcrypt from 'bcrypt';
-import { randomUUID } from 'crypto';
+import { randomUUID, createHash } from 'crypto';
 
 export type EmailTokenType = 'EMAIL_VERIFICATION' | 'PASSWORD_RESET';
 
@@ -18,9 +17,15 @@ export class TokenService {
     private readonly db: PostgresJsDatabase<typeof schema>,
   ) {}
 
+  // Tokens are 128-bit random UUIDs — SHA-256 is sufficient for storage;
+  // bcrypt is designed for low-entropy passwords and adds ~100ms per lookup with no benefit here.
+  private hashToken(token: string): string {
+    return createHash('sha256').update(token).digest('hex');
+  }
+
   async generateToken(userId: string, tokenType: EmailTokenType): Promise<string> {
     const token = randomUUID();
-    const tokenHash = await bcrypt.hash(token, 10);
+    const tokenHash = this.hashToken(token);
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + this.TOKEN_EXPIRY_HOURS);
 
@@ -36,49 +41,36 @@ export class TokenService {
   }
 
   async validateToken(token: string, tokenType: EmailTokenType): Promise<string | null> {
-    const tokens = await this.db
+    const tokenHash = this.hashToken(token);
+    const [stored] = await this.db
       .select()
       .from(emailTokens)
       .where(
         and(
+          eq(emailTokens.tokenHash, tokenHash),
           eq(emailTokens.tokenType, tokenType),
           eq(emailTokens.used, false),
           gt(emailTokens.expiresAt, new Date()),
         ),
-      );
+      )
+      .limit(1);
 
-    for (const storedToken of tokens) {
-      const isValid = await bcrypt.compare(token, storedToken.tokenHash);
-      if (isValid) {
-        return storedToken.userId;
-      }
-    }
-
-    return null;
+    return stored?.userId ?? null;
   }
 
   async invalidateToken(token: string, tokenType: EmailTokenType): Promise<void> {
-    const tokens = await this.db
-      .select()
-      .from(emailTokens)
+    const tokenHash = this.hashToken(token);
+    await this.db
+      .update(emailTokens)
+      .set({ used: true })
       .where(
         and(
+          eq(emailTokens.tokenHash, tokenHash),
           eq(emailTokens.tokenType, tokenType),
           eq(emailTokens.used, false),
           gt(emailTokens.expiresAt, new Date()),
         ),
       );
-
-    for (const storedToken of tokens) {
-      const isValid = await bcrypt.compare(token, storedToken.tokenHash);
-      if (isValid) {
-        await this.db
-          .update(emailTokens)
-          .set({ used: true })
-          .where(eq(emailTokens.tokenId, storedToken.tokenId));
-        return;
-      }
-    }
   }
 
   async invalidateUserTokens(userId: string, tokenType: EmailTokenType): Promise<void> {

@@ -117,7 +117,7 @@ const sections = [
     list: [
       "Email: contact@grotutor.com",
       "Phone: +91-6309046611",
-      "Address: Unit 1801, 18th Floor, Vasavi Sky City, Gachibowli, Hyderabad-500032",
+      "Address: House No# 2-13-58, Uppal, Hyderabad, Telangana, Pin - 500039",
     ],
     footer:
       "We aim to respond to all privacy-related inquiries within 48 business hours.",

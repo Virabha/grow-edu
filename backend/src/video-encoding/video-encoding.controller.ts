@@ -26,7 +26,7 @@ import * as schema from "../database/schema";
 import { AppConfigService } from "../config";
 
 @ApiTags("video-encoding")
-@Controller("video-encoding")
+@Controller('video-encoding')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class VideoEncodingController {

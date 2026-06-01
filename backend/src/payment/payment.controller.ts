@@ -8,6 +8,7 @@ import {
   UseGuards,
   HttpCode,
   Query,
+  Headers,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -54,6 +55,7 @@ export class PaymentController {
   async createPayment(
     @Body() dto: CreatePaymentDto,
     @CurrentUser() user: { userId: string },
+    @Headers('x-idempotency-key') idempotencyKey?: string,
   ) {
     return this.paymentService.createManualQRPayment({
       userId: user.userId,
@@ -61,6 +63,7 @@ export class PaymentController {
       courseId: dto.courseId,
       sectionId: dto.sectionId,
       couponCode: dto.couponCode,
+      idempotencyKey: idempotencyKey || undefined,
     });
   }
 

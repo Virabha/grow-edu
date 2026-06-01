@@ -67,7 +67,7 @@ interface AuthedUser {
 }
 
 @ApiTags("batches")
-@Controller("batches")
+@Controller('batches')
 export class BatchesController {
   constructor(
     private readonly batchesService: BatchesService,

@@ -19,10 +19,10 @@ export const useAuthStore = create<AuthState>()(persist((set) => ({
         set({ token });
         if (typeof window !== 'undefined') {
             if (token) {
-                localStorage.setItem('auth-token', token);
+                localStorage.setItem('admin-auth-token', token);
             }
             else {
-                localStorage.removeItem('auth-token');
+                localStorage.removeItem('admin-auth-token');
             }
         }
     },
@@ -30,7 +30,7 @@ export const useAuthStore = create<AuthState>()(persist((set) => ({
     logout: () => {
         set({ user: null, token: null });
         if (typeof window !== 'undefined') {
-            localStorage.removeItem('auth-token');
+            localStorage.removeItem('admin-auth-token');
             localStorage.clear();
             sessionStorage.clear();
             const hostname = window.location.hostname;

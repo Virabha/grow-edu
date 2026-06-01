@@ -31,16 +31,18 @@ export class SectionsController {
     @Body() dto: CreateSectionDto,
     @CurrentUser() user: { userId: string; role: string },
   ) {
-    // Ideally we should check if user is instructor of the course or admin
-    return this.sectionsService.create(dto);
+    return this.sectionsService.create(dto, user.userId, user.role);
   }
 
   @ApiOperation({ summary: 'Reorder sections' })
   @ApiResponse({ status: 200, description: 'Sections reordered successfully' })
   @Post('reorder')
   @HttpCode(HttpStatus.OK)
-  async reorder(@Body() dto: ReorderSectionsDto) {
-    return this.sectionsService.reorder(dto);
+  async reorder(
+    @Body() dto: ReorderSectionsDto,
+    @CurrentUser() user: { userId: string; role: string },
+  ) {
+    return this.sectionsService.reorder(dto, user.userId, user.role);
   }
 
   @ApiOperation({ summary: 'Get all sections for a course' })
@@ -58,7 +60,7 @@ export class SectionsController {
     @Body() dto: UpdateSectionDto,
     @CurrentUser() user: { userId: string; role: string },
   ) {
-      return this.sectionsService.update(id, dto);
+    return this.sectionsService.update(id, dto, user.userId, user.role);
   }
 
   @ApiOperation({ summary: 'Delete section' })
@@ -66,9 +68,9 @@ export class SectionsController {
   @Delete(':id')
   async delete(
     @Param('id') id: string,
-    @Query('courseId') courseId: string, // Kept for consistency with router input, though not strictly needed if we just mark deleted by ID
+    @Query('courseId') courseId: string,
     @CurrentUser() user: { userId: string; role: string },
   ) {
-    return this.sectionsService.delete(id, courseId);
+    return this.sectionsService.delete(id, courseId, user.userId, user.role);
   }
 }

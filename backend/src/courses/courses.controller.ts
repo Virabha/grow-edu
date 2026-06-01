@@ -35,7 +35,7 @@ import { UserRole } from "../auth/decorators/roles.decorator";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 
 @ApiTags("courses")
-@Controller("courses")
+@Controller('courses')
 export class CoursesController {
   constructor(private readonly coursesService: CoursesService) {}
 

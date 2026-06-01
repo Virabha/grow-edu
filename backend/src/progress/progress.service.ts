@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { Inject } from '@nestjs/common';
-import { eq, and, inArray } from 'drizzle-orm';
+import { eq, and, inArray, sql } from 'drizzle-orm';
 import { courseProgress, lessonProgress, courses, lessons, enrollments, sectionAccess } from '../database/schema';
 import { DATABASE_CONNECTION } from '../database/database.module';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
@@ -161,7 +161,8 @@ export class ProgressService {
           .update(lessonProgress)
           .set({
             completed: shouldComplete || (dto.completed ?? existingLessonProgress.completed),
-            timeSpent: (existingLessonProgress.timeSpent || 0) + (dto.timeSpent || 0),
+            // Atomic increment — avoids lost-update race when two requests read the same row
+            timeSpent: sql`${lessonProgress.timeSpent} + ${dto.timeSpent || 0}`,
             lastPosition: dto.lastPosition !== undefined ? dto.lastPosition : existingLessonProgress.lastPosition,
             lastAccessed: new Date(),
           })
@@ -177,14 +178,14 @@ export class ProgressService {
       }
     }
 
-    // Update course progress
-    const totalTimeSpent = (progress.timeSpent || 0) + (dto.timeSpent || 0);
+    // Update course progress — timeSpent is incremented atomically in SQL to
+    // prevent lost updates when two concurrent requests read the same row value.
     const progressValue = dto.progress !== undefined ? String(dto.progress) : progress.progress;
     await this.db
       .update(courseProgress)
       .set({
         progress: progressValue,
-        timeSpent: totalTimeSpent,
+        timeSpent: sql`${courseProgress.timeSpent} + ${dto.timeSpent || 0}`,
         lastAccessed: new Date(),
       })
       .where(eq(courseProgress.courseProgressId, progress.courseProgressId));

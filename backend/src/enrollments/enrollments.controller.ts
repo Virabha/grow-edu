@@ -81,8 +81,11 @@ export class EnrollmentsController {
   @ApiResponse({ status: 200, description: 'Enrollment details' })
   @ApiResponse({ status: 404, description: 'Enrollment not found' })
   @Get(':id')
-  async findOne(@Param('id') id: string) {
-    return this.enrollmentsService.findOne(id);
+  async findOne(
+    @Param('id') id: string,
+    @CurrentUser() user: { userId: string; role: string },
+  ) {
+    return this.enrollmentsService.findOne(id, user.userId, user.role);
   }
 
   @ApiOperation({ summary: 'Create a new enrollment' })
@@ -108,8 +111,10 @@ export class EnrollmentsController {
     return this.enrollmentsService.bulkCreate(dto, user.companyId || '', user.role);
   }
 
-  @ApiOperation({ summary: 'Update enrollment status' })
+  @ApiOperation({ summary: 'Update enrollment status (admin only)' })
   @ApiResponse({ status: 200, description: 'Enrollment status updated' })
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.PLATFORM_ADMIN, UserRole.CORPORATE_ADMIN)
   @Put(':id/status')
   async updateStatus(
     @Param('id') id: string,

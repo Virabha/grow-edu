@@ -27,7 +27,7 @@ interface AuthedUser {
 }
 
 @ApiTags("notifications")
-@Controller("notifications")
+@Controller('notifications')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class NotificationsController {

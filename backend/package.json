@@ -23,6 +23,7 @@
     "seed:cms": "ts-node -r tsconfig-paths/register scripts/seed-cms.ts",
     "seed:categories": "ts-node -r tsconfig-paths/register scripts/seed-categories.ts",
     "seed:users": "ts-node -r tsconfig-paths/register scripts/seed-users.ts",
+    "seed:course-structure": "ts-node -r tsconfig-paths/register scripts/seed-course-structure.ts",
     "seed:all": "ts-node -r tsconfig-paths/register scripts/seed-images.ts && ts-node -r tsconfig-paths/register scripts/seed-cms.ts && ts-node -r tsconfig-paths/register scripts/seed-users.ts",
     "check:bunny": "ts-node -r tsconfig-paths/register scripts/check-bunny.ts"
   },

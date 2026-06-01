@@ -196,10 +196,11 @@ export class LessonsService {
     return { success: true };
   }
 
-  async getById(lessonId: string) {
+  async getById(lessonId: string, userId: string, userRole: string) {
     const lesson = await this.db.query.lessons.findFirst({
       where: eq(lessons.lessonId, lessonId),
       with: {
+        section: { with: { course: true } },
         questions: true,
       },
     });
@@ -207,18 +208,78 @@ export class LessonsService {
     if (!lesson) {
       throw new NotFoundException("Lesson not found");
     }
+
+    const isAdmin = userRole === "PLATFORM_ADMIN";
+    const isInstructor = userRole === "INSTRUCTOR";
+
+    // Instructors and admins bypass the enrollment gate.
+    if (!isAdmin && !isInstructor) {
+      // Free-preview lessons are accessible to all authenticated users.
+      if (!lesson.isFreePreview) {
+        const [enrollment] = await this.db
+          .select()
+          .from(enrollments)
+          .where(
+            and(
+              eq(enrollments.courseId, lesson.section.courseId),
+              eq(enrollments.userId, userId),
+            ),
+          )
+          .limit(1);
+
+        if (!enrollment) {
+          const [sectionGrant] = await this.db
+            .select()
+            .from(sectionAccess)
+            .where(
+              and(
+                eq(sectionAccess.courseId, lesson.section.courseId),
+                eq(sectionAccess.userId, userId),
+                eq(sectionAccess.sectionId, lesson.sectionId),
+              ),
+            )
+            .limit(1);
+
+          if (!sectionGrant) {
+            throw new ForbiddenException(
+              "You must be enrolled in this course to access lessons",
+            );
+          }
+        }
+      }
+    }
+
     return lesson;
   }
 
-  async reorder(dto: ReorderLessonsDto) {
+  async reorder(dto: ReorderLessonsDto, userId: string, userRole: string) {
+    if (userRole !== "PLATFORM_ADMIN") {
+      const section = await this.db.query.courseSections.findFirst({
+        where: eq(courseSections.sectionId, dto.sectionId),
+        with: { course: true },
+      });
+
+      if (!section) {
+        throw new NotFoundException("Section not found");
+      }
+
+      if (section.course.instructorId !== userId) {
+        throw new ForbiddenException(
+          "Only the course owner or a platform admin can reorder lessons",
+        );
+      }
+    }
+
     const { lessons: items } = dto;
     await this.db.transaction(async (tx) => {
-      for (const item of items) {
-        await tx
-          .update(lessons)
-          .set({ order: item.order })
-          .where(eq(lessons.lessonId, item.lessonId));
-      }
+      await Promise.all(
+        items.map((item) =>
+          tx
+            .update(lessons)
+            .set({ order: item.order })
+            .where(eq(lessons.lessonId, item.lessonId)),
+        ),
+      );
     });
     return { success: true };
   }

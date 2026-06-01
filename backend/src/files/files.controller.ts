@@ -22,7 +22,7 @@ import {
 } from "@nestjs/swagger";
 
 @ApiTags("files")
-@Controller("files")
+@Controller('files')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class FilesController {

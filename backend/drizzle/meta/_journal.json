@@ -141,6 +141,13 @@
       "when": 1779816885365,
       "tag": "0019_cynical_scalphunter",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "5",
+      "when": 1780210444412,
+      "tag": "0020_deep_vivisector",
+      "breakpoints": true
     }
   ]
 }

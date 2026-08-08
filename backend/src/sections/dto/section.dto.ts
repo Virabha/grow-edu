@@ -28,6 +28,7 @@ export class CreateSectionDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsNumber()
+  @Min(0)
   sectionPrice?: number;
 }
 
@@ -59,6 +60,7 @@ export class UpdateSectionDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsNumber()
+  @Min(0)
   sectionPrice?: number;
 }
 

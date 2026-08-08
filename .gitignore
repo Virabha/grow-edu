@@ -1,0 +1,6 @@
+# Scratch: downloaded SkillGro documentation + screenshots used for requirement
+# harvesting. Regenerate with .work/split.js after re-downloading the docs.
+.work/
+
+# Stray vector-db artifacts dropped at repo root and inside packages
+ruvector.db

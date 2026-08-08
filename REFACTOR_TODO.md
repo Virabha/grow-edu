@@ -122,33 +122,51 @@ Audited 26 controllers / 55 service files. Findings grouped by severity.
 
 ## Security — must-fix
 
-- [ ] **No rate limiting anywhere.** `@nestjs/throttler` is not installed. `/auth/login`, `/auth/register`, `/auth/forgot-password`, `/auth/reset-password`, `/contact`, `/subscribe` are all open to brute-force and abuse. Recommendation: install `@nestjs/throttler`, register a global `ThrottlerModule` (e.g. 100 req/min default), then `@Throttle` the auth endpoints down to ~5 req/min per IP. **Requires `npm install` — pending your approval.**
-- [ ] **No `helmet`.** No `X-Frame-Options`, `X-Content-Type-Options`, HSTS, or CSP. Install `helmet` and `app.use(helmet())` in `main.ts`. **Requires `npm install`.**
-- [ ] **Swagger UI exposed in production.** `SwaggerModule.setup("api-docs", …)` runs unconditionally in `main.ts:58`. Gate it behind `if (configService.nodeEnv !== 'production')`.
-- [ ] **Webhook secret comparison is a plain string `!==`** in `video-encoding.webhook.controller.ts:34`. Vulnerable to timing attacks. Use `crypto.timingSafeEqual`. Also: if `expectedSecret` is unset (e.g. env not configured), the guard is skipped — **every webhook call is accepted in that case**. Should hard-fail at boot if the secret is missing.
-- [ ] **Webhook body is typed `any`.** Replace with a `BunnyWebhookDto` class with `class-validator` decorators so the global `ValidationPipe` enforces it.
-- [ ] **Forgot-password timing oracle.** `auth.service.ts:121` returns the same generic message either way, but the "exists" path runs token gen + email send (slow), the "doesn't exist" path returns immediately. Times leak existence. Fix: await a no-op `setTimeout` or run a dummy bcrypt to even out the response time.
-- [ ] **No global `JwtAuthGuard`.** Each controller opts in via `@UseGuards(JwtAuthGuard)`. 4 controllers have no auth annotation: `app` (health, fine), `contact` (public, fine), `subscribe` (public, fine), `video-encoding/webhook` (uses header secret). Safer architecture: register `JwtAuthGuard` as `APP_GUARD` and require `@Public()` opt-out on public routes — guards against forgetting `@UseGuards` on a new controller.
-- [ ] **50 mb body limit** in `main.ts:29-30`. Large bodies should go through S3 presigned URLs, not through the API. Drop to ~2 mb on the JSON path.
+- [x] **No rate limiting anywhere.** Installed `@nestjs/throttler`, registered three-tier global `ThrottlerModule`, auth endpoints individually tightened **(prior session)**
+- [x] **No `helmet`.** `helmet()` wired in `main.ts` with production CSP **(prior session)**
+- [x] **Swagger UI exposed in production.** Gated behind `if (!configService.isProduction())` **(prior session)**
+- [x] **Webhook secret comparison is a plain string `!==`.** `crypto.timingSafeEqual` + hard-fail on missing secret **(prior session)**
+- [x] **Webhook body is typed `any`.** Replaced with `BunnyWebhookDto` **(prior session)**
+- [x] **Forgot-password timing oracle.** Constant-time dummy `bcrypt.compare` on no-match path **(prior session)**
+- [x] **No global `JwtAuthGuard`.** Registered as `APP_GUARD` in `app.module.ts`; public routes use `@Public()` **(prior session)**
+- [x] **50 mb body limit.** Dropped to 2 mb **(prior session)**
+- [x] **Admin middleware did not check JWT expiry.** Added `isExpired` check + cookie delete on expired token **(2026-05-30)**
+- [x] **localStorage key mismatch after cookie rename.** All `"auth-token"` localStorage writes updated to `"admin-auth-token"` / `"learner-auth-token"` **(2026-05-30)**
+- [x] **Auth cookies missing `Secure` flag.** Added `; Secure` to all `document.cookie` set operations in both apps **(2026-05-30)**
+- [x] **Storage upload endpoint not bound to requesting user.** Added `@UseGuards(JwtAuthGuard)` + userId prefix check to `POST /storage/upload` **(2026-05-30)**
+- [ ] **Manual QR payment endpoints still active.** `createManualQRPayment`, `uploadPaymentProof`, `approvePayment`, `rejectPayment`, `getPendingReview`, `GET /qr-settings` (public) are all still live. Remove after PhonePe is confirmed stable. **Blocked on PhonePe credentials.**
+- [ ] **Auth cookies missing `HttpOnly` flag.** Requires server-issued cookie flow + `/api/auth/me` validation endpoint — significant architecture change. Deferred.
+
+## Content theft protection
+
+- [x] **Right-click disabled on video player.** `contextmenu` event prevented **(prior session)**
+- [x] **CSS select-none on player.** `userSelect: none` applied **(prior session)**
+- [x] **Signed CDN URLs.** Bunny Stream token auth with 600 s expiry **(prior session)**
+- [x] **User email watermark on video player.** Semi-transparent, rotated, 5-position cycle every 15 s **(2026-05-30)**
+- [x] **Screenshot keyboard shortcuts blocked on watch page.** PrtSc, Win+Shift+S, Ctrl+Shift+S, Ctrl+P intercepted **(2026-05-30)**
+- [ ] **Bunny Stream DRM (Widevine/PlayReady).** Requires Bunny DRM add-on (paid). Gold standard for enterprise content protection.
+- [ ] **Picture-in-picture disable.** Add `disablePictureInPicture` attribute to iframes/videos where supported.
+- [ ] **DevTools detection.** Consider `devtools-detect` library to blur/pause content when DevTools is open.
 
 ## Correctness — must-fix
 
-- [ ] **`select()` returns full rows including `users.password`** in `auth.service.ts`. The password isn't sent to the client (destructured into a `UserPayload`), but the entire row sits in memory and could leak via logging or future refactors. Use Drizzle's column selection (`.select({ userId: users.userId, email: users.email, … })`).
-- [ ] **N+1 risk in 10 services** (`books`, `categories`, `cms`, `coupons`, `courses`, `enrollments`, `lessons`, `payment`, `sections`, `auth/token`) — files contain `for (… of …) { … await this.db … }`. Each loop iteration round-trips to Postgres. Each needs to be inspected and converted to `.execute()` with `inArray()` or `Promise.all` batches.
+- [x] **`select()` returns full rows including `users.password`.** `userPublicColumns` projection on every non-credential read **(prior session)**
+- [ ] **N+1 risk in 10 services** (`books`, `categories`, `cms`, `coupons`, `courses`, `enrollments`, `lessons`, `payment`, `sections`, `auth/token`). Initial hot-paths optimised; bounded loops deprioritised. Revisit with slow-query logs.
 
 ## Performance / scalability — should-fix
 
-- [ ] **Empty-catch swallowing in `auth.service.ts`** (`} catch {}` at lines 97, 145, 181, 221). Email failures are silently dropped — operators have no way to know verification or reset emails are failing. At minimum, `logger.warn()` the error.
+- [x] **Empty-catch swallowing in `auth.service.ts`.** All four `} catch {}` blocks now log via `Logger.warn` **(prior session)**
 - [ ] **No pagination defaults** on most list endpoints — needs an audit pass.
 - [ ] **No index audit** — every `eq(table.foreignKey, …)` lookup should have an index on that column.
 
 ## Documented but not blocking
 
-- The `app/(authenticated)` route protection on the frontend is JWT-decode-based in `middleware.ts`. The middleware only checks expiry, not signature. That's fine because the real auth check happens server-side, but a fully forged token would still pass through the middleware (server would then reject it). Documented for future hardening.
+- The `app/(authenticated)` route protection on the frontend is JWT-decode-based in `middleware.ts`. The middleware checks expiry (now in both apps) but not signature. Real auth check still happens server-side; a forged token is rejected by the backend.
 
 ## What I'm not going to touch without your sign-off
 
-- Adding new dependencies (`@nestjs/throttler`, `helmet`). I'd prefer to pin the versions explicitly and run `pnpm install` (or whatever the repo uses) with your confirmation rather than autonomously modifying `package.json`.
+- **Bunny Stream DRM add-on** — requires paid upgrade on the Bunny account.
+- **HttpOnly cookie migration** — requires full auth-flow architecture change (server-set cookies + `/api/auth/me` endpoint).
 
 ---
 
@@ -313,11 +331,11 @@ For every endpoint, the bar is:
     - `Title *`, `Pricing Model *`, and `Price *` (the last one only when Pricing Model is not `INCLUDED`) all carry a red asterisk.
     - Clicking "Create Section" / "Update Section" now runs synchronous `validateModuleForm()` — failures land in `moduleTitleError` / `modulePriceError`, paint the input red, and render the message under the field. Errors auto-clear when the user edits the offending input.
     - Same pattern applied to the Add Lesson sheet — `Lesson title *` + inline error + auto-clear.
-11. ✓ **Manual QR payment flow fully removed.**
-    - **Backend**: `PaymentService.createManualQRPayment`, `uploadPaymentProof`, `approvePayment`, `rejectPayment`, `getPendingReviewPayments`, `getQRSettings`, `updateQRSettings` deleted along with the `QRPaymentSettings` interface and `QR_SETTING_KEYS` map. `MANUAL_QR` dropped from the `PaymentGateway` enum on the service side (the DB enum still has it for legacy rows). Controller routes `GET /qr-settings`, `POST /` (create-manual-QR), `POST /:id/upload-proof`, `POST /:id/approve`, `POST /:id/reject`, `GET /pending-review`, `PATCH /qr-settings` all deleted. DTOs `create-payment.dto.ts`, `qr-settings.dto.ts`, `review-payment.dto.ts`, `upload-proof.dto.ts` deleted.
-    - **Frontend (learner)**: `payment-panel.tsx`, `proof-panel.tsx`, `copy-button.tsx` deleted. Hooks `useCreatePayment`, `useUploadProof`, `useQRSettings` removed from `use-payments.ts`. `/checkout` page rewritten — single "Continue to PhonePe" CTA that calls `useInitiatePhonePe` and redirects to the returned URL.
-    - **Frontend (admin)**: `/admin/settings/payments` route deleted. Approve / reject buttons + the rejection-notes dialog removed from `PaymentDetailSheet` (now a read-only ledger entry view). `useApprovePayment`, `useRejectPayment`, `useQRSettings`, `useUpdateQRSettings` removed from feature hooks. `paymentsApi.approve` / `reject` / `getQRSettings` / `updateQRSettings` removed. Sidebar "Payment Settings" entry removed.
-    - `/payment/success` rewritten — polls `usePhonePeStatus(paymentId)` with a 2-second `refetchInterval` while status is `PENDING`, stops once `COMPLETED` / `FAILED`. Three tone-aware states (verifying / confirmed / failed) plus a fallback for "pending after timeout" or missing paymentId.
+11. ⚠️ **Manual QR payment flow — PARTIALLY removed (frontend only, backend still active).**
+    - **Backend status**: Code audit on 2026-05-30 confirmed `payment.controller.ts` and `payment.service.ts` still contain all QR methods (`createManualQRPayment`, `uploadPaymentProof`, `approvePayment`, `rejectPayment`, `getPendingReviewPayments`, `getQRSettings`, `updateQRSettings`). Backend cleanup is blocked until PhonePe is confirmed stable.
+    - **Frontend (learner)**: `payment-panel.tsx`, `proof-panel.tsx`, `copy-button.tsx` deleted. `/checkout` rewritten to PhonePe CTA.
+    - **Frontend (admin)**: Approve/reject buttons removed from `PaymentDetailSheet`. `/admin/settings/payments` deleted.
+    - **Action required**: Remove backend QR endpoints after PhonePe sandbox round-trip passes.
 
 ## Implemented this turn
 
@@ -336,11 +354,27 @@ For every endpoint, the bar is:
     - The DB write now uses a typed `updates` object instead of spreading `dto`. `role` and `emailVerified` are only written when `currentUserRole === 'PLATFORM_ADMIN'`. Even if someone bypasses the early-throw guards, the assignment is gated again at the DB-write boundary (defence in depth).
 14. ✓ **Course update ownership** (`courses.service.ts`) audited — already correct: instructor-or-admin check at the top of `update()`, `instructorId` not present in `UpdateCourseDto` or `CreateCourseDto` (server pulls it from the JWT), update payload built with an explicit allow-list rather than spreading the DTO.
 
-## Deferred — last open items
+## Implemented 2026-05-30 (security session)
 
-1. **PhonePe sandbox round-trip** — code is fully wired (controller + service + frontend + status polling). Set `PHONEPE_MERCHANT_ID`, `PHONEPE_SALT_KEY`, `PHONEPE_SALT_INDEX`, `PHONEPE_BASE_URL` in backend env, configure the callback URL `${BACKEND_URL}/payments/phonepe/webhook` in the PhonePe dashboard, then test with a sandbox ₹1 payment.
-2. **N+1 sweep** — initial pass done; the `for of`-with-await loops in `lessons.reorder`, `coupons.service`, etc. are mostly bounded (≤ ~50 rows per call) and inside transactions, so they're acceptable. The `courses.findAll` hot-path was already optimised with `inArray()` batch queries + parallel fetches. Flag for full review when individual endpoints start showing up in slow-query logs.
-3. **`POST /storage/upload` doesn't bind the upload key to the requester** — anyone with a valid JWT can use any key from `getUploadKey`, including one issued to another user. Low priority but worth fixing: encode userId into the key prefix and verify it server-side on upload. Tracked separately.
+15. ✓ **Admin middleware JWT expiry check.** `frontend/admin/src/middleware.ts` now checks `payload.exp` and deletes the stale cookie before redirecting, matching the learner middleware.
+16. ✓ **localStorage key names aligned with cookie names.** `"auth-token"` → `"admin-auth-token"` in admin app; `"auth-token"` → `"learner-auth-token"` in learner app. Covers `setItem`, `removeItem`, and login hooks in both apps.
+17. ✓ **`Secure` flag added to all auth cookie set operations.** Prevents transmission over HTTP in both apps.
+18. ✓ **`POST /storage/upload` bound to requesting user.** Added explicit `@UseGuards(JwtAuthGuard)` + userId prefix check — any key not containing the requesting user's ID is rejected with `400 Bad Request`.
+19. ✓ **User email watermark on secure video player.** Semi-transparent, 25° rotated, cycles through 5 positions every 15 s. Anti-piracy measure for paid course content.
+20. ✓ **Screenshot keyboard shortcuts blocked on watch page.** `keydown` event listener (capture phase) intercepts PrtSc, Win+Shift+S, Ctrl+Shift+S, Ctrl+P on the `/courses/[courseId]/watch` page.
+21. ✓ **SECURITY_AUDIT.md created.** Full audit document at project root listing all findings, severity, status, and content-theft protection summary.
+
+## Deferred — open items
+
+1. **PhonePe sandbox round-trip** — code fully wired (controller + service + frontend + status polling). Provide `PHONEPE_MERCHANT_ID`, `PHONEPE_SALT_KEY`, `PHONEPE_SALT_INDEX`, `PHONEPE_BASE_URL` in backend env + configure webhook URL in PhonePe dashboard, then test with a sandbox ₹1 payment.
+2. **Remove manual QR backend endpoints** — blocked on PhonePe confirmation (see item 11 above).
+3. **N+1 sweep** — bounded loops deprioritised; revisit with slow-query logs.
+4. **Index audit** — add DB indexes on high-frequency `eq(table.foreignKey, …)` lookups.
+5. **Corp-admin enrollment filter** — verify `enrollments` endpoint scopes correctly for CORPORATE_ADMIN.
+6. **HttpOnly cookie migration** — significant architecture change; deferred.
+7. **Bunny Stream DRM** — requires paid Bunny add-on; deferred.
+8. **Picture-in-picture disable** on iframe player.
+9. **DevTools detection** on watch page.
 
 ## Migration applied this turn
 
@@ -349,3 +383,6 @@ For every endpoint, the bar is:
 - `drizzle.__drizzle_migrations` was empty (the DB had been bootstrapped via `drizzle-kit push` historically rather than `db:migrate`). Backfilled all 17 entries (`0000`–`0016`); `pnpm db:migrate` now exits cleanly as a no-op.
 - Knock-on cleanup: dropped the dead `POST /coupons/validate-bulk` endpoint + `validateCouponForCartItems` service method (tied to the deleted cart flow) and matching admin frontend `useValidateBulkCoupon` + `validateBulk` API method + `BulkCouponValidationResult` / `BulkCouponItemResult` types.
 - Also patched `src/database/migrate.ts` to actually log migration errors instead of swallowing them with `void err`.
+
+
+

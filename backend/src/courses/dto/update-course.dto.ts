@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNumber, IsOptional, IsEnum, MinLength } from 'class-validator';
+import { IsString, IsNumber, IsOptional, IsEnum, MinLength, Min } from 'class-validator';
 
 export class UpdateCourseDto {
   @ApiProperty({ description: 'Course title', required: false })
@@ -27,11 +27,13 @@ export class UpdateCourseDto {
 
   @ApiProperty({ description: 'Course price', required: false })
   @IsNumber()
+  @Min(0)
   @IsOptional()
   price?: number;
 
   @ApiProperty({ description: 'Compare-at price (strike-through)', required: false })
   @IsNumber()
+  @Min(0)
   @IsOptional()
   compareAtPrice?: number;
 

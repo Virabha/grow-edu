@@ -5,6 +5,9 @@ import {
   Param,
   UseGuards,
   Body,
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
 } from "@nestjs/common";
 import {
   ApiTags,
@@ -37,6 +40,35 @@ export class VideoEncodingController {
     private readonly db: PostgresJsDatabase<typeof schema>,
   ) {}
 
+  private async loadLessonForUser(
+    lessonId: string,
+    user: { userId: string; role: string },
+  ) {
+    const lesson = await this.db.query.lessons.findFirst({
+      where: eq(schema.lessons.lessonId, lessonId),
+      with: {
+        section: {
+          with: { course: true },
+        },
+      },
+    });
+
+    if (!lesson) {
+      throw new NotFoundException(`Lesson ${lessonId} not found`);
+    }
+
+    if (
+      user.role !== UserRole.PLATFORM_ADMIN &&
+      lesson.section.course.instructorId !== user.userId
+    ) {
+      throw new ForbiddenException(
+        "You can only access encoding data for your own courses",
+      );
+    }
+
+    return lesson;
+  }
+
   @ApiOperation({ summary: "Create Bunny Stream video and get TUS upload auth" })
   @ApiResponse({ status: 201, description: "Video created, TUS auth returned" })
   @Post("create-upload")
@@ -48,28 +80,12 @@ export class VideoEncodingController {
   ) {
     const { courseId, lessonId, title } = body;
 
-    const lesson = await this.db.query.lessons.findFirst({
-      where: eq(schema.lessons.lessonId, lessonId),
-      with: {
-        section: {
-          with: { course: true },
-        },
-      },
-    });
-
-    if (!lesson) {
-      throw new Error("Lesson not found");
-    }
-
-    if (
-      user.role !== "PLATFORM_ADMIN" &&
-      lesson.section.course.instructorId !== user.userId
-    ) {
-      throw new Error("Only course owner or admin can upload videos");
-    }
+    const lesson = await this.loadLessonForUser(lessonId, user);
 
     if (lesson.section.course.courseId !== courseId) {
-      throw new Error("Course ID mismatch");
+      throw new BadRequestException(
+        "Course ID does not match the lesson's course",
+      );
     }
 
     const result = await this.videoEncodingService.createVideo(
@@ -84,22 +100,33 @@ export class VideoEncodingController {
   @ApiOperation({ summary: "Get encoding job status" })
   @ApiResponse({ status: 200, description: "Job status" })
   @Get("status/:jobId")
-  async getJobStatus(@Param("jobId") jobId: string) {
-    const status = await this.videoEncodingService.getJobStatus(jobId);
-
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.INSTRUCTOR, UserRole.PLATFORM_ADMIN)
+  async getJobStatus(
+    @Param("jobId") jobId: string,
+    @CurrentUser() user: { userId: string; role: string },
+  ) {
     const [job] = await this.db
       .select()
       .from(schema.videoEncodingJobs)
       .where(eq(schema.videoEncodingJobs.jobId, jobId))
       .limit(1);
 
+    if (!job) {
+      throw new NotFoundException(`Encoding job ${jobId} not found`);
+    }
+
+    await this.loadLessonForUser(job.lessonId, user);
+
+    const status = await this.videoEncodingService.getJobStatus(jobId);
+
     return {
       jobId,
       status: status.status,
       progress: status.progress,
       errorMessage: status.errorMessage,
-      lessonId: job?.lessonId,
-      courseId: job?.courseId,
+      lessonId: job.lessonId,
+      courseId: job.courseId,
     };
   }
 
@@ -199,19 +226,11 @@ export class VideoEncodingController {
   @Get("debug/:lessonId")
   @UseGuards(RolesGuard)
   @Roles(UserRole.INSTRUCTOR, UserRole.PLATFORM_ADMIN)
-  async debugLesson(@Param("lessonId") lessonId: string) {
-    const lesson = await this.db.query.lessons.findFirst({
-      where: eq(schema.lessons.lessonId, lessonId),
-      with: {
-        section: {
-          with: { course: true },
-        },
-      },
-    });
-
-    if (!lesson) {
-      return { error: "Lesson not found" };
-    }
+  async debugLesson(
+    @Param("lessonId") lessonId: string,
+    @CurrentUser() user: { userId: string; role: string },
+  ) {
+    const lesson = await this.loadLessonForUser(lessonId, user);
 
     const [encodingJob] = await this.db
       .select()

@@ -2,10 +2,9 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
-  BadRequestException,
   Inject,
 } from "@nestjs/common";
-import { eq, asc, and } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { DATABASE_CONNECTION } from "../database/database.module";
 import * as schema from "../database/schema";

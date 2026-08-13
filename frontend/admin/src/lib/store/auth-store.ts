@@ -37,6 +37,7 @@ export const useAuthStore = create<AuthState>()(persist((set) => ({
             const cookies = document.cookie.split(';');
             for (let i = 0; i < cookies.length; i++) {
                 const cookie = cookies[i];
+                if (cookie === undefined) continue;
                 const eqPos = cookie.indexOf('=');
                 const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
                 if (name) {

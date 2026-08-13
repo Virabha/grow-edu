@@ -18,12 +18,14 @@ import {
   sectionAccess,
   users,
   siteSettings,
+  paymentStatusEnum,
+  paymentGatewayEnum,
 } from '../database/schema';
 import { eq, and, inArray, desc, like, sql } from 'drizzle-orm';
 import { EmailService } from '../email/email.service';
 import { CouponsService } from '../coupons/coupons.service';
 
-const MAX_PAGE_LIMIT = 50;
+const MAX_PAGE_LIMIT = 100;
 const PLATFORM_CURRENCY = 'INR';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -110,8 +112,9 @@ export class PaymentService {
     let itemName = 'Course purchase';
 
     if (payload.itemType === 'COURSE') {
+      if (!payload.courseId) throw new BadRequestException('courseId is required for COURSE items');
       const course = await this.db.query.courses.findFirst({
-        where: eq(courses.courseId, payload.courseId!),
+        where: eq(courses.courseId, payload.courseId),
       });
       if (!course) throw new NotFoundException('Course not found');
       if (course.status !== 'PUBLISHED') {
@@ -120,8 +123,9 @@ export class PaymentService {
       originalAmount = Number(course.price || 0);
       itemName = course.title;
     } else {
+      if (!payload.sectionId) throw new BadRequestException('sectionId is required for SECTION items');
       const section = await this.db.query.courseSections.findFirst({
-        where: eq(courseSections.sectionId, payload.sectionId!),
+        where: eq(courseSections.sectionId, payload.sectionId),
         with: { course: true },
       });
       if (!section) throw new NotFoundException('Section not found');
@@ -156,7 +160,8 @@ export class PaymentService {
         throw new BadRequestException(validation.message);
       }
 
-      couponId = validation.couponId!;
+      if (!validation.couponId) throw new BadRequestException('Coupon validation returned no coupon ID');
+      couponId = validation.couponId;
       discountAmount = Number(validation.discountAmount);
       amount = Number(validation.finalAmount);
     }
@@ -235,7 +240,7 @@ export class PaymentService {
           discountAmount,
           finalAmount: 0,
         });
-      } catch {}
+      } catch { /* non-critical: swallow */ }
     }
 
     await this.grantAccessForPayment(
@@ -263,7 +268,7 @@ export class PaymentService {
           items: [{ name: itemName, type: payload.itemType }],
         });
       }
-    } catch {}
+    } catch { /* non-critical: swallow */ }
 
     return { success: true, paymentId: payment.paymentId, message: 'Enrolled successfully' };
   }
@@ -553,7 +558,7 @@ export class PaymentService {
     if (payment.couponId) {
       try {
         await this.couponsService.consumeReservationByPayment(paymentId);
-      } catch {}
+      } catch { /* non-critical: swallow */ }
     }
 
     // Confirmation email — only if this request won the status-update race
@@ -593,7 +598,7 @@ export class PaymentService {
           });
         }
       }
-    } catch {}
+    } catch { /* non-critical: swallow */ }
 
     return { success: true, message: 'Payment approved and access granted' };
   }
@@ -626,7 +631,7 @@ export class PaymentService {
     if (payment.couponId) {
       try {
         await this.couponsService.cancelReservationByPayment(paymentId);
-      } catch {}
+      } catch { /* non-critical: swallow */ }
     }
 
     return { success: true, message: 'Payment rejected' };
@@ -766,7 +771,7 @@ export class PaymentService {
   }
 
   async markPaymentCompleted(paymentId: string, gatewayPaymentId?: string) {
-    const updateData: { status: 'COMPLETED'; updatedAt: Date; metadata?: any; gatewayId?: string } = {
+    const updateData: { status: 'COMPLETED'; updatedAt: Date; metadata?: Record<string, unknown>; gatewayId?: string } = {
       status: 'COMPLETED',
       updatedAt: new Date(),
     };
@@ -779,7 +784,7 @@ export class PaymentService {
         .limit(1);
 
       updateData.metadata = {
-        ...((existing?.metadata as Record<string, any>) || {}),
+        ...((existing?.metadata as Record<string, unknown>) || {}),
         gatewayPaymentId,
       };
     }
@@ -804,7 +809,7 @@ export class PaymentService {
             finalAmount: Number(payment.amount),
           });
         }
-      } catch {}
+      } catch { /* non-critical: swallow */ }
     }
 
     return payment;
@@ -929,10 +934,10 @@ export class PaymentService {
       conditions.push(like(payments.paymentId, `%${filters.search}%`));
     }
     if (filters?.status) {
-      conditions.push(eq(payments.status, filters.status as any));
+      conditions.push(eq(payments.status, filters.status as (typeof paymentStatusEnum.enumValues)[number]));
     }
     if (filters?.gateway) {
-      conditions.push(eq(payments.gateway, filters.gateway as any));
+      conditions.push(eq(payments.gateway, filters.gateway as (typeof paymentGatewayEnum.enumValues)[number]));
     }
     if (filters?.dateFrom) {
       conditions.push(sql`${payments.createdAt} >= ${new Date(filters.dateFrom)}`);

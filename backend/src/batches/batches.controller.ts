@@ -32,6 +32,7 @@ import {
   UpdateBatchSessionDto,
 } from "./dto/batch-session.dto";
 import { CreateBatchEnrollmentsDto } from "./dto/batch-enrollment.dto";
+import { FilterBatchEnrollmentsDto } from "./dto/filter-batch-enrollments.dto";
 import {
   CreateBatchAnnouncementDto,
   UpdateBatchAnnouncementDto,
@@ -306,14 +307,12 @@ export class BatchesController {
   @Get(":batchId/enrollments")
   async listEnrollments(
     @Param("batchId") batchId: string,
-    @Query("page") page?: string,
-    @Query("limit") limit?: string,
-    @Query("search") search?: string
+    @Query() query: FilterBatchEnrollmentsDto,
   ) {
     return this.batchesService.listEnrollments(batchId, {
-      page: page ? Number(page) : undefined,
-      limit: limit ? Number(limit) : undefined,
-      search,
+      page: query.page,
+      limit: query.limit,
+      search: query.search,
     });
   }
 

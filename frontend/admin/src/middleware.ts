@@ -24,6 +24,7 @@ function decodeJwtPayload(token: string): { role?: string; exp?: number } | null
     const parts = token.split(".");
     if (parts.length !== 3) return null;
     const payload = parts[1];
+    if (payload === undefined) return null;
     const paddedPayload = payload + "=".repeat((4 - (payload.length % 4)) % 4);
     const decoded = Buffer.from(paddedPayload, "base64").toString("utf-8");
     return JSON.parse(decoded);

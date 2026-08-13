@@ -1,12 +1,5 @@
 import { DashboardStats } from '../types';
 import { enrollmentsApi } from '../../enrollments/api/enrollments.api';
-const getAuthHeaders = () => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('auth-token') : null;
-    return {
-        'Content-Type': 'application/json',
-        ...(token && { Authorization: `Bearer ${token}` }),
-    };
-};
 export const dashboardApi = {
     async getStats(userId: string): Promise<DashboardStats> {
         const enrollments = await enrollmentsApi.getAll({ userId, limit: 1000 });

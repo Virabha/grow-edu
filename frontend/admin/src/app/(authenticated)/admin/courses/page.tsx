@@ -202,7 +202,7 @@ export default function AdminCourseManagementPage() {
                     <TableCell>
                       <StatusBadge
                         label={course.status}
-                        styles={STATUS_STYLES[course.status] ?? STATUS_STYLES.DRAFT}
+                        styles={STATUS_STYLES[course.status] ?? "border-border bg-muted text-muted-foreground"}
                       />
                     </TableCell>
                     <TableCell>

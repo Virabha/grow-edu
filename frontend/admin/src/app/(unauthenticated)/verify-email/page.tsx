@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { useVerifyEmail } from "@/features/auth/hooks/use-auth";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState, Suspense, useRef } from "react";
+import { useEffect, Suspense, useRef } from "react";
 import { CheckCircle, XCircle, Loader2 } from "lucide-react";
 import Link from "next/link";
 function EmailVerificationContent() {

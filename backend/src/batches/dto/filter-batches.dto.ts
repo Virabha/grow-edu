@@ -1,8 +1,8 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { Type } from "class-transformer";
-import { IsEnum, IsInt, IsOptional, IsString, Min } from "class-validator";
+import { IsEnum, IsOptional, IsString } from "class-validator";
+import { PaginationDto } from "../../common/dto/pagination.dto";
 
-export class FilterBatchesDto {
+export class FilterBatchesDto extends PaginationDto {
   @ApiProperty({ required: false })
   @IsString()
   @IsOptional()
@@ -25,18 +25,4 @@ export class FilterBatchesDto {
   @IsString()
   @IsOptional()
   categoryId?: string;
-
-  @ApiProperty({ required: false, default: 1 })
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @IsOptional()
-  page?: number;
-
-  @ApiProperty({ required: false, default: 20 })
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @IsOptional()
-  limit?: number;
 }

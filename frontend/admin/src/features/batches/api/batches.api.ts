@@ -7,7 +7,6 @@ import type {
   BatchDoubt,
   BatchDoubtDetail,
   BatchDoubtReply,
-  BatchEnrollment,
   BatchFilters,
   BatchQuiz,
   BatchQuizDetail,

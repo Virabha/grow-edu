@@ -68,7 +68,7 @@ import {
   SubmitQuizAnswerDto,
 } from "./dto/batch-quiz.dto";
 
-const MAX_PAGE_LIMIT = 50;
+const MAX_PAGE_LIMIT = 100;
 const CACHE_PREFIX = "batches:";
 const PUBLIC_LIST_TTL = 300;
 
@@ -412,13 +412,12 @@ export class BatchesService implements OnModuleInit {
     }
     if (filters.search) {
       const pattern = `%${filters.search}%`;
-      conditions.push(
-        or(
-          ilike(batches.title, pattern),
-          ilike(batches.shortDescription, pattern),
-          ilike(batches.targetExam, pattern)
-        )!
+      const searchCondition = or(
+        ilike(batches.title, pattern),
+        ilike(batches.shortDescription, pattern),
+        ilike(batches.targetExam, pattern)
       );
+      if (searchCondition) conditions.push(searchCondition);
     }
     if (scope?.teacherId) {
       conditions.push(
@@ -506,15 +505,13 @@ export class BatchesService implements OnModuleInit {
       .from(batches)
       .where(
         and(
-          or(eq(batches.batchId, idOrSlug), eq(batches.slug, idOrSlug))!,
+          or(eq(batches.batchId, idOrSlug), eq(batches.slug, idOrSlug)),
           eq(batches.isDeleted, false)
         )
       )
       .limit(1);
 
     if (!batch) throw new NotFoundException("Batch not found");
-
-    const isAdmin = this.isAdmin(userRole);
 
     let isEnrolled = false;
     if (userId) {
@@ -988,13 +985,12 @@ export class BatchesService implements OnModuleInit {
     ];
     if (opts.search) {
       const pattern = `%${opts.search}%`;
-      conditions.push(
-        or(
-          ilike(users.email, pattern),
-          ilike(users.firstName, pattern),
-          ilike(users.lastName, pattern)
-        )!
+      const searchCondition = or(
+        ilike(users.email, pattern),
+        ilike(users.firstName, pattern),
+        ilike(users.lastName, pattern)
       );
+      if (searchCondition) conditions.push(searchCondition);
     }
 
     const where = and(...conditions);
@@ -1292,12 +1288,11 @@ export class BatchesService implements OnModuleInit {
     if (opts.type) conditions.push(eq(batchResources.type, opts.type));
     if (opts.subjectId) conditions.push(eq(batchResources.subjectId, opts.subjectId));
     if (!isStaff) {
-      conditions.push(
-        or(
-          sql`${batchResources.publishAt} IS NULL`,
-          sql`${batchResources.publishAt} <= now()`
-        )!
+      const publishCondition = or(
+        sql`${batchResources.publishAt} IS NULL`,
+        sql`${batchResources.publishAt} <= now()`
       );
+      if (publishCondition) conditions.push(publishCondition);
     }
 
     const rows = await this.db

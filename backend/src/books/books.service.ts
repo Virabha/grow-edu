@@ -9,7 +9,7 @@ import { eq, and, asc, desc, like, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { DATABASE_CONNECTION } from '../database/database.module';
 import * as schema from '../database/schema';
-import { books, bookPurchases, users } from '../database/schema';
+import { books, bookPurchases } from '../database/schema';
 import { CreateBookDto } from './dto/create-book.dto';
 import { UpdateBookDto } from './dto/update-book.dto';
 import { FilterBooksDto } from './dto/filter-books.dto';
@@ -18,7 +18,7 @@ import { StorageService } from '../storage/storage.service';
 import { AppConfigService } from '../config';
 
 const CACHE_TTL = 300;
-const MAX_PAGE_LIMIT = 50;
+const MAX_PAGE_LIMIT = 100;
 
 @Injectable()
 export class BooksService {
@@ -70,7 +70,7 @@ export class BooksService {
       conditions.push(eq(books.categoryId, filters.categoryId));
     }
     if (filters?.status) {
-      conditions.push(eq(books.status, filters.status as any));
+      conditions.push(eq(books.status, filters.status as 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'));
     }
 
     const whereClause = conditions.length > 0
@@ -101,7 +101,8 @@ export class BooksService {
 
   async findPublished(filters?: FilterBooksDto) {
     const cacheKey = `books:public:${JSON.stringify(filters || {})}`;
-    const cached = await this.cache.get<any>(cacheKey);
+    type BookPage = { data: (typeof books.$inferSelect)[]; pagination: { page: number; limit: number; total: number; totalPages: number } };
+    const cached = await this.cache.get<BookPage>(cacheKey);
     if (cached) return cached;
 
     const limit = Math.min(filters?.limit || 12, MAX_PAGE_LIMIT);
@@ -195,7 +196,7 @@ export class BooksService {
         publishedYear: dto.publishedYear ?? null,
         format: dto.format ?? 'PHYSICAL',
         downloadUrl: dto.downloadUrl ?? null,
-        status: (dto.status as any) ?? 'DRAFT',
+        status: dto.status ?? 'DRAFT',
         isActive: dto.isActive ?? true,
         displayOrder: dto.displayOrder ?? 0,
       })

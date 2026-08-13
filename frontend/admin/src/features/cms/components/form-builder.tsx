@@ -69,7 +69,8 @@ export function FormBuilder({ value, onChange }: FormBuilderProps) {
     } else {
       const schema = createDefaultSchema();
       onChange(schema);
-      setExpandedSections(new Set([schema.sections[0].id]));
+      const firstSection = schema.sections[0];
+      setExpandedSections(new Set(firstSection ? [firstSection.id] : []));
     }
   }
 

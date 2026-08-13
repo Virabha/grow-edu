@@ -66,6 +66,22 @@ function getSettingValue(settings: SiteSetting[], key: string): Record<string, u
   return (found?.value as Record<string, unknown>) ?? {};
 }
 
+/**
+ * Narrowing predicate for values arriving from the settings API, whose shape is
+ * not guaranteed. Any non-null object can be read with a string key, so this is
+ * justified by the runtime check rather than asserted.
+ */
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+/** Reads a string field from untyped API data, defaulting to "" when absent. */
+function readString(source: unknown, key: string): string {
+  if (!isRecord(source)) return "";
+  const value = source[key];
+  return typeof value === "string" ? value : "";
+}
+
 export function AboutSettingsForm() {
   const { data: settings = [], isLoading } = useSiteSettingsAdmin();
   const upsert = useUpsertSiteSetting();
@@ -130,25 +146,16 @@ export function AboutSettingsForm() {
       leadershipForm.reset({
         employees: employeesRaw
           .map((e) => ({
-            designation:
-              typeof (e as any)?.designation === "string"
-                ? (e as any).designation
-                : "",
-            name: typeof (e as any)?.name === "string" ? (e as any).name : "",
+            designation: readString(e, "designation"),
+            name: readString(e, "name"),
           }))
           .filter((e) => e.designation || e.name),
         importantDirectors: importantDirectorsRaw
           .map((d) => ({
-            name: typeof (d as any)?.name === "string" ? (d as any).name : "",
-            designation:
-              typeof (d as any)?.designation === "string"
-                ? (d as any).designation
-                : "",
-            bio: typeof (d as any)?.bio === "string" ? (d as any).bio : "",
-            photoUrl:
-              typeof (d as any)?.photoUrl === "string"
-                ? (d as any).photoUrl
-                : "",
+            name: readString(d, "name"),
+            designation: readString(d, "designation"),
+            bio: readString(d, "bio"),
+            photoUrl: readString(d, "photoUrl"),
           }))
           .filter((d) => d.name || d.designation || d.bio || d.photoUrl),
       });

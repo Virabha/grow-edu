@@ -1,8 +1,8 @@
 "use client";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useSections, useCreateSection, useUpdateSection, useDeleteSection, useCreateLesson, useDeleteLesson, } from "@/lib/hooks/use-lessons";
-import { Plus, GripVertical, Trash2, Pencil, ChevronDown, ChevronRight, Video, FileText, HelpCircle, Play, } from "lucide-react";
+import { Plus, GripVertical, Trash2, Pencil, ChevronRight, Video, FileText, HelpCircle, Play, } from "lucide-react";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -29,7 +29,7 @@ interface CourseBuilderProps {
     courseId: string;
 }
 export function CourseBuilder({ courseId }: CourseBuilderProps) {
-    const { data: modules, refetch: refetchModules } = useSections({
+    const { data: modules } = useSections({
         enabled: true,
         courseId,
     });

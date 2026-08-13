@@ -24,12 +24,15 @@ interface AuthState {
 function getCookie(name: string): string | undefined {
   if (typeof document === "undefined") return undefined;
   const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
-  return match ? decodeURIComponent(match[1]) : undefined;
+  return match ? decodeURIComponent(match[1] ?? "") : undefined;
 }
 
 function isTokenValid(token: string): boolean {
   try {
-    const payload = JSON.parse(atob(token.split(".")[1]));
+    const parts = token.split(".");
+    const encodedPayload = parts[1];
+    if (!encodedPayload) return false;
+    const payload = JSON.parse(atob(encodedPayload));
     return !payload.exp || payload.exp * 1000 > Date.now();
   } catch {
     return false;

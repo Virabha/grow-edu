@@ -13,7 +13,7 @@ interface SimpleBarChartProps {
     height?: number;
     noCard?: boolean;
 }
-export function SimpleBarChart({ title, data, maxValue, height = 200, noCard = false }: SimpleBarChartProps) {
+export function SimpleBarChart({ title, data, maxValue, height: _height = 200, noCard = false }: SimpleBarChartProps) {
     const max = maxValue || Math.max(...data.map((d) => d.value), 1);
     const chartContent = (<div className="space-y-3 sm:space-y-2 md:space-y-3 w-full min-h-full">
       {data.map((item, index) => {

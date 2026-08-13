@@ -14,12 +14,12 @@ import {
   ApiTags,
   ApiOperation,
   ApiBearerAuth,
-  ApiQuery,
   ApiResponse,
 } from '@nestjs/swagger';
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
+import { FilterCategoriesAdminDto } from './dto/filter-categories.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles, UserRole } from '../auth/decorators/roles.decorator';
@@ -34,24 +34,13 @@ export class CategoriesAdminController {
 
   @Get()
   @ApiOperation({ summary: 'List all categories (admin view)' })
-  @ApiQuery({ name: 'search', required: false })
-  @ApiQuery({ name: 'isActive', required: false, type: Boolean })
-  @ApiQuery({ name: 'parentCategoryId', required: false, description: 'Filter by parent. Use "root" for top-level only.' })
-  @ApiQuery({ name: 'page', required: false, type: Number })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
-  async findAll(
-    @Query('search') search?: string,
-    @Query('isActive') isActive?: string,
-    @Query('parentCategoryId') parentCategoryId?: string,
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
-  ) {
+  async findAll(@Query() query: FilterCategoriesAdminDto) {
     return this.categoriesService.findAllAdmin({
-      search,
-      isActive: isActive !== undefined ? isActive === 'true' : undefined,
-      parentCategoryId,
-      page: page ? parseInt(page, 10) : undefined,
-      limit: limit ? parseInt(limit, 10) : undefined,
+      search: query.search,
+      isActive: query.isActive !== undefined ? query.isActive === 'true' : undefined,
+      parentCategoryId: query.parentCategoryId,
+      page: query.page,
+      limit: query.limit,
     });
   }
 

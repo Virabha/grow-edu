@@ -18,6 +18,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../auth/decorators/roles.decorator';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
+import { FilterCategoriesAdminDto } from './dto/filter-categories.dto';
 import { Public } from '../auth/decorators/public.decorator';
 
 @ApiTags('categories')
@@ -48,17 +49,12 @@ export class CategoriesController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all categories with filters (admin)' })
   @ApiResponse({ status: 200, description: 'Paginated list of categories' })
-  async findAllAdmin(
-    @Query('search') search?: string,
-    @Query('isActive') isActive?: string,
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
-  ) {
+  async findAllAdmin(@Query() query: FilterCategoriesAdminDto) {
     return this.categoriesService.findAllAdmin({
-      search,
-      isActive: isActive === 'true' ? true : isActive === 'false' ? false : undefined,
-      page: page ? parseInt(page, 10) : undefined,
-      limit: limit ? parseInt(limit, 10) : undefined,
+      search: query.search,
+      isActive: query.isActive === 'true' ? true : query.isActive === 'false' ? false : undefined,
+      page: query.page,
+      limit: query.limit,
     });
   }
 

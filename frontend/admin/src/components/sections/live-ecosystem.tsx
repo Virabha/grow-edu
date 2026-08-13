@@ -11,7 +11,8 @@ export function LiveEcosystem() {
         let index = 0;
         const interval = setInterval(() => {
             index = (index + 1) % sequence.length;
-            setViewers(sequence[index]);
+            const next = sequence[index];
+            if (next !== undefined) setViewers(next);
         }, 1500);
         return () => clearInterval(interval);
     }, []);

@@ -2,5 +2,19 @@
 # harvesting. Regenerate with .work/split.js after re-downloading the docs.
 .work/
 
+# Specification and decision records — kept local, not published with the code.
+specs/
+
+# Dependencies and build output
+node_modules/
+dist/
+.next/
+.turbo/
+
+# Local environment
+.env
+.env.local
+.env.*.local
+
 # Stray vector-db artifacts dropped at repo root and inside packages
 ruvector.db

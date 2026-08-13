@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -74,7 +75,6 @@ export default function BecomeTeacherPage() {
   const [skills, setSkills] = useState<string[]>([]);
   const [skillInput, setSkillInput] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [cvFile, setCvFile] = useState<File | null>(null);
   const [cvUrl, setCvUrl] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
@@ -123,13 +123,11 @@ export default function BecomeTeacherPage() {
         toast.error("Invalid file type. Use PDF, JPEG, PNG, or WebP.");
         return;
       }
-      setCvFile(file);
       try {
         const { url } = await uploadCv.mutateAsync(file);
         setCvUrl(url);
       } catch (err) {
         toast.error(getApiErrorMessage(err, "CV upload failed."));
-        setCvFile(null);
       }
     },
     [uploadCv],
@@ -153,7 +151,6 @@ export default function BecomeTeacherPage() {
       reset();
       setSkills([]);
       setSelectedCategories([]);
-      setCvFile(null);
       setCvUrl("");
       toast.success("Application submitted successfully.");
     } catch (err) {
@@ -171,7 +168,7 @@ export default function BecomeTeacherPage() {
           Thank you! We&apos;ll get back to you within 48 hours.
         </p>
         <Button asChild className="mt-6">
-          <a href="/">Back to Home</a>
+          <Link href="/">Back to Home</Link>
         </Button>
       </main>
     );

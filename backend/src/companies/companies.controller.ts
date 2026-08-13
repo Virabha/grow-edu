@@ -9,10 +9,11 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { CompaniesService } from './companies.service';
 import { CreateCompanyDto } from './dto/create-company.dto';
 import { UpdateCompanyDto } from './dto/update-company.dto';
+import { FilterCompaniesDto } from './dto/filter-companies.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -27,17 +28,14 @@ export class CompaniesController {
   constructor(private readonly companiesService: CompaniesService) {}
 
   @ApiOperation({ summary: 'Get all companies' })
-  @ApiQuery({ name: 'search', required: false })
-  @ApiQuery({ name: 'page', required: false, type: Number })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiResponse({ status: 200, description: 'List of companies' })
   @Roles(UserRole.PLATFORM_ADMIN, UserRole.CORPORATE_ADMIN)
   @Get()
-  async findAll(@Query() query: Record<string, string>) {
+  async findAll(@Query() query: FilterCompaniesDto) {
     return this.companiesService.findAll({
       search: query.search,
-      page: query.page ? parseInt(query.page) : undefined,
-      limit: query.limit ? parseInt(query.limit) : undefined,
+      page: query.page,
+      limit: query.limit,
     });
   }
 

@@ -3,7 +3,7 @@ import { useRef, useState, useEffect, type ReactNode } from "react";
 import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import type { Course } from "@/lib/api/services/courses";
@@ -51,6 +51,7 @@ export function CourseCarousel({ title, courses, className, showScrollButtons = 
                 window.removeEventListener("resize", checkScrollability);
             };
         }
+        return;
     }, [courses]);
     const scroll = (direction: "left" | "right") => {
         if (!scrollRef.current)

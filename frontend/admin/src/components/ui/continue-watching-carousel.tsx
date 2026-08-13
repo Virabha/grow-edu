@@ -34,6 +34,7 @@ export function ContinueWatchingCarousel({ courses, className, }: ContinueWatchi
                 window.removeEventListener("resize", checkScrollability);
             };
         }
+        return;
     }, [courses]);
     const scroll = (direction: "left" | "right") => {
         if (!scrollRef.current)

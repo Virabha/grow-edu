@@ -123,7 +123,7 @@ export class NotificationsService {
 
   async listForUser(userId: string, opts: { page?: number; limit?: number }) {
     const page = opts.page ?? 1;
-    const limit = Math.min(opts.limit ?? 20, 50);
+    const limit = Math.min(opts.limit ?? 20, 100);
     const offset = (page - 1) * limit;
 
     const [rows, [{ count }], [{ unread }]] = await Promise.all([

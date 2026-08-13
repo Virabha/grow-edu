@@ -20,10 +20,8 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../auth/decorators/roles.decorator';
 import { CreateTeacherApplicationDto } from './dto/create-teacher-application.dto';
-import {
-  UpdateTeacherApplicationStatusDto,
-  TeacherApplicationStatus,
-} from './dto/update-status.dto';
+import { UpdateTeacherApplicationStatusDto } from './dto/update-status.dto';
+import { FilterTeacherApplicationsDto } from './dto/filter-teacher-applications.dto';
 import { Public } from '../auth/decorators/public.decorator';
 import { Throttle } from '@nestjs/throttler';
 
@@ -77,17 +75,12 @@ export class TeacherApplicationsController {
   @Roles(UserRole.PLATFORM_ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'List applications with filters (admin)' })
-  findAllAdmin(
-    @Query('status') status?: string,
-    @Query('search') search?: string,
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
-  ) {
+  findAllAdmin(@Query() query: FilterTeacherApplicationsDto) {
     return this.teacherApplicationsService.findAllAdmin({
-      status,
-      search,
-      page: page ? parseInt(page, 10) : undefined,
-      limit: limit ? parseInt(limit, 10) : undefined,
+      status: query.status,
+      search: query.search,
+      page: query.page,
+      limit: query.limit,
     });
   }
 

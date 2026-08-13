@@ -1,6 +1,6 @@
 import { Injectable, ForbiddenException } from '@nestjs/common';
 import { Inject } from '@nestjs/common';
-import { eq, sql, and, gte, lte, inArray } from 'drizzle-orm';
+import { eq, sql, and, gte, lte, inArray, isNull, isNotNull } from 'drizzle-orm';
 import { enrollments, courses, payments, courseProgress, users } from '../database/schema';
 import { DATABASE_CONNECTION } from '../database/database.module';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
@@ -36,7 +36,9 @@ export class AnalyticsService {
       .from(enrollments)
       .where(
         and(
-          eq(enrollments.companyId, null),
+          // Was `eq(companyId, null)`, which compiles to `= NULL` and is never
+          // true — so the B2C figure was always 0. SQL null needs IS NULL.
+          isNull(enrollments.companyId),
           conditions.length > 0 ? and(...conditions) : undefined,
         ),
       );
@@ -46,7 +48,7 @@ export class AnalyticsService {
       .from(enrollments)
       .where(
         and(
-          sql`${enrollments.companyId} IS NOT NULL`,
+          isNotNull(enrollments.companyId),
           conditions.length > 0 ? and(...conditions) : undefined,
         ),
       );
@@ -293,7 +295,7 @@ export class AnalyticsService {
     if (userRole !== 'PLATFORM_ADMIN' && userRole !== 'INSTRUCTOR') {
         throw new ForbiddenException('Unauthorized');
     }
-    const limit = Math.min(filters?.limit || 10, 50);
+    const limit = Math.min(filters?.limit || 10, 100);
     const conditions = [];
 
     if (filters?.startDate) {

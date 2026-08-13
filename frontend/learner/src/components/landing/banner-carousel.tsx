@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay, Pagination, EffectFade, Navigation } from "swiper/modules";
 import "swiper/css";
@@ -14,6 +14,11 @@ import { ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { useBanners } from "@/lib/hooks/use-cms";
 import type { Banner } from "@/lib/api/services/cms";
+
+// useSyncExternalStore helpers for "client-only" rendering (avoids setState-in-effect)
+const subscribeNoop = () => () => {};
+const getClientSnapshot = () => true;
+const getServerSnapshot = () => false;
 
 function getAlignmentClasses(align: string | null): {
   container: string;
@@ -166,11 +171,7 @@ function BannerSlide({ banner }: { banner: Banner }) {
 
 export function BannerCarousel() {
   const { data: banners = [], isLoading } = useBanners();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useSyncExternalStore(subscribeNoop, getClientSnapshot, getServerSnapshot);
 
   if (!mounted) return null;
   if (isLoading) {

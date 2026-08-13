@@ -4,7 +4,6 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
-  Star,
   Users,
   BookOpen,
   Award,
@@ -48,7 +47,7 @@ export default function InstructorDetailPage() {
   const { data: instructors, isLoading: loadingInstructors } = useInstructors();
   const instructor = instructors?.find((i) => i.userId === userId);
 
-  const { data: coursesData, isLoading: loadingCourses } = useCourses(
+  const { data: coursesData } = useCourses(
     { instructorId: userId, limit: 20, status: "PUBLISHED" },
     !!userId
   );

@@ -1,6 +1,5 @@
 "use client";
 import { useState } from "react";
-import { toast } from "sonner";
 
 import { PageLayout } from "@/components/layout/page-layout";
 import { PageFilters } from "@/components/layout/page-filters";

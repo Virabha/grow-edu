@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "../query-keys";
-import { axiosGet } from "../api/client";
 import { instructorService } from "@/lib/api/services/instructor";
 interface UseInstructorStatsParams {
     enabled?: boolean;

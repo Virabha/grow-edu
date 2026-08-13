@@ -39,7 +39,6 @@ export function CoursesCarousel() {
     slidesToScroll: 1,
   });
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [scrollSnaps, setScrollSnaps] = useState<number[]>([]);
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
   const autoplayRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -79,12 +78,14 @@ export function CoursesCarousel() {
 
   useEffect(() => {
     if (!emblaApi) return;
-    setScrollSnaps(emblaApi.scrollSnapList());
     const onSelect = () => setSelectedIndex(emblaApi.selectedScrollSnap());
+    const onReInit = () => setSelectedIndex(emblaApi.selectedScrollSnap());
     emblaApi.on("select", onSelect);
+    emblaApi.on("reInit", onReInit);
     startAutoplay();
     return () => {
       emblaApi.off("select", onSelect);
+      emblaApi.off("reInit", onReInit);
       stopAutoplay();
     };
   }, [emblaApi, startAutoplay, stopAutoplay]);
@@ -92,8 +93,6 @@ export function CoursesCarousel() {
   useEffect(() => {
     if (emblaApi) {
       emblaApi.reInit();
-      setScrollSnaps(emblaApi.scrollSnapList());
-      setSelectedIndex(0);
     }
   }, [activeCategoryId, courses.length, emblaApi]);
 
@@ -264,9 +263,9 @@ export function CoursesCarousel() {
           </div>
         )}
 
-        {scrollSnaps.length > 1 && (
+        {courses.length > 1 && (
           <div className="mt-8 flex justify-center gap-2">
-            {scrollSnaps.map((_, i) => (
+            {courses.map((_, i) => (
               <button
                 key={i}
                 onClick={() => emblaApi?.scrollTo(i)}

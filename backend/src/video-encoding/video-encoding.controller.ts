@@ -21,11 +21,6 @@ import { RolesGuard } from "../auth/guards/roles.guard";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { UserRole } from "../auth/decorators/roles.decorator";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
-import { Inject } from "@nestjs/common";
-import { eq } from "drizzle-orm";
-import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { DATABASE_CONNECTION } from "../database/database.module";
-import * as schema from "../database/schema";
 import { AppConfigService } from "../config";
 
 @ApiTags("video-encoding")
@@ -36,22 +31,14 @@ export class VideoEncodingController {
   constructor(
     private readonly videoEncodingService: VideoEncodingService,
     private readonly configService: AppConfigService,
-    @Inject(DATABASE_CONNECTION)
-    private readonly db: PostgresJsDatabase<typeof schema>,
   ) {}
 
   private async loadLessonForUser(
     lessonId: string,
     user: { userId: string; role: string },
   ) {
-    const lesson = await this.db.query.lessons.findFirst({
-      where: eq(schema.lessons.lessonId, lessonId),
-      with: {
-        section: {
-          with: { course: true },
-        },
-      },
-    });
+    const lesson =
+      await this.videoEncodingService.getLessonWithCourse(lessonId);
 
     if (!lesson) {
       throw new NotFoundException(`Lesson ${lessonId} not found`);
@@ -106,11 +93,8 @@ export class VideoEncodingController {
     @Param("jobId") jobId: string,
     @CurrentUser() user: { userId: string; role: string },
   ) {
-    const [job] = await this.db
-      .select()
-      .from(schema.videoEncodingJobs)
-      .where(eq(schema.videoEncodingJobs.jobId, jobId))
-      .limit(1);
+    const job =
+      await this.videoEncodingService.getEncodingJobByJobId(jobId);
 
     if (!job) {
       throw new NotFoundException(`Encoding job ${jobId} not found`);
@@ -163,62 +147,7 @@ export class VideoEncodingController {
   @UseGuards(RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN)
   async debugAllLessons() {
-    const allLessons = await this.db.query.lessons.findMany({
-      where: eq(schema.lessons.type, "VIDEO"),
-      with: {
-        section: {
-          with: { course: true },
-        },
-      },
-    });
-
-    const allJobs = await this.db.select().from(schema.videoEncodingJobs);
-    const jobsByLessonId = new Map(allJobs.map((j) => [j.lessonId, j]));
-
-    const results = allLessons.map((lesson) => {
-      const encodingJob = jobsByLessonId.get(lesson.lessonId);
-
-      let status: string;
-      if (!encodingJob) {
-        status = "NO_ENCODING_JOB";
-      } else if (encodingJob.status === "PROCESSING") {
-        status = "ENCODING_IN_PROGRESS";
-      } else if (encodingJob.status === "FAILED") {
-        status = "ENCODING_FAILED";
-      } else if (encodingJob.status === "COMPLETED") {
-        status = "READY";
-      } else {
-        status = "UNKNOWN";
-      }
-
-      return {
-        lessonId: lesson.lessonId,
-        lessonTitle: lesson.title,
-        courseTitle: lesson.section.course.title,
-        lessonStatus: lesson.status,
-        encodingStatus: status,
-        videoId: encodingJob?.outputPath || null,
-        needsReEncoding:
-          status === "NO_ENCODING_JOB" || status === "ENCODING_FAILED",
-      };
-    });
-
-    const needsReEncoding = results.filter((r) => r.needsReEncoding);
-    const ready = results.filter((r) => r.encodingStatus === "READY");
-    const inProgress = results.filter(
-      (r) => r.encodingStatus === "ENCODING_IN_PROGRESS",
-    );
-
-    return {
-      summary: {
-        total: results.length,
-        ready: ready.length,
-        needsReEncoding: needsReEncoding.length,
-        inProgress: inProgress.length,
-      },
-      lessonsNeedingReEncoding: needsReEncoding,
-      allLessons: results,
-    };
+    return this.videoEncodingService.getAllVideoLessonsDebugInfo();
   }
 
   @ApiOperation({ summary: "Debug: Check encoding job status for a lesson" })
@@ -231,50 +160,15 @@ export class VideoEncodingController {
     @CurrentUser() user: { userId: string; role: string },
   ) {
     const lesson = await this.loadLessonForUser(lessonId, user);
-
-    const [encodingJob] = await this.db
-      .select()
-      .from(schema.videoEncodingJobs)
-      .where(eq(schema.videoEncodingJobs.lessonId, lessonId))
-      .limit(1);
-
-    let bunnyStatus = null;
-    if (encodingJob) {
-      try {
-        bunnyStatus = await this.videoEncodingService.getJobStatus(
-          encodingJob.jobId,
-        );
-      } catch {
-        // Ignore - video may not exist in Bunny
-      }
-    }
+    const encodingInfo =
+      await this.videoEncodingService.getLessonEncodingInfo(lessonId);
 
     return {
       lessonId,
       courseId: lesson.section.course.courseId,
       lessonStatus: lesson.status,
       lessonType: lesson.type,
-      encodingJob: encodingJob
-        ? {
-            jobId: encodingJob.jobId,
-            status: encodingJob.status,
-            inputPath: encodingJob.inputPath,
-            outputPath: encodingJob.outputPath,
-            errorMessage: encodingJob.errorMessage,
-            createdAt: encodingJob.createdAt,
-            completedAt: encodingJob.completedAt,
-          }
-        : null,
-      bunnyStreamStatus: bunnyStatus,
-      diagnosis: !encodingJob
-        ? "No encoding job found - video may not have been uploaded"
-        : encodingJob.status === "PROCESSING"
-          ? "Encoding is still in progress - wait for it to complete"
-          : encodingJob.status === "FAILED"
-            ? `Encoding failed: ${encodingJob.errorMessage}`
-            : encodingJob.status === "COMPLETED"
-              ? "Encoding completed - video should be playable via Bunny Stream"
-              : "Unknown state",
+      ...encodingInfo,
     };
   }
 }

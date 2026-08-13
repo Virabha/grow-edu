@@ -48,7 +48,7 @@ export default function RegisterPage() {
 
   const onSubmit = async (data: RegisterFormValues) => {
     const nameParts = data.name.trim().split(/\s+/);
-    const firstName = nameParts[0];
+    const firstName = nameParts[0] ?? data.name.trim();
     const lastName = nameParts.slice(1).join(" ") || firstName;
 
     try {

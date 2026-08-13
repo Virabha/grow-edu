@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { siteConfig } from "@/lib/site-config";
-const siteUrl = siteConfig.url;
 const siteName = siteConfig.name;
 export const metadata: Metadata = {
     robots: {

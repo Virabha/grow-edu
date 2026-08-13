@@ -85,8 +85,8 @@ export default function WatchPage() {
     return flat;
   }, [sections]);
 
-  const [currentLessonId, setCurrentLessonId] = useState<string | null>(null);
-  const [openSections, setOpenSections] = useState<Set<string>>(new Set());
+  const [selectedLessonId, setCurrentLessonId] = useState<string | null>(null);
+  const [sectionVisibility, setSectionVisibility] = useState<Map<string, boolean>>(new Map());
 
   // Block common screenshot/screen-capture keyboard shortcuts on the watch page.
   useEffect(() => {
@@ -112,35 +112,46 @@ export default function WatchPage() {
     return () => window.removeEventListener("keydown", blockCaptureKeys, { capture: true });
   }, []);
 
+  // Derive the active lesson: use selectedLessonId if set, else pick the first ready video
+  const currentLessonId = useMemo(() => {
+    if (selectedLessonId !== null) return selectedLessonId;
+    if (flatLessons.length === 0) return null;
+    const firstVideo = flatLessons.find(
+      (f) => f.lesson.type === "VIDEO" && f.lesson.status === "READY",
+    );
+    return (firstVideo ?? flatLessons[0])?.lesson.lessonId ?? null;
+  }, [selectedLessonId, flatLessons]);
+
   const current = useMemo(
     () =>
       flatLessons.find((f) => f.lesson.lessonId === currentLessonId) ?? null,
     [flatLessons, currentLessonId],
   );
 
-  useEffect(() => {
-    if (currentLessonId || flatLessons.length === 0) return;
-    const firstVideo = flatLessons.find(
-      (f) => f.lesson.type === "VIDEO" && f.lesson.status === "READY",
-    );
-    setCurrentLessonId((firstVideo ?? flatLessons[0]).lesson.lessonId);
-  }, [flatLessons, currentLessonId]);
-
-  useEffect(() => {
-    if (!current) return;
-    setOpenSections((prev) => {
-      if (prev.has(current.section.sectionId)) return prev;
-      const next = new Set(prev);
-      next.add(current.section.sectionId);
-      return next;
-    });
-  }, [current]);
+  // Derive open sections: a section is open when the user has explicitly opened it,
+  // OR it contains the current lesson and the user has not explicitly closed it.
+  const openSections = useMemo(() => {
+    const open = new Set<string>();
+    for (const [id, visible] of sectionVisibility) {
+      if (visible) open.add(id);
+    }
+    if (current) {
+      const explicit = sectionVisibility.get(current.section.sectionId);
+      if (explicit === undefined || explicit === true) {
+        open.add(current.section.sectionId);
+      }
+    }
+    return open;
+  }, [current, sectionVisibility]);
 
   function toggleSection(sectionId: string) {
-    setOpenSections((prev) => {
-      const next = new Set(prev);
-      if (next.has(sectionId)) next.delete(sectionId);
-      else next.add(sectionId);
+    setSectionVisibility((prev) => {
+      const explicit = prev.get(sectionId);
+      const isCurrentSection = current?.section.sectionId === sectionId;
+      const currentlyOpen =
+        explicit === true || (isCurrentSection && explicit === undefined);
+      const next = new Map(prev);
+      next.set(sectionId, !currentlyOpen);
       return next;
     });
   }
@@ -486,10 +497,15 @@ export default function WatchPage() {
 function LessonTypeBadge({ type }: { type: Lesson["type"] }) {
   const label =
     type === "VIDEO" ? "Video" : type === "QUIZ" ? "Quiz" : "Reading";
-  const Icon = lessonIcon(type);
   return (
     <span className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-      <Icon className="size-3" />
+      {type === "VIDEO" ? (
+        <Play className="size-3" />
+      ) : type === "QUIZ" ? (
+        <HelpCircle className="size-3" />
+      ) : (
+        <FileText className="size-3" />
+      )}
       {label}
     </span>
   );

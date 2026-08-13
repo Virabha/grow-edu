@@ -12,20 +12,22 @@ import {
   users,
   courseSections,
   lessons,
+  quizQuestions,
   enrollments,
   sectionAccess,
+  courseLevelEnum,
 } from "../database/schema";
 import { DATABASE_CONNECTION } from "../database/database.module";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import * as schema from "../database/schema";
 import { CreateCourseDto } from "./dto/create-course.dto";
 import { UpdateCourseDto } from "./dto/update-course.dto";
-import { FilterCoursesDto, CourseStatus } from "./dto/filter-courses.dto";
+import { FilterCoursesDto } from "./dto/filter-courses.dto";
 import { FilesService } from "../files/files.service";
 import { EmailService } from "../email/email.service";
 import { CacheService } from "../cache/cache.service";
 
-const MAX_PAGE_LIMIT = 50;
+const MAX_PAGE_LIMIT = 100;
 const PLATFORM_CURRENCY = "INR";
 const COURSES_CACHE_TTL = 300; // 5 minutes
 
@@ -90,15 +92,14 @@ export class CoursesService {
       );
     }
     if (filters?.search) {
-      conditions.push(
-        or(
-          like(courses.title, `%${filters.search}%`),
-          like(courses.description, `%${filters.search}%`)
-        )!
+      const searchCondition = or(
+        like(courses.title, `%${filters.search}%`),
+        like(courses.description, `%${filters.search}%`)
       );
+      if (searchCondition) conditions.push(searchCondition);
     }
     if (filters?.level) {
-      conditions.push(eq(courses.level, filters.level as any));
+      conditions.push(eq(courses.level, filters.level as (typeof courseLevelEnum.enumValues)[number]));
     }
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
@@ -106,8 +107,8 @@ export class CoursesService {
     // If instructorId filter is provided, include sections and lessons
     const includeSections = !!filters?.instructorId;
 
-    let data: any[];
-    let total: any[];
+    let data: ({ thumbnail: string | null } & Record<string, unknown>)[];
+    let total: { count: number }[];
 
     if (includeSections) {
       // Get paginated courses and count in parallel
@@ -195,31 +196,35 @@ export class CoursesService {
         // Build lookup maps
         const categoryMap = new Map(categoryResults.map((c) => [c.categoryId, c]));
         const instructorMap = new Map(instructorResults.map((i) => [i.userId, i]));
-        const lessonsBySectionId = new Map<string, any[]>();
+        type LessonRow = typeof lessons.$inferSelect;
+        type SectionWithLessons = typeof courseSections.$inferSelect & { lessons: LessonRow[] };
+        const lessonsBySectionId = new Map<string, LessonRow[]>();
         for (const lesson of lessonResults) {
-          if (!lessonsBySectionId.has(lesson.sectionId)) {
-            lessonsBySectionId.set(lesson.sectionId, []);
+          const existing = lessonsBySectionId.get(lesson.sectionId);
+          if (existing !== undefined) {
+            existing.push(lesson);
+          } else {
+            lessonsBySectionId.set(lesson.sectionId, [lesson]);
           }
-          lessonsBySectionId.get(lesson.sectionId)!.push(lesson);
         }
 
         // Group sections by course and attach lessons
-        const sectionsByCourseId = new Map<string, any[]>();
+        const sectionsByCourseId = new Map<string, SectionWithLessons[]>();
         for (const section of sectionResults) {
-          if (!sectionsByCourseId.has(section.courseId)) {
-            sectionsByCourseId.set(section.courseId, []);
+          const existingSections = sectionsByCourseId.get(section.courseId);
+          const entry = { ...section, lessons: lessonsBySectionId.get(section.sectionId) || [] };
+          if (existingSections !== undefined) {
+            existingSections.push(entry);
+          } else {
+            sectionsByCourseId.set(section.courseId, [entry]);
           }
-          sectionsByCourseId.get(section.courseId)!.push({
-            ...section,
-            lessons: lessonsBySectionId.get(section.sectionId) || [],
-          });
         }
 
         // Assemble final course objects with signed URLs
         data = courseResults.map((course) => ({
             ...course,
-            category: categoryMap.get(course.categoryId!) || null,
-            instructor: instructorMap.get(course.instructorId!) || null,
+            category: course.categoryId ? (categoryMap.get(course.categoryId) ?? null) : null,
+            instructor: course.instructorId ? (instructorMap.get(course.instructorId) ?? null) : null,
             sections: sectionsByCourseId.get(course.courseId) || [],
             thumbnail: this.ensureThumbnailUrl(course.thumbnail),
           }));
@@ -307,7 +312,7 @@ export class CoursesService {
     const includeQuestions = options?.includeQuestions ?? true;
 
     // Build the query with conditional depth
-    let courseQuery: any;
+    let courseQuery;
 
     if (includeLessons && includeQuestions) {
       // Full depth - lessons with questions
@@ -317,13 +322,13 @@ export class CoursesService {
           category: true,
           instructor: true,
           sections: {
-            orderBy: (sections: any) => [asc(sections.order)],
+            orderBy: [asc(courseSections.order)],
             with: {
               lessons: {
-                orderBy: (lessons: any) => [asc(lessons.order)],
+                orderBy: [asc(lessons.order)],
                 with: {
                   questions: {
-                    orderBy: (questions: any) => [asc(questions.order)],
+                    orderBy: [asc(quizQuestions.order)],
                   },
                 },
               },
@@ -339,10 +344,10 @@ export class CoursesService {
           category: true,
           instructor: true,
           sections: {
-            orderBy: (sections: any) => [asc(sections.order)],
+            orderBy: [asc(courseSections.order)],
             with: {
               lessons: {
-                orderBy: (lessons: any) => [asc(lessons.order)],
+                orderBy: [asc(lessons.order)],
               },
             },
           },
@@ -356,7 +361,7 @@ export class CoursesService {
           category: true,
           instructor: true,
           sections: {
-            orderBy: (sections: any) => [asc(sections.order)],
+            orderBy: [asc(courseSections.order)],
           },
         },
       });
@@ -732,7 +737,7 @@ export class CoursesService {
           publish: publish,
         });
       }
-    } catch {}
+    } catch { /* non-critical: swallow */ }
 
     await this.invalidateCourseCache();
     return updated;
@@ -782,7 +787,7 @@ export class CoursesService {
           reviewNotes: notes,
         });
       }
-    } catch {}
+    } catch { /* non-critical: swallow */ }
 
     await this.invalidateCourseCache();
     return updated;
@@ -828,7 +833,7 @@ export class CoursesService {
           rejectionReason: reason,
         });
       }
-    } catch {}
+    } catch { /* non-critical: swallow */ }
 
     await this.invalidateCourseCache();
     return updated;

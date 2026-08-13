@@ -9,7 +9,7 @@ export class CreateServiceApplicationDto {
 
   @ApiProperty()
   @IsNotEmpty()
-  formData: any;
+  formData: Record<string, unknown>;
 
   @ApiPropertyOptional()
   @IsOptional()

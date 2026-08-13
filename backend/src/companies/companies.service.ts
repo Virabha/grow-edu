@@ -8,7 +8,7 @@ import * as schema from '../database/schema';
 import { CreateCompanyDto } from './dto/create-company.dto';
 import { UpdateCompanyDto } from './dto/update-company.dto';
 
-const MAX_PAGE_LIMIT = 50;
+const MAX_PAGE_LIMIT = 100;
 const MAX_COMPANY_USERS = 50;
 
 @Injectable()

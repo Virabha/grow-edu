@@ -150,7 +150,7 @@ export function SecureVideoPlayer({
     : signedUrl;
 
   const watermarkLabel = user?.email ?? user?.id ?? "";
-  const pos = WATERMARK_POSITIONS[posIdx];
+  const pos = WATERMARK_POSITIONS[posIdx] ?? { top: "10%", left: "10%" };
 
   return (
     <div

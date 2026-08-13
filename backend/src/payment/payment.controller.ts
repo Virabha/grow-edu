@@ -13,13 +13,15 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { Roles, UserRole } from '../auth/decorators/roles.decorator';
 import { PaymentService } from './payment.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { EnrollFreeDto } from './dto/enroll-free.dto';
 import { UploadProofDto } from './dto/upload-proof.dto';
 import { ReviewPaymentDto } from './dto/review-payment.dto';
 import { UpdateQRSettingsDto } from './dto/qr-settings.dto';
+import { FilterPaymentsDto } from './dto/filter-payments.dto';
+import { PaginationDto } from '../common/dto/pagination.dto';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Public } from '../auth/decorators/public.decorator';
 
@@ -102,40 +104,29 @@ export class PaymentController {
   @ApiOperation({ summary: 'List all payments (admin)' })
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('PLATFORM_ADMIN' as any)
+  @Roles(UserRole.PLATFORM_ADMIN)
   @ApiBearerAuth()
-  async getAllPayments(
-    @Query('search') search?: string,
-    @Query('limit') limit?: string,
-    @Query('page') page?: string,
-    @Query('status') status?: string,
-    @Query('gateway') gateway?: string,
-    @Query('dateFrom') dateFrom?: string,
-    @Query('dateTo') dateTo?: string,
-  ) {
+  async getAllPayments(@Query() query: FilterPaymentsDto) {
     return this.paymentService.getAllPayments({
-      search,
-      limit: limit ? parseInt(limit, 10) : 20,
-      page: page ? parseInt(page, 10) : 1,
-      status,
-      gateway,
-      dateFrom,
-      dateTo,
+      search: query.search,
+      limit: query.limit ?? 20,
+      page: query.page ?? 1,
+      status: query.status,
+      gateway: query.gateway,
+      dateFrom: query.dateFrom,
+      dateTo: query.dateTo,
     });
   }
 
   @ApiOperation({ summary: 'Pending QR-payment reviews (admin)' })
   @Get('pending-review')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('PLATFORM_ADMIN' as any)
+  @Roles(UserRole.PLATFORM_ADMIN)
   @ApiBearerAuth()
-  async getPendingReview(
-    @Query('limit') limit?: string,
-    @Query('page') page?: string,
-  ) {
+  async getPendingReview(@Query() query: PaginationDto) {
     return this.paymentService.getPendingReviewPayments({
-      limit: limit ? parseInt(limit, 10) : 50,
-      page: page ? parseInt(page, 10) : 1,
+      limit: query.limit ?? 50,
+      page: query.page ?? 1,
     });
   }
 
@@ -143,7 +134,7 @@ export class PaymentController {
   @Post(':id/approve')
   @HttpCode(200)
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('PLATFORM_ADMIN' as any)
+  @Roles(UserRole.PLATFORM_ADMIN)
   @ApiBearerAuth()
   async approve(
     @Param('id') id: string,
@@ -157,7 +148,7 @@ export class PaymentController {
   @Post(':id/reject')
   @HttpCode(200)
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('PLATFORM_ADMIN' as any)
+  @Roles(UserRole.PLATFORM_ADMIN)
   @ApiBearerAuth()
   async reject(
     @Param('id') id: string,
@@ -174,7 +165,7 @@ export class PaymentController {
   @ApiOperation({ summary: 'Update QR/bank settings (admin)' })
   @Patch('qr-settings')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('PLATFORM_ADMIN' as any)
+  @Roles(UserRole.PLATFORM_ADMIN)
   @ApiBearerAuth()
   async updateQRSettings(@Body() dto: UpdateQRSettingsDto) {
     return this.paymentService.updateQRSettings(dto);
@@ -183,7 +174,7 @@ export class PaymentController {
   @ApiOperation({ summary: 'Get a specific payment by ID (admin)' })
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('PLATFORM_ADMIN' as any)
+  @Roles(UserRole.PLATFORM_ADMIN)
   @ApiBearerAuth()
   async getPaymentById(@Param('id') id: string) {
     return this.paymentService.getPaymentById(id);

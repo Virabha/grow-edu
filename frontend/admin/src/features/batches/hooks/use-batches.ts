@@ -12,9 +12,6 @@ function showError(verb: string) {
   };
 }
 
-function showSuccess(verb: string) {
-  return () => toast.success(verb);
-}
 import type {
   BatchFilters,
   BatchResourceType,
@@ -140,7 +137,6 @@ export function useDeleteBatchSubject(batchId: string) {
 // ─── Sessions ───────────────────────────────────────────────────────────────
 
 const LIVE_REFETCH_INTERVAL_MS = 60_000;
-const THREAD_REFETCH_INTERVAL_MS = 20_000;
 
 export function useBatchSessions(
   batchId: string | null,

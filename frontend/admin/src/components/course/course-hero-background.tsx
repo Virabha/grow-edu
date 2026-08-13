@@ -16,7 +16,7 @@ export function CourseHeroBackground({ course, className }: CourseHeroBackground
     const [isMuted, setIsMuted] = useState(true);
     const [isPlaying, setIsPlaying] = useState(true);
     const [videoUrl, setVideoUrl] = useState<string | null>(null);
-    const [isVideoLoading, setIsVideoLoading] = useState(false);
+    const [_isVideoLoading, setIsVideoLoading] = useState(false);
     const [videoError, setVideoError] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
     const { token } = useAuthStore();

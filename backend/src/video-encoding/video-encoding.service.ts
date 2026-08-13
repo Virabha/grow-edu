@@ -175,6 +175,134 @@ export class VideoEncodingService {
     };
   }
 
+  // ── Data-access helpers (used by the controller via delegation) ──────────
+
+  async getLessonWithCourse(lessonId: string) {
+    const lesson = await this.db.query.lessons.findFirst({
+      where: eq(schema.lessons.lessonId, lessonId),
+      with: {
+        section: {
+          with: { course: true },
+        },
+      },
+    });
+    return lesson ?? null;
+  }
+
+  async getEncodingJobByJobId(jobId: string) {
+    const [job] = await this.db
+      .select()
+      .from(schema.videoEncodingJobs)
+      .where(eq(schema.videoEncodingJobs.jobId, jobId))
+      .limit(1);
+    return job ?? null;
+  }
+
+  async getAllVideoLessonsDebugInfo() {
+    const allLessons = await this.db.query.lessons.findMany({
+      where: eq(schema.lessons.type, "VIDEO"),
+      with: {
+        section: {
+          with: { course: true },
+        },
+      },
+    });
+
+    const allJobs = await this.db.select().from(schema.videoEncodingJobs);
+    const jobsByLessonId = new Map(allJobs.map((j) => [j.lessonId, j]));
+
+    const results = allLessons.map((lesson) => {
+      const encodingJob = jobsByLessonId.get(lesson.lessonId);
+
+      let status: string;
+      if (!encodingJob) {
+        status = "NO_ENCODING_JOB";
+      } else if (encodingJob.status === "PROCESSING") {
+        status = "ENCODING_IN_PROGRESS";
+      } else if (encodingJob.status === "FAILED") {
+        status = "ENCODING_FAILED";
+      } else if (encodingJob.status === "COMPLETED") {
+        status = "READY";
+      } else {
+        status = "UNKNOWN";
+      }
+
+      return {
+        lessonId: lesson.lessonId,
+        lessonTitle: lesson.title,
+        courseTitle: lesson.section.course.title,
+        lessonStatus: lesson.status,
+        encodingStatus: status,
+        videoId: encodingJob?.outputPath ?? null,
+        needsReEncoding:
+          status === "NO_ENCODING_JOB" || status === "ENCODING_FAILED",
+      };
+    });
+
+    const needsReEncoding = results.filter((r) => r.needsReEncoding);
+    const ready = results.filter((r) => r.encodingStatus === "READY");
+    const inProgress = results.filter(
+      (r) => r.encodingStatus === "ENCODING_IN_PROGRESS",
+    );
+
+    return {
+      summary: {
+        total: results.length,
+        ready: ready.length,
+        needsReEncoding: needsReEncoding.length,
+        inProgress: inProgress.length,
+      },
+      lessonsNeedingReEncoding: needsReEncoding,
+      allLessons: results,
+    };
+  }
+
+  async getLessonEncodingInfo(lessonId: string) {
+    const [encodingJob] = await this.db
+      .select()
+      .from(schema.videoEncodingJobs)
+      .where(eq(schema.videoEncodingJobs.lessonId, lessonId))
+      .limit(1);
+
+    let bunnyStatus: Awaited<ReturnType<typeof this.getJobStatus>> | null =
+      null;
+    if (encodingJob) {
+      try {
+        bunnyStatus = await this.getJobStatus(encodingJob.jobId);
+      } catch {
+        // Ignore — video may not exist in Bunny yet
+      }
+    }
+
+    const diagnosis = !encodingJob
+      ? "No encoding job found - video may not have been uploaded"
+      : encodingJob.status === "PROCESSING"
+        ? "Encoding is still in progress - wait for it to complete"
+        : encodingJob.status === "FAILED"
+          ? `Encoding failed: ${encodingJob.errorMessage}`
+          : encodingJob.status === "COMPLETED"
+            ? "Encoding completed - video should be playable via Bunny Stream"
+            : "Unknown state";
+
+    return {
+      encodingJob: encodingJob
+        ? {
+            jobId: encodingJob.jobId,
+            status: encodingJob.status,
+            inputPath: encodingJob.inputPath,
+            outputPath: encodingJob.outputPath,
+            errorMessage: encodingJob.errorMessage,
+            createdAt: encodingJob.createdAt,
+            completedAt: encodingJob.completedAt,
+          }
+        : null,
+      bunnyStreamStatus: bunnyStatus,
+      diagnosis,
+    };
+  }
+
+  // ── Job lifecycle ─────────────────────────────────────────────────────────
+
   async handleJobCompletion(
     jobId: string,
     status: "COMPLETED" | "FAILED",

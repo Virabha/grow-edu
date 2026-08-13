@@ -45,7 +45,7 @@ function SelectTrigger({
   children,
   ...props
 }: React.ComponentProps<"button">) {
-  const { value, setOpen, open } = useSelectContext();
+  const { setOpen, open } = useSelectContext();
   return (
     <button
       type="button"

@@ -14,6 +14,7 @@ import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { NotificationsService } from "./notifications.service";
 import { IsArray, IsString } from "class-validator";
+import { FilterNotificationsDto } from "./dto/filter-notifications.dto";
 
 class MarkReadDto {
   @IsArray()
@@ -37,12 +38,11 @@ export class NotificationsController {
   @Get()
   async list(
     @CurrentUser() user: AuthedUser,
-    @Query("page") page?: string,
-    @Query("limit") limit?: string
+    @Query() query: FilterNotificationsDto,
   ) {
     return this.notificationsService.listForUser(user.userId, {
-      page: page ? Number(page) : undefined,
-      limit: limit ? Number(limit) : undefined,
+      page: query.page,
+      limit: query.limit,
     });
   }
 

@@ -9,10 +9,11 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { EnrollmentsService } from './enrollments.service';
 import { CreateEnrollmentDto } from './dto/create-enrollment.dto';
 import { BulkEnrollmentDto } from './dto/bulk-enrollment.dto';
+import { FilterEnrollmentsDto } from './dto/filter-enrollments.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -27,30 +28,26 @@ export class EnrollmentsController {
   constructor(private readonly enrollmentsService: EnrollmentsService) {}
 
   @ApiOperation({ summary: 'Get all enrollments' })
-  @ApiQuery({ name: 'userId', required: false })
-  @ApiQuery({ name: 'courseId', required: false })
-  @ApiQuery({ name: 'companyId', required: false })
-  @ApiQuery({ name: 'status', required: false, enum: ['ACTIVE', 'COMPLETED', 'REVOKED'] })
-  @ApiQuery({ name: 'search', required: false, description: 'Search by user name, email, or course title' })
-  @ApiQuery({ name: 'page', required: false, type: Number })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiResponse({ status: 200, description: 'List of enrollments' })
   @Get()
-  async findAll(@Query() query: Record<string, string>, @CurrentUser() user: { userId: string; role: string }): Promise<any> {
+  async findAll(
+    @Query() query: FilterEnrollmentsDto,
+    @CurrentUser() user: { userId: string; role: string },
+  ) {
     // Non-admins can only see their own enrollments
-    const filters: Record<string, any> = { ...query };
-    if (user.role !== 'PLATFORM_ADMIN' && user.role !== 'CORPORATE_ADMIN') {
-      filters.userId = user.userId;
-    }
+    const userId =
+      user.role !== 'PLATFORM_ADMIN' && user.role !== 'CORPORATE_ADMIN'
+        ? user.userId
+        : query.userId;
 
     return this.enrollmentsService.findAll({
-      userId: filters.userId,
-      courseId: filters.courseId,
-      companyId: filters.companyId,
-      status: filters.status,
-      search: filters.search,
-      page: filters.page ? parseInt(filters.page) : undefined,
-      limit: filters.limit ? parseInt(filters.limit) : undefined,
+      userId,
+      courseId: query.courseId,
+      companyId: query.companyId,
+      status: query.status,
+      search: query.search,
+      page: query.page,
+      limit: query.limit,
     });
   }
 

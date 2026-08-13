@@ -108,7 +108,7 @@ export function Header() {
 
   const userInitials = user
     ? `${user.firstName?.[0] ?? ""}${user.lastName?.[0] ?? ""}`.toUpperCase() ||
-      user.email[0].toUpperCase()
+      user.email.charAt(0).toUpperCase()
     : "";
 
   return (

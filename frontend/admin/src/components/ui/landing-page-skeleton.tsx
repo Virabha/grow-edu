@@ -1,7 +1,6 @@
 "use client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
-import { motion } from "framer-motion";
 export function LandingPageSkeleton() {
     return (<main className="min-h-screen bg-background">
       

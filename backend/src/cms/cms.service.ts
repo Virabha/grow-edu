@@ -4,7 +4,7 @@ import {
   NotFoundException,
   ConflictException,
 } from '@nestjs/common';
-import { eq, and, asc, desc, or, ilike, sql, count } from 'drizzle-orm';
+import { eq, and, asc, desc, or, ilike, count } from 'drizzle-orm';
 import {
   banners,
   faqs,
@@ -13,6 +13,7 @@ import {
   siteSettings,
   services,
   serviceApplications,
+  applicationStatusEnum,
   instructorProfiles,
   users,
 } from '../database/schema';
@@ -73,7 +74,7 @@ export class CmsService {
   }
 
   async getBanners() {
-    const cached = await this.cache.get<any[]>('cms:banners:public');
+    const cached = await this.cache.get<(typeof banners.$inferSelect)[]>('cms:banners:public');
     if (cached) return cached;
     const rows = await this.db
       .select()
@@ -186,7 +187,7 @@ export class CmsService {
   // ==================== FAQS ====================
 
   async getFaqs() {
-    const cached = await this.cache.get<any[]>('cms:faqs:public');
+    const cached = await this.cache.get<(typeof faqs.$inferSelect)[]>('cms:faqs:public');
     if (cached) return cached;
     const rows = await this.db
       .select()
@@ -259,7 +260,7 @@ export class CmsService {
   private async invalidateWhy() { await this.cache.delByPrefix('cms:why'); }
 
   async getWhyChooseUs() {
-    const cached = await this.cache.get<any[]>('cms:why:public');
+    const cached = await this.cache.get<(typeof whyChooseUs.$inferSelect)[]>('cms:why:public');
     if (cached) return cached;
     const rows = await this.db
       .select()
@@ -336,7 +337,7 @@ export class CmsService {
   private async invalidateTestimonials() { await this.cache.delByPrefix('cms:testimonials'); }
 
   async getTestimonials() {
-    const cached = await this.cache.get<any[]>('cms:testimonials:public');
+    const cached = await this.cache.get<(typeof testimonials.$inferSelect)[]>('cms:testimonials:public');
     if (cached) return cached;
     const rows = await this.db
       .select()
@@ -425,7 +426,7 @@ export class CmsService {
   }
 
   async getServices() {
-    const cached = await this.cache.get<any[]>('cms:services:public');
+    const cached = await this.cache.get<(typeof services.$inferSelect)[]>('cms:services:public');
     if (cached) return cached;
     const rows = await this.db
       .select()
@@ -622,14 +623,13 @@ export class CmsService {
 
     const conditions = [];
     if (serviceId) conditions.push(eq(serviceApplications.serviceId, serviceId));
-    if (status) conditions.push(eq(serviceApplications.status, status as any));
+    if (status) conditions.push(eq(serviceApplications.status, status as (typeof applicationStatusEnum.enumValues)[number]));
     if (search) {
-      conditions.push(
-        or(
-          ilike(serviceApplications.applicantName, `%${search}%`),
-          ilike(serviceApplications.applicantEmail, `%${search}%`),
-        )!,
+      const searchCondition = or(
+        ilike(serviceApplications.applicantName, `%${search}%`),
+        ilike(serviceApplications.applicantEmail, `%${search}%`),
       );
+      if (searchCondition) conditions.push(searchCondition);
     }
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
@@ -699,7 +699,7 @@ export class CmsService {
     const [row] = await this.db
       .update(serviceApplications)
       .set({
-        status: dto.status as any,
+        status: dto.status as (typeof applicationStatusEnum.enumValues)[number],
         ...(dto.adminNotes !== undefined && { adminNotes: dto.adminNotes }),
         updatedAt: new Date(),
       })

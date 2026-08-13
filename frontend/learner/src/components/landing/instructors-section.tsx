@@ -112,7 +112,7 @@ export function InstructorsSection() {
                     />
                   ) : (
                     <Image
-                      src={fallbackAvatars[i % fallbackAvatars.length]}
+                      src={fallbackAvatars[i % fallbackAvatars.length] ?? "/images/landing/mentor-1.jpg"}
                       alt={person.name}
                       fill
                       className="object-cover transition-transform duration-500 group-hover:scale-105"

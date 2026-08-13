@@ -1,6 +1,6 @@
-import { IsOptional, IsString, IsEnum, IsInt, Min } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsOptional, IsString, IsEnum } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { PaginationDto } from '../../common/dto/pagination.dto';
 
 export enum CourseStatus {
   DRAFT = 'DRAFT',
@@ -8,7 +8,7 @@ export enum CourseStatus {
   ARCHIVED = 'ARCHIVED',
 }
 
-export class FilterCoursesDto {
+export class FilterCoursesDto extends PaginationDto {
   @ApiPropertyOptional({ description: 'Search term for title or description' })
   @IsOptional()
   @IsString()
@@ -36,19 +36,4 @@ export class FilterCoursesDto {
   @IsOptional()
   @IsString()
   level?: string;
-
-  @ApiPropertyOptional({ description: 'Page number', default: 1, minimum: 1 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  page?: number;
-
-  @ApiPropertyOptional({ description: 'Items per page', default: 20, minimum: 1 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  limit?: number;
 }
-

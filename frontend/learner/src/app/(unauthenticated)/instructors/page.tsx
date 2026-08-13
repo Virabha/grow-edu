@@ -97,7 +97,7 @@ export default function InstructorsPage() {
                         />
                       ) : (
                         <Image
-                          src={fallbackAvatars[i % fallbackAvatars.length]}
+                          src={fallbackAvatars[i % fallbackAvatars.length] ?? "/images/landing/mentor-1.jpg"}
                           alt={instructor.name}
                           fill
                           className="object-cover transition-transform duration-500 group-hover:scale-105"

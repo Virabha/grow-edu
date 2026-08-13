@@ -5,6 +5,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles, UserRole } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { FilterInstructorCoursesDto } from './dto/filter-instructor-courses.dto';
 
 @ApiTags('instructor')
 @Controller('instructor')
@@ -26,9 +27,8 @@ export class InstructorController {
   @Get('courses')
   async getInstructorCourses(
     @CurrentUser() user: { userId: string },
-    @Query('page') page?: number,
-    @Query('limit') limit?: number,
+    @Query() query: FilterInstructorCoursesDto,
   ) {
-    return this.instructorService.getInstructorCourses(user.userId, page, limit);
+    return this.instructorService.getInstructorCourses(user.userId, query.page, query.limit);
   }
 }

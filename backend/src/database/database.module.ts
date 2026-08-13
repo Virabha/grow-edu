@@ -2,9 +2,18 @@ import { Module, Global } from '@nestjs/common';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import * as schema from './schema';
 import { AppConfigService } from '../config';
-
-// Use require for postgres to handle CommonJS/ESM compatibility
-const postgres = require('postgres');
+// TypeScript's CommonJS import form, which emits a real `require`.
+//
+// A plain `import postgres from 'postgres'` compiles to `postgres_1.default`,
+// and postgres.js sets `module.exports = Postgres` with no `.default`. This
+// tsconfig has `allowSyntheticDefaultImports` (type-checking only) but NOT
+// `esModuleInterop` (which changes emit), so the default import type-checks and
+// then crashes at boot with "postgres_1.default is not a function".
+//
+// esModuleInterop cannot simply be switched on: `import * as PDFDocument from
+// "pdfkit"` in batches/certificate.service.ts is used with `new PDFDocument()`,
+// which the flag would break.
+import postgres = require('postgres');
 
 export const DATABASE_CONNECTION = 'DATABASE_CONNECTION';
 

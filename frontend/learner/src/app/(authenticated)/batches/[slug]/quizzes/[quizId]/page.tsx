@@ -49,7 +49,7 @@ function AttemptView({ batchId, attempt, questions, onSubmitted }: AttemptViewPr
   const submit = useSubmitQuizAttempt(batchId, attempt.quizId);
   const [answers, setAnswers] = useState<Record<string, unknown>>(attempt.answers);
   const [remainingMs, setRemainingMs] = useState<number>(
-    new Date(attempt.expiresAt).getTime() - Date.now()
+    () => new Date(attempt.expiresAt).getTime() - Date.now()
   );
 
   useEffect(() => {

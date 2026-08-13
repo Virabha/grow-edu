@@ -34,7 +34,7 @@ export class CreateServiceDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  formSchema?: any;
+  formSchema?: Record<string, unknown>;
 
   @ApiPropertyOptional()
   @IsOptional()

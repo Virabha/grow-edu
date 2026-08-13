@@ -96,8 +96,9 @@ export class EmailService {
   private async getCompiledTemplate(
     templateName: string
   ): Promise<handlebars.TemplateDelegate> {
-    if (this.compiledTemplates.has(templateName)) {
-      return this.compiledTemplates.get(templateName)!;
+    const cached = this.compiledTemplates.get(templateName);
+    if (cached !== undefined) {
+      return cached;
     }
 
     const templatePath = path.join(this.templatesPath, `${templateName}.hbs`);
@@ -112,7 +113,7 @@ export class EmailService {
     }
   }
 
-  private prepareTemplateData(data: Record<string, any>): Record<string, any> {
+  private prepareTemplateData(data: Record<string, unknown>): Record<string, unknown> {
     return {
       ...data,
       frontendUrl: this.configService.frontendUrl,

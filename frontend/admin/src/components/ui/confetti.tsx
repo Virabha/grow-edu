@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useRef } from "react";
-import { motion } from "framer-motion";
 interface ConfettiProps {
     onComplete?: () => void;
 }
@@ -15,7 +14,7 @@ export function Confetti({ onComplete }: ConfettiProps) {
         const confetti: HTMLElement[] = [];
         for (let i = 0; i < confettiCount; i++) {
             const confettiPiece = document.createElement("div");
-            const color = colors[Math.floor(Math.random() * colors.length)];
+            const color = colors[Math.floor(Math.random() * colors.length)] ?? "#22c55e";
             const size = Math.random() * 10 + 5;
             const left = Math.random() * 100;
             const delay = Math.random() * 0.5;

@@ -1,6 +1,5 @@
 "use client";
 import { motion } from "framer-motion";
-import { Check } from "lucide-react";
 interface SuccessCheckProps {
     size?: number;
     color?: string;

@@ -2,18 +2,15 @@
 import { useState } from "react";
 import { motion, useScroll, useMotionValueEvent } from "framer-motion";
 import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ModeToggle } from "@/components/theme-toggle";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { User, LogOut, Settings, LayoutDashboard, Building2, UserPlus, } from "lucide-react";
+import { LogOut, Settings, LayoutDashboard, Building2, UserPlus, } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 export function CorporateNavbar() {
-    const router = useRouter();
-    const pathname = usePathname();
     const { scrollY } = useScroll();
     const [hidden, setHidden] = useState(false);
     const [scrolled, setScrolled] = useState(false);
@@ -44,7 +41,7 @@ export function CorporateNavbar() {
         if (firstName && lastName) {
             return `${firstName[0]}${lastName[0]}`.toUpperCase();
         }
-        return user.email ? user.email[0].toUpperCase() : "C";
+        return user.email ? user.email.charAt(0).toUpperCase() : "C";
     };
     return (<motion.header variants={{
             visible: { y: 0 },

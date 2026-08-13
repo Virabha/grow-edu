@@ -29,6 +29,7 @@ import { CreateServiceDto } from './dto/create-service.dto';
 import { UpdateServiceDto } from './dto/update-service.dto';
 import { UpsertSiteSettingDto } from './dto/upsert-site-setting.dto';
 import { CreateServiceApplicationDto } from './dto/create-service-application.dto';
+import { FilterServiceApplicationsDto } from './dto/filter-service-applications.dto';
 import { Public } from '../auth/decorators/public.decorator';
 import { UpdateApplicationStatusDto } from './dto/update-application-status.dto';
 
@@ -333,19 +334,13 @@ export class CmsController {
   @Roles(UserRole.PLATFORM_ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all service applications (admin)' })
-  getAllServiceApplications(
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
-    @Query('serviceId') serviceId?: string,
-    @Query('status') status?: string,
-    @Query('search') search?: string,
-  ) {
+  getAllServiceApplications(@Query() query: FilterServiceApplicationsDto) {
     return this.cmsService.getAllServiceApplications({
-      page: page ? parseInt(page, 10) : 1,
-      limit: limit ? parseInt(limit, 10) : 20,
-      serviceId,
-      status,
-      search,
+      page: query.page ?? 1,
+      limit: query.limit ?? 20,
+      serviceId: query.serviceId,
+      status: query.status,
+      search: query.search,
     });
   }
 

@@ -9,7 +9,6 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Course } from "@/lib/api/services/courses";
-import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Star } from "lucide-react";
 interface CourseCardProps {

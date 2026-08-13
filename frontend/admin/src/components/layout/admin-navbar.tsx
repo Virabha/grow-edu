@@ -2,7 +2,6 @@
 import { useState } from "react";
 import { motion, useScroll, useMotionValueEvent } from "framer-motion";
 import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ModeToggle } from "@/components/theme-toggle";
@@ -10,11 +9,9 @@ import { useAuthStore } from "@/lib/store/auth-store";
 import { useQueryClient } from "@tanstack/react-query";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { User, LogOut, Settings, LayoutDashboard, Shield, Bell, } from "lucide-react";
+import { LogOut, Settings, LayoutDashboard, Shield, Bell, } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 export function AdminNavbar() {
-    const router = useRouter();
-    const pathname = usePathname();
     const { scrollY } = useScroll();
     const [hidden, setHidden] = useState(false);
     const [scrolled, setScrolled] = useState(false);
@@ -45,21 +42,7 @@ export function AdminNavbar() {
         if (firstName && lastName) {
             return `${firstName[0]}${lastName[0]}`.toUpperCase();
         }
-        return user.email ? user.email[0].toUpperCase() : "A";
-    };
-    const getDashboardRoute = () => {
-        if (!user)
-            return "/admin/dashboard";
-        switch (user.role) {
-            case "PLATFORM_ADMIN":
-                return "/admin/dashboard";
-            case "INSTRUCTOR":
-                return "/instructor/dashboard";
-            case "CORPORATE_ADMIN":
-                return "/corporate/dashboard";
-            default:
-                return "/learner/dashboard";
-        }
+        return user.email ? user.email.charAt(0).toUpperCase() : "A";
     };
     return (<motion.header variants={{
             visible: { y: 0 },

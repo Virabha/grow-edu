@@ -19,6 +19,15 @@ import {
   ApiTags,
 } from "@nestjs/swagger";
 
+interface MulterFile {
+  fieldname: string;
+  originalname: string;
+  encoding: string;
+  mimetype: string;
+  buffer: Buffer;
+  size: number;
+}
+
 @ApiTags("storage")
 @Controller('storage')
 export class StorageController {
@@ -65,7 +74,7 @@ export class StorageController {
   @ApiOperation({ summary: "Upload file to Bunny Storage" })
   @ApiResponse({ status: 200, description: "File uploaded" })
   async uploadFile(
-    @UploadedFile() file: any,
+    @UploadedFile() file: MulterFile,
     @Body() body: { key?: string },
     @CurrentUser() user: { userId: string },
   ) {

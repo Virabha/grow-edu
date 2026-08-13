@@ -1,0 +1,153 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PNPM_VERSION: "10.33.0"
+  NODE_VERSION: "22"
+
+# There is no workspace. backend/ and frontend/* are independent packages, each
+# with its own lockfile, so every job installs from its own directory. A root
+# pnpm-workspace.yaml was tried and removed: it silently captured `pnpm install`
+# in every non-member directory and broke Next.js module resolution in the
+# learner app.
+
+jobs:
+  # A single grep is blunt, but it is the one check that cannot be turned off by
+  # editing a lint config, and it covers all three codebases regardless of which
+  # linter each uses.
+  no-forced-types:
+    name: no forced types
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reject any, double casts, ts-ignore and non-null assertions
+        run: |
+          set -uo pipefail
+          dirs="backend/src frontend/admin/src frontend/learner/src"
+          present=""
+          for d in $dirs; do [ -d "$d" ] && present="$present $d"; done
+
+          fail=0
+          check() {
+            # shellcheck disable=SC2086
+            hits=$(grep -rnE "$1" $present --include='*.ts' --include='*.tsx' || true)
+            if [ -n "$hits" ]; then
+              echo "::error::$2"
+              echo "$hits"
+              fail=1
+            fi
+          }
+
+          # Requires whitespace after the colon. Without it this also matches
+          # permission keys like "course:read:any", which are strings, not types.
+          check ':[[:space:]]+any\b|<any>|\bas any\b|\bany\[\]' \
+                'explicit any — give the value a real type'
+          check 'as unknown as' \
+                'double cast — narrow instead'
+          check '@ts-ignore|@ts-expect-error' \
+                'ts comment — fix the underlying type'
+          check 'eslint-disable.*no-explicit-any|eslint-disable.*no-non-null-assertion' \
+                'a type rule was disabled inline'
+
+          if [ "$fail" -ne 0 ]; then
+            echo ""
+            echo "See specs/TODO.md — the codebase is at zero of these and must stay there."
+            exit 1
+          fi
+          echo "clean: no forced types in$present"
+
+  backend:
+    name: backend · typecheck + lint + test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: "${{ env.PNPM_VERSION }}" }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "${{ env.NODE_VERSION }}"
+          cache: pnpm
+          cache-dependency-path: backend/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: npx tsc --noEmit
+      # Lint must not carry --fix: a step that rewrites files can never fail.
+      - run: pnpm lint
+      # 154 tests, including the tenancy host/permissions/context/contracts
+      # suites that used to live in packages/.
+      - run: pnpm test
+
+  # Row-level security cannot be verified by unit tests — PostgreSQL enforces
+  # it, not application code. This applies the schema and then proves one tenant
+  # cannot read another's rows.
+  tenancy:
+    name: tenancy · migration + isolation proof
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: groedu_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/groedu_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: "${{ env.PNPM_VERSION }}" }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "${{ env.NODE_VERSION }}"
+          cache: pnpm
+          cache-dependency-path: backend/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:migrate:tenancy
+      - name: Re-run to prove idempotency
+        run: pnpm db:migrate:tenancy
+      # The check that matters. "RLS is enabled" is not "isolation works" — on
+      # Neon the config was correct and isolation was absent, because the
+      # connecting role had BYPASSRLS. CI's `postgres` superuser bypasses it
+      # too, so this also proves the SET LOCAL ROLE actually fires.
+      - run: pnpm db:verify:isolation
+
+  frontends:
+    name: ${{ matrix.app }} · typecheck + lint
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [admin, learner]
+    defaults:
+      run:
+        working-directory: frontend/${{ matrix.app }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: "${{ env.PNPM_VERSION }}" }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "${{ env.NODE_VERSION }}"
+          cache: pnpm
+          cache-dependency-path: frontend/${{ matrix.app }}/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: npx tsc --noEmit
+      - run: pnpm lint

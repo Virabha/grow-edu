@@ -17,7 +17,6 @@ import {
   ExternalLink,
   Clock,
   Library,
-  ShieldCheck,
 } from "lucide-react";
 import { PageLayout } from "@/components/layout/page-layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";

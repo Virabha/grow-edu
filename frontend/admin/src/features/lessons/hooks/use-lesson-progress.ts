@@ -1,6 +1,5 @@
 import { useCallback, useRef, useEffect } from "react";
 import { useUpdateProgress } from "@/features/progress/hooks/use-progress";
-import { useAuthStore } from "@/lib/store/auth-store";
 interface UseSaveVideoProgressOptions {
     lessonId: string;
     courseId: string;
@@ -9,7 +8,6 @@ interface UseSaveVideoProgressOptions {
 }
 export function useSaveVideoProgress({ lessonId, courseId, enabled = true, debounceMs = 5000, }: UseSaveVideoProgressOptions) {
     const updateProgress = useUpdateProgress();
-    const { user } = useAuthStore();
     const lastSavedRef = useRef<number>(0);
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
     const isCompletedRef = useRef<boolean>(false);

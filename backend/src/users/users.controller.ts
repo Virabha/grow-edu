@@ -9,9 +9,10 @@ import {
   UseGuards,
   ForbiddenException,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { FilterUsersDto } from './dto/filter-users.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -26,20 +27,16 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @ApiOperation({ summary: 'Get all users' })
-  @ApiQuery({ name: 'role', required: false })
-  @ApiQuery({ name: 'search', required: false })
-  @ApiQuery({ name: 'page', required: false, type: Number })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiResponse({ status: 200, description: 'List of users' })
   @UseGuards(RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN)
   @Get()
-  async findAll(@Query() query: Record<string, string>) {
+  async findAll(@Query() query: FilterUsersDto) {
     return this.usersService.findAll({
       role: query.role,
       search: query.search,
-      page: query.page ? parseInt(query.page) : undefined,
-      limit: query.limit ? parseInt(query.limit) : undefined,
+      page: query.page,
+      limit: query.limit,
     });
   }
 

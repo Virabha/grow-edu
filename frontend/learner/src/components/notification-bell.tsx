@@ -90,7 +90,7 @@ export function NotificationBell() {
               </div>
             ) : items.length === 0 ? (
               <div className="p-6 text-center text-xs text-muted-foreground">
-                You're all caught up.
+                You&apos;re all caught up.
               </div>
             ) : (
               <ul>

@@ -1,5 +1,5 @@
 import { EnrollmentStats, RevenueStats, CoursePerformance, PlatformStats } from '../types';
-import { parseJsonResponse, parseErrorResponse, type ApiError } from '@/lib/types/api';
+import { parseJsonResponse, parseErrorResponse } from '@/lib/types/api';
 import { env } from '@/lib/env';
 const API_URL = env.NEXT_PUBLIC_API_URL;
 const getAuthHeaders = () => {

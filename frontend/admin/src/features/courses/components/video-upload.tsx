@@ -7,7 +7,6 @@ import { apiClient } from "@/lib/api/client";
 import { AxiosError } from "axios";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
 import * as tus from "tus-js-client";
 
 interface VideoUploadProps {

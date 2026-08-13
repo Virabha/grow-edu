@@ -3,7 +3,9 @@ export function exportToCSV<T extends Record<string, any>>(data: T[], filename: 
         alert('No data to export');
         return;
     }
-    const csvHeaders = headers || Object.keys(data[0]);
+    const firstRow = data[0];
+    if (firstRow === undefined) return;
+    const csvHeaders = headers || Object.keys(firstRow);
     const csvContent = [
         csvHeaders.join(','),
         ...data.map((row) => csvHeaders

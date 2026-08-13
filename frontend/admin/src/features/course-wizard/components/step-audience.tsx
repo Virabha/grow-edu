@@ -25,7 +25,7 @@ function DynamicList({ label, placeholder, items, onChange }: DynamicListProps) 
     onChange(next);
   };
   const handleKeyDown = (e: React.KeyboardEvent, i: number) => {
-    if (e.key === "Enter" && items[i].trim() !== "") {
+    if (e.key === "Enter" && (items[i] ?? "").trim() !== "") {
       e.preventDefault();
       if (i === items.length - 1) handleAdd();
     }

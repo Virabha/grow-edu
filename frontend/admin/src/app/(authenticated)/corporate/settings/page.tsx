@@ -5,7 +5,6 @@ import { useCompany } from "@/features/companies/hooks/use-companies";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { FormField } from "@/components/ui/form-field";
 import { Button } from "@/components/ui/button";
 import { useForm } from "react-hook-form";

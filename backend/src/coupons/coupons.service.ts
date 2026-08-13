@@ -5,7 +5,7 @@ import {
   BadRequestException,
 } from "@nestjs/common";
 import { Inject } from "@nestjs/common";
-import { eq, and, sql, ilike, desc, asc, inArray } from "drizzle-orm";
+import { eq, and, sql, ilike, desc, inArray } from "drizzle-orm";
 import { DATABASE_CONNECTION } from "../database/database.module";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import * as schema from "../database/schema";
@@ -22,7 +22,7 @@ import { CreateCouponDto, DiscountType } from "./dto/create-coupon.dto";
 import { UpdateCouponDto } from "./dto/update-coupon.dto";
 import { ValidateCouponDto } from "./dto/validate-coupon.dto";
 
-const MAX_PAGE_LIMIT = 50;
+const MAX_PAGE_LIMIT = 100;
 
 export type CouponUsageStatus = "RESERVED" | "CONSUMED" | "CANCELLED";
 
@@ -207,6 +207,12 @@ export class CouponsService {
     // Fetch associated categories and courses for each coupon
     const couponIds = results.map((r) => r.couponId);
 
+    // The empty branches are annotated because an unannotated `[]` infers
+    // never[], which collapses the union's element type and makes `.couponId`
+    // below unreachable under strictNullChecks.
+    type CategoryAssoc = { couponId: string; categoryId: string; name: string };
+    type CourseAssoc = { couponId: string; courseId: string; title: string };
+
     const [categoryAssocs, courseAssocs] = await Promise.all([
       couponIds.length > 0
         ? this.db
@@ -221,7 +227,7 @@ export class CouponsService {
               eq(couponCategories.categoryId, categories.categoryId),
             )
             .where(inArray(couponCategories.couponId, couponIds))
-        : [],
+        : ([] as CategoryAssoc[]),
       couponIds.length > 0
         ? this.db
             .select({
@@ -232,7 +238,7 @@ export class CouponsService {
             .from(couponCourses)
             .innerJoin(courses, eq(couponCourses.courseId, courses.courseId))
             .where(inArray(couponCourses.couponId, couponIds))
-        : [],
+        : ([] as CourseAssoc[]),
     ]);
 
     const data = results.map((coupon) => ({

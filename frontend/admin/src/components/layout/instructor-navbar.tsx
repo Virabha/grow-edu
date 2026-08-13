@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ModeToggle } from "@/components/theme-toggle";
@@ -10,7 +10,6 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { LogOut, LayoutDashboard, BookOpen, Settings, Video } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 export function InstructorNavbar() {
-    const router = useRouter();
     const pathname = usePathname();
     const { user, logout } = useAuthStore();
     const queryClient = useQueryClient();
@@ -29,7 +28,7 @@ export function InstructorNavbar() {
         if (firstName && lastName) {
             return `${firstName[0]}${lastName[0]}`.toUpperCase();
         }
-        return user.email ? user.email[0].toUpperCase() : "I";
+        return user.email ? user.email.charAt(0).toUpperCase() : "I";
     };
     const navItems = [
         { href: "/instructor/dashboard", label: "Dashboard", icon: LayoutDashboard },

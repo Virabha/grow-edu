@@ -9,14 +9,14 @@ import { ModeToggle } from "@/components/theme-toggle";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { User, LogOut, TrendingUp, BookOpen, ShoppingCart, ArrowLeft, } from "lucide-react";
+import { LogOut, TrendingUp, BookOpen, ShoppingCart, ArrowLeft, } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 export function LearnerNavbar() {
     const router = useRouter();
     const pathname = usePathname();
     const { scrollY } = useScroll();
     const [hidden, setHidden] = useState(false);
-    const [scrolled, setScrolled] = useState(false);
+    const [_scrolled, setScrolled] = useState(false);
     const { user, logout } = useAuthStore();
     const queryClient = useQueryClient();
     useMotionValueEvent(scrollY, "change", (latest) => {
@@ -44,7 +44,7 @@ export function LearnerNavbar() {
         if (firstName && lastName) {
             return `${firstName[0]}${lastName[0]}`.toUpperCase();
         }
-        return user.email ? user.email[0].toUpperCase() : "L";
+        return user.email ? user.email.charAt(0).toUpperCase() : "L";
     };
     const navItems = [
         { href: "/learner/dashboard", label: "Dashboard", icon: TrendingUp },

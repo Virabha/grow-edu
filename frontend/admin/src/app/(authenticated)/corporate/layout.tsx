@@ -1,6 +1,5 @@
 "use client";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
-import { CorporateNavbar } from "@/components/layout/corporate-navbar";
 import { LayoutDashboard, Users, UserPlus, Settings } from "lucide-react";
 const sidebarItems = [
     { label: "Dashboard", href: "/corporate/dashboard", icon: <LayoutDashboard className="h-4 w-4"/> },

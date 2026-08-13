@@ -1,7 +1,7 @@
-import { IsOptional, IsString, IsInt, Min } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsOptional, IsString } from 'class-validator';
+import { PaginationDto } from '../../common/dto/pagination.dto';
 
-export class FilterBooksDto {
+export class FilterBooksDto extends PaginationDto {
   @IsOptional()
   @IsString()
   search?: string;
@@ -13,16 +13,4 @@ export class FilterBooksDto {
   @IsOptional()
   @IsString()
   status?: string;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  page?: number;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  limit?: number;
 }

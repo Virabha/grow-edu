@@ -3,7 +3,6 @@
 import { usePathname } from "next/navigation";
 import { Header } from "@/components/landing/header";
 import { Footer } from "@/components/landing/footer";
-import { Metadata } from "next";
 
 const AUTH_PATHS = [
   "/login",

@@ -1,10 +1,9 @@
 "use client";
-import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, GripVertical, CheckCircle2, Circle } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 export interface QuizQuestion {
@@ -32,7 +31,9 @@ export function QuizBuilder({ questions, onChange }: QuizBuilderProps) {
     };
     const handleUpdateQuestion = (index: number, updates: Partial<QuizQuestion>) => {
         const newQuestions = [...questions];
-        newQuestions[index] = { ...newQuestions[index], ...updates };
+        const existing = newQuestions[index];
+        if (existing === undefined) return;
+        newQuestions[index] = { ...existing, ...updates };
         onChange(newQuestions);
     };
     const handleRemoveQuestion = (index: number) => {
@@ -40,18 +41,21 @@ export function QuizBuilder({ questions, onChange }: QuizBuilderProps) {
     };
     const handleAddOption = (qIndex: number) => {
         const q = questions[qIndex];
+        if (!q) return;
         handleUpdateQuestion(qIndex, {
             options: [...q.options, `Option ${q.options.length + 1}`],
         });
     };
     const handleUpdateOption = (qIndex: number, oIndex: number, value: string) => {
         const q = questions[qIndex];
+        if (!q) return;
         const newOptions = [...q.options];
         newOptions[oIndex] = value;
         handleUpdateQuestion(qIndex, { options: newOptions });
     };
     const handleRemoveOption = (qIndex: number, oIndex: number) => {
         const q = questions[qIndex];
+        if (!q) return;
         if (q.options.length <= 2)
             return;
         const newOptions = q.options.filter((_, i) => i !== oIndex);

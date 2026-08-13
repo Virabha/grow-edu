@@ -9,17 +9,27 @@
     "target": "ES2021",
     "sourceMap": true,
     "outDir": "./dist",
-    "baseUrl": "./",
     "incremental": true,
     "skipLibCheck": true,
-    "strictNullChecks": false,
-    "noImplicitAny": true,
-    "strictBindCallApply": false,
-    "forceConsistentCasingInFileNames": false,
-    "noFallthroughCasesInSwitch": false,
+
+    // Full strict mode. Every flag it turns on was measured at 0 errors on this
+    // codebase except strictPropertyInitialization — see below.
+    "strict": true,
+
+    // The one exception. NestJS DTOs and entities declare `title: string;` with
+    // no initialiser and rely on class-validator/class-transformer to populate
+    // them, which this flag cannot see. Enabling it produces 112 errors whose
+    // only fix is a definite-assignment `!` on every DTO field — that is
+    // forcing the type rather than proving it, so the flag stays off.
+    "strictPropertyInitialization": false,
+
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+
+    // `baseUrl` is deprecated and removed in TypeScript 7. Since 4.1 `paths`
+    // resolves relative to this file, so it is no longer needed.
     "paths": {
       "@/*": ["./src/*"]
     }
   }
 }
-

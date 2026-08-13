@@ -23,7 +23,7 @@ import { BulkEnrollmentDto } from "./dto/bulk-enrollment.dto";
 import { EmailService } from "../email/email.service";
 import { FilesService } from "../files/files.service";
 
-const MAX_PAGE_LIMIT = 50;
+const MAX_PAGE_LIMIT = 100;
 
 @Injectable()
 export class EnrollmentsService {
@@ -50,7 +50,7 @@ export class EnrollmentsService {
     search?: string;
     page?: number;
     limit?: number;
-  }): Promise<{ data: any[]; pagination: any }> {
+  }) {
     const page = filters?.page || 1;
     const limit = Math.min(filters?.limit || 10, MAX_PAGE_LIMIT);
     const offset = (page - 1) * limit;
@@ -77,14 +77,13 @@ export class EnrollmentsService {
     // Move search to SQL with ILIKE
     if (filters?.search) {
       const searchPattern = `%${filters.search}%`;
-      enrollmentConditions.push(
-        or(
-          ilike(courses.title, searchPattern),
-          ilike(users.firstName, searchPattern),
-          ilike(users.lastName, searchPattern),
-          ilike(users.email, searchPattern),
-        )!,
+      const searchCondition = or(
+        ilike(courses.title, searchPattern),
+        ilike(users.firstName, searchPattern),
+        ilike(users.lastName, searchPattern),
+        ilike(users.email, searchPattern),
       );
+      if (searchCondition) enrollmentConditions.push(searchCondition);
     }
 
     const enrollmentWhereClause =
@@ -147,6 +146,8 @@ export class EnrollmentsService {
     const fullEnrollmentCount = Number(countResult[0]?.count || 0);
 
     // Define type for section access records
+    type EnrollmentUserInfo = { id: string | null; email: string | null; firstName: string | null; lastName: string | null };
+    type EnrollmentCourseInfo = { id: string | null; title: string | null; slug: string | null; description: string | null; thumbnail: string | null; price: string | null; currency: string | null; categoryId: string | null; categoryName: string; categorySlug: string | null; categoryDescription: string | null };
     type SectionAccessRecord = {
       enrollmentId: string;
       userId: string;
@@ -157,13 +158,13 @@ export class EnrollmentsService {
       completedAt: null;
       accessType: "SECTION";
       accessedSections: Array<{ sectionId: string; title: string }>;
-      userInfo: any;
-      courseInfo: any;
+      userInfo: EnrollmentUserInfo | null;
+      courseInfo: EnrollmentCourseInfo;
       companyInfo: { id: null; name: null };
     };
 
     // Get courses with section access (but not full enrollment)
-    let sectionAccessCourses: SectionAccessRecord[] = [];
+    const sectionAccessCourses: SectionAccessRecord[] = [];
     let sectionAccessCount = 0;
 
     if (filters?.userId && (!filters?.status || filters?.status === "ACTIVE")) {
@@ -296,13 +297,13 @@ export class EnrollmentsService {
               Array<{ sectionId: string; title: string }>
             >();
             for (const section of allSections) {
-              if (!sectionsByCourse.has(section.courseId)) {
-                sectionsByCourse.set(section.courseId, []);
+              const existingSections = sectionsByCourse.get(section.courseId);
+              const entry = { sectionId: section.sectionId, title: section.title };
+              if (existingSections !== undefined) {
+                existingSections.push(entry);
+              } else {
+                sectionsByCourse.set(section.courseId, [entry]);
               }
-              sectionsByCourse.get(section.courseId)!.push({
-                sectionId: section.sectionId,
-                title: section.title,
-              });
             }
 
             // Build section access records
@@ -350,9 +351,9 @@ export class EnrollmentsService {
       completedAt: Date | null;
       accessType: "FULL" | "SECTION";
       accessedSections: Array<{ sectionId: string; title: string }> | null;
-      userInfo: any;
-      courseInfo: any;
-      companyInfo: any;
+      userInfo: EnrollmentUserInfo | null;
+      courseInfo: EnrollmentCourseInfo;
+      companyInfo: { id: string | null; name: string | null } | null;
     }> = [
       ...fullEnrollments.map((e) => ({
         ...e,
@@ -505,7 +506,7 @@ export class EnrollmentsService {
             enrollmentDate: enrollment.enrolledAt,
           });
         }
-      } catch {}
+      } catch { /* non-critical: swallow */ }
 
       return enrollment;
     } catch (error) {
@@ -640,7 +641,7 @@ export class EnrollmentsService {
             completedDate: completedAt || new Date(),
           });
         }
-      } catch {}
+      } catch { /* non-critical: swallow */ }
     }
 
     return updated;

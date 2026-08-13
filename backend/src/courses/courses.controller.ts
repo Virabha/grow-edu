@@ -8,14 +8,12 @@ import {
   Body,
   Query,
   UseGuards,
-  Req,
 } from "@nestjs/common";
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
-  ApiQuery,
 } from "@nestjs/swagger";
 import { CoursesService } from "./courses.service";
 import { CreateCourseDto } from "./dto/create-course.dto";

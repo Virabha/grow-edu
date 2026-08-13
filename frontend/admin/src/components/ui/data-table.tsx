@@ -2,7 +2,6 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, } from "@/components/ui/table";
-import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LucideIcon } from "lucide-react";
 import { DataTableSkeleton } from "@/components/ui/data-table-skeleton";

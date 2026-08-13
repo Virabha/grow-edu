@@ -20,7 +20,6 @@ import {
   X,
   Loader2,
   Clock,
-  Users,
   BarChart3,
   Award,
 } from "lucide-react";

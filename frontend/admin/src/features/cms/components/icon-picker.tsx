@@ -57,6 +57,7 @@ export function IconPicker({
     <div className={cn("grid grid-cols-4 sm:grid-cols-6 gap-2", className)}>
       {ICON_NAMES.map((name) => {
         const Icon = ICONS[name];
+        if (Icon === undefined) return null;
         const selected = value === name;
         return (
           <button

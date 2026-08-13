@@ -10,10 +10,11 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 import { CouponsService } from './coupons.service';
 import { CreateCouponDto } from './dto/create-coupon.dto';
 import { UpdateCouponDto } from './dto/update-coupon.dto';
+import { FilterCouponsDto } from './dto/filter-coupons.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles, UserRole } from '../auth/decorators/roles.decorator';
@@ -36,21 +37,12 @@ export class CouponsAdminController {
 
   @Get()
   @ApiOperation({ summary: 'List all coupons with filters' })
-  @ApiQuery({ name: 'search', required: false })
-  @ApiQuery({ name: 'isActive', required: false, type: Boolean })
-  @ApiQuery({ name: 'page', required: false, type: Number })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
-  async findAll(
-    @Query('search') search?: string,
-    @Query('isActive') isActive?: string,
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
-  ) {
+  async findAll(@Query() query: FilterCouponsDto) {
     return this.couponsService.findAll({
-      search,
-      isActive: isActive !== undefined ? isActive === 'true' : undefined,
-      page: page ? parseInt(page, 10) : undefined,
-      limit: limit ? parseInt(limit, 10) : undefined,
+      search: query.search,
+      isActive: query.isActive !== undefined ? query.isActive === 'true' : undefined,
+      page: query.page,
+      limit: query.limit,
     });
   }
 

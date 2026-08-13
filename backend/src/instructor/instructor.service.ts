@@ -90,12 +90,13 @@ export class InstructorService {
   }
 
   async getInstructorCourses(instructorId: string, page = 1, limit = 10) {
-    const offset = (page - 1) * limit;
+    const effectiveLimit = Math.min(limit, 100);
+    const offset = (page - 1) * effectiveLimit;
     
     // Get courses with detailed stats (e.g. revenue per course)
     const courses = await this.db.query.courses.findMany({
         where: eq(schema.courses.instructorId, instructorId),
-        limit: limit,
+        limit: effectiveLimit,
         offset: offset,
         orderBy: [desc(schema.courses.createdAt)],
         with: {
@@ -117,8 +118,8 @@ export class InstructorService {
         meta: {
             total: total.count,
             page,
-            limit,
-            totalPages: Math.ceil(total.count / limit)
+            limit: effectiveLimit,
+            totalPages: Math.ceil(total.count / effectiveLimit)
         }
     };
   }

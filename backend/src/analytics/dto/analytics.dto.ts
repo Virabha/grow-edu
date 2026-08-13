@@ -1,4 +1,4 @@
-import { IsEnum, IsNumber, IsOptional, IsDateString, Max, Min } from 'class-validator';
+import { IsEnum, IsInt, IsNumber, IsOptional, IsDateString, Max, Min } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type, Transform } from 'class-transformer';
 
@@ -33,7 +33,7 @@ export class TrendFilterDto {
 }
 
 export class TopCoursesFilterDto {
-  @ApiPropertyOptional({ default: 10, type: Number })
+  @ApiPropertyOptional({ default: 10, minimum: 1, maximum: 100, type: Number })
   @IsOptional()
   @Transform(({ value }) => {
     if (value === undefined || value === null) return undefined;
@@ -41,7 +41,9 @@ export class TopCoursesFilterDto {
     return isNaN(num) ? undefined : num;
   })
   @Type(() => Number)
-  @IsNumber()
+  @IsInt()
+  @Min(1)
+  @Max(100)
   limit?: number;
 
   @ApiPropertyOptional()

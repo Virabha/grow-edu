@@ -1,4 +1,5 @@
 export { mockAdapter } from "./adapter";
+export { installFetchMock } from "./fetch-patch";
 export { db, resetDb, write, collection, RESOURCES } from "./db";
 export type { MockDb, Row } from "./db";
 export * from "./settings";

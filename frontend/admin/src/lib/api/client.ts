@@ -2,7 +2,7 @@ import axios, { AxiosError } from "axios";
 
 import { useAuthStore } from "@/lib/store/auth-store";
 import { env } from "@/lib/env";
-import { MOCKS_ENABLED, mockAdapter } from "@/lib/mock";
+import { MOCKS_ENABLED, installFetchMock, mockAdapter } from "@/lib/mock";
 
 const getBaseUrl = (): string => {
   if (typeof window !== "undefined") {
@@ -18,6 +18,10 @@ const getAuthToken = (): string | null => {
     return null;
   }
 };
+
+// Feature APIs that use raw fetch (auth, categories, companies, enrollments,
+// analytics) need intercepting too, not just the axios client.
+if (MOCKS_ENABLED) installFetchMock();
 
 export const apiClient = axios.create({
   baseURL: getBaseUrl(),

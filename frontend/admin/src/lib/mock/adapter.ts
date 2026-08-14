@@ -58,7 +58,7 @@ function normalisePath(config: InternalAxiosRequestConfig): {
   return { path, query };
 }
 
-function matchRoute(
+export function matchRoute(
   method: string,
   path: string,
 ): { key: string; params: Record<string, string> } | null {
@@ -137,6 +137,8 @@ function fail(
   );
   return error;
 }
+
+export { LATENCY_MS };
 
 export const mockAdapter: AxiosAdapter = async (config) => {
   const method = (config.method ?? "get").toUpperCase();

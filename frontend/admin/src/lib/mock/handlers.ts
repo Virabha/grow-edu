@@ -15,7 +15,7 @@ import {
   type ResourceDef,
   type Row,
 } from "./db";
-import { COURSES, USERS } from "./seed";
+import { USERS } from "./seed";
 import { ALL_PERMISSIONS, PAGE_SECTION_LIBRARY } from "./seed-platform";
 import { SETTINGS_FIELDS, SETTINGS_META, type SettingsGroup } from "./settings";
 
@@ -456,6 +456,60 @@ const custom: Record<string, Handler> = {
     title: String(body.title ?? "Untitled video"),
   }),
 
+  /**
+   * The course detail response embeds its curriculum. The wizard's review step
+   * reads `course.sections[].lessons[]` to build its pre-submission checklist,
+   * so a bare course row leaves it reporting "Sections added (0)" however many
+   * were actually created.
+   */
+  "POST /courses": ({ body }) =>
+    write((draft) => {
+      const row: Row = {
+        ...body,
+        courseId: body.courseId ?? newId("crs"),
+        // The wizard does not send an instructor; without one the new course
+        // never appears in the instructor's own list.
+        instructorId: body.instructorId ?? DEMO_INSTRUCTOR.id,
+        instructorName: body.instructorName ?? DEMO_INSTRUCTOR.name,
+        status: body.status ?? "DRAFT",
+        reviewStatus: body.reviewStatus ?? "DRAFT",
+        enrolledCount: body.enrolledCount ?? 0,
+        enrollmentCount: body.enrollmentCount ?? 0,
+        rating: body.rating ?? 0,
+        ratingCount: body.ratingCount ?? 0,
+        revenue: body.revenue ?? 0,
+        currency: body.currency ?? "INR",
+        createdAt: body.createdAt ?? nowIso(),
+      };
+      draft.collections.courses?.unshift(row);
+      return row;
+    }),
+
+  "GET /courses/:id": ({ params }) => {
+    const course = collection("courses").find(
+      (c) => c.courseId === params.id || c.slug === params.id,
+    );
+    if (!course) throw new MockHttpError(404, "Course not found");
+
+    const sections = collection("sections")
+      .filter((sec) => sec.courseId === course.courseId && sec.isDeleted !== true)
+      .sort((a, b) => Number(a.order ?? 0) - Number(b.order ?? 0))
+      .map((sec) => ({
+        ...sec,
+        lessons: collection("lessons")
+          .filter((l) => l.sectionId === sec.sectionId)
+          .sort((a, b) => Number(a.order ?? 0) - Number(b.order ?? 0)),
+      }));
+
+    return { ...course, sections };
+  },
+
+  "GET /courses/slug/:slug": ({ params }) => {
+    const course = collection("courses").find((c) => c.slug === params.slug);
+    if (!course) throw new MockHttpError(404, "Course not found");
+    return course;
+  },
+
   "GET /permissions": () => ALL_PERMISSIONS,
   "GET /page-sections": () => PAGE_SECTION_LIBRARY,
 
@@ -783,7 +837,7 @@ const custom: Record<string, Handler> = {
 
   "GET /instructor/courses": ({ query }) => {
     const mine = collection("courses").filter(
-      (c) => c.instructorId === "ins-anand" || c.instructorId === "ins-rahul",
+      (c) => c.instructorId === DEMO_INSTRUCTOR.id || !c.instructorId,
     );
     return paginate(applyFilters(mine, query, ["title"]), query);
   },
@@ -799,6 +853,9 @@ const custom: Record<string, Handler> = {
   "POST /notifications/read": () => ({ message: "ok" }),
   "POST /notifications/mark-all-read": () => ({ message: "ok" }),
 };
+
+/** The instructor the demo signs in as; new courses are attributed to them. */
+const DEMO_INSTRUCTOR = { id: "ins-anand", name: "Anand Krishnan" };
 
 const MONTHLY = [
   { month: "Sep", revenue: 842000, enrolments: 410 },
@@ -884,9 +941,18 @@ function buildAdminDashboard() {
 }
 
 function buildInstructorDashboard() {
-  const mine = COURSES.filter((c) => c.instructorId === "ins-anand");
-  const revenue = mine.reduce((s, c) => s + c.revenue, 0);
-  const learners = mine.reduce((s, c) => s + c.enrolledCount, 0);
+  const mine = collection("courses").filter(
+    (c) => c.instructorId === DEMO_INSTRUCTOR.id || !c.instructorId,
+  );
+  const revenue = mine.reduce((sum, c) => sum + Number(c.revenue ?? 0), 0);
+  const learners = mine.reduce((sum, c) => sum + Number(c.enrolledCount ?? 0), 0);
+  const rated = mine.filter((c) => Number(c.rating ?? 0) > 0);
+  const averageRating = rated.length
+    ? Number(
+        (rated.reduce((sum, c) => sum + Number(c.rating ?? 0), 0) / rated.length).toFixed(2),
+      )
+    : 0;
+
   return {
     stats: {
       courses: mine.length,
@@ -894,10 +960,7 @@ function buildInstructorDashboard() {
       learners,
       revenue,
       currency: "INR",
-      averageRating:
-        mine.length > 0
-          ? Number((mine.reduce((s, c) => s + c.rating, 0) / mine.length).toFixed(2))
-          : 0,
+      averageRating,
       pendingPayout: 184500,
       lifetimeEarnings: Math.round(revenue * 0.7),
     },

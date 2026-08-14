@@ -2,11 +2,15 @@
 import { PropsWithChildren } from "react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import {
-  LayoutDashboard,
+  Banknote,
   BookOpen,
-  Video,
-  User,
   GraduationCap,
+  LayoutDashboard,
+  ClipboardList,
+  Megaphone,
+  User,
+  Video,
+  Wallet,
 } from "lucide-react";
 
 const sidebarItems = [
@@ -16,18 +20,53 @@ const sidebarItems = [
     icon: <LayoutDashboard className="h-4 w-4" />,
   },
   {
-    label: "Batches",
-    href: "/admin/batches",
-    icon: <GraduationCap className="h-4 w-4" />,
-  },
-  {
     label: "My Courses",
     href: "/instructor/courses",
     icon: <BookOpen className="h-4 w-4" />,
   },
   {
+    label: "Batches",
+    href: "/admin/batches",
+    icon: <GraduationCap className="h-4 w-4" />,
+  },
+  {
     label: "My Videos",
     href: "/instructor/videos",
+    icon: <Video className="h-4 w-4" />,
+  },
+  {
+    label: "Live sessions",
+    href: "/instructor/live-sessions",
+    icon: <Video className="h-4 w-4" />,
+  },
+  {
+    label: "Assignments",
+    href: "/instructor/assignments",
+    icon: <ClipboardList className="h-4 w-4" />,
+  },
+  {
+    label: "Announcements",
+    href: "/instructor/announcements",
+    icon: <Megaphone className="h-4 w-4" />,
+  },
+  {
+    label: "My sales",
+    href: "/instructor/sales",
+    icon: <Banknote className="h-4 w-4" />,
+  },
+  {
+    label: "Request payout",
+    href: "/instructor/payouts",
+    icon: <Wallet className="h-4 w-4" />,
+  },
+  {
+    label: "Zoom settings",
+    href: "/instructor/zoom",
+    icon: <Video className="h-4 w-4" />,
+  },
+  {
+    label: "Jitsi settings",
+    href: "/instructor/jitsi",
     icon: <Video className="h-4 w-4" />,
   },
   {

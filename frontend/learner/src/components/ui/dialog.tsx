@@ -9,31 +9,99 @@ interface DialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   children: React.ReactNode;
+  /** Constrain the panel — defaults to the wide reading width. */
+  className?: string;
+  /** Accessible name, when the panel has no visible DialogTitle. */
+  label?: string;
 }
 
-function Dialog({ open, onOpenChange, children }: DialogProps) {
+const FOCUSABLE =
+  'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
+
+function Dialog({
+  open,
+  onOpenChange,
+  children,
+  className,
+  label,
+}: DialogProps) {
+  const panelRef = React.useRef<HTMLDivElement>(null);
+
+  // Callers pass a fresh closure each render. Holding it in a ref keeps the
+  // effect keyed on `open` alone — otherwise every keystroke in a field inside
+  // the panel re-runs cleanup, throwing focus back to the element behind the
+  // overlay and then dragging it forward again.
+  const onOpenChangeRef = React.useRef(onOpenChange);
   React.useEffect(() => {
-    if (open) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
+    onOpenChangeRef.current = onOpenChange;
+  });
+
+  React.useEffect(() => {
+    if (!open) return;
+
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    document.body.style.overflow = "hidden";
+
+    // Move focus into the panel so keyboard and screen-reader users land here
+    // rather than continuing behind the overlay.
+    const first = panelRef.current?.querySelector<HTMLElement>(FOCUSABLE);
+    (first ?? panelRef.current)?.focus();
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.stopPropagation();
+        onOpenChangeRef.current(false);
+        return;
+      }
+
+      if (event.key !== "Tab" || !panelRef.current) return;
+
+      // Keep Tab inside the panel while it is open.
+      const items = Array.from(
+        panelRef.current.querySelectorAll<HTMLElement>(FOCUSABLE),
+      ).filter((el) => el.offsetParent !== null);
+      if (items.length === 0) return;
+
+      const firstItem = items[0];
+      const lastItem = items[items.length - 1];
+      if (!firstItem || !lastItem) return;
+
+      if (event.shiftKey && document.activeElement === firstItem) {
+        event.preventDefault();
+        lastItem.focus();
+      } else if (!event.shiftKey && document.activeElement === lastItem) {
+        event.preventDefault();
+        firstItem.focus();
+      }
     }
+
+    document.addEventListener("keydown", onKeyDown);
     return () => {
+      document.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = "";
+      previouslyFocused?.focus();
     };
   }, [open]);
 
   if (!open) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      onClick={() => onOpenChange(false)}
-    >
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" />
+    <div className="print-root fixed inset-0 z-50 flex items-center justify-center">
       <div
-        className="relative z-50 w-full max-w-4xl max-h-[90vh] flex flex-col bg-background rounded-lg shadow-xl border border-border mx-4 my-4"
-        onClick={(e) => e.stopPropagation()}
+        className="print-hide fixed inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={() => onOpenChange(false)}
+        aria-hidden="true"
+      />
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={label}
+        tabIndex={-1}
+        className={cn(
+          "relative z-50 mx-4 my-4 flex max-h-[90vh] w-full max-w-4xl flex-col rounded-lg border border-border bg-background shadow-xl outline-none",
+          className,
+        )}
       >
         {children}
       </div>

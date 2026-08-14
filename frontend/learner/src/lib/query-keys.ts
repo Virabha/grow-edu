@@ -25,6 +25,24 @@ export const queryKeys = {
   },
   profile: {
     me: () => ["profile"] as const,
+    devices: () => ["profile", "devices"] as const,
+  },
+  dashboard: {
+    summary: () => ["dashboard", "summary"] as const,
+  },
+  orders: {
+    list: (params?: Record<string, unknown>) => ["orders", params] as const,
+    byId: (id: string) => ["orders", "detail", id] as const,
+  },
+  reviews: {
+    mine: (params?: Record<string, unknown>) =>
+      ["reviews", "mine", params] as const,
+    reviewable: () => ["reviews", "reviewable"] as const,
+  },
+  quizAttempts: {
+    list: (params?: Record<string, unknown>) =>
+      ["quiz-attempts", params] as const,
+    byId: (id: string) => ["quiz-attempts", "detail", id] as const,
   },
   payments: {
     create: () => ["payments", "create"] as const,

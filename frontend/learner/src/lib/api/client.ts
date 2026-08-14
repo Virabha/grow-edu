@@ -1,5 +1,6 @@
 import axios, { AxiosError } from "axios";
 import { env } from "@/lib/env";
+import { MOCKS_ENABLED, mockAdapter } from "@/lib/mock";
 
 function getBaseUrl(): string {
   if (typeof window !== "undefined") return "/api";
@@ -10,6 +11,9 @@ export const apiClient = axios.create({
   baseURL: getBaseUrl(),
   headers: { "Content-Type": "application/json" },
   timeout: 30000,
+  // Demo mode answers every request from the in-memory store in lib/mock.
+  // Set NEXT_PUBLIC_USE_MOCKS=false to go back to the real API.
+  ...(MOCKS_ENABLED ? { adapter: mockAdapter } : {}),
 });
 
 apiClient.interceptors.request.use((config) => {

@@ -3,52 +3,54 @@
 import Link from "next/link";
 import {
   Award,
-  CalendarDays,
-  ClipboardList,
-  GraduationCap,
-  Megaphone,
-  Radio,
+  BookOpen,
+  ChevronRight,
+  Flame,
+  ListChecks,
+  PlayCircle,
+  Receipt,
+  Target,
 } from "lucide-react";
+
 import { PageLayout } from "@/components/layout/page-layout";
-import { Skeleton } from "@/components/ui/skeleton";
-import { EmptyState } from "@/components/ui/empty-state";
-import { Badge } from "@/components/ui/badge";
+import { StudyRhythm } from "@/components/dashboard/study-rhythm";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ProgressBar } from "@/components/ui/progress-bar";
+import { ResultChip } from "@/components/ui/result-chip";
 import { SecureImage } from "@/components/ui/secure-image";
-import { useBatchDashboard } from "@/lib/hooks/use-batches";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useDashboardSummary } from "@/lib/hooks/use-dashboard";
+import { useAuthStore } from "@/lib/store/auth-store";
+import { formatDate, formatMoney, formatRelative } from "@/lib/format";
 
-function formatDateTime(iso: string | null): string {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleString(undefined, {
-    day: "numeric",
-    month: "short",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
+const ORDER_STATUS_COPY: Record<string, string> = {
+  COMPLETED: "Paid",
+  PENDING: "Awaiting payment",
+  PROOF_UPLOADED: "Under review",
+  FAILED: "Failed",
+  REFUNDED: "Refunded",
+};
 
-export default function LearnerDashboardPage() {
-  const { data, isLoading } = useBatchDashboard();
+export default function DashboardPage() {
+  const { user } = useAuthStore();
+  const { data, isLoading, isError, error, refetch } = useDashboardSummary();
 
-  if (isLoading || !data) {
-    return (
-      <PageLayout header="Dashboard">
-        <div className="grid gap-4 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-32 w-full rounded-2xl" />
-          ))}
-        </div>
-      </PageLayout>
-    );
-  }
+  const firstName = user?.firstName ?? "there";
 
-  if (data.batches.length === 0) {
+  if (isError) {
     return (
       <PageLayout header="Dashboard">
         <EmptyState
-          title="You're not enrolled in any batches yet"
-          description="Browse batches to start learning."
-          icon={<GraduationCap className="h-12 w-12" />}
+          title="We could not load your dashboard"
+          description={
+            error instanceof Error
+              ? error.message
+              : "Something went wrong on our side."
+          }
+          icon={<Target className="size-10" />}
+          action={{ label: "Try again", onClick: () => void refetch() }}
         />
       </PageLayout>
     );
@@ -56,186 +58,311 @@ export default function LearnerDashboardPage() {
 
   return (
     <PageLayout
-      header="Dashboard"
-      description="Your batches, today's live classes, and pending work — all in one place."
-      className="space-y-6"
+      subtitle="Your learning"
+      header={`Welcome back, ${firstName}`}
+      description="Where you left off, how the week is going, and what needs your attention."
     >
-      {data.upcomingLive.length > 0 && (
-        <section>
-          <h2 className="mb-2 flex items-center gap-2 font-display text-base font-medium">
-            <Radio className="size-4 text-emerald-600" />
-            Upcoming live classes
-          </h2>
-          <ul className="space-y-2">
-            {data.upcomingLive.map((s) => (
-              <li
-                key={s.sessionId}
-                className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4"
-              >
-                <div className="min-w-0">
-                  <p className="font-medium line-clamp-1">{s.title}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    {s.batch.title} · {formatDateTime(s.scheduledStartAt)}
-                  </p>
-                </div>
-                {s.joinUrl ? (
-                  <Button asChild size="sm">
-                    <a href={s.joinUrl} target="_blank" rel="noreferrer">
-                      Join
-                    </a>
-                  </Button>
-                ) : (
-                  <Badge variant="outline">{s.status}</Badge>
-                )}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      {isLoading || !data ? (
+        <DashboardSkeleton />
+      ) : (
+        <div className="space-y-4">
+          {/* Stat band — one bordered strip rather than four floating cards, so
+              the numbers read as a single summary. */}
+          {/* gap-px over a border-coloured ground draws the dividers, so the
+              grid stays correct at both 2 and 4 columns. */}
+          <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border/70 bg-border/70 sm:grid-cols-4">
+            <Stat
+              icon={<BookOpen className="size-3.5" />}
+              label="Active courses"
+              value={String(data.stats.activeCount)}
+              hint={`${data.stats.enrolledCount} enrolled in total`}
+            />
+            <Stat
+              icon={<ListChecks className="size-3.5" />}
+              label="Lessons completed"
+              value={String(data.stats.lessonsCompleted)}
+              hint={`across ${data.stats.enrolledCount} courses`}
+            />
+            <Stat
+              icon={<Target className="size-3.5" />}
+              label="Average quiz score"
+              value={`${data.stats.averageQuizScore}%`}
+              hint={`${data.stats.quizzesAttempted} attempts`}
+            />
+            <Stat
+              icon={<Award className="size-3.5" />}
+              label="Certificates"
+              value={String(data.stats.certificatesEarned)}
+              hint={`${formatMoney(data.stats.totalSpend)} invested`}
+            />
+          </div>
 
-      <section>
-        <h2 className="mb-2 flex items-center gap-2 font-display text-base font-medium">
-          <GraduationCap className="size-4" />
-          My batches
-        </h2>
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-          {data.batches.map((b) => (
-            <Link
-              key={b.batchId}
-              href={`/batches/${b.slug}`}
-              className="group flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
-            >
-              <div className="relative aspect-[4/3] overflow-hidden bg-muted">
-                {b.thumbnail ? (
-                  <SecureImage
-                    src={b.thumbnail}
-                    alt={b.title}
-                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+          <div className="grid gap-4 [&>*]:min-w-0 lg:grid-cols-[1.4fr_1fr]">
+            {/* Continue learning */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="font-display text-base font-medium">
+                  Pick up where you left off
+                </CardTitle>
+                <Button asChild variant="ghost" size="sm" className="h-7 text-xs">
+                  <Link href="/my-courses">
+                    All courses
+                    <ChevronRight className="ml-0.5 size-3.5" />
+                  </Link>
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {data.continueLearning.length === 0 ? (
+                  <EmptyState
+                    title="Nothing in progress"
+                    description="Enrol in a course and it will show up here."
+                    icon={<BookOpen className="size-9" />}
+                    className="py-8"
                   />
                 ) : (
-                  <div className="flex h-full items-center justify-center">
-                    <GraduationCap className="size-8 text-muted-foreground/30" />
-                  </div>
+                  <ul className="divide-y divide-border/60">
+                    {data.continueLearning.map((enrollment) => {
+                      const progress = enrollment.progressPercent ?? 0;
+                      return (
+                      <li
+                        key={enrollment.enrollmentId}
+                        className="flex flex-col gap-2 py-2.5 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:gap-3"
+                      >
+                        <div className="flex min-w-0 flex-1 items-center gap-3">
+                        <div className="h-12 w-20 shrink-0 overflow-hidden rounded-md bg-muted">
+                          {enrollment.course?.thumbnail ? (
+                            <SecureImage
+                              src={enrollment.course.thumbnail}
+                              alt=""
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-full items-center justify-center">
+                              <BookOpen className="size-4 text-muted-foreground/40" />
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="min-w-0 flex-1 space-y-1.5">
+                          <div className="flex items-baseline justify-between gap-2">
+                            <h3 className="truncate text-sm font-medium">
+                              {enrollment.course?.title ?? "Course"}
+                            </h3>
+                            <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">
+                              {progress}%
+                            </span>
+                          </div>
+                          <ProgressBar
+                            value={progress}
+                            label={`${enrollment.course?.title ?? "Course"} progress`}
+                          />
+                          <p className="text-[11px] text-muted-foreground">
+                            {enrollment.lastAccessedAt
+                              ? `Last opened ${formatRelative(enrollment.lastAccessedAt)}`
+                              : `Enrolled ${formatDate(enrollment.enrolledAt)}`}
+                          </p>
+                        </div>
+                        </div>
+
+                        <Button
+                          asChild
+                          size="sm"
+                          variant="outline"
+                          className="h-8 w-full shrink-0 text-xs sm:w-auto"
+                        >
+                          <Link href={`/courses/${enrollment.courseId}/watch`}>
+                            <PlayCircle className="mr-1 size-3.5" />
+                            Resume
+                          </Link>
+                        </Button>
+                      </li>
+                      );
+                    })}
+                  </ul>
                 )}
-                <span
-                  className={
-                    "absolute right-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide " +
-                    (b.status === "ONGOING"
-                      ? "bg-emerald-500/95 text-white"
-                      : b.status === "UPCOMING"
-                        ? "bg-amber-500/95 text-white"
-                        : "bg-zinc-500/95 text-white")
-                  }
-                >
-                  {b.status}
-                </span>
-              </div>
-              <div className="flex flex-1 flex-col gap-1 p-3">
-                {b.targetExam && (
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">
-                    {b.targetExam}
-                  </p>
-                )}
-                <p className="font-display line-clamp-2 text-sm font-medium leading-snug text-foreground group-hover:text-primary">
-                  {b.title}
+              </CardContent>
+            </Card>
+
+            {/* This week */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="font-display text-base font-medium">
+                  This week
+                </CardTitle>
+                <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Flame className="size-3.5 text-[var(--brass)]" />
+                  {data.stats.studyStreakDays}-day streak ·{" "}
+                  {Math.floor(data.stats.studyMinutesThisWeek / 60)}h{" "}
+                  {data.stats.studyMinutesThisWeek % 60}m studied
                 </p>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
+              </CardHeader>
+              <CardContent>
+                <StudyRhythm data={data.activity} />
+              </CardContent>
+            </Card>
+          </div>
 
-      {data.openQuizzes.length > 0 && (
-        <section>
-          <h2 className="mb-2 flex items-center gap-2 font-display text-base font-medium">
-            <ClipboardList className="size-4 text-amber-500" />
-            Tests available
-          </h2>
-          <ul className="space-y-2">
-            {data.openQuizzes.map((q) => (
-              <li key={q.quizId}>
-                <Link
-                  href={`/batches/${q.batch.slug}/quizzes/${q.quizId}`}
-                  className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4 transition-colors hover:bg-muted/40"
-                >
-                  <div className="min-w-0">
-                    <p className="font-medium line-clamp-1">{q.title}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {q.batch.title} · {q.durationMinutes} min
-                    </p>
-                  </div>
-                  <Badge>Open</Badge>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {data.recentAnnouncements.length > 0 && (
-        <section>
-          <h2 className="mb-2 flex items-center gap-2 font-display text-base font-medium">
-            <Megaphone className="size-4" />
-            Recent announcements
-          </h2>
-          <ul className="space-y-2">
-            {data.recentAnnouncements.slice(0, 5).map((a) => (
-              <li
-                key={a.announcementId}
-                className="rounded-2xl border border-border bg-card p-4"
-              >
-                <Link
-                  href={`/batches/${a.batch.slug}?tab=announcements`}
-                  className="block"
-                >
-                  <p className="font-medium line-clamp-1">{a.title}</p>
-                  <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-                    {a.body}
-                  </p>
-                  <p className="mt-1 text-[10px] uppercase tracking-widest text-muted-foreground">
-                    {a.batch.title} ·{" "}
-                    <CalendarDays className="inline size-3" />{" "}
-                    {formatDateTime(a.createdAt)}
-                  </p>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {data.myCertificates.length > 0 && (
-        <section>
-          <h2 className="mb-2 flex items-center gap-2 font-display text-base font-medium">
-            <Award className="size-4 text-amber-500" />
-            Certificates
-          </h2>
-          <ul className="space-y-2">
-            {data.myCertificates.map((c) => (
-              <li
-                key={c.cert.certificateId}
-                className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4"
-              >
-                <div className="min-w-0">
-                  <p className="font-medium line-clamp-1">{c.batch.title}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {c.cert.certificateNumber}
-                  </p>
-                </div>
-                <Button asChild size="sm" variant="outline">
-                  <a
-                    href={`/api/batches/${c.batch.batchId}/my-certificate/download`}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Download
-                  </a>
+          <div className="grid gap-4 [&>*]:min-w-0 lg:grid-cols-2">
+            {/* Recent quiz attempts */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="font-display text-base font-medium">
+                  Recent quizzes
+                </CardTitle>
+                <Button asChild variant="ghost" size="sm" className="h-7 text-xs">
+                  <Link href="/quizzes">
+                    All attempts
+                    <ChevronRight className="ml-0.5 size-3.5" />
+                  </Link>
                 </Button>
-              </li>
-            ))}
-          </ul>
-        </section>
+              </CardHeader>
+              <CardContent>
+                {data.recentAttempts.length === 0 ? (
+                  <EmptyState
+                    title="No quizzes attempted yet"
+                    description="Quiz results appear here once you submit one."
+                    icon={<Target className="size-9" />}
+                    className="py-8"
+                  />
+                ) : (
+                  <ul className="divide-y divide-border/60">
+                    {data.recentAttempts.map((attempt) => (
+                      <li
+                        key={attempt.attemptId}
+                        className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0"
+                      >
+                        <div className="min-w-0">
+                          <Link
+                            href={`/quizzes/${attempt.attemptId}`}
+                            className="block truncate text-sm font-medium hover:underline"
+                          >
+                            {attempt.quizTitle}
+                          </Link>
+                          <p className="truncate text-[11px] text-muted-foreground">
+                            {attempt.courseTitle} ·{" "}
+                            {formatRelative(attempt.submittedAt)}
+                          </p>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-2">
+                          <span className="text-sm font-medium tabular-nums">
+                            {attempt.scorePercent}%
+                          </span>
+                          <ResultChip passed={attempt.passed} />
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Recent orders */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="font-display text-base font-medium">
+                  Recent orders
+                </CardTitle>
+                <Button asChild variant="ghost" size="sm" className="h-7 text-xs">
+                  <Link href="/orders">
+                    Order history
+                    <ChevronRight className="ml-0.5 size-3.5" />
+                  </Link>
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {data.recentOrders.length === 0 ? (
+                  <EmptyState
+                    title="No orders yet"
+                    description="Your purchases will be listed here."
+                    icon={<Receipt className="size-9" />}
+                    className="py-8"
+                  />
+                ) : (
+                  <ul className="divide-y divide-border/60">
+                    {data.recentOrders.map((order) => (
+                      <li
+                        key={order.orderId}
+                        className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0"
+                      >
+                        <div className="min-w-0">
+                          <Link
+                            href={`/orders?order=${order.orderId}`}
+                            className="block truncate text-sm font-medium hover:underline"
+                          >
+                            {order.items[0]?.title ?? order.invoiceNo}
+                            {order.items.length > 1 &&
+                              ` + ${order.items.length - 1} more`}
+                          </Link>
+                          <p className="text-[11px] text-muted-foreground">
+                            {order.invoiceNo} · {formatDate(order.placedAt)}
+                          </p>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <p className="text-sm font-medium tabular-nums">
+                            {formatMoney(order.total, order.currency)}
+                          </p>
+                          <p className="text-[11px] text-muted-foreground">
+                            {ORDER_STATUS_COPY[order.status] ?? order.status}
+                          </p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       )}
     </PageLayout>
+  );
+}
+
+function Stat({
+  icon,
+  label,
+  value,
+  hint,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  hint: string;
+}) {
+  return (
+    <div className="bg-card px-4 py-3">
+      <p className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+        <span className="text-[var(--brass)]">{icon}</span>
+        {label}
+      </p>
+      <p className="mt-1 font-display text-2xl font-medium tabular-nums leading-none">
+        {value}
+      </p>
+      <p className="mt-1 text-[11px] text-muted-foreground">{hint}</p>
+    </div>
+  );
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border/70 sm:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="space-y-2 px-4 py-3">
+            <Skeleton className="h-3 w-24" />
+            <Skeleton className="h-7 w-12" />
+            <Skeleton className="h-3 w-20" />
+          </div>
+        ))}
+      </div>
+      <div className="grid gap-4 [&>*]:min-w-0 lg:grid-cols-[1.4fr_1fr]">
+        <Skeleton className="h-56 w-full rounded-xl" />
+        <Skeleton className="h-56 w-full rounded-xl" />
+      </div>
+      <div className="grid gap-4 [&>*]:min-w-0 lg:grid-cols-2">
+        <Skeleton className="h-48 w-full rounded-xl" />
+        <Skeleton className="h-48 w-full rounded-xl" />
+      </div>
+    </div>
   );
 }

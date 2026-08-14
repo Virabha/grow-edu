@@ -14,6 +14,10 @@ export interface Enrollment {
   enrolledAt: string;
   course?: Course;
   accessedSections?: { sectionId: string; title: string }[];
+  /** Present when the list is served with progress joined in. */
+  progressPercent?: number;
+  lessonsCompleted?: number;
+  lastAccessedAt?: string | null;
 }
 
 interface EnrollmentsResponse {

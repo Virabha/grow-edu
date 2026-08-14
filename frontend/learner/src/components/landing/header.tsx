@@ -11,7 +11,10 @@ import {
   Search,
   LogOut,
   BookOpen,
+  Receipt,
   Settings,
+  Star,
+  Target,
   ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -100,11 +103,24 @@ export function Header() {
     { href: "/profile", label: "Profile" },
   ];
 
+  // Account-level pages. They live in the avatar menu rather than the top bar,
+  // which is already at its limit, and are appended to the mobile sheet.
+  const ACCOUNT_LINKS = [
+    { href: "/orders", label: "Order history", icon: Receipt },
+    { href: "/reviews", label: "Reviews", icon: Star },
+    { href: "/quizzes", label: "Quiz attempts", icon: Target },
+  ];
+
   const navLinks = isLoggedIn
     ? [{ href: "/courses", label: "Courses" }, { href: "/batches", label: "Batches" }, ...LOGGED_IN_LINKS]
     : [...NAV_LINKS, { href: "/batches", label: "Batches" }];
 
   const navLinksWithoutCourses = navLinks.filter((l) => l.href !== "/courses");
+
+  // The mobile sheet has room for the account pages; the desktop bar does not.
+  const mobileNavLinks = isLoggedIn
+    ? [...navLinks, ...ACCOUNT_LINKS.map(({ href, label }) => ({ href, label }))]
+    : navLinks;
 
   const userInitials = user
     ? `${user.firstName?.[0] ?? ""}${user.lastName?.[0] ?? ""}`.toUpperCase() ||
@@ -434,17 +450,28 @@ export function Header() {
                         <BookOpen className="size-4 text-muted-foreground" />
                         My Courses
                       </Link>
+                      {ACCOUNT_LINKS.map(({ href, label, icon: Icon }) => (
+                        <Link
+                          key={href}
+                          href={href}
+                          onClick={() => setUserMenuOpen(false)}
+                          className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground transition-colors hover:bg-muted/50"
+                        >
+                          <Icon className="size-4 text-muted-foreground" />
+                          {label}
+                        </Link>
+                      ))}
                       <Link
                         href="/profile"
                         onClick={() => setUserMenuOpen(false)}
                         className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground transition-colors hover:bg-muted/50"
                       >
                         <Settings className="size-4 text-muted-foreground" />
-                        Profile
+                        Profile settings
                       </Link>
                       <button
                         onClick={handleLogout}
-                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-600 transition-colors hover:bg-red-50"
+                        className="mt-1 flex w-full items-center gap-2 rounded-lg border-t border-border/40 px-3 py-2 pt-2.5 text-sm text-red-600 transition-colors hover:bg-red-50"
                       >
                         <LogOut className="size-4" />
                         Sign Out
@@ -552,7 +579,7 @@ export function Header() {
                   className="flex flex-col gap-0.5"
                   aria-label="Mobile navigation"
                 >
-                  {navLinks.map((link) => (
+                  {mobileNavLinks.map((link) => (
                     <Link
                       key={link.href}
                       href={link.href}

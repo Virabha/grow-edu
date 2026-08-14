@@ -2,8 +2,12 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 const PROTECTED_PATHS = [
+  "/dashboard",
   "/profile",
   "/my-courses",
+  "/orders",
+  "/reviews",
+  "/quizzes",
   "/checkout",
   "/payment",
 ];
@@ -45,10 +49,6 @@ export function middleware(request: NextRequest) {
     return response;
   }
 
-  if (pathname === "/dashboard" || pathname.startsWith("/dashboard/")) {
-    return NextResponse.redirect(new URL("/", request.url));
-  }
-
   return NextResponse.next();
 }
 
@@ -57,6 +57,9 @@ export const config = {
     "/dashboard/:path*",
     "/profile/:path*",
     "/my-courses/:path*",
+    "/orders/:path*",
+    "/reviews/:path*",
+    "/quizzes/:path*",
     "/checkout/:path*",
     "/payment/:path*",
     "/courses/:path*/watch",

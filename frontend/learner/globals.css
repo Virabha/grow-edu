@@ -399,3 +399,40 @@ html {
     display: none;
   }
 }
+
+/* ── Printing an invoice ───────────────────────────────────
+   "Print invoice" prints the open invoice panel, not the page
+   around it, so the sheet that comes out is the document. */
+@media print {
+  /* Collapse everything outside the invoice out of the layout entirely —
+     `visibility: hidden` leaves the boxes occupying space, which pushes the
+     invoice off the first sheet. */
+  body > *:not(.print-root) {
+    display: none !important;
+  }
+
+  /* Lift the panel out of its fixed/max-height modal chrome so a long invoice
+     paginates across sheets instead of being clipped. */
+  .print-root,
+  .print-root > * {
+    position: static !important;
+    max-height: none !important;
+    overflow: visible !important;
+    background: #fff !important;
+    box-shadow: none !important;
+    border: 0 !important;
+    margin: 0 !important;
+    inset: auto !important;
+    backdrop-filter: none !important;
+  }
+
+  .print-root .print-hide {
+    display: none !important;
+  }
+
+  .print-invoice {
+    max-height: none !important;
+    overflow: visible !important;
+    color: #000;
+  }
+}

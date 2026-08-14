@@ -149,6 +149,8 @@ export default function AdminTeacherApplicationsPage() {
                             size="sm"
                             variant="outline"
                             disabled={updateStatus.isPending}
+                            aria-label={`Approve ${app.fullName}`}
+                            title="Approve"
                             className="gap-1 text-emerald-700 dark:text-emerald-300"
                             onClick={() =>
                               updateStatus.mutate({
@@ -163,6 +165,8 @@ export default function AdminTeacherApplicationsPage() {
                             size="sm"
                             variant="outline"
                             disabled={updateStatus.isPending}
+                            aria-label={`Reject ${app.fullName}`}
+                            title="Reject"
                             className="gap-1 text-destructive"
                             onClick={() =>
                               updateStatus.mutate({

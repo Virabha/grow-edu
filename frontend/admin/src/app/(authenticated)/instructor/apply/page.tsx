@@ -75,6 +75,7 @@ export default function InstructorApplyPage() {
 
     apply.mutate(
       {
+        fullName: `${form.firstName.trim()} ${form.lastName.trim()}`.trim(),
         firstName: form.firstName.trim(),
         lastName: form.lastName.trim(),
         email: form.email.trim(),

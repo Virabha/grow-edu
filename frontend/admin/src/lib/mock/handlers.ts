@@ -542,9 +542,27 @@ const custom: Record<string, Handler> = {
     });
   },
 
+  // The admin screen updates status through this endpoint; approve/reject
+  // below remain for any caller using the verb-style routes.
+  "PATCH /teacher-applications/:id/status": ({ params, body }) =>
+    write((draft) => {
+      const row = draft.collections.teacherApplications?.find(
+        (t) => t.applicationId === params.id,
+      );
+      if (!row) throw new MockHttpError(404, "Application not found");
+      const status = requireString(body, "status");
+      if (!["PENDING", "APPROVED", "REJECTED"].includes(status)) {
+        throw new MockHttpError(400, `Unknown status: ${status}`);
+      }
+      row.status = status;
+      return row;
+    }),
+
   "POST /teacher-applications/:id/approve": ({ params }) =>
     write((draft) => {
-      const row = draft.collections.teacherApplications?.find((t) => t.id === params.id);
+      const row = draft.collections.teacherApplications?.find(
+        (t) => t.applicationId === params.id,
+      );
       if (!row) throw new MockHttpError(404, "Application not found");
       row.status = "APPROVED";
       return row;
@@ -552,7 +570,9 @@ const custom: Record<string, Handler> = {
 
   "POST /teacher-applications/:id/reject": ({ params, body }) =>
     write((draft) => {
-      const row = draft.collections.teacherApplications?.find((t) => t.id === params.id);
+      const row = draft.collections.teacherApplications?.find(
+        (t) => t.applicationId === params.id,
+      );
       if (!row) throw new MockHttpError(404, "Application not found");
       row.status = "REJECTED";
       row.rejectionReason = String(body.reason ?? "");

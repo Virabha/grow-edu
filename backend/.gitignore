@@ -4,7 +4,8 @@
 ## Dependencies
 node_modules/
 
-pnpm-lock.yaml
+## The pnpm lockfile is committed: CI installs with --frozen-lockfile and
+## caches on it, so ignoring it made both backend jobs fail before install.
 package-lock.json
 ## Build outputs / caches
 dist/

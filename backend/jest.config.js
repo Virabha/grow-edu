@@ -10,7 +10,7 @@ module.exports = {
   },
   coverageDirectory: '../coverage',
   testEnvironment: 'node',
-  setupFiles: ['reflect-metadata'],
+  setupFiles: ['reflect-metadata', '<rootDir>/../jest.setup.ts'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
   },

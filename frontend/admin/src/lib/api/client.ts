@@ -52,6 +52,20 @@ apiClient.interceptors.response.use(
   (error: AxiosError<{ message?: string | string[]; error?: string }>) => {
     if (error.response?.status === 401) {
       useAuthStore.getState().logout();
+      if (typeof window !== "undefined") {
+        const { pathname, search } = window.location;
+        const isAuthPage = [
+          "/login",
+          "/signup",
+          "/forgot-password",
+          "/reset-password",
+          "/verify-email",
+          "/verify-email-pending",
+        ].some((p) => pathname.startsWith(p));
+        if (!isAuthPage) {
+          window.location.href = `/login?redirect=${encodeURIComponent(pathname + search)}`;
+        }
+      }
     }
     // Make "Network Error" more actionable (often CORS or backend unreachable)
     if (error.message === "Network Error" || error.code === "ERR_NETWORK") {

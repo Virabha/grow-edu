@@ -88,11 +88,12 @@ export function useBatchAnnouncements(batchId: string | null, enabled = true) {
 export function useBatchResources(
   batchId: string | null,
   params?: { type?: BatchResourceType },
+  enabled = true,
 ) {
   return useQuery({
     queryKey: queryKeys.batches.resources(batchId ?? "", params),
     queryFn: () => batchesApi.listResources(batchId!, params),
-    enabled: !!batchId,
+    enabled: !!batchId && enabled,
     ...liveOpts(FEED_REFETCH_MS),
   });
 }
@@ -100,11 +101,12 @@ export function useBatchResources(
 export function useBatchDoubts(
   batchId: string | null,
   params?: { mine?: boolean; status?: string },
+  enabled = true,
 ) {
   return useQuery({
     queryKey: queryKeys.batches.doubts(batchId ?? "", params),
     queryFn: () => batchesApi.listDoubts(batchId!, params),
-    enabled: !!batchId,
+    enabled: !!batchId && enabled,
     ...liveOpts(FEED_REFETCH_MS),
   });
 }
@@ -139,11 +141,11 @@ export function useReplyToDoubt(batchId: string, doubtId: string) {
   });
 }
 
-export function useBatchQuizzes(batchId: string | null) {
+export function useBatchQuizzes(batchId: string | null, enabled = true) {
   return useQuery({
     queryKey: queryKeys.batches.quizzes(batchId ?? ""),
     queryFn: () => batchesApi.listQuizzes(batchId!),
-    enabled: !!batchId,
+    enabled: !!batchId && enabled,
     ...liveOpts(SLOW_REFETCH_MS),
   });
 }

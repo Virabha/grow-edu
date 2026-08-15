@@ -39,8 +39,12 @@ export function useLogin() {
     onSuccess: (data) => {
       login(data.user, data.access_token);
       const params = new URLSearchParams(window.location.search);
-      const redirect = params.get("redirect");
-      window.location.href = redirect || "/";
+      const requested = params.get("redirect");
+      const isSameOrigin =
+        requested !== null &&
+        requested.startsWith("/") &&
+        !requested.startsWith("//");
+      window.location.href = isSameOrigin ? requested : "/";
     },
   });
 }

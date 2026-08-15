@@ -1,4 +1,8 @@
-import { Injectable, Logger } from "@nestjs/common";
+import {
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+} from "@nestjs/common";
 import { AppConfigService } from "../config";
 
 @Injectable()
@@ -27,19 +31,41 @@ export class StorageService {
   ): Promise<string> {
     const url = `${this.storageBaseUrl}/${this.zoneName}/${key}`;
 
-    const response = await fetch(url, {
-      method: "PUT",
-      headers: {
-        AccessKey: this.apiKey,
-        "Content-Type": contentType,
-      },
-      body: new Uint8Array(file),
-    });
+    if (!this.apiKey || !this.zoneName) {
+      throw new ServiceUnavailableException(
+        "File storage is not configured. Set BUNNY_STORAGE_API_KEY and BUNNY_STORAGE_ZONE_NAME.",
+      );
+    }
+
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method: "PUT",
+        headers: {
+          AccessKey: this.apiKey,
+          "Content-Type": contentType,
+        },
+        body: new Uint8Array(file),
+      });
+    } catch (cause) {
+      this.logger.error(`Bunny Storage unreachable for ${key}`, cause);
+      throw new ServiceUnavailableException(
+        "Could not reach the file storage service. Please try again.",
+      );
+    }
 
     if (!response.ok) {
       const body = await response.text();
-      throw new Error(
-        `Bunny Storage upload failed (${response.status}): ${body}`,
+      this.logger.error(
+        `Bunny Storage upload failed for ${key} (${response.status}): ${body}`,
+      );
+      if (response.status === 401 || response.status === 403) {
+        throw new ServiceUnavailableException(
+          "File storage rejected the credentials. Check BUNNY_STORAGE_API_KEY.",
+        );
+      }
+      throw new ServiceUnavailableException(
+        `File storage rejected the upload (${response.status}).`,
       );
     }
 

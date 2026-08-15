@@ -1,6 +1,20 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { User } from '@/features/auth/types';
+
+function isTokenExpired(token: string): boolean {
+    try {
+        const parts = token.split(".");
+        if (parts.length !== 3) return true;
+        const payload = parts[1];
+        if (!payload) return true;
+        const padded = payload + "=".repeat((4 - (payload.length % 4)) % 4);
+        const decoded: { exp?: number } = JSON.parse(atob(padded));
+        return typeof decoded.exp === "number" && decoded.exp * 1000 < Date.now();
+    } catch {
+        return true;
+    }
+}
 interface AuthState {
     user: User | null;
     token: string | null;
@@ -57,6 +71,12 @@ export const useAuthStore = create<AuthState>()(persist((set) => ({
 }), {
     name: 'auth-storage',
     onRehydrateStorage: () => (state) => {
-        state?.setHydrated(true);
+        if (state) {
+            if (state.token && isTokenExpired(state.token)) {
+                state.setToken(null);
+                state.setUser(null);
+            }
+            state.setHydrated(true);
+        }
     },
 }));

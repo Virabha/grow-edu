@@ -7,7 +7,6 @@ import { LoginDto, RegisterDto, ForgotPasswordDto, ResetPasswordDto, } from "../
 import { env } from "@/lib/env";
 
 function getPostLoginDestination(role: string): string {
-    // LEARNERs live in a different app (port 6002) — bounce them there.
     if (role === "LEARNER") {
         const base = env.NEXT_PUBLIC_LEARNER_URL.replace(/\/$/, "");
         return `${base}/my-courses`;
@@ -19,6 +18,16 @@ function getPostLoginDestination(role: string): string {
     };
     return roleToPath[role] || "/admin/dashboard";
 }
+
+function getSafeRedirect(search: string, fallback: string): string {
+    const params = new URLSearchParams(search);
+    const redirect = params.get("redirect");
+    if (redirect && redirect.startsWith("/") && !redirect.startsWith("//")) {
+        return redirect;
+    }
+    return fallback;
+}
+
 export function useLogin() {
     const { setUser, setToken } = useAuthStore();
     const queryClient = useQueryClient();
@@ -34,7 +43,12 @@ export function useLogin() {
                 document.cookie = `admin-auth-token=${data.access_token}; expires=${expires.toUTCString()}; path=/; SameSite=Lax; Secure`;
             }
             queryClient.invalidateQueries();
-            window.location.href = getPostLoginDestination(data.user.role);
+            const defaultDest = getPostLoginDestination(data.user.role);
+            const dest =
+                data.user.role !== "LEARNER" && typeof window !== "undefined"
+                    ? getSafeRedirect(window.location.search, defaultDest)
+                    : defaultDest;
+            window.location.href = dest;
         },
     });
 }

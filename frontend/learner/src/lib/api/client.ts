@@ -7,6 +7,14 @@ function getBaseUrl(): string {
   return env.NEXT_PUBLIC_API_URL.replace(/\/$/, "");
 }
 
+const AUTH_SCREENS = [
+  "/login",
+  "/register",
+  "/forgot-password",
+  "/reset-password",
+  "/verify-email",
+];
+
 export const apiClient = axios.create({
   baseURL: getBaseUrl(),
   headers: { "Content-Type": "application/json" },
@@ -39,18 +47,20 @@ apiClient.interceptors.response.use(
   (error: AxiosError<{ message?: string | string[]; error?: string }>) => {
     if (error.response?.status === 401 && typeof window !== "undefined") {
       try {
-        const raw = localStorage.getItem("learner-auth");
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (parsed?.state?.token) {
-            localStorage.removeItem("learner-auth");
-            document.cookie =
-              "learner-auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-            window.location.href = "/login";
-          }
-        }
+        localStorage.removeItem("learner-auth");
       } catch {
         // noop
+      }
+      document.cookie =
+        "learner-auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+
+      const { pathname, search } = window.location;
+      const onAuthScreen = AUTH_SCREENS.some(
+        (screen) => pathname === screen || pathname.startsWith(`${screen}/`),
+      );
+      if (!onAuthScreen) {
+        const target = `${pathname}${search}`;
+        window.location.href = `/login?redirect=${encodeURIComponent(target)}`;
       }
     }
 

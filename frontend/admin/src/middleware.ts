@@ -1,13 +1,16 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const publicRoutes = [
+const AUTH_ROUTES = [
   "/login",
   "/signup",
   "/forgot-password",
   "/reset-password",
   "/verify-email",
+  "/verify-email-pending",
 ];
+
+const OPEN_ROUTES = ["/unauthorized"];
 
 const roleBasedRoutes: Record<string, string[]> = {
   INSTRUCTOR: ["/instructor", "/admin/batches"],
@@ -46,21 +49,24 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get("admin-auth-token")?.value;
 
-  // Static / API / internal — never gate.
   if (
     pathname === "/" ||
     pathname.startsWith("/api") ||
-    pathname.startsWith("/_next")
+    pathname.startsWith("/_next") ||
+    OPEN_ROUTES.some((r) => pathname.startsWith(r))
   ) {
     return NextResponse.next();
   }
 
-  const isPublicRoute = publicRoutes.some((r) => pathname.startsWith(r));
+  const isAuthRoute = AUTH_ROUTES.some((r) => pathname.startsWith(r));
 
   if (!token) {
-    if (isPublicRoute) return NextResponse.next();
+    if (isAuthRoute) return NextResponse.next();
     const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("redirect", pathname);
+    loginUrl.searchParams.set(
+      "redirect",
+      pathname + (request.nextUrl.search || ""),
+    );
     return NextResponse.redirect(loginUrl);
   }
 
@@ -69,37 +75,37 @@ export function middleware(request: NextRequest) {
   const isExpired = payload?.exp ? payload.exp * 1000 < Date.now() : false;
 
   if (!role || isExpired) {
-    if (isPublicRoute) {
+    if (isAuthRoute) {
       const response = NextResponse.next();
       if (isExpired) response.cookies.delete("admin-auth-token");
       return response;
     }
     const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("redirect", pathname);
+    loginUrl.searchParams.set(
+      "redirect",
+      pathname + (request.nextUrl.search || ""),
+    );
     const response = NextResponse.redirect(loginUrl);
     if (isExpired) response.cookies.delete("admin-auth-token");
     return response;
   }
 
-  // Learners do not belong in the admin app at all — send to the learner app.
   if (role === "LEARNER") {
-    if (isPublicRoute) return NextResponse.next();
+    if (isAuthRoute) return NextResponse.next();
     return NextResponse.redirect(`${LEARNER_APP_URL}/my-courses`);
   }
 
   const dashboardRoute = getDashboardRoute(role);
 
-  // Authenticated user hitting a public auth page → push to their dashboard.
-  if (isPublicRoute) {
+  if (isAuthRoute) {
     if (pathname === dashboardRoute) return NextResponse.next();
     return NextResponse.redirect(new URL(dashboardRoute, request.url));
   }
 
-  // Role guard against admin/instructor/corporate sections.
   const allowed = roleBasedRoutes[role] ?? [];
   const hasAccess = allowed.some((r) => pathname.startsWith(r));
   if (!hasAccess) {
-    return NextResponse.redirect(new URL(dashboardRoute, request.url));
+    return NextResponse.redirect(new URL("/unauthorized", request.url));
   }
 
   return NextResponse.next();

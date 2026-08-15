@@ -7,6 +7,7 @@ import {
   Video,
   User,
   GraduationCap,
+  Cast,
 } from "lucide-react";
 
 const sidebarItems = [
@@ -34,6 +35,11 @@ const sidebarItems = [
     label: "Profile",
     href: "/instructor/profile",
     icon: <User className="h-4 w-4" />,
+  },
+  {
+    label: "Live Settings",
+    href: "/instructor/settings/live",
+    icon: <Cast className="h-4 w-4" />,
   },
 ];
 

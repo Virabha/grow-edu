@@ -1830,3 +1830,103 @@ export const batchCertificatesRelations = relations(batchCertificates, ({ one })
     references: [users.userId],
   }),
 }));
+
+/* ==========================================================================
+ * Instructor portal — payouts, course announcements, live-meeting credentials.
+ *
+ * Modelled from the SkillGro instructor screens (docs sections in_request,
+ * in_announcement, zoom_setting, jitsi_setting). Money stays `decimal(10,2)`
+ * to match `payments.amount`, which these figures derive from — mixing minor
+ * units into a decimal money domain is a worse bug than the existing defect.
+ * Converting the whole money domain is tracked as A8.
+ * ======================================================================== */
+
+export const payoutStatusEnum = pgEnum("payout_status", [
+  "PENDING",
+  "APPROVED",
+  "REJECTED",
+  "PAID",
+]);
+
+export const payoutRequests = pgTable(
+  "payout_requests",
+  {
+    payoutId: text("payout_id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    instructorId: text("instructor_id").notNull(),
+    amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+    currency: text("currency").notNull().default("INR"),
+    /** Free text for now: admin-managed withdraw methods are a separate slice. */
+    method: text("method").notNull(),
+    accountDetails: text("account_details"),
+    status: payoutStatusEnum("status").notNull().default("PENDING"),
+    requestedAt: timestamp("requested_at").notNull().defaultNow(),
+    processedAt: timestamp("processed_at"),
+    processedBy: text("processed_by"),
+    adminNote: text("admin_note"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    instructorIdx: index("payout_requests_instructor_idx").on(table.instructorId),
+    statusIdx: index("payout_requests_status_idx").on(table.status),
+    /** The admin queue orders by request date within a status. */
+    statusRequestedIdx: index("payout_requests_status_requested_idx").on(
+      table.status,
+      table.requestedAt,
+    ),
+  }),
+);
+
+export const courseAnnouncements = pgTable(
+  "course_announcements",
+  {
+    announcementId: text("announcement_id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    courseId: text("course_id").notNull(),
+    /** The author. Kept separate from the course's instructor so history
+     *  survives a course changing hands. */
+    instructorId: text("instructor_id").notNull(),
+    title: text("title").notNull(),
+    body: text("body").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    courseIdx: index("course_announcements_course_idx").on(table.courseId),
+    instructorIdx: index("course_announcements_instructor_idx").on(table.instructorId),
+    /** Enrolled students read newest-first for one course. */
+    courseCreatedIdx: index("course_announcements_course_created_idx").on(
+      table.courseId,
+      table.createdAt,
+    ),
+  }),
+);
+
+/**
+ * Live-meeting credentials, deliberately NOT columns on instructorProfiles.
+ *
+ * A separate table means the profile endpoints cannot leak a client secret by
+ * selecting the whole row. Nothing here is ever returned to a client in full —
+ * secrets are reported as configured/not-configured only.
+ */
+export const instructorMeetingCredentials = pgTable(
+  "instructor_meeting_credentials",
+  {
+    credentialId: text("credential_id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id").notNull().unique(),
+    zoomClientId: text("zoom_client_id"),
+    zoomClientSecret: text("zoom_client_secret"),
+    jitsiAppId: text("jitsi_app_id"),
+    jitsiSecret: text("jitsi_secret"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    userIdx: index("instructor_meeting_credentials_user_idx").on(table.userId),
+  }),
+);

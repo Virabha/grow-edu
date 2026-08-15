@@ -5,6 +5,8 @@ import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { JwtAuthGuard } from "./auth/guards/jwt-auth.guard";
 import { InstructorModule } from "./instructor/instructor.module";
+import { PayoutsModule } from "./payouts/payouts.module";
+import { AnnouncementsModule } from "./announcements/announcements.module";
 import { AppConfigModule } from "./config/config.module";
 import { DatabaseModule } from "./database/database.module";
 import { AuthModule } from "./auth/auth.module";
@@ -56,6 +58,10 @@ import { NotificationsModule } from "./notifications/notifications.module";
     LessonsModule,
     SectionsModule,
     InstructorModule,
+
+    PayoutsModule,
+
+    AnnouncementsModule,
     FilesModule,
     VideoEncodingModule,
     CdnModule,

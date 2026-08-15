@@ -4,9 +4,10 @@ import { CoursesService } from './courses.service';
 import { DatabaseModule } from '../database/database.module';
 import { FilesModule } from '../files/files.module';
 import { EmailModule } from '../email/email.module';
+import { AnnouncementsModule } from '../announcements/announcements.module';
 
 @Module({
-  imports: [DatabaseModule, FilesModule, EmailModule],
+  imports: [DatabaseModule, FilesModule, EmailModule, AnnouncementsModule],
   controllers: [CoursesController],
   providers: [CoursesService],
   exports: [CoursesService],

@@ -1,14 +1,9 @@
 "use client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { AxiosError } from "axios";
 import { toast } from "sonner";
 import { adminCategoriesApi } from "./api";
 import type { CategoryFilters, CreateCategoryDto, UpdateCategoryDto } from "./types";
-
-function getErrorMessage(error: Error, fallback: string): string {
-    const axiosErr = error as AxiosError<{ message?: string }>;
-    return axiosErr?.response?.data?.message || fallback;
-}
+import { getApiError } from "@/lib/api/errors";
 export const adminCategoryKeys = {
     all: ["admin-categories"] as const,
     list: (filters?: CategoryFilters) => [...adminCategoryKeys.all, "list", filters] as const,
@@ -28,8 +23,8 @@ export function useCreateCategory() {
             qc.invalidateQueries({ queryKey: adminCategoryKeys.all });
             toast.success("Category created");
         },
-        onError: (e: Error) => {
-            toast.error(getErrorMessage(e, "Failed to create category"));
+        onError: (e: unknown) => {
+            toast.error(getApiError(e, "Failed to create category").message);
         },
     });
 }
@@ -45,8 +40,8 @@ export function useUpdateCategory() {
             qc.setQueryData(adminCategoryKeys.detail(data.categoryId), data);
             toast.success("Category updated");
         },
-        onError: (e: Error) => {
-            toast.error(getErrorMessage(e, "Failed to update category"));
+        onError: (e: unknown) => {
+            toast.error(getApiError(e, "Failed to update category").message);
         },
     });
 }
@@ -61,8 +56,8 @@ export function useToggleCategoryStatus() {
             qc.invalidateQueries({ queryKey: adminCategoryKeys.all });
             toast.success(`Category ${activate ? "activated" : "deactivated"}`);
         },
-        onError: (e: Error) => {
-            toast.error(getErrorMessage(e, "Failed to update category status"));
+        onError: (e: unknown) => {
+            toast.error(getApiError(e, "Failed to update category status").message);
         },
     });
 }
@@ -74,8 +69,8 @@ export function useDeleteCategory() {
             qc.invalidateQueries({ queryKey: adminCategoryKeys.all });
             toast.success("Category deleted");
         },
-        onError: (e: Error) => {
-            toast.error(getErrorMessage(e, "Failed to delete category"));
+        onError: (e: unknown) => {
+            toast.error(getApiError(e, "Failed to delete category").message);
         },
     });
 }

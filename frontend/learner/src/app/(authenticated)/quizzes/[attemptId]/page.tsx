@@ -11,6 +11,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useQuizAttempt } from "@/lib/hooks/use-quiz-attempts";
 import { cn } from "@/lib/utils";
+import { getApiError } from "@/lib/api/errors";
 import { formatDateTime, formatDuration } from "@/lib/format";
 
 export default function QuizAttemptPage({
@@ -26,11 +27,7 @@ export default function QuizAttemptPage({
       <PageLayout header="Quiz attempt">
         <EmptyState
           title="We could not find that attempt"
-          description={
-            error instanceof Error
-              ? error.message
-              : "It may have been removed."
-          }
+          description={getApiError(error, "It may have been removed.").message}
           icon={<Target className="size-10" />}
         />
         <Button asChild variant="outline" size="sm" className="mt-3">

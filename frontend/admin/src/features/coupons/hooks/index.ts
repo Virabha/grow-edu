@@ -1,13 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { AxiosError } from 'axios';
 import { couponsApi } from '../api';
 import type { CouponFilters, CreateCouponDto, UpdateCouponDto } from '../types';
 import { toast } from 'sonner';
-
-function getErrorMessage(error: Error, fallback: string): string {
-    const axiosErr = error as AxiosError<{ message?: string }>;
-    return axiosErr?.response?.data?.message || fallback;
-}
+import { getApiError } from '@/lib/api/errors';
 export const couponKeys = {
     all: ['coupons'] as const,
     list: (filters?: CouponFilters) => [...couponKeys.all, 'list', filters] as const,
@@ -34,8 +29,8 @@ export function useCreateCoupon() {
             queryClient.invalidateQueries({ queryKey: couponKeys.all });
             toast.success('Coupon created successfully');
         },
-        onError: (error: Error) => {
-            toast.error(getErrorMessage(error, 'Failed to create coupon'));
+        onError: (error: unknown) => {
+            toast.error(getApiError(error, 'Failed to create coupon').message);
         },
     });
 }
@@ -51,8 +46,8 @@ export function useUpdateCoupon() {
             queryClient.setQueryData(couponKeys.detail(data.couponId), data);
             toast.success('Coupon updated successfully');
         },
-        onError: (error: Error) => {
-            toast.error(getErrorMessage(error, 'Failed to update coupon'));
+        onError: (error: unknown) => {
+            toast.error(getApiError(error, 'Failed to update coupon').message);
         },
     });
 }
@@ -67,8 +62,8 @@ export function useToggleCouponStatus() {
             queryClient.invalidateQueries({ queryKey: couponKeys.all });
             toast.success(`Coupon ${activate ? 'activated' : 'deactivated'}`);
         },
-        onError: (error: Error) => {
-            toast.error(getErrorMessage(error, 'Failed to update coupon status'));
+        onError: (error: unknown) => {
+            toast.error(getApiError(error, 'Failed to update coupon status').message);
         },
     });
 }
@@ -80,8 +75,8 @@ export function useDeleteCoupon() {
             queryClient.invalidateQueries({ queryKey: couponKeys.all });
             toast.success('Coupon deleted');
         },
-        onError: (error: Error) => {
-            toast.error(getErrorMessage(error, 'Failed to delete coupon'));
+        onError: (error: unknown) => {
+            toast.error(getApiError(error, 'Failed to delete coupon').message);
         },
     });
 }

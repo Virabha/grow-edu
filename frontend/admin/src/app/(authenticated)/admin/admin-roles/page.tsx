@@ -24,6 +24,7 @@ import {
   type ResourceRow,
 } from "@/lib/hooks/use-resource";
 import { cn } from "@/lib/utils";
+import { getApiError } from "@/lib/api/errors";
 
 interface PermissionGroup {
   group: string;
@@ -93,7 +94,7 @@ export default function AdminRolesPage() {
         setDraft(null);
       },
       onError: (err: unknown) =>
-        toast.error(err instanceof Error ? err.message : "Could not save the role"),
+        toast.error(getApiError(err, "Could not save the role").message),
     };
 
     if (draft.id) update.mutate({ ...body, id: draft.id }, done);

@@ -3,6 +3,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import type { FieldPath } from "react-hook-form";
+import { getApiError } from "@/lib/api/errors";
 import {
   Sheet,
   SheetBody,
@@ -61,8 +64,14 @@ export function EditCompanyDialog({
     try {
       await updateCompany.mutateAsync({ id: company.id, data: values });
       onOpenChange(false);
-    } catch {
-      // toast handled in hook
+    } catch (err) {
+      const apiError = getApiError(err);
+      for (const [field, message] of Object.entries(apiError.fieldErrors)) {
+        form.setError(field as FieldPath<z.infer<typeof formSchema>>, { type: "server", message });
+      }
+      if (Object.keys(apiError.fieldErrors).length === 0) {
+        toast.error(apiError.message);
+      }
     }
   };
 

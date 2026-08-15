@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FormField } from "@/components/ui/form-field";
-import { getApiErrorMessage } from "@/lib/utils";
+import { getApiError } from "@/lib/api/errors";
 import {
   useMeetingCredentials,
   useUpsertZoom,
@@ -111,7 +111,7 @@ function ZoomSection({
       toast.success("Zoom credentials updated.");
       reset({ clientId: values.clientId, clientSecret: "" });
     } catch (err) {
-      toast.error(getApiErrorMessage(err, "Failed to save Zoom credentials."));
+      toast.error(getApiError(err, "Failed to save Zoom credentials.").message);
     }
   };
 
@@ -121,7 +121,7 @@ function ZoomSection({
       toast.success("Zoom credentials cleared.");
       reset({ clientId: "", clientSecret: "" });
     } catch (err) {
-      toast.error(getApiErrorMessage(err, "Failed to clear Zoom credentials."));
+      toast.error(getApiError(err, "Failed to clear Zoom credentials.").message);
     }
   };
 
@@ -311,7 +311,7 @@ function JitsiSection({
       toast.success("Jitsi credentials updated.");
       reset({ appId: values.appId, appKey: "" });
     } catch (err) {
-      toast.error(getApiErrorMessage(err, "Failed to save Jitsi credentials."));
+      toast.error(getApiError(err, "Failed to save Jitsi credentials.").message);
     }
   };
 
@@ -322,7 +322,7 @@ function JitsiSection({
       reset({ appId: "", appKey: "" });
     } catch (err) {
       toast.error(
-        getApiErrorMessage(err, "Failed to clear Jitsi credentials."),
+        getApiError(err, "Failed to clear Jitsi credentials.").message,
       );
     }
   };
@@ -499,7 +499,7 @@ export default function InstructorLiveSettingsPage() {
       >
         <div className="rounded-2xl border border-destructive/40 bg-destructive/5 p-6 text-center">
           <p className="text-sm text-destructive">
-            {getApiErrorMessage(error, "Failed to load credentials.")}
+            {getApiError(error, "Failed to load credentials.").message}
           </p>
           <Button
             variant="outline"

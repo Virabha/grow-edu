@@ -12,8 +12,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { IconPicker } from "./icon-picker";
+import { toast } from "sonner";
+import type { FieldPath } from "react-hook-form";
 import { useCreateWhyChooseUs, useUpdateWhyChooseUs } from "../hooks/use-cms";
 import type { WhyChooseUs } from "../types";
+import { getApiError } from "@/lib/api/errors";
 
 const schema = z.object({
   iconName: z.string().min(1, "Pick an icon"),
@@ -76,21 +79,31 @@ export function WhyChooseFormDialog({
 
   const isPending = create.isPending || update.isPending;
   const onSubmit = async (values: Values) => {
-    const payload = {
-      iconName: values.iconName,
-      iconColor: values.iconColor?.trim() || undefined,
-      iconBg: values.iconBg?.trim() || undefined,
-      title: values.title.trim(),
-      description: values.description?.trim() || undefined,
-      displayOrder: values.displayOrder,
-      isActive: values.isActive,
-    };
-    if (isEditing && item) {
-      await update.mutateAsync({ id: item.id, dto: payload });
-    } else {
-      await create.mutateAsync(payload);
+    try {
+      const payload = {
+        iconName: values.iconName,
+        iconColor: values.iconColor?.trim() || undefined,
+        iconBg: values.iconBg?.trim() || undefined,
+        title: values.title.trim(),
+        description: values.description?.trim() || undefined,
+        displayOrder: values.displayOrder,
+        isActive: values.isActive,
+      };
+      if (isEditing && item) {
+        await update.mutateAsync({ id: item.id, dto: payload });
+      } else {
+        await create.mutateAsync(payload);
+      }
+      onOpenChange(false);
+    } catch (err) {
+      const apiError = getApiError(err);
+      for (const [field, message] of Object.entries(apiError.fieldErrors)) {
+        form.setError(field as FieldPath<Values>, { type: "server", message });
+      }
+      if (Object.keys(apiError.fieldErrors).length === 0) {
+        toast.error(apiError.message);
+      }
     }
-    onOpenChange(false);
   };
 
   return (

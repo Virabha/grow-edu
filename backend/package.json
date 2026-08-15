@@ -28,7 +28,10 @@
     "check:bunny": "ts-node -r tsconfig-paths/register scripts/check-bunny.ts",
     "db:generate:tenancy": "drizzle-kit generate:pg --config drizzle-tenancy.config.ts",
     "db:migrate:tenancy": "ts-node -r tsconfig-paths/register scripts/migrate-tenancy.ts",
-    "db:verify:isolation": "ts-node -r tsconfig-paths/register scripts/verify-isolation.ts"
+    "db:verify:isolation": "ts-node -r tsconfig-paths/register scripts/verify-isolation.ts",
+    "check:route-params": "node scripts/check-route-params.mjs",
+    "e2e:menus": "node scripts/e2e-menus.mjs",
+    "e2e:api-sweep": "node scripts/e2e-api-sweep.mjs"
   },
   "dependencies": {
     "@nestjs/common": "^10.3.0",

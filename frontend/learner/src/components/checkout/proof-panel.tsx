@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { Clock, Loader2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
-import { Controller, useForm } from "react-hook-form";
+import { Controller, useForm, type FieldPath } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,8 @@ import {
   useUploadProof,
   type CreateManualQRResponse,
 } from "@/lib/hooks/use-payments";
-import { cn, getApiErrorMessage } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { getApiError } from "@/lib/api/errors";
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -71,6 +72,7 @@ export function ProofPanel({
   const {
     control,
     handleSubmit,
+    setError,
     formState: { errors, isValid },
   } = useForm<ProofFormValues>({
     resolver: zodResolver(proofSchema),
@@ -130,7 +132,11 @@ export function ProofPanel({
       toast.success("Proof submitted — awaiting admin review.");
       onSubmitted();
     } catch (err) {
-      toast.error(getApiErrorMessage(err, "Upload failed."));
+      const apiError = getApiError(err, "Upload failed.");
+      toast.error(apiError.message);
+      for (const [field, message] of Object.entries(apiError.fieldErrors)) {
+        setError(field as FieldPath<ProofFormValues>, { message });
+      }
     } finally {
       setUploading(false);
     }

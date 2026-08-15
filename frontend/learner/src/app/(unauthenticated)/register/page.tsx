@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, type FieldPath } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod/v3";
 import { motion } from "framer-motion";
@@ -11,17 +11,19 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useRegister } from "@/lib/hooks/use-auth";
-import { getApiErrorMessage } from "@/lib/utils";
+import { getApiError } from "@/lib/api/errors";
 
 const registerSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
+  name: z.string().trim().min(2, "Name must be at least 2 characters"),
   email: z.string().min(1, "Email is required").email("Enter a valid email"),
   password: z
     .string()
     .min(8, "At least 8 characters")
+    .max(128, "Password must not exceed 128 characters")
     .regex(/[A-Z]/, "Must include an uppercase letter")
     .regex(/[a-z]/, "Must include a lowercase letter")
-    .regex(/[0-9]/, "Must include a number"),
+    .regex(/[0-9]/, "Must include a number")
+    .regex(/[@$!%*?&]/, "Must include a special character (@$!%*?&)"),
 });
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
@@ -40,6 +42,7 @@ export default function RegisterPage() {
   const {
     register,
     handleSubmit,
+    setError,
     formState: { errors },
   } = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -60,9 +63,11 @@ export default function RegisterPage() {
       });
       toast.success("Account created! Please sign in.");
     } catch (err) {
-      toast.error(
-        getApiErrorMessage(err, "Registration failed. Please try again."),
-      );
+      const apiError = getApiError(err, "Registration failed. Please try again.");
+      toast.error(apiError.message);
+      for (const [field, message] of Object.entries(apiError.fieldErrors)) {
+        setError(field as FieldPath<RegisterFormValues>, { message });
+      }
     }
   };
 

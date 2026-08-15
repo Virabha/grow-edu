@@ -8,6 +8,7 @@ import { useSubmitCourseForReview, useCourse } from "@/lib/hooks/use-courses";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { getApiError } from "@/lib/api/errors";
 import { WizardShell } from "./wizard-shell";
 
 function ChecklistItem({
@@ -97,15 +98,7 @@ export function StepReview() {
       toast.success("Course submitted for review.");
       router.push("/instructor/courses");
     } catch (error: unknown) {
-      const err = error as {
-        response?: { data?: { message?: string } };
-        message?: string;
-      };
-      toast.error(
-        err?.response?.data?.message ||
-          err?.message ||
-          "Submission failed — please re-check requirements.",
-      );
+      toast.error(getApiError(error, "Submission failed — please re-check requirements.").message);
     }
   };
 

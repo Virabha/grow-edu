@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { useForm } from "react-hook-form";
+import { useForm, type FieldPath } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { z } from "zod/v3";
@@ -23,7 +23,7 @@ import { Button } from "@/components/ui/button";
 import { useCategories } from "@/lib/hooks/use-categories";
 import { teacherApplicationsApi } from "@/lib/api/services/teacher-applications";
 import { toast } from "sonner";
-import { getApiErrorMessage } from "@/lib/utils";
+import { getApiError } from "@/lib/api/errors";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
@@ -49,10 +49,19 @@ const steps = [
 ];
 
 const teacherSchema = z.object({
-  fullName: z.string().min(2, "Name must be at least 2 characters"),
-  email: z.string().email("Please enter a valid email address"),
+  fullName: z.string().trim().min(2, "Name must be at least 2 characters"),
+  email: z.string().min(1, "Email is required").email("Please enter a valid email address"),
   phone: z.string().optional(),
-  experienceYears: z.string().optional(),
+  experienceYears: z
+    .string()
+    .optional()
+    .refine(
+      (v) =>
+        v === undefined ||
+        v === "" ||
+        (Number.isFinite(Number(v)) && Number(v) >= 0 && Number.isInteger(Number(v))),
+      "Enter a whole number, 0 or greater",
+    ),
   whyJoin: z.string().optional(),
 });
 
@@ -65,6 +74,7 @@ export default function BecomeTeacherPage() {
   const {
     register,
     handleSubmit: rhfHandleSubmit,
+    setError,
     formState: { errors },
     reset,
   } = useForm<TeacherFormData>({
@@ -127,7 +137,7 @@ export default function BecomeTeacherPage() {
         const { url } = await uploadCv.mutateAsync(file);
         setCvUrl(url);
       } catch (err) {
-        toast.error(getApiErrorMessage(err, "CV upload failed."));
+        toast.error(getApiError(err, "CV upload failed.").message);
       }
     },
     [uploadCv],
@@ -154,9 +164,11 @@ export default function BecomeTeacherPage() {
       setCvUrl("");
       toast.success("Application submitted successfully.");
     } catch (err) {
-      toast.error(
-        getApiErrorMessage(err, "Submission failed. Please try again."),
-      );
+      const apiError = getApiError(err, "Submission failed. Please try again.");
+      toast.error(apiError.message);
+      for (const [field, message] of Object.entries(apiError.fieldErrors)) {
+        setError(field as FieldPath<TeacherFormData>, { message });
+      }
     }
   };
 
@@ -328,6 +340,9 @@ export default function BecomeTeacherPage() {
                     placeholder="e.g. 5"
                     className={inputClass}
                   />
+                  {errors.experienceYears && (
+                    <p className="mt-1 text-xs text-destructive">{errors.experienceYears.message}</p>
+                  )}
                 </div>
                 <div>
                   <label className="mb-1 block text-sm font-medium text-foreground">Skills</label>

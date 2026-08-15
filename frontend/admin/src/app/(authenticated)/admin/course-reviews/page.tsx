@@ -21,6 +21,7 @@ import {
   useResourceList,
   type ResourceRow,
 } from "@/lib/hooks/use-resource";
+import { getApiError } from "@/lib/api/errors";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -46,9 +47,7 @@ export default function CourseReviewsPage() {
             action === "approve" ? "Review published" : "Review rejected",
           ),
         onError: (err) =>
-          toast.error(
-            err instanceof Error ? err.message : "Could not update the review",
-          ),
+          toast.error(getApiError(err, "Could not update the review").message),
       },
     );
   }
@@ -75,7 +74,7 @@ export default function CourseReviewsPage() {
       {isError ? (
         <EmptyState
           title="We could not load reviews"
-          description={error instanceof Error ? error.message : "Please try again."}
+          description={getApiError(error, "Please try again.").message}
           action={{ label: "Try again", onClick: () => void refetch() }}
         />
       ) : isLoading ? (

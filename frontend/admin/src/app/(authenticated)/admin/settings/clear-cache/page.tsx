@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { apiClient } from "@/lib/api/client";
+import { getApiError } from "@/lib/api/errors";
 
 const SCOPES = [
   { key: "pages", label: "Rendered pages", help: "Cached HTML for the public marketing pages." },
@@ -26,7 +27,7 @@ export default function ClearCachePage() {
       apiClient.post<{ message: string }>("/system/clear-cache", { scopes }).then((r) => r.data),
     onSuccess: (result) => toast.success(result.message),
     onError: (err) =>
-      toast.error(err instanceof Error ? err.message : "Could not clear the cache"),
+      toast.error(getApiError(err, "Could not clear the cache").message),
   });
 
   function toggle(key: string) {

@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { apiClient } from "@/lib/api/client";
+import { getApiError } from "@/lib/api/errors";
 
 interface Template {
   backgroundUrl: string;
@@ -51,7 +52,7 @@ export default function CertificateBuilderPage() {
       setDraft(null);
     },
     onError: (err) =>
-      toast.error(err instanceof Error ? err.message : "Could not save"),
+      toast.error(getApiError(err, "Could not save").message),
   });
 
   const current = draft ?? data ?? null;

@@ -21,6 +21,7 @@ import {
   useUpdateResource,
   type ResourceRow,
 } from "@/lib/hooks/use-resource";
+import { getApiError } from "@/lib/api/errors";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -68,7 +69,7 @@ export default function PageBuilderPage() {
         onSuccess: () =>
           toast.success(`"${template.name}" added to ${String(selected.title)}`),
         onError: (err) =>
-          toast.error(err instanceof Error ? err.message : "Could not add"),
+          toast.error(getApiError(err, "Could not add").message),
       },
     );
   }
@@ -96,7 +97,7 @@ export default function PageBuilderPage() {
           setSelectedId(String((row as ResourceRow).id));
         },
         onError: (err) =>
-          toast.error(err instanceof Error ? err.message : "Could not create"),
+          toast.error(getApiError(err, "Could not create").message),
       },
     );
   }

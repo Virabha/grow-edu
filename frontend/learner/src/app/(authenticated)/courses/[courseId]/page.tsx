@@ -31,7 +31,8 @@ import { useLessonPreview } from "@/lib/hooks/use-lessons";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { useEnrollments } from "@/lib/hooks/use-enrollments";
 import { useFreeEnroll } from "@/lib/hooks/use-payments";
-import { cn, getApiErrorMessage } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { getApiError } from "@/lib/api/errors";
 
 export default function CourseDetailPage() {
   const params = useParams<{ courseId: string }>();
@@ -76,8 +77,8 @@ export default function CourseDetailPage() {
         setPreviewUrl(
           `${signedUrl}${separator}autoplay=true&preload=true&responsive=true`,
         );
-      } catch {
-        toast.error("Failed to load preview");
+      } catch (err) {
+        toast.error(getApiError(err, "Failed to load preview").message);
         setPreviewLessonId(null);
       }
     },
@@ -141,7 +142,7 @@ export default function CourseDetailPage() {
       toast.success("Enrolled successfully!");
       router.push("/my-courses");
     } catch (err: unknown) {
-      toast.error(getApiErrorMessage(err, "Failed to enroll"));
+      toast.error(getApiError(err, "Failed to enroll").message);
     }
   }
 

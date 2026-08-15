@@ -22,6 +22,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { FileUpload } from "@/components/ui/file-upload";
 import { useSiteSettingsAdmin, useUpsertSiteSetting } from "../hooks/use-cms";
 import { toast } from "sonner";
+import { getApiError } from "@/lib/api/errors";
 import type { SiteSetting } from "../types";
 
 const heroSchema = z.object({
@@ -171,8 +172,8 @@ export function AboutSettingsForm() {
         value: { title: values.title.trim(), subtitle: values.subtitle?.trim() || "" },
       });
       toast.success("Hero section saved");
-    } catch {
-      toast.error("Failed to save hero section");
+    } catch (err) {
+      toast.error(getApiError(err, "Failed to save hero section").message);
     }
   };
 
@@ -190,8 +191,8 @@ export function AboutSettingsForm() {
         },
       });
       toast.success("Vision & Mission saved");
-    } catch {
-      toast.error("Failed to save vision & mission");
+    } catch (err) {
+      toast.error(getApiError(err, "Failed to save vision & mission").message);
     }
   };
 
@@ -213,8 +214,8 @@ export function AboutSettingsForm() {
         },
       });
       toast.success("Leadership saved");
-    } catch {
-      toast.error("Failed to save leadership");
+    } catch (err) {
+      toast.error(getApiError(err, "Failed to save leadership").message);
     }
   };
 

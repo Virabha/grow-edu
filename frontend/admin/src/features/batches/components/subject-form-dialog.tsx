@@ -22,11 +22,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import type { FieldPath } from "react-hook-form";
 import {
   useCreateBatchSubject,
   useUpdateBatchSubject,
 } from "../hooks/use-batches";
 import type { BatchSubject } from "../types";
+import { getApiError } from "@/lib/api/errors";
 
 const FIELD_CLS = "h-8 text-xs";
 const LABEL_CLS = "text-xs font-medium";
@@ -141,19 +144,27 @@ export function SubjectFormDialog(props: {
 
   const isPending = create.isPending || update.isPending;
 
-  function onSubmit(values: Values) {
-    const payload = {
-      name: values.name.trim(),
-      color: values.color?.trim() || undefined,
-      displayOrder: values.displayOrder,
-    };
-    if (isEditing && subject) {
-      update.mutate(
-        { subjectId: subject.subjectId, dto: payload },
-        { onSuccess: () => onOpenChange(false) },
-      );
-    } else {
-      create.mutate(payload, { onSuccess: () => onOpenChange(false) });
+  async function onSubmit(values: Values) {
+    try {
+      const payload = {
+        name: values.name.trim(),
+        color: values.color?.trim() || undefined,
+        displayOrder: values.displayOrder,
+      };
+      if (isEditing && subject) {
+        await update.mutateAsync({ subjectId: subject.subjectId, dto: payload });
+      } else {
+        await create.mutateAsync(payload);
+      }
+      onOpenChange(false);
+    } catch (err) {
+      const apiError = getApiError(err);
+      for (const [field, message] of Object.entries(apiError.fieldErrors)) {
+        form.setError(field as FieldPath<Values>, { type: "server", message });
+      }
+      if (Object.keys(apiError.fieldErrors).length === 0) {
+        toast.error(apiError.message);
+      }
     }
   }
 

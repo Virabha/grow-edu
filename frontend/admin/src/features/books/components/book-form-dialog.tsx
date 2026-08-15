@@ -14,8 +14,11 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FileUpload } from "@/components/ui/file-upload";
 import { SecureImage } from "@/components/ui/secure-image";
+import { toast } from "sonner";
+import type { FieldPath } from "react-hook-form";
 import { useCreateBook, useUpdateBook } from "../hooks/use-books";
 import type { Book } from "../types";
+import { getApiError } from "@/lib/api/errors";
 
 const schema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -129,37 +132,44 @@ export function BookFormDialog(props: {
 
   const isPending = create.isPending || update.isPending;
 
-  function handleSubmitForm(values: Values) {
-    const slug = values.slug.trim() || slugify(values.title);
-    const payload = {
-      title: values.title.trim(),
-      slug,
-      author: values.author.trim(),
-      description: values.description?.trim() || undefined,
-      shortDescription: values.shortDescription?.trim() || undefined,
-      coverImage: values.coverImage?.trim() || undefined,
-      price: values.price,
-      compareAtPrice: values.compareAtPrice || undefined,
-      currency: values.currency,
-      categoryId: values.categoryId?.trim() || undefined,
-      isbn: values.isbn?.trim() || undefined,
-      pages: values.pages || undefined,
-      language: values.language?.trim() || undefined,
-      publisher: values.publisher?.trim() || undefined,
-      publishedYear: values.publishedYear || undefined,
-      format: values.format,
-      status: values.status,
-      isActive: values.isActive,
-      displayOrder: values.displayOrder,
-    };
-    if (isEditing && book) {
-      update.mutate({ id: book.bookId, dto: payload }, {
-        onSuccess: () => onOpenChange(false),
-      });
-    } else {
-      create.mutate(payload, {
-        onSuccess: () => onOpenChange(false),
-      });
+  async function handleSubmitForm(values: Values) {
+    try {
+      const slug = values.slug.trim() || slugify(values.title);
+      const payload = {
+        title: values.title.trim(),
+        slug,
+        author: values.author.trim(),
+        description: values.description?.trim() || undefined,
+        shortDescription: values.shortDescription?.trim() || undefined,
+        coverImage: values.coverImage?.trim() || undefined,
+        price: values.price,
+        compareAtPrice: values.compareAtPrice || undefined,
+        currency: values.currency,
+        categoryId: values.categoryId?.trim() || undefined,
+        isbn: values.isbn?.trim() || undefined,
+        pages: values.pages || undefined,
+        language: values.language?.trim() || undefined,
+        publisher: values.publisher?.trim() || undefined,
+        publishedYear: values.publishedYear || undefined,
+        format: values.format,
+        status: values.status,
+        isActive: values.isActive,
+        displayOrder: values.displayOrder,
+      };
+      if (isEditing && book) {
+        await update.mutateAsync({ id: book.bookId, dto: payload });
+      } else {
+        await create.mutateAsync(payload);
+      }
+      onOpenChange(false);
+    } catch (err) {
+      const apiError = getApiError(err);
+      for (const [field, message] of Object.entries(apiError.fieldErrors)) {
+        form.setError(field as FieldPath<Values>, { type: "server", message });
+      }
+      if (Object.keys(apiError.fieldErrors).length === 0) {
+        toast.error(apiError.message);
+      }
     }
   }
 

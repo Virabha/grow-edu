@@ -22,7 +22,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useBookBySlug, usePurchaseBook, useMyBookPurchases } from "@/lib/hooks/use-books";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { getApiErrorMessage } from "@/lib/utils";
+import { getApiError } from "@/lib/api/errors";
 
 function BookDetailContent({ slug }: { slug: string }) {
   const router = useRouter();
@@ -54,7 +54,7 @@ function BookDetailContent({ slug }: { slug: string }) {
           }
         },
         onError: (err: unknown) => {
-          toast.error(getApiErrorMessage(err, "Failed to purchase book"));
+          toast.error(getApiError(err, "Failed to purchase book").message);
         },
       },
     );

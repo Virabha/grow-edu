@@ -31,8 +31,11 @@ import {
 } from "@/components/ui/select";
 import { FileUpload } from "@/components/ui/file-upload";
 import { SecureImage } from "@/components/ui/secure-image";
+import { toast } from "sonner";
+import type { FieldPath } from "react-hook-form";
 import { useCreateCategory, useUpdateCategory, useAdminCategories } from "./hooks";
 import type { AdminCategory } from "./types";
+import { getApiError } from "@/lib/api/errors";
 
 const schema = z.object({
   name: z.string().min(2, "Name is required").max(80),
@@ -105,21 +108,31 @@ export function CategoryFormDialog(props: {
   const isPending = create.isPending || update.isPending;
 
   const onSubmit = async (values: Values) => {
-    const payload = {
-      name: values.name,
-      slug: values.slug?.trim() || undefined,
-      description: values.description?.trim() || undefined,
-      displayOrder: values.displayOrder,
-      isActive: values.isActive,
-      parentCategoryId: values.parentCategoryId || null,
-      imageUrl: values.imageUrl?.trim() || undefined,
-    };
-    if (isEditing && category) {
-      await update.mutateAsync({ categoryId: category.categoryId, dto: payload });
-    } else {
-      await create.mutateAsync(payload);
+    try {
+      const payload = {
+        name: values.name,
+        slug: values.slug?.trim() || undefined,
+        description: values.description?.trim() || undefined,
+        displayOrder: values.displayOrder,
+        isActive: values.isActive,
+        parentCategoryId: values.parentCategoryId || null,
+        imageUrl: values.imageUrl?.trim() || undefined,
+      };
+      if (isEditing && category) {
+        await update.mutateAsync({ categoryId: category.categoryId, dto: payload });
+      } else {
+        await create.mutateAsync(payload);
+      }
+      onOpenChange(false);
+    } catch (err) {
+      const apiError = getApiError(err);
+      for (const [field, message] of Object.entries(apiError.fieldErrors)) {
+        form.setError(field as FieldPath<Values>, { type: "server", message });
+      }
+      if (Object.keys(apiError.fieldErrors).length === 0) {
+        toast.error(apiError.message);
+      }
     }
-    onOpenChange(false);
   };
 
   return (

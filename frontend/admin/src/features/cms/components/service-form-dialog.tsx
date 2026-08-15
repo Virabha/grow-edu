@@ -15,9 +15,12 @@ import { FileUpload } from "@/components/ui/file-upload";
 import { SecureImage } from "@/components/ui/secure-image";
 import { IconPicker } from "./icon-picker";
 import { FormBuilder } from "./form-builder";
+import { toast } from "sonner";
+import type { FieldPath } from "react-hook-form";
 import { useCreateService, useUpdateService } from "../hooks/use-cms";
 import { X } from "lucide-react";
 import type { Service, FormSchema } from "../types";
+import { getApiError } from "@/lib/api/errors";
 
 const schema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -114,27 +117,34 @@ export function ServiceFormDialog(props: {
 
   const isPending = create.isPending || update.isPending;
 
-  function handleSubmitForm(values: Values) {
-    const slug = values.slug.trim() || slugify(values.title);
-    const payload = {
-      title: values.title.trim(),
-      slug,
-      description: values.description?.trim() || undefined,
-      imageUrl: values.imageUrl?.trim() || undefined,
-      screenshots: values.screenshots.length > 0 ? values.screenshots : undefined,
-      iconName: values.iconName?.trim() || undefined,
-      formSchema: formSchema || null,
-      displayOrder: values.displayOrder,
-      isActive: values.isActive,
-    };
-    if (isEditing && service) {
-      update.mutate({ id: service.serviceId, dto: payload }, {
-        onSuccess: () => onOpenChange(false),
-      });
-    } else {
-      create.mutate(payload, {
-        onSuccess: () => onOpenChange(false),
-      });
+  async function handleSubmitForm(values: Values) {
+    try {
+      const slug = values.slug.trim() || slugify(values.title);
+      const payload = {
+        title: values.title.trim(),
+        slug,
+        description: values.description?.trim() || undefined,
+        imageUrl: values.imageUrl?.trim() || undefined,
+        screenshots: values.screenshots.length > 0 ? values.screenshots : undefined,
+        iconName: values.iconName?.trim() || undefined,
+        formSchema: formSchema || null,
+        displayOrder: values.displayOrder,
+        isActive: values.isActive,
+      };
+      if (isEditing && service) {
+        await update.mutateAsync({ id: service.serviceId, dto: payload });
+      } else {
+        await create.mutateAsync(payload);
+      }
+      onOpenChange(false);
+    } catch (err) {
+      const apiError = getApiError(err);
+      for (const [field, message] of Object.entries(apiError.fieldErrors)) {
+        form.setError(field as FieldPath<Values>, { type: "server", message });
+      }
+      if (Object.keys(apiError.fieldErrors).length === 0) {
+        toast.error(apiError.message);
+      }
     }
   }
 

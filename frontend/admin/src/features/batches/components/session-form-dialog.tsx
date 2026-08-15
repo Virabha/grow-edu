@@ -29,11 +29,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import type { FieldPath } from "react-hook-form";
 import {
   useCreateBatchSession,
   useUpdateBatchSession,
 } from "../hooks/use-batches";
 import type { BatchSession, BatchSubject } from "../types";
+import { getApiError } from "@/lib/api/errors";
 
 const FIELD_CLS = "h-8 text-xs";
 const LABEL_CLS = "text-xs font-medium";
@@ -174,37 +177,45 @@ export function SessionFormDialog(props: {
 
   const isPending = create.isPending || update.isPending;
 
-  function onSubmit(values: Values) {
-    const payload = {
-      title: values.title.trim(),
-      description: values.description?.trim() || undefined,
-      type: values.type,
-      subjectId: values.subjectId?.trim() || undefined,
-      ...(values.type === "LIVE"
-        ? {
-            liveProvider: values.liveProvider,
-            joinUrl: values.joinUrl?.trim() || undefined,
-            meetingId: values.meetingId?.trim() || undefined,
-            meetingPasscode: values.meetingPasscode?.trim() || undefined,
-            scheduledStartAt: values.scheduledStartAt
-              ? new Date(values.scheduledStartAt).toISOString()
-              : undefined,
-            scheduledEndAt: values.scheduledEndAt
-              ? new Date(values.scheduledEndAt).toISOString()
-              : undefined,
-          }
-        : {
-            recordingVideoId: values.recordingVideoId?.trim() || undefined,
-            recordingDurationSeconds: values.recordingDurationSeconds,
-          }),
-    };
-    if (isEditing && session) {
-      update.mutate(
-        { sessionId: session.sessionId, dto: payload },
-        { onSuccess: () => onOpenChange(false) },
-      );
-    } else {
-      create.mutate(payload, { onSuccess: () => onOpenChange(false) });
+  async function onSubmit(values: Values) {
+    try {
+      const payload = {
+        title: values.title.trim(),
+        description: values.description?.trim() || undefined,
+        type: values.type,
+        subjectId: values.subjectId?.trim() || undefined,
+        ...(values.type === "LIVE"
+          ? {
+              liveProvider: values.liveProvider,
+              joinUrl: values.joinUrl?.trim() || undefined,
+              meetingId: values.meetingId?.trim() || undefined,
+              meetingPasscode: values.meetingPasscode?.trim() || undefined,
+              scheduledStartAt: values.scheduledStartAt
+                ? new Date(values.scheduledStartAt).toISOString()
+                : undefined,
+              scheduledEndAt: values.scheduledEndAt
+                ? new Date(values.scheduledEndAt).toISOString()
+                : undefined,
+            }
+          : {
+              recordingVideoId: values.recordingVideoId?.trim() || undefined,
+              recordingDurationSeconds: values.recordingDurationSeconds,
+            }),
+      };
+      if (isEditing && session) {
+        await update.mutateAsync({ sessionId: session.sessionId, dto: payload });
+      } else {
+        await create.mutateAsync(payload);
+      }
+      onOpenChange(false);
+    } catch (err) {
+      const apiError = getApiError(err);
+      for (const [field, message] of Object.entries(apiError.fieldErrors)) {
+        form.setError(field as FieldPath<Values>, { type: "server", message });
+      }
+      if (Object.keys(apiError.fieldErrors).length === 0) {
+        toast.error(apiError.message);
+      }
     }
   }
 

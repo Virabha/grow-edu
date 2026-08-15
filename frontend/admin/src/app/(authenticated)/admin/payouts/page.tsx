@@ -33,6 +33,7 @@ import {
   useResourceList,
   type ResourceRow,
 } from "@/lib/hooks/use-resource";
+import { getApiError } from "@/lib/api/errors";
 import { formatDate, formatMoney } from "@/lib/format";
 
 const STATUS_OPTIONS = [
@@ -72,7 +73,7 @@ export default function PayoutsPage() {
           setReference("");
         },
         onError: (err) =>
-          toast.error(err instanceof Error ? err.message : "Could not approve"),
+          toast.error(getApiError(err, "Could not approve").message),
       },
     );
   }
@@ -93,7 +94,7 @@ export default function PayoutsPage() {
           setNote("");
         },
         onError: (err) =>
-          toast.error(err instanceof Error ? err.message : "Could not reject"),
+          toast.error(getApiError(err, "Could not reject").message),
       },
     );
   }
@@ -134,7 +135,7 @@ export default function PayoutsPage() {
       {isError ? (
         <EmptyState
           title="We could not load payout requests"
-          description={error instanceof Error ? error.message : "Please try again."}
+          description={getApiError(error, "Please try again.").message}
           action={{ label: "Try again", onClick: () => void refetch() }}
         />
       ) : isLoading ? (

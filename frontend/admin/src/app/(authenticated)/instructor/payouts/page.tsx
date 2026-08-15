@@ -31,6 +31,7 @@ import {
 import { StatusPill } from "@/components/admin/status-pill";
 import { apiClient } from "@/lib/api/client";
 import { useCreateResource, useResourceList } from "@/lib/hooks/use-resource";
+import { getApiError } from "@/lib/api/errors";
 import { formatDate, formatMoney } from "@/lib/format";
 
 interface InstructorDashboard {
@@ -105,7 +106,7 @@ export default function InstructorPayoutsPage() {
           setAmount("");
         },
         onError: (err) =>
-          toast.error(err instanceof Error ? err.message : "Could not request"),
+          toast.error(getApiError(err, "Could not request").message),
       },
     );
   }

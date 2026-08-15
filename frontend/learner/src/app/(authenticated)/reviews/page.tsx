@@ -32,6 +32,7 @@ import {
   type Review,
 } from "@/lib/hooks/use-reviews";
 import { formatDate } from "@/lib/format";
+import { getApiError } from "@/lib/api/errors";
 
 export default function ReviewsPage() {
   const [target, setTarget] = useState<ReviewTarget | null>(null);
@@ -58,9 +59,7 @@ export default function ReviewsPage() {
         setPendingDelete(null);
       },
       onError: (err) =>
-        toast.error(
-          err instanceof Error ? err.message : "Could not delete the review",
-        ),
+        toast.error(getApiError(err, "Could not delete the review").message),
     });
   }
 
@@ -84,11 +83,7 @@ export default function ReviewsPage() {
           {reviews.isError ? (
             <EmptyState
               title="We could not load your reviews"
-              description={
-                reviews.error instanceof Error
-                  ? reviews.error.message
-                  : "Please try again."
-              }
+              description={getApiError(reviews.error, "Please try again.").message}
               icon={<MessageSquareQuote className="size-10" />}
               action={{ label: "Try again", onClick: () => void reviews.refetch() }}
             />

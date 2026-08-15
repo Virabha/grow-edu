@@ -42,7 +42,8 @@ import {
 import { useCategories } from "@/features/categories/hooks/use-categories";
 import { CourseBuilder } from "@/features/courses/components/course-builder";
 import type { UpdateCourseDto } from "@/lib/api/services/courses";
-import { generateSlug, getApiErrorMessage } from "@/lib/utils";
+import { generateSlug } from "@/lib/utils";
+import { getApiError } from "@/lib/api/errors";
 
 const LEVELS = [
   { value: "BEGINNER", label: "Beginner" },
@@ -232,7 +233,7 @@ export default function CourseEditPage({
       await updateCourse.mutateAsync({ id: courseId, dto });
       toast.success("Details saved.");
     } catch (err) {
-      toast.error(getApiErrorMessage(err, "Save failed"));
+      toast.error(getApiError(err, "Save failed").message);
     }
   });
 
@@ -253,7 +254,7 @@ export default function CourseEditPage({
       });
       toast.success("Pricing saved.");
     } catch (err) {
-      toast.error(getApiErrorMessage(err, "Couldn't save pricing."));
+      toast.error(getApiError(err, "Couldn't save pricing.").message);
     }
   });
 
@@ -269,8 +270,8 @@ export default function CourseEditPage({
         },
       });
       toast.success("Audience details saved.");
-    } catch {
-      toast.error("Couldn't save audience details.");
+    } catch (err) {
+      toast.error(getApiError(err, "Couldn't save audience details.").message);
     } finally {
       setAudienceSaving(false);
     }
@@ -282,8 +283,8 @@ export default function CourseEditPage({
     try {
       await updateCourse.mutateAsync({ id: courseId, dto: { status } });
       toast.success(`Status set to ${status.toLowerCase()}.`);
-    } catch {
-      toast.error("Couldn't change status.");
+    } catch (err) {
+      toast.error(getApiError(err, "Couldn't change status.").message);
     }
   };
 
@@ -292,7 +293,7 @@ export default function CourseEditPage({
       await submitForReview.mutateAsync(courseId);
       toast.success("Submitted for review.");
     } catch (err) {
-      toast.error(getApiErrorMessage(err, "Submission failed."));
+      toast.error(getApiError(err, "Submission failed.").message);
     }
   };
 

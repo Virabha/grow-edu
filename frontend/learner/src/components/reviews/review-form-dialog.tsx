@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
+import { getApiError } from "@/lib/api/errors";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -25,7 +26,6 @@ import {
 export interface ReviewTarget {
   courseId: string;
   courseTitle: string;
-  /** Present when editing an existing review. */
   review?: Review;
 }
 
@@ -43,8 +43,6 @@ export function ReviewFormDialog({
 }) {
   if (!target) return null;
 
-  // Keying on the target remounts the form for each course, which resets the
-  // fields without an effect that writes state on open.
   return (
     <ReviewForm
       key={`${target.courseId}:${target.review?.reviewId ?? "new"}`}
@@ -68,6 +66,8 @@ function ReviewForm({
   const [title, setTitle] = useState(target.review?.title ?? "");
   const [body, setBody] = useState(target.review?.body ?? "");
   const [touched, setTouched] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [serverFieldErrors, setServerFieldErrors] = useState<Record<string, string>>({});
 
   const createReview = useCreateReview();
   const updateReview = useUpdateReview();
@@ -82,11 +82,21 @@ function ReviewForm({
       ? `Write at least ${MIN_BODY} characters`
       : undefined;
 
+  const displayRatingError = ratingError ?? serverFieldErrors["rating"];
+  const displayTitleError = titleError ?? serverFieldErrors["title"];
+  const displayBodyError = bodyError ?? serverFieldErrors["body"];
+
   const valid = rating > 0 && title.trim() && body.trim().length >= MIN_BODY;
+
+  function clearServerErrors() {
+    setServerError(null);
+    setServerFieldErrors({});
+  }
 
   function submit(event: React.FormEvent) {
     event.preventDefault();
     setTouched(true);
+    clearServerErrors();
     if (!valid) return;
 
     const done = {
@@ -98,10 +108,12 @@ function ReviewForm({
         );
         onOpenChange(false);
       },
-      onError: (err: unknown) =>
-        toast.error(
-          err instanceof Error ? err.message : "Could not save your review",
-        ),
+      onError: (err: unknown) => {
+        const apiError = getApiError(err, "Could not save your review");
+        setServerError(apiError.message);
+        setServerFieldErrors(apiError.fieldErrors);
+        toast.error(apiError.message);
+      },
     };
 
     if (isEditing && target.review) {
@@ -138,12 +150,24 @@ function ReviewForm({
         </DialogHeader>
 
         <DialogContent className="space-y-4 pt-3">
+          {serverError && !Object.keys(serverFieldErrors).length && (
+            <p className="text-xs text-destructive" role="alert">
+              {serverError}
+            </p>
+          )}
+
           <div className="space-y-1.5">
             <Label>How would you rate it?</Label>
-            <StarRatingInput value={rating} onChange={setRating} />
-            {ratingError && (
+            <StarRatingInput
+              value={rating}
+              onChange={(r) => {
+                setRating(r);
+                clearServerErrors();
+              }}
+            />
+            {displayRatingError && (
               <p className="text-xs text-destructive" role="alert">
-                {ratingError}
+                {displayRatingError}
               </p>
             )}
           </div>
@@ -154,13 +178,16 @@ function ReviewForm({
               id="review-title"
               value={title}
               maxLength={120}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(e) => {
+                setTitle(e.target.value);
+                clearServerErrors();
+              }}
               placeholder="Sum up your experience in one line"
-              aria-invalid={!!titleError}
+              aria-invalid={!!displayTitleError}
             />
-            {titleError && (
+            {displayTitleError && (
               <p className="text-xs text-destructive" role="alert">
-                {titleError}
+                {displayTitleError}
               </p>
             )}
           </div>
@@ -172,14 +199,17 @@ function ReviewForm({
               rows={5}
               value={body}
               maxLength={MAX_BODY}
-              onChange={(e) => setBody(e.target.value)}
+              onChange={(e) => {
+                setBody(e.target.value);
+                clearServerErrors();
+              }}
               placeholder="What worked, what did not, and who this course suits."
-              aria-invalid={!!bodyError}
+              aria-invalid={!!displayBodyError}
             />
             <div className="flex items-center justify-between">
-              {bodyError ? (
+              {displayBodyError ? (
                 <p className="text-xs text-destructive" role="alert">
-                  {bodyError}
+                  {displayBodyError}
                 </p>
               ) : (
                 <span className="text-[11px] text-muted-foreground">

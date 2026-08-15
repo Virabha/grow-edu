@@ -18,6 +18,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { useDebounce } from "@/hooks/use-debounce";
+import { getApiError } from "@/lib/api/errors";
 
 export interface AsyncMultiSelectOption {
   value: string;
@@ -67,8 +68,7 @@ export function AsyncMultiSelect({
       .catch((err: unknown) => {
         if (cancelled) return;
         setResults([]);
-        const msg = err instanceof Error ? err.message : "Failed to load";
-        setLoadError(msg);
+        setLoadError(getApiError(err, "Failed to load").message);
         console.error("[AsyncMultiSelect] load failed:", err);
       })
       .finally(() => {

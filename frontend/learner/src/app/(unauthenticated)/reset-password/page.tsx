@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, Suspense } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, type FieldPath } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod/v3";
 import { motion } from "framer-motion";
@@ -12,16 +12,11 @@ import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useResetPassword } from "@/lib/hooks/use-auth";
-import { getApiErrorMessage } from "@/lib/utils";
+import { getApiError } from "@/lib/api/errors";
 
 const resetSchema = z
   .object({
-    password: z
-      .string()
-      .min(8, "At least 8 characters")
-      .regex(/[A-Z]/, "Must include an uppercase letter")
-      .regex(/[a-z]/, "Must include a lowercase letter")
-      .regex(/[0-9]/, "Must include a number"),
+    password: z.string().min(8, "At least 8 characters"),
     confirmPassword: z.string().min(1, "Please confirm your password"),
   })
   .refine((d) => d.password === d.confirmPassword, {
@@ -44,6 +39,7 @@ function ResetPasswordForm() {
   const {
     register,
     handleSubmit,
+    setError,
     formState: { errors },
   } = useForm<ResetFormValues>({
     resolver: zodResolver(resetSchema),
@@ -60,9 +56,11 @@ function ResetPasswordForm() {
       setSubmitted(true);
       toast.success("Password reset successfully!");
     } catch (err) {
-      toast.error(
-        getApiErrorMessage(err, "Reset failed. The link may have expired."),
-      );
+      const apiError = getApiError(err, "Reset failed. The link may have expired.");
+      toast.error(apiError.message);
+      for (const [field, message] of Object.entries(apiError.fieldErrors)) {
+        setError(field as FieldPath<ResetFormValues>, { message });
+      }
     }
   };
 

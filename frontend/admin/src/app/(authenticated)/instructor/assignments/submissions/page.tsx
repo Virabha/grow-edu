@@ -23,6 +23,7 @@ import { StatusPill } from "@/components/admin/status-pill";
 import {
   useResourceList, useUpdateResource, type ResourceRow,
 } from "@/lib/hooks/use-resource";
+import { getApiError } from "@/lib/api/errors";
 import { formatDateTime } from "@/lib/format";
 
 export default function AssignmentSubmissionsPage() {
@@ -64,7 +65,7 @@ export default function AssignmentSubmissionsPage() {
           setGrading(null);
         },
         onError: (err) =>
-          toast.error(err instanceof Error ? err.message : "Could not save the grade"),
+          toast.error(getApiError(err, "Could not save the grade").message),
       },
     );
   }

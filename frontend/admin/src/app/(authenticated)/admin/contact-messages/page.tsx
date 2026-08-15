@@ -24,6 +24,7 @@ import {
   useUpdateResource,
   type ResourceRow,
 } from "@/lib/hooks/use-resource";
+import { getApiError } from "@/lib/api/errors";
 import { formatDateTime } from "@/lib/format";
 
 export default function ContactMessagesPage() {
@@ -64,7 +65,7 @@ export default function ContactMessagesPage() {
           setReply("");
         },
         onError: (err) =>
-          toast.error(err instanceof Error ? err.message : "Could not send the reply"),
+          toast.error(getApiError(err, "Could not send the reply").message),
       },
     );
   }
@@ -99,7 +100,7 @@ export default function ContactMessagesPage() {
       {isError ? (
         <EmptyState
           title="We could not load messages"
-          description={error instanceof Error ? error.message : "Please try again."}
+          description={getApiError(error, "Please try again.").message}
           action={{ label: "Try again", onClick: () => void refetch() }}
         />
       ) : isLoading ? (

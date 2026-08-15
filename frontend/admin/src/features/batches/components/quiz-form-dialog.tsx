@@ -23,11 +23,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { FormSheet } from "@/components/ui/form-sheet";
+import { toast } from "sonner";
+import type { FieldPath } from "react-hook-form";
 import {
   useCreateBatchQuiz,
   useUpdateBatchQuiz,
 } from "../hooks/use-batches";
 import type { BatchQuiz, BatchSubject } from "../types";
+import { getApiError } from "@/lib/api/errors";
 
 const FIELD_CLS = "h-8 text-xs";
 const LABEL_CLS = "text-xs font-medium";
@@ -118,32 +121,40 @@ export function QuizFormDialog(props: {
 
   const isPending = create.isPending || update.isPending;
 
-  function onSubmit(values: Values) {
-    const payload = {
-      title: values.title.trim(),
-      description: values.description?.trim() || undefined,
-      subjectId: values.subjectId?.trim() || undefined,
-      durationMinutes: values.durationMinutes,
-      maxAttempts: values.maxAttempts,
-      negativeMarkPercent: values.negativeMarkPercent,
-      passingPercent: values.passingPercent,
-      showLeaderboard: values.showLeaderboard,
-      showSolutions: values.showSolutions,
-      opensAt: values.opensAt
-        ? new Date(values.opensAt).toISOString()
-        : undefined,
-      closesAt: values.closesAt
-        ? new Date(values.closesAt).toISOString()
-        : undefined,
-      publish: values.publish,
-    };
-    if (isEditing && quiz) {
-      update.mutate(
-        { quizId: quiz.quizId, dto: payload },
-        { onSuccess: () => onOpenChange(false) },
-      );
-    } else {
-      create.mutate(payload, { onSuccess: () => onOpenChange(false) });
+  async function onSubmit(values: Values) {
+    try {
+      const payload = {
+        title: values.title.trim(),
+        description: values.description?.trim() || undefined,
+        subjectId: values.subjectId?.trim() || undefined,
+        durationMinutes: values.durationMinutes,
+        maxAttempts: values.maxAttempts,
+        negativeMarkPercent: values.negativeMarkPercent,
+        passingPercent: values.passingPercent,
+        showLeaderboard: values.showLeaderboard,
+        showSolutions: values.showSolutions,
+        opensAt: values.opensAt
+          ? new Date(values.opensAt).toISOString()
+          : undefined,
+        closesAt: values.closesAt
+          ? new Date(values.closesAt).toISOString()
+          : undefined,
+        publish: values.publish,
+      };
+      if (isEditing && quiz) {
+        await update.mutateAsync({ quizId: quiz.quizId, dto: payload });
+      } else {
+        await create.mutateAsync(payload);
+      }
+      onOpenChange(false);
+    } catch (err) {
+      const apiError = getApiError(err);
+      for (const [field, message] of Object.entries(apiError.fieldErrors)) {
+        form.setError(field as FieldPath<Values>, { type: "server", message });
+      }
+      if (Object.keys(apiError.fieldErrors).length === 0) {
+        toast.error(apiError.message);
+      }
     }
   }
 

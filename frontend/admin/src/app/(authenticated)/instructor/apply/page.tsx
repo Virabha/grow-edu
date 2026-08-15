@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useCreateResource } from "@/lib/hooks/use-resource";
+import { getApiError } from "@/lib/api/errors";
 
 interface Form {
   firstName: string;
@@ -92,9 +93,7 @@ export default function InstructorApplyPage() {
           setSubmitted(true);
         },
         onError: (err) =>
-          toast.error(
-            err instanceof Error ? err.message : "Could not submit the application",
-          ),
+          toast.error(getApiError(err, "Could not submit the application").message),
       },
     );
   }

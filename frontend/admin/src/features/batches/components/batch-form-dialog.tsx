@@ -43,9 +43,12 @@ import {
 } from "@/components/ui/async-multi-select";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import type { FieldPath } from "react-hook-form";
 import { useCreateBatch, useUpdateBatch } from "../hooks/use-batches";
 import { usersApi } from "@/features/users/api/users.api";
 import type { Batch, BatchStatus, BatchDetail } from "../types";
+import { getApiError } from "@/lib/api/errors";
 
 const schema = z
   .object({
@@ -205,42 +208,52 @@ export function BatchFormDialog(props: {
 
   const isPending = create.isPending || update.isPending;
 
-  function handleSubmitForm(values: Values) {
-    const slug = values.slug.trim() || slugify(values.title);
-    const trimmedThumb = values.thumbnail?.trim() ?? "";
-    const thumbnailChanged = trimmedThumb !== (thumbnailInitial ?? "");
-    const thumbnailToSend = !isEditing
-      ? trimmedThumb || undefined
-      : thumbnailChanged
+  async function handleSubmitForm(values: Values) {
+    try {
+      const slug = values.slug.trim() || slugify(values.title);
+      const trimmedThumb = values.thumbnail?.trim() ?? "";
+      const thumbnailChanged = trimmedThumb !== (thumbnailInitial ?? "");
+      const thumbnailToSend = !isEditing
         ? trimmedThumb || undefined
-        : undefined;
+        : thumbnailChanged
+          ? trimmedThumb || undefined
+          : undefined;
 
-    const payload = {
-      title: values.title.trim(),
-      slug,
-      description: values.description?.trim() || undefined,
-      shortDescription: values.shortDescription?.trim() || undefined,
-      targetExam: values.targetExam?.trim() || undefined,
-      language: values.language.trim(),
-      thumbnail: thumbnailToSend,
-      bannerImage: values.bannerImage?.trim() || undefined,
-      price: values.price,
-      compareAtPrice: values.compareAtPrice,
-      currency: values.currency,
-      capacity: values.capacity,
-      startDate: new Date(values.startDate).toISOString(),
-      endDate: new Date(values.endDate).toISOString(),
-      categoryId: values.categoryId?.trim() || undefined,
-      teacherIds: values.teacherIds,
-      status: values.status as BatchStatus,
-    };
+      const payload = {
+        title: values.title.trim(),
+        slug,
+        description: values.description?.trim() || undefined,
+        shortDescription: values.shortDescription?.trim() || undefined,
+        targetExam: values.targetExam?.trim() || undefined,
+        language: values.language.trim(),
+        thumbnail: thumbnailToSend,
+        bannerImage: values.bannerImage?.trim() || undefined,
+        price: values.price,
+        compareAtPrice: values.compareAtPrice,
+        currency: values.currency,
+        capacity: values.capacity,
+        startDate: new Date(values.startDate).toISOString(),
+        endDate: new Date(values.endDate).toISOString(),
+        categoryId: values.categoryId?.trim() || undefined,
+        teacherIds: values.teacherIds,
+        status: values.status as BatchStatus,
+      };
 
-    if (isEditing && batch)
-      update.mutate(
-        { batchId: batch.batchId, dto: payload },
-        { onSuccess: () => onOpenChange(false) },
-      );
-    else create.mutate(payload, { onSuccess: () => onOpenChange(false) });
+      if (isEditing && batch) {
+        await update.mutateAsync({ batchId: batch.batchId, dto: payload });
+      } else {
+        await create.mutateAsync(payload);
+      }
+      onOpenChange(false);
+    } catch (err) {
+      const apiError = getApiError(err);
+      for (const [field, message] of Object.entries(apiError.fieldErrors)) {
+        form.setError(field as FieldPath<Values>, { type: "server", message });
+      }
+      if (Object.keys(apiError.fieldErrors).length === 0) {
+        toast.error(apiError.message);
+      }
+    }
   }
 
   useEffect(() => {

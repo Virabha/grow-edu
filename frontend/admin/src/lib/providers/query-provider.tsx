@@ -2,6 +2,7 @@
 import { QueryClient, QueryClientProvider, type QueryClient as QueryClientType, MutationCache, } from "@tanstack/react-query";
 import { toast } from "sonner";
 import React, { createContext, useContext, useState, type ReactNode } from "react";
+import { getApiError } from "@/lib/api/errors";
 const createQueryClient = (): QueryClientType => new QueryClient({
     defaultOptions: {
         queries: {
@@ -9,12 +10,10 @@ const createQueryClient = (): QueryClientType => new QueryClient({
             refetchOnWindowFocus: false,
         },
     },
-    // Global mutation error handler — individual mutations can still override with their own onError.
     mutationCache: new MutationCache({
         onError: (error, _vars, _ctx, mutation) => {
-            if (mutation.options.onError) return; // mutation handles its own errors
-            const msg = error instanceof Error ? error.message : "Something went wrong";
-            toast.error(msg);
+            if (mutation.options.onError) return;
+            toast.error(getApiError(error).message);
         },
     }),
 });

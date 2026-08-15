@@ -39,6 +39,7 @@ import {
   useUpdateResource,
   type ResourceRow,
 } from "@/lib/hooks/use-resource";
+import { getApiError } from "@/lib/api/errors";
 
 export interface ColumnSpec {
   key: string;
@@ -177,6 +178,39 @@ export function ResourcePage({
       const value = values[field.key];
       if (value === "" || value === null || value === undefined) {
         nextErrors[field.key] = `${field.label} is required`;
+      } else if (
+        field.type !== "boolean" &&
+        field.type !== "number" &&
+        typeof value === "string" &&
+        value.trim() === ""
+      ) {
+        nextErrors[field.key] = `${field.label} is required`;
+      }
+    }
+    for (const field of formFields) {
+      if (nextErrors[field.key]) continue;
+      const value = values[field.key];
+      if (
+        field.type === "number" &&
+        value !== "" &&
+        value !== null &&
+        value !== undefined
+      ) {
+        const n = Number(value);
+        if (Number.isNaN(n)) {
+          nextErrors[field.key] = `${field.label} must be a valid number`;
+        }
+      }
+      if (
+        field.type === "date" &&
+        value !== "" &&
+        value !== null &&
+        value !== undefined
+      ) {
+        const d = new Date(String(value));
+        if (Number.isNaN(d.getTime())) {
+          nextErrors[field.key] = `${field.label} must be a valid date`;
+        }
       }
     }
     setErrors(nextErrors);
@@ -192,7 +226,15 @@ export function ResourcePage({
             toast.success(`${capitalise(noun)} updated`);
             setFormOpen(false);
           },
-          onError: (err) => toast.error(messageOf(err, `Could not update the ${noun}`)),
+          onError: (err) => {
+            const apiError = getApiError(err, `Could not update the ${noun}`);
+            const fieldErrs = apiError.fieldErrors;
+            if (Object.keys(fieldErrs).length > 0) {
+              setErrors(fieldErrs);
+            } else {
+              toast.error(apiError.message);
+            }
+          },
         },
       );
     } else {
@@ -202,7 +244,15 @@ export function ResourcePage({
           setFormOpen(false);
           setPage(1);
         },
-        onError: (err) => toast.error(messageOf(err, `Could not create the ${noun}`)),
+        onError: (err) => {
+          const apiError = getApiError(err, `Could not create the ${noun}`);
+          const fieldErrs = apiError.fieldErrors;
+          if (Object.keys(fieldErrs).length > 0) {
+            setErrors(fieldErrs);
+          } else {
+            toast.error(apiError.message);
+          }
+        },
       });
     }
   }
@@ -214,7 +264,7 @@ export function ResourcePage({
         toast.success(`${capitalise(noun)} deleted`);
         setPendingDelete(null);
       },
-      onError: (err) => toast.error(messageOf(err, `Could not delete the ${noun}`)),
+      onError: (err) => toast.error(getApiError(err, `Could not delete the ${noun}`).message),
     });
   }
 
@@ -281,7 +331,7 @@ export function ResourcePage({
         {isError ? (
           <EmptyState
             title={`We could not load ${noun}s`}
-            description={messageOf(error, "Please try again.")}
+            description={getApiError(error, "Please try again.").message}
             action={{ label: "Try again", onClick: () => void refetch() }}
           />
         ) : isLoading ? (
@@ -430,10 +480,6 @@ export function ResourcePage({
 
 function capitalise(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
-}
-
-function messageOf(error: unknown, fallback: string): string {
-  return error instanceof Error && error.message ? error.message : fallback;
 }
 
 function labelOf(row: ResourceRow | null, columns: ColumnSpec[]): string {

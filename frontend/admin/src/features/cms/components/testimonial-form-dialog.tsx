@@ -11,8 +11,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { toast } from "sonner";
+import type { FieldPath } from "react-hook-form";
 import { useCreateTestimonial, useUpdateTestimonial } from "../hooks/use-cms";
 import type { Testimonial } from "../types";
+import { getApiError } from "@/lib/api/errors";
 
 const schema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -78,23 +81,33 @@ export function TestimonialFormDialog(props: {
 
   const isPending = create.isPending || update.isPending;
   const onSubmit = async (values: Values) => {
-    const payload = {
-      name: values.name.trim(),
-      role: values.role?.trim() || undefined,
-      company: values.company?.trim() || undefined,
-      rating: values.rating,
-      text: values.text.trim(),
-      course: values.course?.trim() || undefined,
-      avatarUrl: values.avatarUrl?.trim() || undefined,
-      displayOrder: values.displayOrder,
-      isActive: values.isActive,
-    };
-    if (isEditing && testimonial) {
-      await update.mutateAsync({ id: testimonial.testimonialId, dto: payload });
-    } else {
-      await create.mutateAsync(payload);
+    try {
+      const payload = {
+        name: values.name.trim(),
+        role: values.role?.trim() || undefined,
+        company: values.company?.trim() || undefined,
+        rating: values.rating,
+        text: values.text.trim(),
+        course: values.course?.trim() || undefined,
+        avatarUrl: values.avatarUrl?.trim() || undefined,
+        displayOrder: values.displayOrder,
+        isActive: values.isActive,
+      };
+      if (isEditing && testimonial) {
+        await update.mutateAsync({ id: testimonial.testimonialId, dto: payload });
+      } else {
+        await create.mutateAsync(payload);
+      }
+      onOpenChange(false);
+    } catch (err) {
+      const apiError = getApiError(err);
+      for (const [field, message] of Object.entries(apiError.fieldErrors)) {
+        form.setError(field as FieldPath<Values>, { type: "server", message });
+      }
+      if (Object.keys(apiError.fieldErrors).length === 0) {
+        toast.error(apiError.message);
+      }
     }
-    onOpenChange(false);
   };
 
   return (

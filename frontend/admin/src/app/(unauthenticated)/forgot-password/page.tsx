@@ -7,6 +7,8 @@ import { useForgotPassword } from "@/features/auth/hooks/use-auth";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { getApiError } from "@/lib/api/errors";
+import type { FieldPath } from "react-hook-form";
 import Link from "next/link";
 import { CheckCircle, AlertCircle } from "lucide-react";
 import { useEffect } from "react";
@@ -17,17 +19,20 @@ const forgotPasswordSchema = z.object({
 type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
 export default function ForgotPasswordPage() {
     const forgotPassword = useForgotPassword();
-    const { register, handleSubmit, formState: { errors, isSubmitSuccessful }, } = useForm<ForgotPasswordFormData>({
+    const { register, handleSubmit, setError, formState: { errors, isSubmitSuccessful }, } = useForm<ForgotPasswordFormData>({
         resolver: zodResolver(forgotPasswordSchema),
     });
     useEffect(() => {
         if (forgotPassword.isError) {
-            const errorMessage = forgotPassword.error instanceof Error
-                ? forgotPassword.error.message
-                : "Failed to send reset email. Please try again.";
-            toast.error(errorMessage);
+            const apiError = getApiError(forgotPassword.error, "Failed to send reset email. Please try again.");
+            for (const [field, message] of Object.entries(apiError.fieldErrors)) {
+                setError(field as FieldPath<ForgotPasswordFormData>, { type: "server", message });
+            }
+            if (Object.keys(apiError.fieldErrors).length === 0) {
+                toast.error(apiError.message);
+            }
         }
-    }, [forgotPassword.isError, forgotPassword.error]);
+    }, [forgotPassword.isError, forgotPassword.error, setError]);
     const onSubmit = (data: ForgotPasswordFormData) => {
         forgotPassword.mutate(data);
     };

@@ -24,6 +24,7 @@ import {
 } from "@/lib/hooks/use-lessons";
 import { queryKeys } from "@/lib/query-keys";
 import { VideoUpload } from "./video-upload";
+import { getApiError } from "@/lib/api/errors";
 import { QuizBuilder, type QuizQuestion } from "./quiz-builder";
 import { SecureVideoPlayer } from "@/components/ui/secure-video-player";
 
@@ -41,6 +42,7 @@ export function LessonEditorDialog({
   courseId,
 }: LessonEditorDialogProps) {
   const [title, setTitle] = useState("");
+  const [titleError, setTitleError] = useState("");
   const [description, setDescription] = useState("");
   const [isFreePreview, setIsFreePreview] = useState(false);
   const [textContent, setTextContent] = useState("");
@@ -81,6 +83,11 @@ export function LessonEditorDialog({
 
   const handleSave = async () => {
     if (!lessonId) return;
+    if (title.trim() === "") {
+      setTitleError("Title is required");
+      return;
+    }
+    setTitleError("");
     try {
       await updateLessonMutation.mutateAsync({
         id: lessonId,
@@ -101,8 +108,8 @@ export function LessonEditorDialog({
       });
       toast.success("Lesson saved.");
       onOpenChange(false);
-    } catch {
-      toast.error("Failed to update lesson.");
+    } catch (err) {
+      toast.error(getApiError(err, "Failed to update lesson.").message);
     }
   };
 
@@ -136,9 +143,10 @@ export function LessonEditorDialog({
               </Label>
               <Input
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                onChange={(e) => { setTitle(e.target.value); if (titleError) setTitleError(""); }}
                 placeholder="e.g. Introduction to web development"
               />
+              {titleError && <p className="text-xs text-destructive">{titleError}</p>}
             </div>
 
             <div className="space-y-1.5">

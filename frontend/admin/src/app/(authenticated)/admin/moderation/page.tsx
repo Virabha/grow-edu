@@ -4,7 +4,7 @@ import { CheckCircle, XCircle, Eye } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useCourses, useApproveCourse, useRejectCourse, } from "@/features/courses/hooks/use-courses";
 import type { Course } from "@/lib/api/services/courses";
-import type { AxiosError } from "axios";
+import { getApiError } from "@/lib/api/errors";
 import { DataTableSkeleton } from "@/components/ui/data-table-skeleton";
 import { PageFilters } from "@/components/layout/page-filters";
 import { Button } from "@/components/ui/button";
@@ -38,9 +38,7 @@ export default function ContentModerationPage() {
             toast.success("Course approved successfully!");
         }
         catch (error: unknown) {
-            const err = error as AxiosError<{ message?: string }>;
-            const message = err?.response?.data?.message || err?.message || "Failed to approve course";
-            toast.error(message);
+            toast.error(getApiError(error, "Failed to approve course").message);
         }
     };
     const handleReject = async (courseId: string) => {
@@ -53,9 +51,7 @@ export default function ContentModerationPage() {
             toast.success("Course rejected successfully");
         }
         catch (error: unknown) {
-            const err = error as AxiosError<{ message?: string }>;
-            const message = err?.response?.data?.message || err?.message || "Failed to reject course";
-            toast.error(message);
+            toast.error(getApiError(error, "Failed to reject course").message);
         }
     };
     const coursesArray = coursesData?.data || [];

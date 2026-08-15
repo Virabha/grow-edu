@@ -3,6 +3,8 @@ import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { toast } from "sonner";
+import type { FieldPath } from "react-hook-form";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, } from "@/components/ui/form";
@@ -13,7 +15,9 @@ import { Switch } from "@/components/ui/switch";
 import { useCreateCoupon, useUpdateCoupon } from "../hooks";
 import type { Coupon, DiscountType } from "../types";
 import { useCategories } from "@/features/categories/hooks/use-categories";
-const couponFormSchema = z.object({
+import { getApiError } from "@/lib/api/errors";
+const couponFormSchema = z
+  .object({
     couponCode: z
         .string()
         .min(3, "Coupon code must be at least 3 characters")
@@ -26,10 +30,30 @@ const couponFormSchema = z.object({
     validFrom: z.string().min(1, "Valid from date is required"),
     validTill: z.string().min(1, "Valid till date is required"),
     usageLimit: z.coerce.number().min(1).optional().nullable(),
-    usageLimitPerUser: z.coerce.number().min(1).default(1),
+    usageLimitPerUser: z.coerce.number().min(1).max(100).default(1),
     categoryIds: z.array(z.string()).optional(),
     isActive: z.boolean().default(true),
-});
+  })
+  .superRefine((v, ctx) => {
+    if (
+      v.validFrom &&
+      v.validTill &&
+      new Date(v.validTill) <= new Date(v.validFrom)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["validTill"],
+        message: "Valid till must be after valid from",
+      });
+    }
+    if (v.discountType === "PERCENTAGE" && v.discountValue > 100) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["discountValue"],
+        message: "Percentage discount cannot exceed 100",
+      });
+    }
+  });
 type CouponFormValues = z.infer<typeof couponFormSchema>;
 interface CouponFormDialogProps {
     open: boolean;
@@ -122,7 +146,14 @@ export function CouponFormDialog({ open, onOpenChange, coupon, }: CouponFormDial
             }
             onOpenChange(false);
         }
-        catch {
+        catch (err) {
+          const apiError = getApiError(err);
+          for (const [field, message] of Object.entries(apiError.fieldErrors)) {
+            form.setError(field as FieldPath<CouponFormValues>, { type: "server", message });
+          }
+          if (Object.keys(apiError.fieldErrors).length === 0) {
+            toast.error(apiError.message);
+          }
         }
     };
     const isPending = createCoupon.isPending || updateCoupon.isPending;

@@ -27,6 +27,7 @@ import {
   useQRSettings,
   type CreateManualQRResponse,
 } from "@/lib/hooks/use-payments";
+import { getApiError } from "@/lib/api/errors";
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, {
@@ -65,9 +66,7 @@ export default function BatchCheckoutPage(props: {
         if (res.paymentId) setPaymentId(res.paymentId);
       })
       .catch((err) => {
-        const msg =
-          err instanceof Error ? err.message : "Failed to start checkout";
-        setInitError(msg);
+        setInitError(getApiError(err, "Failed to start checkout").message);
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [batch?.batchId]);

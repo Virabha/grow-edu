@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, type FieldPath } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod/v3";
 import { motion } from "framer-motion";
@@ -11,7 +11,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useForgotPassword } from "@/lib/hooks/use-auth";
-import { getApiErrorMessage } from "@/lib/utils";
+import { getApiError } from "@/lib/api/errors";
 
 const forgotSchema = z.object({
   email: z.string().min(1, "Email is required").email("Enter a valid email"),
@@ -26,6 +26,7 @@ export default function ForgotPasswordPage() {
   const {
     register,
     handleSubmit,
+    setError,
     formState: { errors },
   } = useForm<ForgotFormValues>({
     resolver: zodResolver(forgotSchema),
@@ -40,9 +41,11 @@ export default function ForgotPasswordPage() {
       setSubmitted(true);
       toast.success("Reset link sent to your email.");
     } catch (err) {
-      toast.error(
-        getApiErrorMessage(err, "Something went wrong. Please try again."),
-      );
+      const apiError = getApiError(err, "Something went wrong. Please try again.");
+      toast.error(apiError.message);
+      for (const [field, message] of Object.entries(apiError.fieldErrors)) {
+        setError(field as FieldPath<ForgotFormValues>, { message });
+      }
     }
   };
 

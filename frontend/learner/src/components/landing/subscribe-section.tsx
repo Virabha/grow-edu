@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { BRAND } from "@/lib/constants";
 import { useSubscribe } from "@/lib/hooks/use-contact";
 import { toast } from "sonner";
+import { getApiError } from "@/lib/api/errors";
 
 export function SubscribeSection() {
   const [email, setEmail] = useState("");
@@ -24,8 +25,8 @@ export function SubscribeSection() {
           setDone(true);
           toast.success("Subscribed successfully!");
         },
-        onError: () => {
-          toast.error("Failed to subscribe. Please try again.");
+        onError: (err) => {
+          toast.error(getApiError(err, "Failed to subscribe. Please try again.").message);
         },
       },
     );

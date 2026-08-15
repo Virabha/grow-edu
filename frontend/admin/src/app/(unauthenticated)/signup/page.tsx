@@ -7,6 +7,8 @@ import { useRegister } from "@/features/auth/hooks/use-auth";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { getApiError } from "@/lib/api/errors";
+import type { FieldPath } from "react-hook-form";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -52,6 +54,7 @@ export default function SignupPage() {
   const {
     register,
     handleSubmit,
+    setError,
     formState: { errors },
   } = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
@@ -74,12 +77,14 @@ export default function SignupPage() {
         firstName,
         lastName,
       })
-      .catch((error: unknown) => {
-        const errorMessage =
-          error instanceof Error
-            ? error.message
-            : "Registration failed. Please try again.";
-        toast.error(errorMessage);
+      .catch((err: unknown) => {
+        const apiError = getApiError(err, "Registration failed. Please try again.");
+        for (const [field, message] of Object.entries(apiError.fieldErrors)) {
+          setError(field as FieldPath<SignupFormData>, { type: "server", message });
+        }
+        if (Object.keys(apiError.fieldErrors).length === 0) {
+          toast.error(apiError.message);
+        }
       });
   }
 

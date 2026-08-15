@@ -41,6 +41,7 @@ import type { BatchSession } from "@/lib/api/services/batches";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { getApiError } from "@/lib/api/errors";
 
 const JOIN_WINDOW_MS = 15 * 60 * 1000; // 15 min before start
 
@@ -769,8 +770,8 @@ export default function BatchDetailPage(props: { params: Promise<{ slug: string 
                       setDoubtTitle("");
                       setDoubtBody("");
                       toast.success("Doubt posted");
-                    } catch {
-                      toast.error("Failed to post doubt");
+                    } catch (err) {
+                      toast.error(getApiError(err, "Failed to post doubt").message);
                     }
                   }}
                 >

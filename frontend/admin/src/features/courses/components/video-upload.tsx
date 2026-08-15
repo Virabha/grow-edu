@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { CheckCircle, X, Loader2 } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
-import { AxiosError } from "axios";
+import { getApiError } from "@/lib/api/errors";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import * as tus from "tus-js-client";
@@ -125,10 +125,7 @@ export function VideoUpload({
     } catch (error: unknown) {
       setProgress(0);
       setUploading(false);
-      const err = error as AxiosError<{ message?: string }>;
-      const errorMessage =
-        err.response?.data?.message || err.message || "Upload failed";
-      toast.error(errorMessage);
+      toast.error(getApiError(error, "Upload failed").message);
     }
   };
 

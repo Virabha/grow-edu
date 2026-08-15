@@ -21,7 +21,7 @@ import {
   useValidateCoupon,
   type CouponValidationResult,
 } from "@/lib/hooks/use-coupons";
-import { getApiErrorMessage } from "@/lib/utils";
+import { getApiError } from "@/lib/api/errors";
 
 import { PaymentPanel } from "@/components/checkout/payment-panel";
 import { ProofPanel } from "@/components/checkout/proof-panel";
@@ -97,7 +97,7 @@ function CheckoutContent() {
           router.push("/my-courses");
         })
         .catch((err) => {
-          toast.error(getApiErrorMessage(err, "Failed to enrol."));
+          toast.error(getApiError(err, "Failed to enrol.").message);
         });
       return;
     }
@@ -112,7 +112,7 @@ function CheckoutContent() {
         setPending(res);
       })
       .catch((err) => {
-        const msg = getApiErrorMessage(err, "Couldn't start the payment.");
+        const msg = getApiError(err, "Couldn't start the payment.").message;
         setPaymentError(msg);
         toast.error(msg);
       });
@@ -144,7 +144,7 @@ function CheckoutContent() {
             valid: false,
             couponCode: debouncedCoupon.toUpperCase(),
             reason: "ERROR",
-            message: getApiErrorMessage(e, "Couldn't validate coupon."),
+            message: getApiError(e, "Couldn't validate coupon.").message,
           });
         }
       });
@@ -170,7 +170,7 @@ function CheckoutContent() {
       toast.success("Enrolled successfully!");
       router.push("/my-courses");
     } catch (err) {
-      toast.error(getApiErrorMessage(err, "Failed to enrol."));
+      toast.error(getApiError(err, "Failed to enrol.").message);
     }
   };
 

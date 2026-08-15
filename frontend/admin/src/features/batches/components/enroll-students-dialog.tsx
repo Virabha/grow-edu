@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Users } from "lucide-react";
+import { getApiError } from "@/lib/api/errors";
 import { Label } from "@/components/ui/label";
 import { FormSheet } from "@/components/ui/form-sheet";
 import {
@@ -110,8 +111,7 @@ export function EnrollStudentsDialog(props: {
       }
       onOpenChange(false);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Failed to enroll";
-      setError(msg);
+      setError(getApiError(err, "Failed to enroll").message);
     }
   }
 

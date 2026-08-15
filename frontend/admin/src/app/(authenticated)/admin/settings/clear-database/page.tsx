@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiClient } from "@/lib/api/client";
+import { getApiError } from "@/lib/api/errors";
 
 export default function ClearDatabasePage() {
   const queryClient = useQueryClient();
@@ -27,7 +28,7 @@ export default function ClearDatabasePage() {
       setConfirm("");
     },
     onError: (err) =>
-      toast.error(err instanceof Error ? err.message : "Could not reset"),
+      toast.error(getApiError(err, "Could not reset").message),
   });
 
   return (

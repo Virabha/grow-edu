@@ -22,6 +22,7 @@ import { useRequestRefund, type Order } from "@/lib/hooks/use-orders";
 import { formatDateTime, formatMoney } from "@/lib/format";
 import { BRAND } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { getApiError } from "@/lib/api/errors";
 
 const GATEWAY_LABEL: Record<Order["gateway"], string> = {
   RAZORPAY: "Razorpay",
@@ -41,6 +42,7 @@ export function OrderDetailDialog({
 }) {
   const [showRefundForm, setShowRefundForm] = useState(false);
   const [reason, setReason] = useState("");
+  const [reasonError, setReasonError] = useState<string | null>(null);
   const requestRefund = useRequestRefund();
 
   if (!order) return null;
@@ -52,6 +54,7 @@ export function OrderDetailDialog({
     if (!next) {
       setShowRefundForm(false);
       setReason("");
+      setReasonError(null);
     }
     onOpenChange(next);
   }
@@ -60,9 +63,10 @@ export function OrderDetailDialog({
     if (!order) return;
     const trimmed = reason.trim();
     if (trimmed.length < 10) {
-      toast.error("Tell us a little more — at least 10 characters.");
+      setReasonError("Tell us a little more — at least 10 characters.");
       return;
     }
+    setReasonError(null);
     requestRefund.mutate(
       { orderId: order.orderId, reason: trimmed },
       {
@@ -70,11 +74,16 @@ export function OrderDetailDialog({
           toast.success("Refund requested. We will email you within 3 days.");
           setShowRefundForm(false);
           setReason("");
+          setReasonError(null);
         },
-        onError: (err) =>
-          toast.error(
-            err instanceof Error ? err.message : "Could not request a refund",
-          ),
+        onError: (err) => {
+          const apiError = getApiError(err, "Could not request a refund");
+          toast.error(apiError.message);
+          const serverReasonError = apiError.fieldErrors["reason"];
+          if (serverReasonError !== undefined) {
+            setReasonError(serverReasonError);
+          }
+        },
       },
     );
   }
@@ -198,9 +207,18 @@ export function OrderDetailDialog({
               id="refund-reason"
               rows={3}
               value={reason}
-              onChange={(e) => setReason(e.target.value)}
+              onChange={(e) => {
+                setReason(e.target.value);
+                if (reasonError) setReasonError(null);
+              }}
               placeholder="Tell us what went wrong so we can put it right."
+              aria-invalid={!!reasonError}
             />
+            {reasonError && (
+              <p className="text-xs text-destructive" role="alert">
+                {reasonError}
+              </p>
+            )}
             <p className="text-[11px] text-muted-foreground">
               Refunds are available within 14 days of purchase if you have
               completed less than 30% of the course.

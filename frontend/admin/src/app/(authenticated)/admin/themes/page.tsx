@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useResourceAction, useResourceList } from "@/lib/hooks/use-resource";
+import { getApiError } from "@/lib/api/errors";
 import { cn } from "@/lib/utils";
 
 export default function ThemesPage() {
@@ -26,7 +27,7 @@ export default function ThemesPage() {
       {isError ? (
         <EmptyState
           title="We could not load themes"
-          description={error instanceof Error ? error.message : "Please try again."}
+          description={getApiError(error, "Please try again.").message}
           action={{ label: "Try again", onClick: () => void refetch() }}
         />
       ) : isLoading ? (
@@ -80,11 +81,7 @@ export default function ThemesPage() {
                           onSuccess: () =>
                             toast.success(`${String(theme.name)} is now live`),
                           onError: (err) =>
-                            toast.error(
-                              err instanceof Error
-                                ? err.message
-                                : "Could not switch theme",
-                            ),
+                            toast.error(getApiError(err, "Could not switch theme").message),
                         },
                       )
                     }

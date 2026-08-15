@@ -6,6 +6,7 @@ import { Plus, GripVertical, Trash2, Pencil, ChevronRight, Video, FileText, Help
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { getApiError } from "@/lib/api/errors";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger, } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
@@ -116,7 +117,7 @@ export function CourseBuilder({ courseId }: CourseBuilderProps) {
             resetModuleForm();
         }
         catch (error) {
-            toast.error("Failed to create module");
+            toast.error(getApiError(error, "Failed to create module").message);
         }
     };
     const handleUpdateModule = async () => {
@@ -136,7 +137,7 @@ export function CourseBuilder({ courseId }: CourseBuilderProps) {
             resetModuleForm();
         }
         catch (error) {
-            toast.error("Failed to update module");
+            toast.error(getApiError(error, "Failed to update module").message);
         }
     };
     const confirmDeleteModule = (id: string) => {
@@ -183,7 +184,7 @@ export function CourseBuilder({ courseId }: CourseBuilderProps) {
             setEditingLessonId(newLesson.lessonId);
         }
         catch (error) {
-            toast.error("Failed to create lesson");
+            toast.error(getApiError(error, "Failed to create lesson").message);
         }
     };
     const confirmDeleteLesson = (lessonId: string) => {

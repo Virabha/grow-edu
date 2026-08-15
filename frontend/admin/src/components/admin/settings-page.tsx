@@ -16,6 +16,7 @@ import {
   type FieldValue,
 } from "@/components/admin/resource-field";
 import { apiClient } from "@/lib/api/client";
+import { getApiError } from "@/lib/api/errors";
 
 interface SettingsResponse {
   group: string;
@@ -60,9 +61,7 @@ export function SettingsPage({
       toast.success("Settings saved");
     },
     onError: (err) =>
-      toast.error(
-        err instanceof Error ? err.message : "Could not save these settings",
-      ),
+      toast.error(getApiError(err, "Could not save these settings").message),
   });
 
   // Server values are the source of truth until the user edits something.
@@ -74,9 +73,7 @@ export function SettingsPage({
       <PageLayout header="Settings">
         <EmptyState
           title="We could not load these settings"
-          description={
-            error instanceof Error ? error.message : "Please try again."
-          }
+          description={getApiError(error, "Please try again.").message}
           action={{ label: "Try again", onClick: () => void refetch() }}
         />
       </PageLayout>

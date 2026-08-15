@@ -64,6 +64,20 @@ jobs:
           fi
           echo "clean: no forced types in$present"
 
+  route-params:
+    name: route params match their bindings
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Every @Param must match a parameter declared in its route path
+        run: node scripts/check-route-params.mjs
+
   backend:
     name: backend · typecheck + lint + test
     runs-on: ubuntu-latest

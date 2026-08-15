@@ -3,6 +3,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { useCourseWizard } from "../store";
 import { useUpdateCourse } from "@/features/courses/hooks/use-courses";
+import { getApiError } from "@/lib/api/errors";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { WizardShell } from "./wizard-shell";
@@ -42,8 +43,8 @@ export function StepSettings() {
       await updateCourse.mutateAsync({ id: courseId, dto: { status } });
       toast.success("Settings saved.");
       nextStep();
-    } catch {
-      toast.error("Couldn't save settings.");
+    } catch (err) {
+      toast.error(getApiError(err, "Couldn't save settings.").message);
     }
   };
 

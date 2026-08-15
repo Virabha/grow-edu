@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select";
 import { useQuizAttempts } from "@/lib/hooks/use-quiz-attempts";
 import { formatDateTime, formatDuration } from "@/lib/format";
+import { getApiError } from "@/lib/api/errors";
 
 const RESULTS = [
   { value: "all", label: "All results" },
@@ -104,9 +105,7 @@ export default function QuizzesPage() {
         {isError ? (
           <EmptyState
             title="We could not load your attempts"
-            description={
-              error instanceof Error ? error.message : "Please try again."
-            }
+            description={getApiError(error, "Please try again.").message}
             icon={<Target className="size-10" />}
             action={{ label: "Try again", onClick: () => void refetch() }}
           />

@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StatusPill } from "@/components/admin/status-pill";
 import { apiClient } from "@/lib/api/client";
 import { useResourceList, type ResourceRow } from "@/lib/hooks/use-resource";
+import { getApiError } from "@/lib/api/errors";
 import { formatDate, formatMoney } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -67,7 +68,7 @@ export default function ManualEnrollmentPage() {
       setCourseId(null);
     },
     onError: (err) =>
-      toast.error(err instanceof Error ? err.message : "Could not enrol"),
+      toast.error(getApiError(err, "Could not enrol").message),
   });
 
   const chosenLearner = (learners.data?.data ?? []).find(

@@ -7,6 +7,8 @@ import { useResetPassword } from "@/features/auth/hooks/use-auth";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { getApiError } from "@/lib/api/errors";
+import type { FieldPath } from "react-hook-form";
 import { useSearchParams } from "next/navigation";
 import { CheckCircle, AlertCircle } from "lucide-react";
 import Link from "next/link";
@@ -26,17 +28,20 @@ function ResetPasswordForm() {
     const searchParams = useSearchParams();
     const token = searchParams.get("token");
     const resetPassword = useResetPassword();
-    const { register, handleSubmit, formState: { errors, isSubmitSuccessful }, } = useForm<ResetPasswordFormData>({
+    const { register, handleSubmit, setError, formState: { errors, isSubmitSuccessful }, } = useForm<ResetPasswordFormData>({
         resolver: zodResolver(resetPasswordSchema),
     });
     useEffect(() => {
         if (resetPassword.isError) {
-            const errorMessage = resetPassword.error instanceof Error
-                ? resetPassword.error.message
-                : "Failed to reset password. Please try again.";
-            toast.error(errorMessage);
+            const apiError = getApiError(resetPassword.error, "Failed to reset password. Please try again.");
+            for (const [field, message] of Object.entries(apiError.fieldErrors)) {
+                setError(field as FieldPath<ResetPasswordFormData>, { type: "server", message });
+            }
+            if (Object.keys(apiError.fieldErrors).length === 0) {
+                toast.error(apiError.message);
+            }
         }
-    }, [resetPassword.isError, resetPassword.error]);
+    }, [resetPassword.isError, resetPassword.error, setError]);
     const onSubmit = (data: ResetPasswordFormData) => {
         if (!token) {
             return;

@@ -31,6 +31,7 @@ import {
 import { PaymentStatusBadge } from "./payment-status-badge";
 import type { PaymentDetail } from "../api/payments.api";
 import { useApprovePayment, useRejectPayment } from "../hooks/use-payments";
+import { getApiError } from "@/lib/api/errors";
 
 type Action = "approve" | "reject" | null;
 
@@ -149,7 +150,7 @@ export function PaymentDetailSheet({
       setNotes("");
       onOpenChange(false);
     } catch (err) {
-      toast.error((err as Error)?.message || "Action failed.");
+      toast.error(getApiError(err, "Action failed.").message);
     }
   };
 

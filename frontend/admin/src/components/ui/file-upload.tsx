@@ -4,7 +4,7 @@ import { Loader2, UploadCloud } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { apiClient } from "@/lib/api/client";
-import { AxiosError } from "axios";
+import { getApiError } from "@/lib/api/errors";
 
 interface FileUploadProps {
   onUploadComplete: (key: string, url: string) => void;
@@ -67,10 +67,7 @@ export function FileUpload({
       onUploadComplete(data.key, data.url);
     } catch (error: unknown) {
       setProgress(0);
-      const err = error as AxiosError<{ message?: string }>;
-      const errorMessage =
-        err.response?.data?.message || err.message || "Upload failed";
-      toast.error(errorMessage);
+      toast.error(getApiError(error, "Upload failed").message);
     } finally {
       setUploading(false);
     }

@@ -4,13 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { queryKeys } from "@/lib/query-keys";
 import { batchesApi } from "../api/batches.api";
-
-function showError(verb: string) {
-  return (err: unknown) => {
-    const msg = err instanceof Error ? err.message : `Failed to ${verb}`;
-    toast.error(msg);
-  };
-}
+import { getApiError } from "@/lib/api/errors";
 
 import type {
   BatchFilters,
@@ -61,7 +55,7 @@ export function useCreateBatch() {
       qc.invalidateQueries({ queryKey: queryKeys.batches.all() });
       toast.success("Batch created");
     },
-    onError: showError("create batch"),
+    onError: (err: unknown) => toast.error(getApiError(err, "Failed to create batch").message),
   });
 }
 
@@ -74,7 +68,7 @@ export function useUpdateBatch() {
       qc.invalidateQueries({ queryKey: queryKeys.batches.all() });
       toast.success("Batch updated");
     },
-    onError: showError("update batch"),
+    onError: (err: unknown) => toast.error(getApiError(err, "Failed to update batch").message),
   });
 }
 
@@ -86,7 +80,7 @@ export function useDeleteBatch() {
       qc.invalidateQueries({ queryKey: queryKeys.batches.all() });
       toast.success("Batch deleted");
     },
-    onError: showError("delete batch"),
+    onError: (err: unknown) => toast.error(getApiError(err, "Failed to delete batch").message),
   });
 }
 

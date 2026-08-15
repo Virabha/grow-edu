@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
 import { AlertCircle, CheckCircle, Loader2, XCircle } from "lucide-react";
-import type { AxiosError } from "axios";
+import { getApiError } from "@/lib/api/errors";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -40,15 +40,6 @@ interface CourseModerationPanelProps {
   courseId: string;
 }
 
-function apiError(err: unknown): string {
-  const axiosErr = err as AxiosError<{ message?: string }>;
-  return (
-    axiosErr?.response?.data?.message ||
-    axiosErr?.message ||
-    "Something went wrong."
-  );
-}
-
 export function CourseModerationPanel({ courseId }: CourseModerationPanelProps) {
   const router = useRouter();
   const approveMutation = useApproveCourse();
@@ -78,7 +69,7 @@ export function CourseModerationPanel({ courseId }: CourseModerationPanelProps) 
       toast.success("Course approved.");
       router.push("/admin/courses");
     } catch (err) {
-      toast.error(apiError(err));
+      toast.error(getApiError(err, "Something went wrong.").message);
     }
   };
 
@@ -91,7 +82,7 @@ export function CourseModerationPanel({ courseId }: CourseModerationPanelProps) 
       toast.success("Changes requested.");
       router.push("/admin/courses");
     } catch (err) {
-      toast.error(apiError(err));
+      toast.error(getApiError(err, "Something went wrong.").message);
     }
   };
 
@@ -104,7 +95,7 @@ export function CourseModerationPanel({ courseId }: CourseModerationPanelProps) 
       toast.success("Course rejected.");
       router.push("/admin/courses");
     } catch (err) {
-      toast.error(apiError(err));
+      toast.error(getApiError(err, "Something went wrong.").message);
     }
   };
 

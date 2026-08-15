@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { WizardShell } from "./wizard-shell";
+import { getApiError } from "@/lib/api/errors";
 
 type PriceType = "FREE" | "PAID";
 
@@ -80,13 +81,7 @@ export function StepPricing() {
       toast.success("Pricing saved.");
       nextStep();
     } catch (error: unknown) {
-      const err = error as {
-        response?: { data?: { message?: string } };
-        message?: string;
-      };
-      toast.error(
-        err?.response?.data?.message || err?.message || "Couldn't save pricing.",
-      );
+      toast.error(getApiError(error, "Couldn't save pricing.").message);
     }
   };
 

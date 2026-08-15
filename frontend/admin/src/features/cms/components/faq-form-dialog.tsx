@@ -11,8 +11,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { toast } from "sonner";
+import type { FieldPath } from "react-hook-form";
 import { useCreateFaq, useUpdateFaq } from "../hooks/use-cms";
 import type { Faq } from "../types";
+import { getApiError } from "@/lib/api/errors";
 
 const schema = z.object({
   question: z.string().min(1, "Question is required"),
@@ -59,18 +62,28 @@ export function FaqFormDialog({
 
   const isPending = create.isPending || update.isPending;
   const onSubmit = async (values: Values) => {
-    const payload = {
-      question: values.question.trim(),
-      answer: values.answer.trim(),
-      displayOrder: values.displayOrder,
-      isActive: values.isActive,
-    };
-    if (isEditing && faq) {
-      await update.mutateAsync({ id: faq.faqId, dto: payload });
-    } else {
-      await create.mutateAsync(payload);
+    try {
+      const payload = {
+        question: values.question.trim(),
+        answer: values.answer.trim(),
+        displayOrder: values.displayOrder,
+        isActive: values.isActive,
+      };
+      if (isEditing && faq) {
+        await update.mutateAsync({ id: faq.faqId, dto: payload });
+      } else {
+        await create.mutateAsync(payload);
+      }
+      onOpenChange(false);
+    } catch (err) {
+      const apiError = getApiError(err);
+      for (const [field, message] of Object.entries(apiError.fieldErrors)) {
+        form.setError(field as FieldPath<Values>, { type: "server", message });
+      }
+      if (Object.keys(apiError.fieldErrors).length === 0) {
+        toast.error(apiError.message);
+      }
     }
-    onOpenChange(false);
   };
 
   return (

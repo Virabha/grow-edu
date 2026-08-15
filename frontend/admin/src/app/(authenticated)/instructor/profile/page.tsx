@@ -20,6 +20,7 @@ import { Camera, Loader2, Trash2, User } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { toast } from "sonner";
+import { getApiError } from "@/lib/api/errors";
 
 interface AvatarUploadResponse {
   url: string;
@@ -69,8 +70,8 @@ export default function InstructorProfilePage() {
       });
       setImagePreview(url);
       toast.success("Profile image updated");
-    } catch {
-      toast.error("Failed to upload image");
+    } catch (err) {
+      toast.error(getApiError(err, "Failed to upload image").message);
     }
   }
 
@@ -83,8 +84,8 @@ export default function InstructorProfilePage() {
       });
       setImagePreview(null);
       toast.success("Profile image removed");
-    } catch {
-      toast.error("Failed to remove image");
+    } catch (err) {
+      toast.error(getApiError(err, "Failed to remove image").message);
     }
   }
 

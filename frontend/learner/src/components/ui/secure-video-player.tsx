@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Hourglass, Loader2, Lock, RefreshCw } from "lucide-react";
-import { AxiosError } from "axios";
 import { apiClient } from "@/lib/api/client";
+import { getApiError } from "@/lib/api/errors";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { cn } from "@/lib/utils";
 import { Button } from "./button";
@@ -76,12 +76,9 @@ export function SecureVideoPlayer({
         }
       } catch (err: unknown) {
         if (isMounted) {
-          const axiosErr = err as AxiosError<{ message?: string }>;
-          const status = axiosErr.response?.status;
-          const msg =
-            axiosErr.response?.data?.message ??
-            axiosErr.message ??
-            "Unknown error";
+          const apiErr = getApiError(err, "Unknown error");
+          const status = apiErr.statusCode;
+          const msg = apiErr.message;
           if (status === 401) {
             setError({ kind: "auth", message: "Authentication required." });
           } else if (/not ready/i.test(msg)) {

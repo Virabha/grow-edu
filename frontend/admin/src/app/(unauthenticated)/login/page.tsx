@@ -16,6 +16,8 @@ import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { useLogin } from "@/features/auth/hooks/use-auth";
 import { useAuthStore } from "@/lib/store/auth-store";
+import { getApiError } from "@/lib/api/errors";
+import type { FieldPath } from "react-hook-form";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -32,6 +34,7 @@ export default function LoginPage() {
   const {
     register,
     handleSubmit,
+    setError,
     formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -44,12 +47,14 @@ export default function LoginPage() {
   }, [user, router]);
 
   function handleFormSubmit(data: LoginFormData) {
-    login.mutateAsync(data).catch((error: unknown) => {
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Login failed. Please check your credentials.";
-      toast.error(errorMessage);
+    login.mutateAsync(data).catch((err: unknown) => {
+      const apiError = getApiError(err, "Login failed. Please check your credentials.");
+      for (const [field, message] of Object.entries(apiError.fieldErrors)) {
+        setError(field as FieldPath<LoginFormData>, { type: "server", message });
+      }
+      if (Object.keys(apiError.fieldErrors).length === 0) {
+        toast.error(apiError.message);
+      }
     });
   }
 

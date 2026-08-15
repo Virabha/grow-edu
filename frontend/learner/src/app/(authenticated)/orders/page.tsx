@@ -26,6 +26,7 @@ import {
 import { useDebounce } from "@/hooks/use-debounce";
 import { useOrder, useOrders } from "@/lib/hooks/use-orders";
 import { formatDate, formatMoney } from "@/lib/format";
+import { getApiError } from "@/lib/api/errors";
 
 const STATUSES = [
   { value: "all", label: "All orders" },
@@ -121,9 +122,7 @@ function OrdersView() {
         {isError ? (
           <EmptyState
             title="We could not load your orders"
-            description={
-              error instanceof Error ? error.message : "Please try again."
-            }
+            description={getApiError(error, "Please try again.").message}
             icon={<Receipt className="size-10" />}
             action={{ label: "Try again", onClick: () => void refetch() }}
           />

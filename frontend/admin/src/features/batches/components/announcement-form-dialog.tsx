@@ -16,11 +16,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { FormSheet } from "@/components/ui/form-sheet";
+import { toast } from "sonner";
+import type { FieldPath } from "react-hook-form";
 import {
   useCreateBatchAnnouncement,
   useUpdateBatchAnnouncement,
 } from "../hooks/use-batches";
 import type { BatchAnnouncement } from "../types";
+import { getApiError } from "@/lib/api/errors";
 
 const FIELD_CLS = "h-8 text-xs";
 const LABEL_CLS = "text-xs font-medium";
@@ -65,14 +68,22 @@ export function AnnouncementFormDialog(props: {
 
   const isPending = create.isPending || update.isPending;
 
-  function onSubmit(values: Values) {
-    if (isEditing && announcement) {
-      update.mutate(
-        { announcementId: announcement.announcementId, dto: values },
-        { onSuccess: () => onOpenChange(false) },
-      );
-    } else {
-      create.mutate(values, { onSuccess: () => onOpenChange(false) });
+  async function onSubmit(values: Values) {
+    try {
+      if (isEditing && announcement) {
+        await update.mutateAsync({ announcementId: announcement.announcementId, dto: values });
+      } else {
+        await create.mutateAsync(values);
+      }
+      onOpenChange(false);
+    } catch (err) {
+      const apiError = getApiError(err);
+      for (const [field, message] of Object.entries(apiError.fieldErrors)) {
+        form.setError(field as FieldPath<Values>, { type: "server", message });
+      }
+      if (Object.keys(apiError.fieldErrors).length === 0) {
+        toast.error(apiError.message);
+      }
     }
   }
 

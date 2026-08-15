@@ -25,6 +25,7 @@ import {
   useSubmitQuizAttempt,
 } from "@/lib/hooks/use-batches";
 import type { QuizAttempt, QuizQuestion } from "@/lib/api/services/batches";
+import { getApiError } from "@/lib/api/errors";
 
 function pad(n: number): string {
   return String(n).padStart(2, "0");
@@ -67,8 +68,8 @@ function AttemptView({ batchId, attempt, questions, onSubmitted }: AttemptViewPr
       });
       onSubmitted(result);
       toast.success("Submitted");
-    } catch {
-      toast.error("Failed to submit");
+    } catch (err) {
+      toast.error(getApiError(err, "Failed to submit").message);
     }
   }, [answers, attempt.attemptId, submit, onSubmitted]);
 
@@ -380,8 +381,7 @@ export default function LearnerQuizPage(props: {
       const a = await startAttempt.mutateAsync();
       setAttempt(a);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Failed to start";
-      toast.error(msg);
+      toast.error(getApiError(e, "Failed to start").message);
     }
   }, [batch, startAttempt]);
 

@@ -22,6 +22,7 @@ import {
   useUpdateResource,
   type ResourceRow,
 } from "@/lib/hooks/use-resource";
+import { getApiError } from "@/lib/api/errors";
 
 const MENUS = [
   { key: "header", label: "Header menu", hint: "The main navigation across the top." },
@@ -106,7 +107,7 @@ export default function MenuBuilderPage() {
         setDraft(null);
       },
       onError: (err: unknown) =>
-        toast.error(err instanceof Error ? err.message : "Could not save"),
+        toast.error(getApiError(err, "Could not save").message),
     };
 
     if (draft.id) update.mutate({ ...body, id: draft.id }, done);

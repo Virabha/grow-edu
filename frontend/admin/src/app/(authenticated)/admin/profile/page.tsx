@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiClient } from "@/lib/api/client";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { useQuery } from "@tanstack/react-query";
+import { getApiError } from "@/lib/api/errors";
 
 interface Profile {
   id: string;
@@ -53,7 +54,7 @@ export default function AdminProfilePage() {
       setForm(null);
     },
     onError: (err) =>
-      toast.error(err instanceof Error ? err.message : "Could not save"),
+      toast.error(getApiError(err, "Could not save").message),
   });
 
   const upload = useMutation({
@@ -82,7 +83,7 @@ export default function AdminProfilePage() {
       await save.mutateAsync({ profileImage: url });
       toast.success("Photo updated");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Upload failed");
+      toast.error(getApiError(err, "Upload failed").message);
     } finally {
       if (fileRef.current) fileRef.current.value = "";
     }

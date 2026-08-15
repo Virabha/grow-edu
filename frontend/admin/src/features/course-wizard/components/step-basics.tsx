@@ -23,6 +23,7 @@ import {
 } from "@/features/courses/hooks/use-courses";
 import { useCategories } from "@/features/categories/hooks/use-categories";
 import { useCourseWizard } from "../store";
+import { getApiError } from "@/lib/api/errors";
 import { WizardShell } from "./wizard-shell";
 
 const basicsSchema = z.object({
@@ -160,8 +161,8 @@ export function StepBasics() {
         toast.success("Course basics updated.");
       }
       nextStep();
-    } catch {
-      toast.error("Couldn't save course basics.");
+    } catch (err) {
+      toast.error(getApiError(err, "Couldn't save course basics.").message);
     }
   };
 

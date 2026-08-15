@@ -17,6 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { SecureImage } from "@/components/ui/secure-image";
 import { cn } from "@/lib/utils";
+import { getApiError } from "@/lib/api/errors";
 import {
   useBatchBySlug,
   useBatchDoubt,
@@ -98,15 +99,19 @@ export default function LearnerDoubtPage(props: {
   );
   const reply = useReplyToDoubt(batch?.batchId ?? "", doubtId);
   const [body, setBody] = useState("");
+  const [bodyTouched, setBodyTouched] = useState(false);
+  const bodyError = bodyTouched && !body.trim() ? "Reply cannot be empty" : undefined;
 
   async function postReply() {
+    setBodyTouched(true);
     if (!body.trim()) return;
     try {
       await reply.mutateAsync(body.trim());
       setBody("");
+      setBodyTouched(false);
       toast.success("Reply posted");
-    } catch {
-      // global mutation toast surfaces it
+    } catch (err) {
+      toast.error(getApiError(err, "Could not post your reply").message);
     }
   }
 
@@ -261,9 +266,16 @@ export default function LearnerDoubtPage(props: {
             rows={3}
             value={body}
             onChange={(e) => setBody(e.target.value)}
+            onBlur={() => setBodyTouched(true)}
             placeholder="Help out or add follow-up details…"
             className="min-h-[72px] text-sm"
+            aria-invalid={!!bodyError}
           />
+          {bodyError && (
+            <p className="mt-1 text-xs text-destructive" role="alert">
+              {bodyError}
+            </p>
+          )}
           <div className="mt-2 flex items-center justify-between gap-2">
             <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
               <CheckCircle2 className="size-3" />

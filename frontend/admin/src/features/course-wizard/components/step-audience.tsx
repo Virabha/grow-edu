@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Loader2, Plus, X } from "lucide-react";
 import { useCourseWizard } from "../store";
 import { useUpdateCourse, useCourse } from "@/features/courses/hooks/use-courses";
+import { getApiError } from "@/lib/api/errors";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -110,8 +111,8 @@ export function StepAudience() {
       });
       toast.success("Audience saved.");
       nextStep();
-    } catch {
-      toast.error("Couldn't save audience.");
+    } catch (err) {
+      toast.error(getApiError(err, "Couldn't save audience.").message);
     }
   };
 

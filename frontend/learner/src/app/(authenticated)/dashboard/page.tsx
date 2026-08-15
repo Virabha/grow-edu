@@ -24,6 +24,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useDashboardSummary } from "@/lib/hooks/use-dashboard";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { formatDate, formatMoney, formatRelative } from "@/lib/format";
+import { getApiError } from "@/lib/api/errors";
 
 const ORDER_STATUS_COPY: Record<string, string> = {
   COMPLETED: "Paid",
@@ -44,11 +45,7 @@ export default function DashboardPage() {
       <PageLayout header="Dashboard">
         <EmptyState
           title="We could not load your dashboard"
-          description={
-            error instanceof Error
-              ? error.message
-              : "Something went wrong on our side."
-          }
+          description={getApiError(error, "Something went wrong on our side.").message}
           icon={<Target className="size-10" />}
           action={{ label: "Try again", onClick: () => void refetch() }}
         />

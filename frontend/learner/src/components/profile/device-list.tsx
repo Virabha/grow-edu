@@ -20,6 +20,7 @@ import {
   type Device,
 } from "@/lib/hooks/use-profile";
 import { formatRelative } from "@/lib/format";
+import { getApiError } from "@/lib/api/errors";
 
 const ICON = {
   desktop: Laptop,
@@ -39,9 +40,7 @@ export function DeviceList() {
     signOutDevice.mutate(device.deviceId, {
       onSuccess: () => toast.success(`Signed out of ${device.browser}`),
       onError: (err) =>
-        toast.error(
-          err instanceof Error ? err.message : "Could not sign that device out",
-        ),
+        toast.error(getApiError(err, "Could not sign that device out").message),
     });
   }
 
@@ -56,9 +55,7 @@ export function DeviceList() {
         setConfirmAll(false);
       },
       onError: (err) =>
-        toast.error(
-          err instanceof Error ? err.message : "Could not sign the devices out",
-        ),
+        toast.error(getApiError(err, "Could not sign the devices out").message),
     });
   }
 

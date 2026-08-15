@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, type FieldPath } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod/v3";
 import { toast } from "sonner";
@@ -24,6 +24,7 @@ import { FormField } from "@/components/ui/form-field";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiClient } from "@/lib/api/client";
+import { getApiError } from "@/lib/api/errors";
 import {
   useChangeEmail,
   useChangePassword,
@@ -34,8 +35,8 @@ import {
 /* ------------------------------------------------------------- schemas */
 
 const personalSchema = z.object({
-  firstName: z.string().min(1, "First name is required").max(50, "Too long"),
-  lastName: z.string().min(1, "Last name is required").max(50, "Too long"),
+  firstName: z.string().trim().min(1, "First name is required").max(50, "Too long"),
+  lastName: z.string().trim().min(1, "Last name is required").max(50, "Too long"),
   headline: z.string().max(120, "Keep it under 120 characters").optional(),
   bio: z.string().max(600, "Keep it under 600 characters").optional(),
   phone: z.string().max(20, "Too long").optional(),
@@ -198,9 +199,7 @@ function AvatarCard({ image }: { image: string | null }) {
       setPreview(url);
       toast.success("Profile photo updated");
     } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Could not upload that image",
-      );
+      toast.error(getApiError(err, "Could not upload that image").message);
       setPreview(null);
     } finally {
       URL.revokeObjectURL(localUrl);
@@ -213,8 +212,8 @@ function AvatarCard({ image }: { image: string | null }) {
       await updateProfile.mutateAsync({ profileImage: null });
       setPreview(null);
       toast.success("Profile photo removed");
-    } catch {
-      toast.error("Could not remove the photo");
+    } catch (err) {
+      toast.error(getApiError(err, "Could not remove the photo").message);
     }
   }
 
@@ -289,6 +288,7 @@ function PersonalCard() {
     register,
     handleSubmit,
     reset,
+    setError,
     formState: { errors, isDirty },
   } = useForm<PersonalValues>({
     resolver: zodResolver(personalSchema),
@@ -324,7 +324,13 @@ function PersonalCard() {
           phone: updated.phone ?? "",
         });
       },
-      onError: () => toast.error("Could not save your profile"),
+      onError: (err) => {
+        const apiError = getApiError(err, "Could not save your profile");
+        toast.error(apiError.message);
+        for (const [field, message] of Object.entries(apiError.fieldErrors)) {
+          setError(field as FieldPath<PersonalValues>, { message });
+        }
+      },
     });
   }
 
@@ -387,6 +393,7 @@ function LocationCard() {
     register,
     handleSubmit,
     reset,
+    setError,
     formState: { errors, isDirty },
   } = useForm<LocationValues>({
     resolver: zodResolver(locationSchema),
@@ -416,7 +423,13 @@ function LocationCard() {
         toast.success("Address updated");
         reset(values);
       },
-      onError: () => toast.error("Could not save your address"),
+      onError: (err) => {
+        const apiError = getApiError(err, "Could not save your address");
+        toast.error(apiError.message);
+        for (const [field, message] of Object.entries(apiError.fieldErrors)) {
+          setError(field as FieldPath<LocationValues>, { message });
+        }
+      },
     });
   }
 
@@ -466,6 +479,7 @@ function SocialCard() {
     register,
     handleSubmit,
     reset,
+    setError,
     formState: { errors, isDirty },
   } = useForm<SocialValues>({
     resolver: zodResolver(socialSchema),
@@ -490,7 +504,13 @@ function SocialCard() {
           toast.success("Links updated");
           reset(values);
         },
-        onError: () => toast.error("Could not save your links"),
+        onError: (err) => {
+          const apiError = getApiError(err, "Could not save your links");
+          toast.error(apiError.message);
+          for (const [field, message] of Object.entries(apiError.fieldErrors)) {
+            setError(field as FieldPath<SocialValues>, { message });
+          }
+        },
       },
     );
   }
@@ -545,6 +565,7 @@ function EmailCard({ currentEmail }: { currentEmail: string }) {
     register,
     handleSubmit,
     reset,
+    setError,
     formState: { errors, isDirty },
   } = useForm<EmailValues>({
     resolver: zodResolver(emailSchema),
@@ -561,10 +582,13 @@ function EmailCard({ currentEmail }: { currentEmail: string }) {
         toast.success("Email updated. Verify it from the link we just sent.");
         reset(values);
       },
-      onError: (err) =>
-        toast.error(
-          err instanceof Error ? err.message : "Could not change your email",
-        ),
+      onError: (err) => {
+        const apiError = getApiError(err, "Could not change your email");
+        toast.error(apiError.message);
+        for (const [field, message] of Object.entries(apiError.fieldErrors)) {
+          setError(field as FieldPath<EmailValues>, { message });
+        }
+      },
     });
   }
 
@@ -606,6 +630,7 @@ function PasswordCard() {
     register,
     handleSubmit,
     reset,
+    setError,
     formState: { errors },
   } = useForm<PasswordValues>({
     resolver: zodResolver(passwordSchema),
@@ -627,12 +652,13 @@ function PasswordCard() {
           toast.success("Password updated");
           reset();
         },
-        onError: (err) =>
-          toast.error(
-            err instanceof Error
-              ? err.message
-              : "Could not change your password",
-          ),
+        onError: (err) => {
+          const apiError = getApiError(err, "Could not change your password");
+          toast.error(apiError.message);
+          for (const [field, message] of Object.entries(apiError.fieldErrors)) {
+            setError(field as FieldPath<PasswordValues>, { message });
+          }
+        },
       },
     );
   }

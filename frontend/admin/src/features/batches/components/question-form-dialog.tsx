@@ -26,11 +26,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { FormSheet } from "@/components/ui/form-sheet";
 import { Plus, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import type { FieldPath } from "react-hook-form";
 import {
   useCreateQuizQuestion,
   useUpdateQuizQuestion,
 } from "../hooks/use-batches";
 import type { QuizQuestion } from "../types";
+import { getApiError } from "@/lib/api/errors";
 
 const FIELD_CLS = "h-8 text-xs";
 const LABEL_CLS = "text-xs font-medium";
@@ -177,33 +180,41 @@ export function QuestionFormDialog(props: {
 
   const isPending = create.isPending || update.isPending;
 
-  function onSubmit(values: Values) {
-    let correctAnswer: unknown;
-    if (values.type === "MCQ_SINGLE") correctAnswer = values.correctSingle;
-    else if (values.type === "MCQ_MULTI") correctAnswer = values.correctMulti;
-    else
-      correctAnswer = {
-        value: values.numericalValue,
-        tolerance: values.numericalTolerance ?? 0,
-      };
+  async function onSubmit(values: Values) {
+    try {
+      let correctAnswer: unknown;
+      if (values.type === "MCQ_SINGLE") correctAnswer = values.correctSingle;
+      else if (values.type === "MCQ_MULTI") correctAnswer = values.correctMulti;
+      else
+        correctAnswer = {
+          value: values.numericalValue,
+          tolerance: values.numericalTolerance ?? 0,
+        };
 
-    const payload = {
-      order: values.order,
-      type: values.type,
-      prompt: values.prompt.trim(),
-      options:
-        values.type === "NUMERICAL" ? [] : values.options.map((o) => ({ id: o.id, text: o.text })),
-      correctAnswer,
-      marks: values.marks,
-      explanation: values.explanation?.trim() || undefined,
-    };
-    if (isEditing && question) {
-      update.mutate(
-        { questionId: question.questionId, dto: payload },
-        { onSuccess: () => onOpenChange(false) }
-      );
-    } else {
-      create.mutate(payload, { onSuccess: () => onOpenChange(false) });
+      const payload = {
+        order: values.order,
+        type: values.type,
+        prompt: values.prompt.trim(),
+        options:
+          values.type === "NUMERICAL" ? [] : values.options.map((o) => ({ id: o.id, text: o.text })),
+        correctAnswer,
+        marks: values.marks,
+        explanation: values.explanation?.trim() || undefined,
+      };
+      if (isEditing && question) {
+        await update.mutateAsync({ questionId: question.questionId, dto: payload });
+      } else {
+        await create.mutateAsync(payload);
+      }
+      onOpenChange(false);
+    } catch (err) {
+      const apiError = getApiError(err);
+      for (const [field, message] of Object.entries(apiError.fieldErrors)) {
+        form.setError(field as FieldPath<Values>, { type: "server", message });
+      }
+      if (Object.keys(apiError.fieldErrors).length === 0) {
+        toast.error(apiError.message);
+      }
     }
   }
 

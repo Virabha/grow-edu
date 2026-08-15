@@ -34,8 +34,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Slider } from "@/components/ui/slider";
 import { FileUpload } from "@/components/ui/file-upload";
 import { SecureImage } from "@/components/ui/secure-image";
+import { toast } from "sonner";
+import type { FieldPath } from "react-hook-form";
 import { useCreateBanner, useUpdateBanner } from "../hooks/use-cms";
 import type { Banner } from "../types";
+import { getApiError } from "@/lib/api/errors";
 
 const schema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -126,30 +129,40 @@ export function BannerFormDialog(props: {
   }, [open, form]);
 
   const onSubmit = async (values: Values) => {
-    const clean = (v: string | undefined) => v?.trim() || undefined;
-    const payload = {
-      title: values.title.trim(),
-      subtitle: clean(values.subtitle),
-      description: clean(values.description),
-      imageUrl: values.imageUrl.trim(),
-      overlayColor: clean(values.overlayColor),
-      overlayOpacity: values.overlayOpacity,
-      textColor: clean(values.textColor),
-      textAlign: clean(values.textAlign),
-      ctaText: clean(values.ctaText),
-      ctaLink: clean(values.ctaLink),
-      ctaStyle: clean(values.ctaStyle),
-      secondaryCtaText: clean(values.secondaryCtaText),
-      secondaryCtaLink: clean(values.secondaryCtaLink),
-      badgeText: clean(values.badgeText),
-      badgeColor: clean(values.badgeColor),
-      displayOrder: values.displayOrder,
-      isActive: values.isActive,
-    };
-    if (isEditing && banner)
-      await update.mutateAsync({ id: banner.bannerId, dto: payload });
-    else await create.mutateAsync(payload);
-    onOpenChange(false);
+    try {
+      const clean = (v: string | undefined) => v?.trim() || undefined;
+      const payload = {
+        title: values.title.trim(),
+        subtitle: clean(values.subtitle),
+        description: clean(values.description),
+        imageUrl: values.imageUrl.trim(),
+        overlayColor: clean(values.overlayColor),
+        overlayOpacity: values.overlayOpacity,
+        textColor: clean(values.textColor),
+        textAlign: clean(values.textAlign),
+        ctaText: clean(values.ctaText),
+        ctaLink: clean(values.ctaLink),
+        ctaStyle: clean(values.ctaStyle),
+        secondaryCtaText: clean(values.secondaryCtaText),
+        secondaryCtaLink: clean(values.secondaryCtaLink),
+        badgeText: clean(values.badgeText),
+        badgeColor: clean(values.badgeColor),
+        displayOrder: values.displayOrder,
+        isActive: values.isActive,
+      };
+      if (isEditing && banner)
+        await update.mutateAsync({ id: banner.bannerId, dto: payload });
+      else await create.mutateAsync(payload);
+      onOpenChange(false);
+    } catch (err) {
+      const apiError = getApiError(err);
+      for (const [field, message] of Object.entries(apiError.fieldErrors)) {
+        form.setError(field as FieldPath<Values>, { type: "server", message });
+      }
+      if (Object.keys(apiError.fieldErrors).length === 0) {
+        toast.error(apiError.message);
+      }
+    }
   };
 
   return (

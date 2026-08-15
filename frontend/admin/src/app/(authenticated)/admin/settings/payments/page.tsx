@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
-import { getApiErrorMessage } from "@/lib/utils";
+import { getApiError } from "@/lib/api/errors";
 
 import { PageLayout } from "@/components/layout/page-layout";
 import { Input } from "@/components/ui/input";
@@ -184,7 +184,7 @@ export default function PaymentSettingsPage() {
       });
       toast.success("QR uploaded.");
     } catch (err) {
-      toast.error(getApiErrorMessage(err, "Upload failed."));
+      toast.error(getApiError(err, "Upload failed.").message);
     } finally {
       setUploading(false);
     }
@@ -204,7 +204,7 @@ export default function PaymentSettingsPage() {
       toast.success("Payment settings saved.");
       reset(values);
     } catch (err) {
-      toast.error(getApiErrorMessage(err, "Save failed."));
+      toast.error(getApiError(err, "Save failed.").message);
     }
   };
 

@@ -1,8 +1,8 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Loader2, FileVideo, RefreshCw, Bug, WifiOff } from "lucide-react";
-import { AxiosError } from "axios";
 import { apiClient } from "@/lib/api/client";
+import { getApiError } from "@/lib/api/errors";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { cn } from "@/lib/utils";
 import { Button } from "./button";
@@ -152,23 +152,20 @@ export function SecureVideoPlayer({
         }
       } catch (err) {
         if (!isMounted) return;
-        const axiosErr = err as AxiosError<{ message?: string }>;
-        const status = axiosErr.response?.status;
-        const apiMessage =
-          axiosErr.response?.data?.message || axiosErr.message;
+        const apiErr = getApiError(err, "Couldn't load video.");
 
-        if (axiosErr.code === "ERR_NETWORK") {
+        if (apiErr.isNetworkError) {
           setError({
             kind: "network",
             message:
               "Couldn't reach the video service. Check your connection and try again.",
           });
-        } else if (status === 401 || status === 403) {
+        } else if (apiErr.statusCode === 401 || apiErr.statusCode === 403) {
           setError({
             kind: "auth",
-            message: apiMessage || "You don't have access to this video.",
+            message: apiErr.message,
           });
-        } else if (status === 404) {
+        } else if (apiErr.statusCode === 404) {
           setError({
             kind: "missing",
             message: "No video uploaded for this lesson yet.",
@@ -176,7 +173,7 @@ export function SecureVideoPlayer({
         } else {
           setError({
             kind: "other",
-            message: apiMessage || "Couldn't load video.",
+            message: apiErr.message,
           });
         }
       } finally {

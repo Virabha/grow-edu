@@ -16,6 +16,7 @@ import {
   useUpdateResource,
   type ResourceRow,
 } from "@/lib/hooks/use-resource";
+import { getApiError } from "@/lib/api/errors";
 
 export default function HomeSectionsPage() {
   const queryClient = useQueryClient();
@@ -33,7 +34,7 @@ export default function HomeSectionsPage() {
       toast.success("Order saved");
     },
     onError: (err) =>
-      toast.error(err instanceof Error ? err.message : "Could not save the order"),
+      toast.error(getApiError(err, "Could not save the order").message),
   });
 
   const sections = React.useMemo(
@@ -66,7 +67,7 @@ export default function HomeSectionsPage() {
               : `${String(row.name)} is hidden`,
           ),
         onError: (err) =>
-          toast.error(err instanceof Error ? err.message : "Could not update"),
+          toast.error(getApiError(err, "Could not update").message),
       },
     );
   }
@@ -80,7 +81,7 @@ export default function HomeSectionsPage() {
       {isError ? (
         <EmptyState
           title="We could not load sections"
-          description={error instanceof Error ? error.message : "Please try again."}
+          description={getApiError(error, "Please try again.").message}
           action={{ label: "Try again", onClick: () => void refetch() }}
         />
       ) : isLoading ? (

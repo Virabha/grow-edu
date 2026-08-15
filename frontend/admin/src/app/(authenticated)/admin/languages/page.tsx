@@ -6,6 +6,7 @@ import { Check } from "lucide-react";
 import { ResourcePage } from "@/components/admin/resource-page";
 import { Button } from "@/components/ui/button";
 import { useResourceAction, type ResourceRow } from "@/lib/hooks/use-resource";
+import { getApiError } from "@/lib/api/errors";
 
 export default function LanguagesPage() {
   const setDefault = useResourceAction("languages", "default");
@@ -87,9 +88,7 @@ export default function LanguagesPage() {
                   onSuccess: () =>
                     toast.success(`${String(row.name)} is now the default`),
                   onError: (err) =>
-                    toast.error(
-                      err instanceof Error ? err.message : "Could not update",
-                    ),
+                    toast.error(getApiError(err, "Could not update").message),
                 },
               )
             }

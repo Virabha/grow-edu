@@ -24,11 +24,14 @@ import {
 import { FormSheet } from "@/components/ui/form-sheet";
 import { FileUpload } from "@/components/ui/file-upload";
 import { FileText } from "lucide-react";
+import { toast } from "sonner";
+import type { FieldPath } from "react-hook-form";
 import {
   useCreateBatchResource,
   useUpdateBatchResource,
 } from "../hooks/use-batches";
 import type { BatchResource, BatchResourceType, BatchSubject } from "../types";
+import { getApiError } from "@/lib/api/errors";
 
 const FIELD_CLS = "h-8 text-xs";
 const LABEL_CLS = "text-xs font-medium";
@@ -92,22 +95,30 @@ export function ResourceFormDialog(props: {
 
   const isPending = create.isPending || update.isPending;
 
-  function onSubmit(values: Values) {
-    const payload = {
-      title: values.title.trim(),
-      description: values.description?.trim() || undefined,
-      type: values.type,
-      subjectId: values.subjectId?.trim() || undefined,
-      fileKey: values.fileKey,
-      dayNumber: values.type === "DPP" ? values.dayNumber : undefined,
-    };
-    if (isEditing && resource) {
-      update.mutate(
-        { resourceId: resource.resourceId, dto: payload },
-        { onSuccess: () => onOpenChange(false) },
-      );
-    } else {
-      create.mutate(payload, { onSuccess: () => onOpenChange(false) });
+  async function onSubmit(values: Values) {
+    try {
+      const payload = {
+        title: values.title.trim(),
+        description: values.description?.trim() || undefined,
+        type: values.type,
+        subjectId: values.subjectId?.trim() || undefined,
+        fileKey: values.fileKey,
+        dayNumber: values.type === "DPP" ? values.dayNumber : undefined,
+      };
+      if (isEditing && resource) {
+        await update.mutateAsync({ resourceId: resource.resourceId, dto: payload });
+      } else {
+        await create.mutateAsync(payload);
+      }
+      onOpenChange(false);
+    } catch (err) {
+      const apiError = getApiError(err);
+      for (const [field, message] of Object.entries(apiError.fieldErrors)) {
+        form.setError(field as FieldPath<Values>, { type: "server", message });
+      }
+      if (Object.keys(apiError.fieldErrors).length === 0) {
+        toast.error(apiError.message);
+      }
     }
   }
 

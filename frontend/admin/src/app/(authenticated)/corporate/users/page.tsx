@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { UserPlus as UserPlusIcon } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useUsers } from "@/features/users/hooks/use-users";
-import { useAuthStore } from "@/lib/store/auth-store";
 import { DataTableSkeleton } from "@/components/ui/data-table-skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, } from "@/components/ui/table";
@@ -13,13 +12,14 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { PageFilters } from "@/components/layout/page-filters";
 export default function CorporateUserManagementPage() {
-    const { user } = useAuthStore();
     const [search, setSearch] = useState("");
     const { data: usersData, isLoading } = useUsers({
         enabled: true,
+        // No companyId here: GET /users scopes a corporate admin to their own
+        // company server-side, and FilterUsersDto rejects the parameter, so
+        // sending it fails the whole request with a 400.
         filters: {
             search: search || undefined,
-            companyId: user?.companyId ?? undefined,
             page: 1,
             limit: 100,
         },

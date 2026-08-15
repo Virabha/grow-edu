@@ -18,6 +18,15 @@ export interface UserPayload {
   role: string;
   firstName?: string | null;
   lastName?: string | null;
+  /**
+   * The company a CORPORATE_ADMIN administers, null for everyone else.
+   *
+   * The admin app stores this payload as its current user and reads
+   * user.companyId on every corporate screen, so omitting it left those
+   * screens with an undefined company id — see corporate/settings, which
+   * hung on "Loading..." forever because its query stayed disabled.
+   */
+  companyId?: string | null;
 }
 
 const userPublicColumns = {
@@ -55,6 +64,7 @@ export class AuthService {
         role: users.role,
         firstName: users.firstName,
         lastName: users.lastName,
+        companyId: users.companyId,
         password: users.password,
       })
       .from(users)
@@ -76,6 +86,7 @@ export class AuthService {
       role: user.role,
       firstName: user.firstName,
       lastName: user.lastName,
+      companyId: user.companyId,
     };
   }
 
@@ -146,6 +157,7 @@ export class AuthService {
         role: user.role,
         firstName: user.firstName,
         lastName: user.lastName,
+        companyId: user.companyId ?? null,
       },
     };
   }

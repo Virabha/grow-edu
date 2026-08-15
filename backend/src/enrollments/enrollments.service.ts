@@ -608,7 +608,7 @@ export class EnrollmentsService {
 
   async bulkCreate(
     dto: BulkEnrollmentDto,
-    companyId: string,
+    callerUserId: string,
     userRole: string,
   ) {
     if (userRole !== "CORPORATE_ADMIN" && userRole !== "PLATFORM_ADMIN") {
@@ -616,6 +616,24 @@ export class EnrollmentsService {
         "Only corporate admins can perform bulk enrollments",
       );
     }
+
+    // Attribute the enrolments to the caller's company. This used to arrive as
+    // user.companyId from the controller, but the JWT carries no companyId, so
+    // every corporate bulk enrolment was written with an empty string instead
+    // of the real company. A platform admin has no company and stays null.
+    const [caller] = await this.db
+      .select({ companyId: users.companyId })
+      .from(users)
+      .where(eq(users.userId, callerUserId))
+      .limit(1);
+
+    if (userRole === "CORPORATE_ADMIN" && !caller?.companyId) {
+      throw new ForbiddenException(
+        "Your account is not linked to a company, so it cannot enrol on one's behalf",
+      );
+    }
+
+    const companyId = caller?.companyId ?? null;
 
     // Verify course exists
     const [course] = await this.db

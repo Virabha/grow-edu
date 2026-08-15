@@ -18,3 +18,8 @@ dist/
 
 # Stray vector-db artifacts dropped at repo root and inside packages
 ruvector.db
+
+/package.json
+/dev.mjs
+/pnpm-workspace.yaml
+/pnpm-lock.yaml

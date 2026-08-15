@@ -7,7 +7,7 @@ import { ModeToggle } from "@/components/theme-toggle";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { LogOut, LayoutDashboard, BookOpen, Settings, Video } from "lucide-react";
+import { LogOut, LayoutDashboard, BookOpen, Settings, Video, Wallet, Megaphone, TrendingUp, Radio } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 export function InstructorNavbar() {
     const pathname = usePathname();
@@ -30,10 +30,17 @@ export function InstructorNavbar() {
         }
         return user.email ? user.email.charAt(0).toUpperCase() : "I";
     };
+    // Order mirrors the SkillGro instructor sidebar (zoom-setting.png):
+    // Dashboard · Courses · Request Payout · Announcement · My Sales, then
+    // live-meeting settings under the user group.
     const navItems = [
         { href: "/instructor/dashboard", label: "Dashboard", icon: LayoutDashboard },
         { href: "/instructor/courses", label: "My Courses", icon: BookOpen },
         { href: "/instructor/videos", label: "My Videos", icon: Video },
+        { href: "/instructor/payouts", label: "Payouts", icon: Wallet },
+        { href: "/instructor/announcements", label: "Announcements", icon: Megaphone },
+        { href: "/instructor/sales", label: "My Sales", icon: TrendingUp },
+        { href: "/instructor/settings/live", label: "Live Settings", icon: Radio },
     ];
     return (<header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 bg-background/80 backdrop-blur-md border-b border-border">
       <Link href="/instructor/dashboard" className="flex items-center gap-2">

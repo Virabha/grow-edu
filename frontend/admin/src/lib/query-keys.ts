@@ -128,6 +128,7 @@ export const queryKeys = {
     instructor: {
         all: () => ["instructor"] as const,
         courses: (instructorId?: string) => [...queryKeys.instructor.all(), "courses", instructorId] as const,
+        meetingCredentials: () => [...queryKeys.instructor.all(), "meeting-credentials"] as const,
     },
     cms: {
         all: () => ["cms"] as const,
@@ -187,5 +188,13 @@ export const queryKeys = {
             [...queryKeys.batches.all(), "attempt", batchId, quizId, attemptId] as const,
         leaderboard: (batchId?: string, quizId?: string) =>
             [...queryKeys.batches.all(), "leaderboard", batchId, quizId] as const,
+    },
+    payouts: {
+        all: () => ["payouts"] as const,
+        earnings: () => ["payouts", "earnings"] as const,
+        history: (page?: number, limit?: number) =>
+            ["payouts", "history", page, limit] as const,
+        sales: (page?: number, limit?: number) =>
+            ["payouts", "sales", page, limit] as const,
     },
 } as const;

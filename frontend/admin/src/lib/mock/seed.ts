@@ -116,11 +116,11 @@ const FIRST = ["Ananya", "Rohit", "Priya", "Karthik", "Sneha", "Arjun", "Divya",
 const LAST = ["Rao", "Sharma", "Nair", "Iyer", "Gupta", "Reddy", "Khan", "Patel", "Bose", "Mehta", "Joshi", "Kulkarni", "Das", "Menon", "Chopra", "Verma"];
 
 export const USERS = [
-  { userId: "usr-admin", email: "admin@grotutor.com", firstName: "Platform", lastName: "Admin", role: "PLATFORM_ADMIN", emailVerified: true, companyId: null, isBanned: false, profileImage: null, createdAt: "2025-01-02T08:00:00.000Z", lastLoginAt: "2026-08-14T05:10:00.000Z", enrolledCount: 0, totalSpend: 0 },
-  { userId: "usr-super", email: "superadmin@grotutor.com", firstName: "Super", lastName: "Admin", role: "PLATFORM_ADMIN", emailVerified: true, companyId: null, isBanned: false, profileImage: null, createdAt: "2025-01-02T08:05:00.000Z", lastLoginAt: "2026-08-13T19:22:00.000Z", enrolledCount: 0, totalSpend: 0 },
-  { userId: "usr-corp", email: "corporate@grotutor.com", firstName: "Corporate", lastName: "Manager", role: "CORPORATE_ADMIN", emailVerified: true, companyId: "cmp-techcorp", isBanned: false, profileImage: null, createdAt: "2025-02-14T11:00:00.000Z", lastLoginAt: "2026-08-12T10:41:00.000Z", enrolledCount: 0, totalSpend: 0 },
+  { id: "usr-admin", email: "admin@grotutor.com", firstName: "Platform", lastName: "Admin", role: "PLATFORM_ADMIN", emailVerified: true, companyId: null, isBanned: false, profileImage: null, createdAt: "2025-01-02T08:00:00.000Z", lastLoginAt: "2026-08-14T05:10:00.000Z", enrolledCount: 0, totalSpend: 0 },
+  { id: "usr-super", email: "superadmin@grotutor.com", firstName: "Super", lastName: "Admin", role: "PLATFORM_ADMIN", emailVerified: true, companyId: null, isBanned: false, profileImage: null, createdAt: "2025-01-02T08:05:00.000Z", lastLoginAt: "2026-08-13T19:22:00.000Z", enrolledCount: 0, totalSpend: 0 },
+  { id: "usr-corp", email: "corporate@grotutor.com", firstName: "Corporate", lastName: "Manager", role: "CORPORATE_ADMIN", emailVerified: true, companyId: "cmp-techcorp", isBanned: false, profileImage: null, createdAt: "2025-02-14T11:00:00.000Z", lastLoginAt: "2026-08-12T10:41:00.000Z", enrolledCount: 0, totalSpend: 0 },
   ...INSTRUCTORS.map((i, idx) => ({
-    userId: i.userId,
+    id: i.userId,
     email: i.email,
     firstName: i.firstName,
     lastName: i.lastName,
@@ -138,7 +138,7 @@ export const USERS = [
     const first = FIRST[i % FIRST.length] ?? "Learner";
     const last = LAST[(i * 7) % LAST.length] ?? "User";
     return {
-      userId: `usr-l${String(i + 1).padStart(2, "0")}`,
+      id: `usr-l${String(i + 1).padStart(2, "0")}`,
       email: `${first.toLowerCase()}.${last.toLowerCase()}${i + 1}@example.com`,
       firstName: first,
       lastName: last,
@@ -174,7 +174,7 @@ export const PAYMENTS = Array.from({ length: 28 }, (_, i) => {
   return {
     paymentId: `pay-${String(2001 + i)}`,
     invoiceNo: `GT-2026-${String(1000 + i)}`,
-    userId: learner?.userId ?? "usr-l01",
+    userId: learner?.id ?? "usr-l01",
     userName: `${learner?.firstName ?? ""} ${learner?.lastName ?? ""}`.trim(),
     userEmail: learner?.email ?? "",
     courseId: course?.courseId ?? "",
@@ -198,7 +198,7 @@ export const ENROLLMENTS = Array.from({ length: 34 }, (_, i) => {
   const learner = USERS.filter((u) => u.role === "LEARNER")[i % 22];
   return {
     enrollmentId: `enr-${String(3001 + i)}`,
-    userId: learner?.userId ?? "usr-l01",
+    userId: learner?.id ?? "usr-l01",
     userName: `${learner?.firstName ?? ""} ${learner?.lastName ?? ""}`.trim(),
     userEmail: learner?.email ?? "",
     courseId: course?.courseId ?? "",

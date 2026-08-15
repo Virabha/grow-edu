@@ -14,13 +14,16 @@ import { useAuthStore } from "@/lib/store/auth-store";
 
 export default function CorporateDashboardPage() {
   const { user } = useAuthStore();
+  // The API scopes a corporate admin to their own company from their own
+  // record, so no companyId is sent — it is not an accepted query parameter
+  // and the request is rejected outright if present. limit is capped at 100.
   const { data: usersData, isLoading: usersLoading } = useUsers({
     enabled: true,
-    filters: { companyId: user?.companyId ?? undefined, limit: 1000 },
+    filters: { limit: 100 },
   });
   const { data: enrollmentsData, isLoading: enrollmentsLoading } = useEnrollments({
     enabled: true,
-    filters: { companyId: user?.companyId ?? undefined, limit: 1000 },
+    filters: { companyId: user?.companyId ?? undefined, limit: 100 },
   });
 
   const users = usersData?.data ?? [];

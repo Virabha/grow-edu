@@ -39,11 +39,20 @@ CREATE INDEX IF NOT EXISTS user_devices_user_idx ON user_devices (user_id);
 CREATE INDEX IF NOT EXISTS user_devices_user_last_seen_idx ON user_devices (user_id, last_seen_at);
 --> statement-breakpoint
 
-ALTER TABLE enrollments ADD COLUMN IF NOT EXISTS source enrollment_source NOT NULL DEFAULT 'SELF_PURCHASE';
---> statement-breakpoint
-ALTER TABLE enrollments ADD COLUMN IF NOT EXISTS granted_by text;
---> statement-breakpoint
-CREATE INDEX IF NOT EXISTS enrollments_source_idx ON enrollments (source, enrolled_at);
+-- `enrollments` belongs to the application schema in backend/drizzle, not to
+-- the tenancy schema. It is absent on the tenancy CI job, where these columns
+-- have nothing to attach to and the run must continue regardless.
+DO $$
+BEGIN
+  IF to_regclass('public.enrollments') IS NULL THEN
+    RAISE NOTICE 'skipping enrollments columns in 0006: table "enrollments" is absent (application schema not applied)';
+    RETURN;
+  END IF;
+
+  ALTER TABLE enrollments ADD COLUMN IF NOT EXISTS source enrollment_source NOT NULL DEFAULT 'SELF_PURCHASE';
+  ALTER TABLE enrollments ADD COLUMN IF NOT EXISTS granted_by text;
+  CREATE INDEX IF NOT EXISTS enrollments_source_idx ON enrollments (source, enrolled_at);
+END $$;
 --> statement-breakpoint
 
 CREATE TABLE IF NOT EXISTS lesson_quiz_attempts (

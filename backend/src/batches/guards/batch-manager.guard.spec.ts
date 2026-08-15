@@ -4,18 +4,17 @@
  * not ForbiddenException (403), so a caller cannot distinguish "batch deleted"
  * from "batch never existed" purely from the HTTP status code.
  */
-import { ExecutionContext, ForbiddenException, NotFoundException } from "@nestjs/common";
+import { ForbiddenException, NotFoundException } from "@nestjs/common";
+import { ExecutionContextHost } from "@nestjs/core/helpers/execution-context-host";
 import { BatchManagerGuard } from "./batch-manager.guard";
 
+/**
+ * Nest's own ExecutionContext implementation, built over a fake request. Using
+ * the real class rather than a hand-rolled stub keeps switchToHttp() behaving
+ * exactly as it does in production.
+ */
 function makeContext(user: { userId: string; role: string }, batchId: string) {
-  return {
-    switchToHttp: () => ({
-      getRequest: () => ({
-        user,
-        params: { batchId },
-      }),
-    }),
-  } as unknown as ExecutionContext;
+  return new ExecutionContextHost([{ user, params: { batchId } }]);
 }
 
 describe("BatchManagerGuard › deleted / missing batch", () => {

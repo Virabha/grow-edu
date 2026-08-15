@@ -213,7 +213,7 @@ const custom: Record<string, Handler> = {
     // Unknown addresses sign in as a platform admin so the demo is never locked
     // out; a known address keeps its real role.
     const role = known?.role ?? "PLATFORM_ADMIN";
-    const id = known?.userId ?? "usr-admin";
+    const id = known?.id ?? "usr-admin";
     const firstName = known?.firstName ?? "Platform";
     const lastName = known?.lastName ?? "Admin";
 
@@ -236,7 +236,7 @@ const custom: Record<string, Handler> = {
   "GET /users/me": () => {
     const admin = USERS[0];
     return {
-      id: admin?.userId,
+      id: admin?.id,
       email: admin?.email,
       firstName: admin?.firstName,
       lastName: admin?.lastName,
@@ -651,7 +651,7 @@ const custom: Record<string, Handler> = {
 
   "POST /users/:id/ban": ({ params }) =>
     write((draft) => {
-      const row = draft.collections.users?.find((u) => u.userId === params.id);
+      const row = draft.collections.users?.find((u) => u.id === params.id);
       if (!row) throw new MockHttpError(404, "User not found");
       row.isBanned = !row.isBanned;
       return row;
@@ -661,7 +661,7 @@ const custom: Record<string, Handler> = {
     const userId = requireString(body, "userId");
     const courseId = requireString(body, "courseId");
     return write((draft) => {
-      const user = draft.collections.users?.find((u) => u.userId === userId);
+      const user = draft.collections.users?.find((u) => u.id === userId);
       const course = draft.collections.courses?.find((c) => c.courseId === courseId);
       if (!user) throw new MockHttpError(404, "Learner not found");
       if (!course) throw new MockHttpError(404, "Course not found");

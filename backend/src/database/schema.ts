@@ -1830,3 +1830,170 @@ export const batchCertificatesRelations = relations(batchCertificates, ({ one })
     references: [users.userId],
   }),
 }));
+
+/* ==========================================================================
+ * Admin "resource" tables.
+ *
+ * Each backs one generic ResourcePage screen in the admin app. The columns are
+ * taken verbatim from each page's `fields` definition — the frontend was
+ * written first and is the contract. Primary keys are named `id` because every
+ * one of those pages declares `idKey="id"`.
+ *
+ * Select options come from the pages' own `options` arrays, not invented.
+ * ======================================================================== */
+
+export const badgeCriteriaEnum = pgEnum("badge_criteria_type", [
+  "RATING",
+  "ENROLMENTS",
+  "COURSES",
+  "MANUAL",
+]);
+
+export const currencyPositionEnum = pgEnum("currency_symbol_position", [
+  "before",
+  "after",
+]);
+
+export const brands = pgTable(
+  "brands",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    name: text("name").notNull(),
+    logoUrl: text("logo_url"),
+    websiteUrl: text("website_url"),
+    displayOrder: integer("display_order").notNull().default(0),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    orderIdx: index("brands_display_order_idx").on(table.displayOrder),
+    activeIdx: index("brands_is_active_idx").on(table.isActive),
+  }),
+);
+
+export const instructorBadges = pgTable(
+  "instructor_badges",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    name: text("name").notNull(),
+    description: text("description").notNull(),
+    icon: text("icon"),
+    colour: text("colour"),
+    criteriaType: badgeCriteriaEnum("criteria_type").notNull().default("MANUAL"),
+    criteriaValue: integer("criteria_value"),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    activeIdx: index("instructor_badges_is_active_idx").on(table.isActive),
+  }),
+);
+
+export const socialLinks = pgTable(
+  "social_links",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    platform: text("platform").notNull(),
+    url: text("url"),
+    icon: text("icon"),
+    displayOrder: integer("display_order").notNull().default(0),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    orderIdx: index("social_links_display_order_idx").on(table.displayOrder),
+  }),
+);
+
+/** UI languages offered to visitors (the /languages screen). */
+export const siteLanguages = pgTable(
+  "site_languages",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    name: text("name").notNull(),
+    code: text("code").notNull().unique(),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    codeIdx: index("site_languages_code_idx").on(table.code),
+  }),
+);
+
+/** Languages a course can be taught in (the /course-languages screen).
+ *  Separate from siteLanguages: a course may be taught in a language the site
+ *  UI is not translated into. */
+export const courseLanguages = pgTable(
+  "course_languages",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    name: text("name").notNull(),
+    code: text("code").notNull().unique(),
+    displayOrder: integer("display_order").notNull().default(0),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    codeIdx: index("course_languages_code_idx").on(table.code),
+  }),
+);
+
+export const locations = pgTable(
+  "locations",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    name: text("name").notNull(),
+    code: text("code").notNull().unique(),
+    dialCode: text("dial_code"),
+    currency: text("currency"),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    codeIdx: index("locations_code_idx").on(table.code),
+  }),
+);
+
+export const currencies = pgTable(
+  "currencies",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    name: text("name").notNull(),
+    code: text("code").notNull().unique(),
+    symbol: text("symbol").notNull(),
+    /** Exchange rate against INR, the base currency [D-023]. */
+    rate: decimal("rate", { precision: 18, scale: 6 }).notNull().default("1"),
+    position: currencyPositionEnum("position").notNull().default("before"),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    codeIdx: index("currencies_code_idx").on(table.code),
+  }),
+);
+
+export const withdrawMethods = pgTable(
+  "withdraw_methods",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    name: text("name").notNull(),
+    description: text("description"),
+    minAmount: decimal("min_amount", { precision: 10, scale: 2 }).notNull().default("0"),
+    maxAmount: decimal("max_amount", { precision: 10, scale: 2 }),
+    processingDays: integer("processing_days"),
+    feePercent: decimal("fee_percent", { precision: 5, scale: 2 }),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    activeIdx: index("withdraw_methods_is_active_idx").on(table.isActive),
+  }),
+);

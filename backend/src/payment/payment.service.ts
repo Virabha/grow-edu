@@ -551,7 +551,7 @@ export class PaymentService {
         updatedAt: now,
         ...(linkedEnrollmentId ? { enrollmentId: linkedEnrollmentId } : {}),
       })
-      .where(and(eq(payments.paymentId, paymentId), eq(payments.status, 'PROOF_UPLOADED')))
+      .where(and(eq(payments.paymentId, paymentId), inArray(payments.status, ['PROOF_UPLOADED', 'PENDING'])))
       .returning({ paymentId: payments.paymentId });
 
     // Consume coupon reservation if any

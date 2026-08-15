@@ -36,11 +36,11 @@ export class BrandsController {
     });
   }
 
-  @Get(':id')
+  @Get(':brandId')
   @ApiOperation({ summary: 'Get a brand by id' })
   @ApiResponse({ status: 404, description: 'Brand not found' })
-  findOne(@Param('id') id: string) {
-    return this.brandsService.findOne(id);
+  findOne(@Param('brandId') brandId: string) {
+    return this.brandsService.findOne(brandId);
   }
 
   @Post()
@@ -49,17 +49,17 @@ export class BrandsController {
     return this.brandsService.create(dto);
   }
 
-  @Patch(':id')
+  @Patch(':brandId')
   @ApiOperation({ summary: 'Update a brand' })
   @ApiResponse({ status: 404, description: 'Brand not found' })
-  update(@Param('id') id: string, @Body() dto: UpdateBrandDto) {
-    return this.brandsService.update(id, dto);
+  update(@Param('brandId') brandId: string, @Body() dto: UpdateBrandDto) {
+    return this.brandsService.update(brandId, dto);
   }
 
-  @Delete(':id')
+  @Delete(':brandId')
   @ApiOperation({ summary: 'Delete a brand' })
   @ApiResponse({ status: 404, description: 'Brand not found' })
-  remove(@Param('id') id: string) {
-    return this.brandsService.remove(id);
+  remove(@Param('brandId') brandId: string) {
+    return this.brandsService.remove(brandId);
   }
 }

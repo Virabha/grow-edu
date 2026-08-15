@@ -32,11 +32,11 @@ export class SiteLanguagesController {
     return this.service.findAll(query);
   }
 
-  @Get(':id')
+  @Get(':siteLanguageId')
   @ApiOperation({ summary: 'Get a site language by id' })
   @ApiResponse({ status: 404, description: 'Not found' })
-  findOne(@Param('id') id: string) {
-    return this.service.findOne(id);
+  findOne(@Param('siteLanguageId') siteLanguageId: string) {
+    return this.service.findOne(siteLanguageId);
   }
 
   @Post()
@@ -46,18 +46,18 @@ export class SiteLanguagesController {
     return this.service.create(dto);
   }
 
-  @Patch(':id')
+  @Patch(':siteLanguageId')
   @ApiOperation({ summary: 'Update a site language' })
   @ApiResponse({ status: 404, description: 'Not found' })
   @ApiResponse({ status: 409, description: 'Duplicate code' })
-  update(@Param('id') id: string, @Body() dto: UpdateSiteLanguageDto) {
-    return this.service.update(id, dto);
+  update(@Param('siteLanguageId') siteLanguageId: string, @Body() dto: UpdateSiteLanguageDto) {
+    return this.service.update(siteLanguageId, dto);
   }
 
-  @Delete(':id')
+  @Delete(':siteLanguageId')
   @ApiOperation({ summary: 'Delete a site language' })
   @ApiResponse({ status: 404, description: 'Not found' })
-  remove(@Param('id') id: string) {
-    return this.service.remove(id);
+  remove(@Param('siteLanguageId') siteLanguageId: string) {
+    return this.service.remove(siteLanguageId);
   }
 }

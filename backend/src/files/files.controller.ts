@@ -49,8 +49,11 @@ export class FilesController {
 
   @Get("storage/download-url")
   @ApiOperation({ summary: "Get CDN URL for a file" })
-  @ApiQuery({ name: "key", type: "string", description: "Storage key of the file" })
-  getDownloadUrl(@Query("key") key: string) {
+  @ApiQuery({ name: "key", type: "string", required: true, description: "Storage key of the file" })
+  getDownloadUrl(@Query("key") key?: string) {
+    if (typeof key !== "string" || key.trim() === "") {
+      throw new BadRequestException("key is required");
+    }
     const url = this.filesService.getDownloadUrl(key);
     return { url };
   }

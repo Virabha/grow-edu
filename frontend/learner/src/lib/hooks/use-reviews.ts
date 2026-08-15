@@ -12,7 +12,7 @@ export interface Review {
   rating: number;
   title: string;
   body: string;
-  status: "PUBLISHED" | "PENDING";
+  status: "PUBLISHED" | "PENDING" | "REJECTED";
   createdAt: string;
   updatedAt: string | null;
   instructorReply: string | null;

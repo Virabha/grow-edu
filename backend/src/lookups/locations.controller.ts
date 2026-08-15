@@ -32,11 +32,11 @@ export class LocationsController {
     return this.service.findAll(query);
   }
 
-  @Get(':id')
+  @Get(':locationId')
   @ApiOperation({ summary: 'Get a location by id' })
   @ApiResponse({ status: 404, description: 'Not found' })
-  findOne(@Param('id') id: string) {
-    return this.service.findOne(id);
+  findOne(@Param('locationId') locationId: string) {
+    return this.service.findOne(locationId);
   }
 
   @Post()
@@ -46,18 +46,18 @@ export class LocationsController {
     return this.service.create(dto);
   }
 
-  @Patch(':id')
+  @Patch(':locationId')
   @ApiOperation({ summary: 'Update a location' })
   @ApiResponse({ status: 404, description: 'Not found' })
   @ApiResponse({ status: 409, description: 'Duplicate code' })
-  update(@Param('id') id: string, @Body() dto: UpdateLocationDto) {
-    return this.service.update(id, dto);
+  update(@Param('locationId') locationId: string, @Body() dto: UpdateLocationDto) {
+    return this.service.update(locationId, dto);
   }
 
-  @Delete(':id')
+  @Delete(':locationId')
   @ApiOperation({ summary: 'Delete a location' })
   @ApiResponse({ status: 404, description: 'Not found' })
-  remove(@Param('id') id: string) {
-    return this.service.remove(id);
+  remove(@Param('locationId') locationId: string) {
+    return this.service.remove(locationId);
   }
 }

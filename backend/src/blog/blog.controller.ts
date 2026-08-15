@@ -1,0 +1,151 @@
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Param,
+  Body,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiResponse,
+} from '@nestjs/swagger';
+import { BlogService } from './blog.service';
+import { CreateBlogCategoryDto } from './dto/create-blog-category.dto';
+import { UpdateBlogCategoryDto } from './dto/update-blog-category.dto';
+import { ListBlogCategoriesDto } from './dto/list-blog-categories.dto';
+import { CreateBlogPostDto } from './dto/create-blog-post.dto';
+import { UpdateBlogPostDto } from './dto/update-blog-post.dto';
+import { ListBlogPostsDto } from './dto/list-blog-posts.dto';
+import { PublicListBlogPostsDto } from './dto/public-list-blog-posts.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles, UserRole } from '../auth/decorators/roles.decorator';
+import { Public } from '../auth/decorators/public.decorator';
+
+@ApiTags('blog')
+@Controller('blog')
+@UseGuards(JwtAuthGuard)
+export class BlogController {
+  constructor(private readonly blogService: BlogService) {}
+
+  @Get('categories')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.PLATFORM_ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'List blog categories (admin)' })
+  @ApiResponse({ status: 200, description: 'Paginated list of categories' })
+  listCategories(@Query() query: ListBlogCategoriesDto) {
+    return this.blogService.listCategories(query);
+  }
+
+  @Post('categories')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.PLATFORM_ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Create a blog category (admin)' })
+  @ApiResponse({ status: 201, description: 'Created category' })
+  @ApiResponse({ status: 409, description: 'Slug already exists' })
+  createCategory(@Body() dto: CreateBlogCategoryDto) {
+    return this.blogService.createCategory(dto);
+  }
+
+  @Get('categories/:blogCategoryId')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.PLATFORM_ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get a blog category by ID (admin)' })
+  @ApiResponse({ status: 404, description: 'Not found' })
+  getCategory(@Param('blogCategoryId') blogCategoryId: string) {
+    return this.blogService.getCategory(blogCategoryId);
+  }
+
+  @Patch('categories/:blogCategoryId')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.PLATFORM_ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update a blog category (admin)' })
+  @ApiResponse({ status: 409, description: 'Slug already exists' })
+  updateCategory(@Param('blogCategoryId') blogCategoryId: string, @Body() dto: UpdateBlogCategoryDto) {
+    return this.blogService.updateCategory(blogCategoryId, dto);
+  }
+
+  @Delete('categories/:blogCategoryId')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.PLATFORM_ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Soft-delete a blog category (admin)' })
+  @ApiResponse({ status: 409, description: 'Category has active posts' })
+  deleteCategory(@Param('blogCategoryId') blogCategoryId: string) {
+    return this.blogService.deleteCategory(blogCategoryId);
+  }
+
+  @Get('posts/public')
+  @Public()
+  @ApiOperation({ summary: 'List published blog posts (public)' })
+  @ApiResponse({ status: 200, description: 'Paginated list of published posts' })
+  listPublicPosts(@Query() query: PublicListBlogPostsDto) {
+    return this.blogService.listPublicPosts(query);
+  }
+
+  @Get('posts/public/:slug')
+  @Public()
+  @ApiOperation({ summary: 'Get a published blog post by slug (public); increments view count' })
+  @ApiResponse({ status: 404, description: 'Not found or not published' })
+  getPublicPost(@Param('slug') slug: string) {
+    return this.blogService.getPublicPostBySlug(slug);
+  }
+
+  @Get('posts')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.PLATFORM_ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'List blog posts (admin)' })
+  listPosts(@Query() query: ListBlogPostsDto) {
+    return this.blogService.listPosts(query);
+  }
+
+  @Post('posts')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.PLATFORM_ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Create a blog post (admin)' })
+  @ApiResponse({ status: 409, description: 'Slug already exists' })
+  createPost(@Body() dto: CreateBlogPostDto) {
+    return this.blogService.createPost(dto);
+  }
+
+  @Get('posts/:blogPostId')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.PLATFORM_ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get a blog post by ID (admin)' })
+  @ApiResponse({ status: 404, description: 'Not found' })
+  getPost(@Param('blogPostId') blogPostId: string) {
+    return this.blogService.getPost(blogPostId);
+  }
+
+  @Patch('posts/:blogPostId')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.PLATFORM_ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update a blog post (admin)' })
+  @ApiResponse({ status: 409, description: 'Slug already exists' })
+  updatePost(@Param('blogPostId') blogPostId: string, @Body() dto: UpdateBlogPostDto) {
+    return this.blogService.updatePost(blogPostId, dto);
+  }
+
+  @Delete('posts/:blogPostId')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.PLATFORM_ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Soft-delete a blog post (admin)' })
+  deletePost(@Param('blogPostId') blogPostId: string) {
+    return this.blogService.deletePost(blogPostId);
+  }
+}

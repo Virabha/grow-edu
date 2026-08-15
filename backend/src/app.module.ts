@@ -8,6 +8,12 @@ import { InstructorModule } from "./instructor/instructor.module";
 import { DashboardModule } from "./dashboard/dashboard.module";
 import { AdminResourcesModule } from "./admin-resources/admin-resources.module";
 import { LookupsModule } from "./lookups/lookups.module";
+import { CertificateTemplateModule } from "./certificate-template/certificate-template.module";
+import { BlogModule } from "./blog/blog.module";
+import { ReviewsModule } from "./reviews/reviews.module";
+import { QuizAttemptsModule } from "./quiz-attempts/quiz-attempts.module";
+import { OrdersModule } from "./orders/orders.module";
+import { DeviceRevocationModule } from "./auth/device-revocation.module";
 import { WithdrawMethodsModule } from "./withdraw-methods/withdraw-methods.module";
 import { SubscribersModule } from "./subscribers/subscribers.module";
 import { PayoutsModule } from "./payouts/payouts.module";
@@ -94,6 +100,12 @@ import { NotificationsModule } from "./notifications/notifications.module";
     BooksModule,
     BatchesModule,
     NotificationsModule,
+    CertificateTemplateModule,
+    BlogModule,
+    ReviewsModule,
+    QuizAttemptsModule,
+    OrdersModule,
+    DeviceRevocationModule,
   ],
   controllers: [AppController],
   providers: [

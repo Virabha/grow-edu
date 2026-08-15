@@ -15,6 +15,7 @@ import {
   sectionAccess,
   courseSections,
 } from "../database/schema";
+import { alias } from "drizzle-orm/pg-core";
 import { DATABASE_CONNECTION } from "../database/database.module";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import * as schema from "../database/schema";
@@ -42,11 +43,21 @@ export class EnrollmentsService {
     return this.filesService.getDownloadUrl(thumbnail);
   }
 
+  private resolveDisplayName(
+    firstName: string | null,
+    lastName: string | null,
+    email: string | null,
+  ): string {
+    const name = [firstName, lastName].filter(Boolean).join(" ");
+    return name || email || "";
+  }
+
   async findAll(filters?: {
     userId?: string;
     courseId?: string;
     companyId?: string;
     status?: string;
+    source?: string;
     search?: string;
     page?: number;
     limit?: number;
@@ -74,6 +85,14 @@ export class EnrollmentsService {
         ),
       );
     }
+    if (filters?.source) {
+      enrollmentConditions.push(
+        eq(
+          enrollments.source,
+          filters.source as "SELF_PURCHASE" | "ADMIN_GRANT" | "COMPANY_ASSIGNMENT" | "FREE_COURSE",
+        ),
+      );
+    }
     // Move search to SQL with ILIKE
     if (filters?.search) {
       const searchPattern = `%${filters.search}%`;
@@ -91,7 +110,8 @@ export class EnrollmentsService {
         ? and(...enrollmentConditions)
         : undefined;
 
-    // Get count and paginated enrollments in parallel using SQL LIMIT/OFFSET
+    const grantedByUser = alias(users, 'granted_by_user');
+
     const [countResult, fullEnrollments] = await Promise.all([
       this.db
         .select({ count: sql<number>`count(*)::int` })
@@ -106,6 +126,8 @@ export class EnrollmentsService {
           courseId: enrollments.courseId,
           companyId: enrollments.companyId,
           status: enrollments.status,
+          source: enrollments.source,
+          grantedById: enrollments.grantedBy,
           enrolledAt: enrollments.enrolledAt,
           completedAt: enrollments.completedAt,
           userInfo: {
@@ -131,12 +153,19 @@ export class EnrollmentsService {
             id: companies.companyId,
             name: companies.name,
           },
+          grantedByInfo: {
+            id: grantedByUser.userId,
+            firstName: grantedByUser.firstName,
+            lastName: grantedByUser.lastName,
+            email: grantedByUser.email,
+          },
         })
         .from(enrollments)
         .leftJoin(users, eq(enrollments.userId, users.userId))
         .leftJoin(courses, eq(enrollments.courseId, courses.courseId))
         .leftJoin(categories, eq(courses.categoryId, categories.categoryId))
         .leftJoin(companies, eq(enrollments.companyId, companies.companyId))
+        .leftJoin(grantedByUser, eq(enrollments.grantedBy, grantedByUser.userId))
         .where(enrollmentWhereClause)
         .orderBy(desc(enrollments.enrolledAt))
         .limit(limit)
@@ -145,15 +174,18 @@ export class EnrollmentsService {
 
     const fullEnrollmentCount = Number(countResult[0]?.count || 0);
 
-    // Define type for section access records
     type EnrollmentUserInfo = { id: string | null; email: string | null; firstName: string | null; lastName: string | null };
     type EnrollmentCourseInfo = { id: string | null; title: string | null; slug: string | null; description: string | null; thumbnail: string | null; price: string | null; currency: string | null; categoryId: string | null; categoryName: string; categorySlug: string | null; categoryDescription: string | null };
+    type GrantedByInfo = { id: string | null; firstName: string | null; lastName: string | null; email: string | null };
     type SectionAccessRecord = {
       enrollmentId: string;
       userId: string;
       courseId: string;
       companyId: null;
       status: "ACTIVE";
+      source: "SELF_PURCHASE";
+      grantedById: null;
+      grantedByInfo: null;
       enrolledAt: Date;
       completedAt: null;
       accessType: "SECTION";
@@ -324,6 +356,9 @@ export class EnrollmentsService {
                 courseId: course.id,
                 companyId: null,
                 status: "ACTIVE" as const,
+                source: "SELF_PURCHASE" as const,
+                grantedById: null,
+                grantedByInfo: null,
                 enrolledAt: earliestAccess,
                 completedAt: null,
                 accessType: "SECTION" as const,
@@ -340,13 +375,15 @@ export class EnrollmentsService {
       }
     }
 
-    // Combine full enrollments and section access courses
     const allRecords: Array<{
       enrollmentId: string;
       userId: string;
       courseId: string;
       companyId: string | null;
       status: string;
+      source: string;
+      grantedById: string | null;
+      grantedByInfo: GrantedByInfo | null;
       enrolledAt: Date;
       completedAt: Date | null;
       accessType: "FULL" | "SECTION";
@@ -368,7 +405,6 @@ export class EnrollmentsService {
 
     const totalCount = fullEnrollmentCount + sectionAccessCount;
 
-    // Map to final structure (resolve thumbnail to full URL for images)
     const mappedData = allRecords.map((e) => ({
       ...e,
       user: e.userInfo,
@@ -385,6 +421,12 @@ export class EnrollmentsService {
           : null,
       },
       company: e.companyInfo,
+      grantedBy: e.grantedByInfo
+        ? {
+            id: e.grantedByInfo.id,
+            name: this.resolveDisplayName(e.grantedByInfo.firstName, e.grantedByInfo.lastName, e.grantedByInfo.email),
+          }
+        : null,
     }));
 
     return {
@@ -527,6 +569,41 @@ export class EnrollmentsService {
       }
       throw error;
     }
+  }
+
+  async manualCreate(learnerUserId: string, courseId: string, adminUserId: string) {
+    const [course] = await this.db
+      .select()
+      .from(courses)
+      .where(eq(courses.courseId, courseId))
+      .limit(1);
+
+    if (!course) {
+      throw new NotFoundException(`Course with ID ${courseId} not found`);
+    }
+
+    const [existing] = await this.db
+      .select()
+      .from(enrollments)
+      .where(and(eq(enrollments.userId, learnerUserId), eq(enrollments.courseId, courseId)))
+      .limit(1);
+
+    if (existing) {
+      throw new ConflictException("User is already enrolled in this course");
+    }
+
+    const [newEnrollment] = await this.db
+      .insert(enrollments)
+      .values({
+        userId: learnerUserId,
+        courseId,
+        source: "ADMIN_GRANT",
+        grantedBy: adminUserId,
+        status: "ACTIVE",
+      })
+      .returning({ enrollmentId: enrollments.enrollmentId });
+
+    return this.findOne(newEnrollment.enrollmentId);
   }
 
   async bulkCreate(

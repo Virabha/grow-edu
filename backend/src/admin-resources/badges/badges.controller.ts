@@ -31,16 +31,17 @@ export class BadgesController {
   findAll(@Query() query: FilterBadgesDto) {
     return this.badgesService.findAll({
       search: query.search,
+      isActive: query.isActive !== undefined ? query.isActive === 'true' : undefined,
       page: query.page,
       limit: query.limit,
     });
   }
 
-  @Get(':id')
+  @Get(':badgeId')
   @ApiOperation({ summary: 'Get a badge by id' })
   @ApiResponse({ status: 404, description: 'Badge not found' })
-  findOne(@Param('id') id: string) {
-    return this.badgesService.findOne(id);
+  findOne(@Param('badgeId') badgeId: string) {
+    return this.badgesService.findOne(badgeId);
   }
 
   @Post()
@@ -49,17 +50,17 @@ export class BadgesController {
     return this.badgesService.create(dto);
   }
 
-  @Patch(':id')
+  @Patch(':badgeId')
   @ApiOperation({ summary: 'Update a badge' })
   @ApiResponse({ status: 404, description: 'Badge not found' })
-  update(@Param('id') id: string, @Body() dto: UpdateBadgeDto) {
-    return this.badgesService.update(id, dto);
+  update(@Param('badgeId') badgeId: string, @Body() dto: UpdateBadgeDto) {
+    return this.badgesService.update(badgeId, dto);
   }
 
-  @Delete(':id')
+  @Delete(':badgeId')
   @ApiOperation({ summary: 'Delete a badge' })
   @ApiResponse({ status: 404, description: 'Badge not found' })
-  remove(@Param('id') id: string) {
-    return this.badgesService.remove(id);
+  remove(@Param('badgeId') badgeId: string) {
+    return this.badgesService.remove(badgeId);
   }
 }

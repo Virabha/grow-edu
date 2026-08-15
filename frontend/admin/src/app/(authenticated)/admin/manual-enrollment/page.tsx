@@ -17,6 +17,24 @@ import { useResourceList, type ResourceRow } from "@/lib/hooks/use-resource";
 import { formatDate, formatMoney } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null;
+}
+
+function nestedUserName(row: ResourceRow): string {
+  const user = row.user;
+  if (!isRecord(user)) return String(row.userId ?? "");
+  const first = typeof user.firstName === 'string' ? user.firstName : '';
+  const last = typeof user.lastName === 'string' ? user.lastName : '';
+  return `${first} ${last}`.trim() || (typeof user.email === 'string' ? user.email : '');
+}
+
+function nestedCourseTitle(row: ResourceRow): string {
+  const course = row.course;
+  if (!isRecord(course)) return '';
+  return typeof course.title === 'string' ? course.title : '';
+}
+
 export default function ManualEnrollmentPage() {
   const queryClient = useQueryClient();
   const [learnerSearch, setLearnerSearch] = React.useState("");
@@ -53,7 +71,7 @@ export default function ManualEnrollmentPage() {
   });
 
   const chosenLearner = (learners.data?.data ?? []).find(
-    (u) => u.userId === learnerId,
+    (u) => u.id === learnerId,
   );
   const chosenCourse = (courses.data?.data ?? []).find(
     (c) => c.courseId === courseId,
@@ -74,7 +92,7 @@ export default function ManualEnrollmentPage() {
           placeholder="Search by name or email…"
           loading={learners.isLoading}
           rows={learners.data?.data ?? []}
-          idKey="userId"
+          idKey="id"
           selectedId={learnerId}
           onSelect={setLearnerId}
           primary={(row) =>
@@ -156,10 +174,10 @@ export default function ManualEnrollmentPage() {
                   {(recent.data?.data ?? []).map((row) => (
                     <li key={String(row.enrollmentId)} className="py-2 first:pt-0 last:pb-0">
                       <p className="truncate text-sm font-medium">
-                        {String(row.userName ?? "")}
+                        {nestedUserName(row)}
                       </p>
                       <p className="truncate text-[11px] text-muted-foreground">
-                        {String(row.courseTitle ?? "")}
+                        {nestedCourseTitle(row)}
                       </p>
                       <div className="mt-0.5 flex items-center gap-2">
                         <StatusPill value={String(row.status ?? "")} />

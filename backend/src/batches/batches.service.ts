@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Inject,
   Injectable,
@@ -34,6 +35,7 @@ import { PaymentService } from "../payment/payment.service";
 import { payments } from "../database/schema";
 import { CouponsService } from "../coupons/coupons.service";
 import { coupons, couponUsages, batchCertificates } from "../database/schema";
+import { QuizCorrectAnswer } from "../database/schema/batches";
 import { CreateBatchDto } from "./dto/create-batch.dto";
 import { UpdateBatchDto } from "./dto/update-batch.dto";
 import { FilterBatchesDto } from "./dto/filter-batches.dto";
@@ -220,6 +222,39 @@ export class BatchesService implements OnModuleInit {
         originalAmount,
         discountAmount,
         finalAmount: 0,
+      };
+    }
+
+    // Idempotency: reuse an existing PENDING or PROOF_UPLOADED payment for the
+    // same batch+user rather than accumulating duplicate rows.
+    // We query by userId + itemType + status (indexed), then narrow to this
+    // specific batch by checking the metadata.batchId in JavaScript — safer
+    // than relying on a JSONB operator in the WHERE clause.
+    const candidatePayments = await this.db
+      .select()
+      .from(payments)
+      .where(
+        and(
+          eq(payments.userId, userId),
+          eq(payments.itemType, "BATCH"),
+          inArray(payments.status, ["PENDING", "PROOF_UPLOADED"]),
+        )
+      );
+
+    const existingPending = candidatePayments.find((p) => {
+      const meta = (p.metadata as Record<string, unknown> | null) ?? {};
+      return meta.batchId === batchId;
+    });
+
+    if (existingPending) {
+      return {
+        paymentId: existingPending.paymentId as string | null,
+        enrolled: false,
+        enrollment: undefined,
+        originalAmount,
+        discountAmount: Number(existingPending.discountAmount ?? 0),
+        finalAmount: Number(existingPending.amount),
+        reused: true,
       };
     }
 
@@ -441,12 +476,38 @@ export class BatchesService implements OnModuleInit {
         .where(where),
     ]);
 
+    const allTeacherIds = [
+      ...new Set(rows.flatMap((b) => (b.teacherIds as string[]) ?? [])),
+    ];
+    const teacherRows =
+      allTeacherIds.length > 0
+        ? await this.db
+            .select({
+              userId: users.userId,
+              firstName: users.firstName,
+              lastName: users.lastName,
+              email: users.email,
+              profileImage: users.profileImage,
+            })
+            .from(users)
+            .where(inArray(users.userId, allTeacherIds))
+        : [];
+    const teacherMap = new Map(teacherRows.map((t) => [t.userId, t]));
+
     const data = rows.map((b) => ({
       ...b,
       thumbnail: this.resolveImageUrl(b.thumbnail),
       bannerImage: this.resolveImageUrl(b.bannerImage),
       price: Number(b.price),
       compareAtPrice: b.compareAtPrice == null ? null : Number(b.compareAtPrice),
+      teachers: ((b.teacherIds as string[]) ?? [])
+        .map((id) => {
+          const t = teacherMap.get(id);
+          return t
+            ? { ...t, profileImage: this.resolveImageUrl(t.profileImage) }
+            : null;
+        })
+        .filter((t): t is NonNullable<typeof t> => t !== null),
     }));
 
     const response = {
@@ -580,7 +641,7 @@ export class BatchesService implements OnModuleInit {
       .from(batches)
       .where(eq(batches.slug, dto.slug))
       .limit(1);
-    if (existing) throw new BadRequestException("Slug already in use");
+    if (existing) throw new ConflictException("Slug already in use");
 
     const [created] = await this.db
       .insert(batches)
@@ -626,7 +687,7 @@ export class BatchesService implements OnModuleInit {
         .from(batches)
         .where(and(eq(batches.slug, dto.slug), sql`${batches.batchId} <> ${batchId}`))
         .limit(1);
-      if (conflict) throw new BadRequestException("Slug already in use");
+      if (conflict) throw new ConflictException("Slug already in use");
     }
 
     const [updated] = await this.db
@@ -1078,6 +1139,29 @@ export class BatchesService implements OnModuleInit {
 
     if (newUserIds.length === 0) {
       return { enrolled: 0, alreadyEnrolled: targetUserIds.length, notFoundEmails };
+    }
+
+    // Capacity check: count current active enrolments and ensure there is
+    // enough room for all newUserIds before touching the DB.
+    if (batch.capacity != null) {
+      const [{ count }] = await this.db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(batchEnrollments)
+        .where(
+          and(
+            eq(batchEnrollments.batchId, batchId),
+            eq(batchEnrollments.status, "ACTIVE"),
+          ),
+        );
+      const available = batch.capacity - count;
+      if (available <= 0) {
+        throw new BadRequestException("Batch is full");
+      }
+      if (newUserIds.length > available) {
+        throw new BadRequestException(
+          `Batch capacity would be exceeded: ${available} slot(s) remaining, tried to enrol ${newUserIds.length}`,
+        );
+      }
     }
 
     const accessEndsAt = dto.accessEndsAt ? new Date(dto.accessEndsAt) : batch.endDate;
@@ -2025,7 +2109,7 @@ export class BatchesService implements OnModuleInit {
         type: dto.type,
         prompt: dto.prompt,
         options: dto.options ?? [],
-        correctAnswer: dto.correctAnswer as never,
+        correctAnswer: dto.correctAnswer,
         marks: dto.marks.toString(),
         explanation: dto.explanation,
       })
@@ -2058,9 +2142,7 @@ export class BatchesService implements OnModuleInit {
         type: dto.type ?? existing.type,
         options: dto.options ?? existing.options,
         correctAnswer:
-          dto.correctAnswer !== undefined
-            ? dto.correctAnswer
-            : (existing.correctAnswer as never),
+          dto.correctAnswer !== undefined ? dto.correctAnswer : existing.correctAnswer,
       });
     }
 
@@ -2072,7 +2154,7 @@ export class BatchesService implements OnModuleInit {
         ...(dto.prompt !== undefined && { prompt: dto.prompt }),
         ...(dto.options !== undefined && { options: dto.options }),
         ...(dto.correctAnswer !== undefined && {
-          correctAnswer: dto.correctAnswer as never,
+          correctAnswer: dto.correctAnswer,
         }),
         ...(dto.marks !== undefined && { marks: dto.marks.toString() }),
         ...(dto.explanation !== undefined && { explanation: dto.explanation }),
@@ -2100,7 +2182,7 @@ export class BatchesService implements OnModuleInit {
   private validateQuestionShape(q: {
     type: "MCQ_SINGLE" | "MCQ_MULTI" | "NUMERICAL";
     options?: Array<{ id: string; text: string }> | null;
-    correctAnswer: unknown;
+    correctAnswer: QuizCorrectAnswer;
   }) {
     if (q.type === "MCQ_SINGLE" || q.type === "MCQ_MULTI") {
       if (!q.options || q.options.length < 2) {
@@ -2123,10 +2205,11 @@ export class BatchesService implements OnModuleInit {
         }
       }
     } else if (q.type === "NUMERICAL") {
-      const ca = q.correctAnswer as { value?: unknown; tolerance?: unknown };
+      const ca = q.correctAnswer;
       if (
-        !ca ||
         typeof ca !== "object" ||
+        ca === null ||
+        Array.isArray(ca) ||
         typeof ca.value !== "number" ||
         (ca.tolerance !== undefined && typeof ca.tolerance !== "number")
       ) {

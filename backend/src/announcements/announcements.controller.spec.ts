@@ -1,4 +1,5 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { DeviceRevocationService } from '../auth/device-revocation.service';
 import { Test } from '@nestjs/testing';
 import { AnnouncementsController } from './announcements.controller';
 import { AnnouncementsService } from './announcements.service';
@@ -48,7 +49,9 @@ async function buildController(): Promise<{
 
   const moduleRef = await Test.createTestingModule({
     controllers: [AnnouncementsController],
-    providers: [{ provide: AnnouncementsService, useValue: svc }],
+    providers: [
+      { provide: DeviceRevocationService, useValue: { isRevoked: async () => false, forget: () => undefined } },
+      { provide: AnnouncementsService, useValue: svc }],
   }).compile();
 
   return {

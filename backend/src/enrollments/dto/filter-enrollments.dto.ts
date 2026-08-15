@@ -23,6 +23,11 @@ export class FilterEnrollmentsDto extends PaginationDto {
   @IsEnum(['ACTIVE', 'COMPLETED', 'REVOKED'])
   status?: string;
 
+  @ApiPropertyOptional({ enum: ['SELF_PURCHASE', 'ADMIN_GRANT', 'COMPANY_ASSIGNMENT', 'FREE_COURSE'] })
+  @IsOptional()
+  @IsEnum(['SELF_PURCHASE', 'ADMIN_GRANT', 'COMPANY_ASSIGNMENT', 'FREE_COURSE'])
+  source?: string;
+
   @ApiPropertyOptional({ description: 'Search by user name, email, or course title' })
   @IsOptional()
   @IsString()

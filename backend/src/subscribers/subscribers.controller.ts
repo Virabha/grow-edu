@@ -37,11 +37,11 @@ export class SubscribersController {
     return this.service.findAll(query);
   }
 
-  @Get(':id')
+  @Get(':subscriberId')
   @ApiOperation({ summary: 'Get a single subscriber' })
   @ApiResponse({ status: 404, description: 'Not found' })
-  findOne(@Param('id') id: string) {
-    return this.service.findOne(id);
+  findOne(@Param('subscriberId') subscriberId: string) {
+    return this.service.findOne(subscriberId);
   }
 
   @Post()
@@ -51,18 +51,18 @@ export class SubscribersController {
     return this.service.create(dto);
   }
 
-  @Patch(':id')
+  @Patch(':subscriberId')
   @ApiOperation({ summary: 'Update a subscriber' })
   @ApiResponse({ status: 404, description: 'Not found' })
   @ApiResponse({ status: 409, description: 'Email already taken' })
-  update(@Param('id') id: string, @Body() dto: UpdateSubscriberDto) {
-    return this.service.update(id, dto);
+  update(@Param('subscriberId') subscriberId: string, @Body() dto: UpdateSubscriberDto) {
+    return this.service.update(subscriberId, dto);
   }
 
-  @Delete(':id')
+  @Delete(':subscriberId')
   @ApiOperation({ summary: 'Delete a subscriber' })
   @ApiResponse({ status: 404, description: 'Not found' })
-  remove(@Param('id') id: string) {
-    return this.service.remove(id);
+  remove(@Param('subscriberId') subscriberId: string) {
+    return this.service.remove(subscriberId);
   }
 }

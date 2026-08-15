@@ -6,6 +6,7 @@ import {
   IsDateString,
   IsEnum,
   IsInt,
+  IsDefined,
   IsNumber,
   IsObject,
   IsOptional,
@@ -14,6 +15,7 @@ import {
   MinLength,
   ValidateNested,
 } from "class-validator";
+import { QuizCorrectAnswer } from "../../database/schema/batches";
 
 export class CreateBatchQuizDto {
   @ApiProperty()
@@ -111,9 +113,11 @@ export class CreateQuizQuestionDto {
   @IsOptional()
   options?: QuizOptionDto[];
 
-  @ApiProperty({ description: "MCQ_SINGLE: string; MCQ_MULTI: string[]; NUMERICAL: {value, tolerance}" })
-  @IsObject()
-  correctAnswer: Record<string, unknown> | string | string[];
+  @ApiProperty({
+    description: "MCQ_SINGLE: option id; MCQ_MULTI: option ids; NUMERICAL: {value, tolerance?}",
+  })
+  @IsDefined()
+  correctAnswer: QuizCorrectAnswer;
 
   @ApiProperty({ default: 1 })
   @IsNumber()

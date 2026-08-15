@@ -307,6 +307,11 @@ export const batchQuizzes = pgTable(
   })
 );
 
+export type QuizCorrectAnswer =
+  | string
+  | string[]
+  | { value: number; tolerance?: number };
+
 export const batchQuizQuestions = pgTable(
   "batch_quiz_questions",
   {
@@ -321,8 +326,7 @@ export const batchQuizQuestions = pgTable(
     options: jsonb("options")
       .$type<Array<{ id: string; text: string }>>()
       .default([]),
-    // For MCQ_SINGLE: string id; MCQ_MULTI: string[]; NUMERICAL: { value, tolerance }
-    correctAnswer: jsonb("correct_answer").notNull(),
+    correctAnswer: jsonb("correct_answer").$type<QuizCorrectAnswer>().notNull(),
     marks: decimal("marks", { precision: 6, scale: 2 }).notNull().default("1"),
     explanation: text("explanation"),
     isDeleted: boolean("is_deleted").notNull().default(false),

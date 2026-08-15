@@ -15,6 +15,8 @@
  * tenant isolation at all, which is the failure mode this file exists to make
  * impossible to reach quietly.
  */
+import "dotenv/config";
+
 import { readdir, readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { join } from "node:path";

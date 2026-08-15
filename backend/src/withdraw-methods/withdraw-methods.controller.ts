@@ -37,11 +37,11 @@ export class WithdrawMethodsController {
     return this.service.findAll(query);
   }
 
-  @Get(':id')
+  @Get(':withdrawMethodId')
   @ApiOperation({ summary: 'Get a single withdraw method' })
   @ApiResponse({ status: 404, description: 'Not found' })
-  findOne(@Param('id') id: string) {
-    return this.service.findOne(id);
+  findOne(@Param('withdrawMethodId') withdrawMethodId: string) {
+    return this.service.findOne(withdrawMethodId);
   }
 
   @Post()
@@ -51,17 +51,17 @@ export class WithdrawMethodsController {
     return this.service.create(dto);
   }
 
-  @Patch(':id')
+  @Patch(':withdrawMethodId')
   @ApiOperation({ summary: 'Update a withdraw method' })
   @ApiResponse({ status: 404, description: 'Not found' })
-  update(@Param('id') id: string, @Body() dto: UpdateWithdrawMethodDto) {
-    return this.service.update(id, dto);
+  update(@Param('withdrawMethodId') withdrawMethodId: string, @Body() dto: UpdateWithdrawMethodDto) {
+    return this.service.update(withdrawMethodId, dto);
   }
 
-  @Delete(':id')
+  @Delete(':withdrawMethodId')
   @ApiOperation({ summary: 'Delete a withdraw method' })
   @ApiResponse({ status: 404, description: 'Not found' })
-  remove(@Param('id') id: string) {
-    return this.service.remove(id);
+  remove(@Param('withdrawMethodId') withdrawMethodId: string) {
+    return this.service.remove(withdrawMethodId);
   }
 }

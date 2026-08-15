@@ -194,3 +194,29 @@ export const currencyPositionEnum = pgEnum("currency_symbol_position", [
   "before",
   "after",
 ]);
+
+export const studentReviewStatusEnum = pgEnum("student_review_status", [
+  "PENDING",
+  "PUBLISHED",
+  "REJECTED",
+]);
+
+export const blogPostStatusEnum = pgEnum("blog_post_status", [
+  "DRAFT",
+  "PUBLISHED",
+  "ARCHIVED",
+]);
+
+export const refundStatusEnum = pgEnum("refund_status", [
+  "NONE",
+  "REQUESTED",
+  "APPROVED",
+  "DECLINED",
+]);
+
+export const enrollmentSourceEnum = pgEnum("enrollment_source", [
+  "SELF_PURCHASE",
+  "ADMIN_GRANT",
+  "COMPANY_ASSIGNMENT",
+  "FREE_COURSE",
+]);

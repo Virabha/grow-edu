@@ -10,6 +10,8 @@
  * Runs inside a transaction that is always rolled back, so it leaves nothing
  * behind and is safe to run repeatedly.
  */
+import "dotenv/config";
+
 import { sql } from "drizzle-orm";
 
 import { createDb } from "../src/tenancy/client";

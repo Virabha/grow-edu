@@ -32,11 +32,11 @@ export class CourseLanguagesController {
     return this.service.findAll(query);
   }
 
-  @Get(':id')
+  @Get(':courseLanguageId')
   @ApiOperation({ summary: 'Get a course language by id' })
   @ApiResponse({ status: 404, description: 'Not found' })
-  findOne(@Param('id') id: string) {
-    return this.service.findOne(id);
+  findOne(@Param('courseLanguageId') courseLanguageId: string) {
+    return this.service.findOne(courseLanguageId);
   }
 
   @Post()
@@ -46,18 +46,18 @@ export class CourseLanguagesController {
     return this.service.create(dto);
   }
 
-  @Patch(':id')
+  @Patch(':courseLanguageId')
   @ApiOperation({ summary: 'Update a course language' })
   @ApiResponse({ status: 404, description: 'Not found' })
   @ApiResponse({ status: 409, description: 'Duplicate code' })
-  update(@Param('id') id: string, @Body() dto: UpdateCourseLanguageDto) {
-    return this.service.update(id, dto);
+  update(@Param('courseLanguageId') courseLanguageId: string, @Body() dto: UpdateCourseLanguageDto) {
+    return this.service.update(courseLanguageId, dto);
   }
 
-  @Delete(':id')
+  @Delete(':courseLanguageId')
   @ApiOperation({ summary: 'Delete a course language' })
   @ApiResponse({ status: 404, description: 'Not found' })
-  remove(@Param('id') id: string) {
-    return this.service.remove(id);
+  remove(@Param('courseLanguageId') courseLanguageId: string) {
+    return this.service.remove(courseLanguageId);
   }
 }

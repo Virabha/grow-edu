@@ -1,4 +1,5 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { DeviceRevocationService } from '../auth/device-revocation.service';
 import { Test } from '@nestjs/testing';
 import { VideoEncodingController } from './video-encoding.controller';
 import { VideoEncodingService } from './video-encoding.service';
@@ -74,6 +75,8 @@ async function buildMocks(): Promise<{
   const moduleRef = await Test.createTestingModule({
     controllers: [VideoEncodingController],
     providers: [
+      { provide: DeviceRevocationService, useValue: { isRevoked: async () => false, forget: () => undefined } },
+      
       { provide: VideoEncodingService, useValue: mockService },
       { provide: AppConfigService, useValue: mockConfig },
     ],

@@ -26,6 +26,10 @@ const ORDER_TONE: Record<OrderStatus, { label: string; className: string }> = {
     className:
       "bg-stone-200 text-stone-700 dark:bg-stone-700/50 dark:text-stone-200",
   },
+  REJECTED: {
+    label: "Rejected",
+    className: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200",
+  },
 };
 
 const REFUND_TONE: Record<

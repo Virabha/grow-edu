@@ -136,6 +136,11 @@ export default function ReviewsPage() {
                                 Awaiting approval
                               </span>
                             )}
+                            {review.status === "REJECTED" && (
+                              <span className="rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-medium text-red-700 dark:bg-red-900/40 dark:text-red-300">
+                                Not approved
+                              </span>
+                            )}
                           </div>
                           <p className="text-sm leading-relaxed text-muted-foreground">
                             {review.body}

@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   Inject,
   Injectable,
+  NotFoundException,
 } from "@nestjs/common";
 import { eq } from "drizzle-orm";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -45,7 +46,7 @@ export class BatchManagerGuard implements CanActivate {
       .where(eq(batches.batchId, batchId))
       .limit(1);
     if (!batch || batch.isDeleted) {
-      throw new ForbiddenException("Batch not found");
+      throw new NotFoundException("Batch not found");
     }
     const teacherIds = Array.isArray(batch.teacherIds)
       ? (batch.teacherIds as string[])

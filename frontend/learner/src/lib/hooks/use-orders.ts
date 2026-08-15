@@ -9,7 +9,8 @@ export type OrderStatus =
   | "PENDING"
   | "PROOF_UPLOADED"
   | "FAILED"
-  | "REFUNDED";
+  | "REFUNDED"
+  | "REJECTED";
 
 export type RefundStatus = "NONE" | "REQUESTED" | "APPROVED" | "DECLINED";
 
@@ -18,7 +19,7 @@ export interface OrderItem {
   courseId: string;
   title: string;
   thumbnail: string;
-  itemType: "COURSE" | "SECTION" | "BOOK";
+  itemType: "COURSE" | "SECTION" | "BOOK" | "BATCH";
   unitPrice: number;
 }
 
@@ -32,7 +33,7 @@ export interface Order {
   tax: number;
   total: number;
   currency: string;
-  gateway: "RAZORPAY" | "MANUAL_QR" | "FREE";
+  gateway: "RAZORPAY" | "MANUAL_QR" | "FREE" | "PHONEPE";
   status: OrderStatus;
   refundStatus: RefundStatus;
   refundReason: string | null;

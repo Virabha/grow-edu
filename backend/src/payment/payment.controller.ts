@@ -71,16 +71,16 @@ export class PaymentController {
 
   @ApiOperation({ summary: 'Upload payment proof (screenshot URL)' })
   @ApiResponse({ status: 200, description: 'Proof uploaded; awaiting admin review' })
-  @Post(':id/upload-proof')
+  @Post(':paymentId/upload-proof')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   async uploadProof(
-    @Param('id') id: string,
+    @Param('paymentId') paymentId: string,
     @Body() dto: UploadProofDto,
     @CurrentUser() user: { userId: string },
   ) {
     return this.paymentService.uploadPaymentProof({
-      paymentId: id,
+      paymentId: paymentId,
       userId: user.userId,
       proofUrl: dto.proofUrl,
       transactionId: dto.transactionId,
@@ -89,14 +89,14 @@ export class PaymentController {
   }
 
   @ApiOperation({ summary: 'Get my payment (learner)' })
-  @Get('my/:id')
+  @Get('my/:paymentId')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   async getMyPayment(
-    @Param('id') id: string,
+    @Param('paymentId') paymentId: string,
     @CurrentUser() user: { userId: string },
   ) {
-    return this.paymentService.getMyPayment(id, user.userId);
+    return this.paymentService.getMyPayment(paymentId, user.userId);
   }
 
   // ─── Admin ──────────────────────────────────────────────────────────
@@ -131,32 +131,32 @@ export class PaymentController {
   }
 
   @ApiOperation({ summary: 'Approve a manual-QR payment (admin)' })
-  @Post(':id/approve')
+  @Post(':paymentId/approve')
   @HttpCode(200)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN)
   @ApiBearerAuth()
   async approve(
-    @Param('id') id: string,
+    @Param('paymentId') paymentId: string,
     @Body() dto: ReviewPaymentDto,
     @CurrentUser() user: { userId: string },
   ) {
-    return this.paymentService.approvePayment(id, user.userId, dto.notes);
+    return this.paymentService.approvePayment(paymentId, user.userId, dto.notes);
   }
 
   @ApiOperation({ summary: 'Reject a manual-QR payment (admin)' })
-  @Post(':id/reject')
+  @Post(':paymentId/reject')
   @HttpCode(200)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN)
   @ApiBearerAuth()
   async reject(
-    @Param('id') id: string,
+    @Param('paymentId') paymentId: string,
     @Body() dto: ReviewPaymentDto,
     @CurrentUser() user: { userId: string },
   ) {
     return this.paymentService.rejectPayment(
-      id,
+      paymentId,
       user.userId,
       dto.notes || 'Rejected by admin',
     );
@@ -172,11 +172,11 @@ export class PaymentController {
   }
 
   @ApiOperation({ summary: 'Get a specific payment by ID (admin)' })
-  @Get(':id')
+  @Get(':paymentId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN)
   @ApiBearerAuth()
-  async getPaymentById(@Param('id') id: string) {
-    return this.paymentService.getPaymentById(id);
+  async getPaymentById(@Param('paymentId') paymentId: string) {
+    return this.paymentService.getPaymentById(paymentId);
   }
 }

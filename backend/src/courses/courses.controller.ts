@@ -83,12 +83,12 @@ export class CoursesController {
   @Public()
   @UseGuards(OptionalJwtAuthGuard)
   @ApiBearerAuth()
-  @Get(":id")
+  @Get(":courseId")
   async findOne(
-    @Param("id") id: string,
+    @Param("courseId") courseId: string,
     @CurrentUser() user?: { userId: string; role: string }
   ) {
-    return this.coursesService.findOne(id, user?.userId, user?.role);
+    return this.coursesService.findOne(courseId, user?.userId, user?.role);
   }
 
   @ApiOperation({ summary: "Create a new course" })
@@ -108,37 +108,37 @@ export class CoursesController {
   @ApiResponse({ status: 200, description: "Course updated successfully" })
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @Put(":id")
+  @Put(":courseId")
   async update(
-    @Param("id") id: string,
+    @Param("courseId") courseId: string,
     @Body() dto: UpdateCourseDto,
     @CurrentUser() user: { userId: string; role: string }
   ) {
-    return this.coursesService.update(id, dto, user.userId, user.role);
+    return this.coursesService.update(courseId, dto, user.userId, user.role);
   }
 
   @ApiOperation({ summary: "Delete course" })
   @ApiResponse({ status: 200, description: "Course deleted successfully" })
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @Delete(":id")
+  @Delete(":courseId")
   async delete(
-    @Param("id") id: string,
+    @Param("courseId") courseId: string,
     @CurrentUser() user: { userId: string; role: string }
   ) {
-    return this.coursesService.delete(id, user.userId, user.role);
+    return this.coursesService.delete(courseId, user.userId, user.role);
   }
 
   @ApiOperation({ summary: "Submit course for review" })
   @ApiResponse({ status: 200, description: "Course submitted successfully" })
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @Post(":id/submit-review")
+  @Post(":courseId/submit-review")
   async submitForReview(
-    @Param("id") id: string,
+    @Param("courseId") courseId: string,
     @CurrentUser() user: { userId: string; role: string }
   ) {
-    return this.coursesService.submitForReview(id, user.userId, user.role);
+    return this.coursesService.submitForReview(courseId, user.userId, user.role);
   }
 
   @ApiOperation({ summary: "Approve course" })
@@ -146,14 +146,14 @@ export class CoursesController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN)
   @ApiBearerAuth()
-  @Post(":id/approve")
+  @Post(":courseId/approve")
   async approve(
-    @Param("id") id: string,
+    @Param("courseId") courseId: string,
     @Body() dto: ApproveCourseDto,
     @CurrentUser() user: { userId: string; role: string }
   ) {
     return this.coursesService.approve(
-      id,
+      courseId,
       user.userId,
       user.role,
       dto.notes,
@@ -166,14 +166,14 @@ export class CoursesController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN)
   @ApiBearerAuth()
-  @Post(":id/request-changes")
+  @Post(":courseId/request-changes")
   async requestChanges(
-    @Param("id") id: string,
+    @Param("courseId") courseId: string,
     @Body() dto: RequestChangesDto,
     @CurrentUser() user: { userId: string; role: string }
   ) {
     return this.coursesService.requestChanges(
-      id,
+      courseId,
       user.userId,
       user.role,
       dto.notes
@@ -185,13 +185,13 @@ export class CoursesController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN)
   @ApiBearerAuth()
-  @Post(":id/reject")
+  @Post(":courseId/reject")
   async reject(
-    @Param("id") id: string,
+    @Param("courseId") courseId: string,
     @Body() dto: RejectCourseDto,
     @CurrentUser() user: { userId: string; role: string }
   ) {
-    return this.coursesService.reject(id, user.userId, user.role, dto.reason);
+    return this.coursesService.reject(courseId, user.userId, user.role, dto.reason);
   }
 
   @ApiOperation({ summary: "Unpublish course" })
@@ -199,11 +199,11 @@ export class CoursesController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN)
   @ApiBearerAuth()
-  @Post(":id/unpublish")
+  @Post(":courseId/unpublish")
   async unpublish(
-    @Param("id") id: string,
+    @Param("courseId") courseId: string,
     @CurrentUser() user: { userId: string; role: string }
   ) {
-    return this.coursesService.unpublish(id, user.userId, user.role);
+    return this.coursesService.unpublish(courseId, user.userId, user.role);
   }
 }

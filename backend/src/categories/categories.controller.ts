@@ -58,13 +58,13 @@ export class CategoriesController {
     });
   }
 
-  @Get(':id')
+  @Get(':categoryId')
   @Public()
   @ApiOperation({ summary: 'Get category by ID' })
   @ApiResponse({ status: 200, description: 'Category details' })
   @ApiResponse({ status: 404, description: 'Category not found' })
-  async findOne(@Param('id') id: string) {
-    return this.categoriesService.findOne(id);
+  async findOne(@Param('categoryId') categoryId: string) {
+    return this.categoriesService.findOne(categoryId);
   }
 
   @Post()
@@ -77,41 +77,40 @@ export class CategoriesController {
     return this.categoriesService.create(dto);
   }
 
-  @Put(':id')
+  @Put(':categoryId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update category (admin)' })
   @ApiResponse({ status: 200, description: 'Category updated' })
-  async update(@Param('id') id: string, @Body() dto: UpdateCategoryDto) {
-    return this.categoriesService.update(id, dto);
+  async update(@Param('categoryId') categoryId: string, @Body() dto: UpdateCategoryDto) {
+    return this.categoriesService.update(categoryId, dto);
   }
 
-  @Patch(':id/activate')
+  @Patch(':categoryId/activate')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Activate category (admin)' })
-  async activate(@Param('id') id: string) {
-    return this.categoriesService.activate(id);
+  async activate(@Param('categoryId') categoryId: string) {
+    return this.categoriesService.activate(categoryId);
   }
 
-  @Patch(':id/deactivate')
+  @Patch(':categoryId/deactivate')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Deactivate category (admin)' })
-  async deactivate(@Param('id') id: string) {
-    return this.categoriesService.deactivate(id);
+  async deactivate(@Param('categoryId') categoryId: string) {
+    return this.categoriesService.deactivate(categoryId);
   }
 
-  @Delete(':id')
+  @Delete(':categoryId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Soft delete category (admin)' })
-  async softDelete(@Param('id') id: string) {
-    return this.categoriesService.softDelete(id);
+  async softDelete(@Param('categoryId') categoryId: string) {
+    return this.categoriesService.softDelete(categoryId);
   }
 }
-

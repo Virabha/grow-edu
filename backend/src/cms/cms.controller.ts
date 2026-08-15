@@ -57,13 +57,13 @@ export class CmsController {
     return this.cmsService.getAllBannersAdmin();
   }
 
-  @Get('banners/admin/:id')
+  @Get('banners/admin/:bannerId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get banner by ID (admin)' })
-  getBannerById(@Param('id') id: string) {
-    return this.cmsService.getBannerById(id);
+  getBannerById(@Param('bannerId') bannerId: string) {
+    return this.cmsService.getBannerById(bannerId);
   }
 
   @Post('banners')
@@ -75,40 +75,40 @@ export class CmsController {
     return this.cmsService.createBanner(dto);
   }
 
-  @Put('banners/:id')
+  @Put('banners/:bannerId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update banner (admin)' })
-  updateBanner(@Param('id') id: string, @Body() dto: UpdateBannerDto) {
-    return this.cmsService.updateBanner(id, dto);
+  updateBanner(@Param('bannerId') bannerId: string, @Body() dto: UpdateBannerDto) {
+    return this.cmsService.updateBanner(bannerId, dto);
   }
 
-  @Patch('banners/:id/activate')
+  @Patch('banners/:bannerId/activate')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Activate banner (admin)' })
-  activateBanner(@Param('id') id: string) {
-    return this.cmsService.activateBanner(id);
+  activateBanner(@Param('bannerId') bannerId: string) {
+    return this.cmsService.activateBanner(bannerId);
   }
 
-  @Patch('banners/:id/deactivate')
+  @Patch('banners/:bannerId/deactivate')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Deactivate banner (admin)' })
-  deactivateBanner(@Param('id') id: string) {
-    return this.cmsService.deactivateBanner(id);
+  deactivateBanner(@Param('bannerId') bannerId: string) {
+    return this.cmsService.deactivateBanner(bannerId);
   }
 
-  @Delete('banners/:id')
+  @Delete('banners/:bannerId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete banner (admin)' })
-  deleteBanner(@Param('id') id: string) {
-    return this.cmsService.deleteBanner(id);
+  deleteBanner(@Param('bannerId') bannerId: string) {
+    return this.cmsService.deleteBanner(bannerId);
   }
 
   // ==================== FAQS (public + admin) ====================
@@ -130,12 +130,12 @@ export class CmsController {
     return this.cmsService.getAllFaqsAdmin();
   }
 
-  @Get('faqs/admin/:id')
+  @Get('faqs/admin/:faqId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN)
   @ApiBearerAuth()
-  getFaqById(@Param('id') id: string) {
-    return this.cmsService.getFaqById(id);
+  getFaqById(@Param('faqId') faqId: string) {
+    return this.cmsService.getFaqById(faqId);
   }
 
   @Post('faqs')
@@ -146,20 +146,20 @@ export class CmsController {
     return this.cmsService.createFaq(dto);
   }
 
-  @Put('faqs/:id')
+  @Put('faqs/:faqId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN)
   @ApiBearerAuth()
-  updateFaq(@Param('id') id: string, @Body() dto: UpdateFaqDto) {
-    return this.cmsService.updateFaq(id, dto);
+  updateFaq(@Param('faqId') faqId: string, @Body() dto: UpdateFaqDto) {
+    return this.cmsService.updateFaq(faqId, dto);
   }
 
-  @Delete('faqs/:id')
+  @Delete('faqs/:faqId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN)
   @ApiBearerAuth()
-  deleteFaq(@Param('id') id: string) {
-    return this.cmsService.deleteFaq(id);
+  deleteFaq(@Param('faqId') faqId: string) {
+    return this.cmsService.deleteFaq(faqId);
   }
 
   // ==================== WHY CHOOSE US (public + admin) ====================
@@ -179,12 +179,12 @@ export class CmsController {
     return this.cmsService.getAllWhyChooseUsAdmin();
   }
 
-  @Get('why-choose-us/admin/:id')
+  @Get('why-choose-us/admin/:whyChooseUsId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN)
   @ApiBearerAuth()
-  getWhyChooseUsById(@Param('id') id: string) {
-    return this.cmsService.getWhyChooseUsById(id);
+  getWhyChooseUsById(@Param('whyChooseUsId') whyChooseUsId: string) {
+    return this.cmsService.getWhyChooseUsById(whyChooseUsId);
   }
 
   @Post('why-choose-us')
@@ -195,20 +195,20 @@ export class CmsController {
     return this.cmsService.createWhyChooseUs(dto);
   }
 
-  @Put('why-choose-us/:id')
+  @Put('why-choose-us/:whyChooseUsId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN)
   @ApiBearerAuth()
-  updateWhyChooseUs(@Param('id') id: string, @Body() dto: UpdateWhyChooseUsDto) {
-    return this.cmsService.updateWhyChooseUs(id, dto);
+  updateWhyChooseUs(@Param('whyChooseUsId') whyChooseUsId: string, @Body() dto: UpdateWhyChooseUsDto) {
+    return this.cmsService.updateWhyChooseUs(whyChooseUsId, dto);
   }
 
-  @Delete('why-choose-us/:id')
+  @Delete('why-choose-us/:whyChooseUsId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN)
   @ApiBearerAuth()
-  deleteWhyChooseUs(@Param('id') id: string) {
-    return this.cmsService.deleteWhyChooseUs(id);
+  deleteWhyChooseUs(@Param('whyChooseUsId') whyChooseUsId: string) {
+    return this.cmsService.deleteWhyChooseUs(whyChooseUsId);
   }
 
   // ==================== TESTIMONIALS (public + admin) ====================
@@ -228,12 +228,12 @@ export class CmsController {
     return this.cmsService.getAllTestimonialsAdmin();
   }
 
-  @Get('testimonials/admin/:id')
+  @Get('testimonials/admin/:testimonialId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN)
   @ApiBearerAuth()
-  getTestimonialById(@Param('id') id: string) {
-    return this.cmsService.getTestimonialById(id);
+  getTestimonialById(@Param('testimonialId') testimonialId: string) {
+    return this.cmsService.getTestimonialById(testimonialId);
   }
 
   @Post('testimonials')
@@ -244,20 +244,20 @@ export class CmsController {
     return this.cmsService.createTestimonial(dto);
   }
 
-  @Put('testimonials/:id')
+  @Put('testimonials/:testimonialId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN)
   @ApiBearerAuth()
-  updateTestimonial(@Param('id') id: string, @Body() dto: UpdateTestimonialDto) {
-    return this.cmsService.updateTestimonial(id, dto);
+  updateTestimonial(@Param('testimonialId') testimonialId: string, @Body() dto: UpdateTestimonialDto) {
+    return this.cmsService.updateTestimonial(testimonialId, dto);
   }
 
-  @Delete('testimonials/:id')
+  @Delete('testimonials/:testimonialId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN)
   @ApiBearerAuth()
-  deleteTestimonial(@Param('id') id: string) {
-    return this.cmsService.deleteTestimonial(id);
+  deleteTestimonial(@Param('testimonialId') testimonialId: string) {
+    return this.cmsService.deleteTestimonial(testimonialId);
   }
 
   // ==================== SERVICES (public + admin) ====================
@@ -284,12 +284,12 @@ export class CmsController {
     return this.cmsService.getAllServicesAdmin();
   }
 
-  @Get('services/admin/:id')
+  @Get('services/admin/:serviceId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN)
   @ApiBearerAuth()
-  getServiceById(@Param('id') id: string) {
-    return this.cmsService.getServiceById(id);
+  getServiceById(@Param('serviceId') serviceId: string) {
+    return this.cmsService.getServiceById(serviceId);
   }
 
   @Post('services')
@@ -300,20 +300,20 @@ export class CmsController {
     return this.cmsService.createService(dto);
   }
 
-  @Put('services/:id')
+  @Put('services/:serviceId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN)
   @ApiBearerAuth()
-  updateService(@Param('id') id: string, @Body() dto: UpdateServiceDto) {
-    return this.cmsService.updateService(id, dto);
+  updateService(@Param('serviceId') serviceId: string, @Body() dto: UpdateServiceDto) {
+    return this.cmsService.updateService(serviceId, dto);
   }
 
-  @Delete('services/:id')
+  @Delete('services/:serviceId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN)
   @ApiBearerAuth()
-  deleteService(@Param('id') id: string) {
-    return this.cmsService.deleteService(id);
+  deleteService(@Param('serviceId') serviceId: string) {
+    return this.cmsService.deleteService(serviceId);
   }
 
   // ==================== SERVICE APPLICATIONS (public + admin) ====================
@@ -344,34 +344,34 @@ export class CmsController {
     });
   }
 
-  @Get('service-applications/admin/:id')
+  @Get('service-applications/admin/:serviceApplicationId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get single service application (admin)' })
-  getServiceApplicationById(@Param('id') id: string) {
-    return this.cmsService.getServiceApplicationById(id);
+  getServiceApplicationById(@Param('serviceApplicationId') serviceApplicationId: string) {
+    return this.cmsService.getServiceApplicationById(serviceApplicationId);
   }
 
-  @Patch('service-applications/admin/:id/status')
+  @Patch('service-applications/admin/:serviceApplicationId/status')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update service application status (admin)' })
   updateServiceApplicationStatus(
-    @Param('id') id: string,
+    @Param('serviceApplicationId') serviceApplicationId: string,
     @Body() dto: UpdateApplicationStatusDto,
   ) {
-    return this.cmsService.updateServiceApplicationStatus(id, dto);
+    return this.cmsService.updateServiceApplicationStatus(serviceApplicationId, dto);
   }
 
-  @Delete('service-applications/admin/:id')
+  @Delete('service-applications/admin/:serviceApplicationId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete service application (admin)' })
-  deleteServiceApplication(@Param('id') id: string) {
-    return this.cmsService.deleteServiceApplication(id);
+  deleteServiceApplication(@Param('serviceApplicationId') serviceApplicationId: string) {
+    return this.cmsService.deleteServiceApplication(serviceApplicationId);
   }
 
   // ==================== SITE SETTINGS (public + admin) ====================

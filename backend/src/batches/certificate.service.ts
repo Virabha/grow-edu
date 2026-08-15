@@ -21,6 +21,7 @@ import {
   users,
 } from "../database/schema";
 import { NotificationsService } from "../notifications/notifications.service";
+import { CertificateTemplateService } from "../certificate-template/certificate-template.service";
 
 type DbType = PostgresJsDatabase<typeof schema>;
 
@@ -37,7 +38,8 @@ export interface CertificateRow {
 export class CertificateService {
   constructor(
     @Inject(DATABASE_CONNECTION) private readonly db: DbType,
-    private readonly notificationsService: NotificationsService
+    private readonly notificationsService: NotificationsService,
+    private readonly certificateTemplateService: CertificateTemplateService,
   ) {}
 
   private generateCertificateNumber(batchId: string, userId: string): string {
@@ -266,6 +268,21 @@ export class CertificateService {
     const learnerName =
       [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email;
 
+    const template = await this.certificateTemplateService.get();
+    const accent = template.accentColour;
+    const issuedDate = new Date(cert.issuedAt).toLocaleDateString(undefined, {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+
+    const bodyText = template.bodyText
+      ? template.bodyText
+          .replace("{{learner_name}}", learnerName)
+          .replace("{{course_title}}", batch.title)
+          .replace("{{completion_date}}", issuedDate)
+      : null;
+
     return new Promise<Buffer>((resolve, reject) => {
       const doc = new PDFDocument({ size: "A4", layout: "landscape", margin: 50 });
       const chunks: Buffer[] = [];
@@ -276,14 +293,11 @@ export class CertificateService {
       const w = doc.page.width;
       const h = doc.page.height;
 
-      // Outer border
-      doc.lineWidth(2).strokeColor("#1e3a8a").rect(30, 30, w - 60, h - 60).stroke();
-      // Inner border
-      doc.lineWidth(0.5).strokeColor("#3b82f6").rect(40, 40, w - 80, h - 80).stroke();
+      doc.lineWidth(2).strokeColor(accent).rect(30, 30, w - 60, h - 60).stroke();
+      doc.lineWidth(0.5).strokeColor(accent).rect(40, 40, w - 80, h - 80).stroke();
 
-      // Header
       doc
-        .fillColor("#1e3a8a")
+        .fillColor(accent)
         .font("Helvetica-Bold")
         .fontSize(34)
         .text("Certificate of Completion", 60, 90, { align: "center", width: w - 120 });
@@ -297,53 +311,57 @@ export class CertificateService {
           width: w - 120,
         });
 
-      // Body
       doc.moveDown(2);
-      doc
-        .fillColor("#1f2937")
-        .fontSize(14)
-        .text("This is to certify that", { align: "center", width: w - 120 });
 
-      doc.moveDown(0.6);
-      doc
-        .fillColor("#1e3a8a")
-        .font("Helvetica-Bold")
-        .fontSize(28)
-        .text(learnerName, { align: "center", width: w - 120 });
-
-      doc.moveDown(0.6);
-      doc
-        .fillColor("#1f2937")
-        .font("Helvetica")
-        .fontSize(14)
-        .text("has successfully completed the batch", {
-          align: "center",
-          width: w - 120,
-        });
-
-      doc.moveDown(0.4);
-      doc
-        .fillColor("#1e3a8a")
-        .font("Helvetica-Bold")
-        .fontSize(20)
-        .text(batch.title, { align: "center", width: w - 120 });
-
-      if (batch.targetExam) {
-        doc.moveDown(0.2);
+      if (bodyText) {
         doc
-          .fillColor("#6b7280")
-          .font("Helvetica-Oblique")
-          .fontSize(12)
-          .text(batch.targetExam, { align: "center", width: w - 120 });
+          .fillColor("#1f2937")
+          .font("Helvetica")
+          .fontSize(14)
+          .text(bodyText, { align: "center", width: w - 120 });
+      } else {
+        doc
+          .fillColor("#1f2937")
+          .fontSize(14)
+          .text("This is to certify that", { align: "center", width: w - 120 });
+
+        doc.moveDown(0.6);
+        doc
+          .fillColor(accent)
+          .font("Helvetica-Bold")
+          .fontSize(28)
+          .text(learnerName, { align: "center", width: w - 120 });
+
+        doc.moveDown(0.6);
+        doc
+          .fillColor("#1f2937")
+          .font("Helvetica")
+          .fontSize(14)
+          .text("has successfully completed the batch", { align: "center", width: w - 120 });
+
+        doc.moveDown(0.4);
+        doc
+          .fillColor(accent)
+          .font("Helvetica-Bold")
+          .fontSize(20)
+          .text(batch.title, { align: "center", width: w - 120 });
+
+        if (batch.targetExam) {
+          doc.moveDown(0.2);
+          doc
+            .fillColor("#6b7280")
+            .font("Helvetica-Oblique")
+            .fontSize(12)
+            .text(batch.targetExam, { align: "center", width: w - 120 });
+        }
       }
 
-      // Stats row
       doc.moveDown(2);
       const statsY = doc.y;
       const colW = (w - 120) / 3;
       const drawStat = (x: number, label: string, value: string) => {
         doc
-          .fillColor("#1e3a8a")
+          .fillColor(accent)
           .font("Helvetica-Bold")
           .fontSize(18)
           .text(value, x, statsY, { width: colW, align: "center" });
@@ -361,36 +379,41 @@ export class CertificateService {
       );
       drawStat(60 + colW * 2, "Avg quiz score", quizPct != null ? `${quizPct.toFixed(0)}%` : "—");
 
-      // Footer
       const footerY = h - 120;
-      doc
-        .fillColor("#6b7280")
-        .font("Helvetica")
-        .fontSize(10)
-        .text(`Certificate No.`, 60, footerY, { width: 200 })
-        .fillColor("#1f2937")
-        .font("Helvetica-Bold")
-        .fontSize(11)
-        .text(cert.certificateNumber, 60, footerY + 12, { width: 250 });
+
+      if (template.signatoryName) {
+        doc
+          .fillColor("#6b7280")
+          .font("Helvetica")
+          .fontSize(10)
+          .text(template.signatoryTitle, 60, footerY, { width: 200 })
+          .fillColor("#1f2937")
+          .font("Helvetica-Bold")
+          .fontSize(11)
+          .text(template.signatoryName, 60, footerY + 12, { width: 250 });
+      }
+
+      if (template.showCertificateId) {
+        doc
+          .fillColor("#6b7280")
+          .font("Helvetica")
+          .fontSize(10)
+          .text("Certificate No.", 60, footerY + (template.signatoryName ? 28 : 0), { width: 200 })
+          .fillColor("#1f2937")
+          .font("Helvetica-Bold")
+          .fontSize(11)
+          .text(cert.certificateNumber, 60, footerY + (template.signatoryName ? 40 : 12), { width: 250 });
+      }
 
       doc
         .fillColor("#6b7280")
         .font("Helvetica")
         .fontSize(10)
-        .text(`Issued on`, w - 260, footerY, { width: 200, align: "right" })
+        .text("Issued on", w - 260, footerY, { width: 200, align: "right" })
         .fillColor("#1f2937")
         .font("Helvetica-Bold")
         .fontSize(11)
-        .text(
-          new Date(cert.issuedAt).toLocaleDateString(undefined, {
-            day: "numeric",
-            month: "long",
-            year: "numeric",
-          }),
-          w - 260,
-          footerY + 12,
-          { width: 200, align: "right" }
-        );
+        .text(issuedDate, w - 260, footerY + 12, { width: 200, align: "right" });
 
       doc.end();
     });

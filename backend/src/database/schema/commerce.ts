@@ -12,6 +12,7 @@ import {
 import {
   itemTypeEnum,
   paymentGatewayEnum,
+  refundStatusEnum,
   paymentStatusEnum,
   discountTypeEnum,
   couponUsageStatusEnum,
@@ -42,6 +43,13 @@ export const payments = pgTable(
     paymentProofUrl: text("payment_proof_url"),
     transactionId: text("transaction_id"),
     payerName: text("payer_name"),
+    invoiceNo: text("invoice_no").unique(),
+    taxAmount: decimal("tax_amount", { precision: 10, scale: 2 }).default("0"),
+    refundStatus: refundStatusEnum("refund_status").notNull().default("NONE"),
+    refundReason: text("refund_reason"),
+    refundRequestedAt: timestamp("refund_requested_at"),
+    refundResolvedAt: timestamp("refund_resolved_at"),
+    refundResolvedBy: text("refund_resolved_by"),
     proofUploadedAt: timestamp("proof_uploaded_at"),
     reviewedAt: timestamp("reviewed_at"),
     reviewedBy: text("reviewed_by"),
@@ -59,6 +67,8 @@ export const payments = pgTable(
     couponIdx: index("payments_coupon_idx").on(table.couponId),
     txnIdx: index("payments_transaction_id_idx").on(table.transactionId),
     userStatusIdx: index("payments_user_status_idx").on(table.userId, table.status),
+    userCreatedIdx: index("payments_user_created_idx").on(table.userId, table.createdAt),
+    refundStatusIdx: index("payments_refund_status_idx").on(table.refundStatus),
   })
 );
 

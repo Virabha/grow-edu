@@ -27,6 +27,7 @@ const GATEWAY_LABEL: Record<Order["gateway"], string> = {
   RAZORPAY: "Razorpay",
   MANUAL_QR: "UPI / bank transfer",
   FREE: "Free enrolment",
+  PHONEPE: "PhonePe",
 };
 
 export function OrderDetailDialog({
@@ -126,7 +127,9 @@ export function OrderDetailDialog({
                       ? "Section access"
                       : item.itemType === "BOOK"
                         ? "Book"
-                        : "Full course"}
+                        : item.itemType === "BATCH"
+                          ? "Batch / cohort"
+                          : "Full course"}
                   </p>
                 </div>
                 <p className="shrink-0 text-sm tabular-nums">

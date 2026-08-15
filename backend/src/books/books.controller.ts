@@ -58,12 +58,12 @@ export class BooksController {
     return this.booksService.findBySlug(slug);
   }
 
-  @Get(':id')
+  @Get(':bookId')
   @Public()
   @UseGuards(OptionalJwtAuthGuard)
   @ApiOperation({ summary: 'Get book by ID' })
-  findById(@Param('id') id: string) {
-    return this.booksService.findById(id);
+  findById(@Param('bookId') bookId: string) {
+    return this.booksService.findById(bookId);
   }
 
   @Post()
@@ -75,34 +75,34 @@ export class BooksController {
     return this.booksService.create(dto);
   }
 
-  @Put(':id')
+  @Put(':bookId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update book (admin)' })
-  update(@Param('id') id: string, @Body() dto: UpdateBookDto) {
-    return this.booksService.update(id, dto);
+  update(@Param('bookId') bookId: string, @Body() dto: UpdateBookDto) {
+    return this.booksService.update(bookId, dto);
   }
 
-  @Delete(':id')
+  @Delete(':bookId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete book (admin)' })
-  remove(@Param('id') id: string) {
-    return this.booksService.remove(id);
+  remove(@Param('bookId') bookId: string) {
+    return this.booksService.remove(bookId);
   }
 
-  @Post(':id/purchase')
+  @Post(':bookId/purchase')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Purchase a book' })
   purchase(
-    @Param('id') id: string,
+    @Param('bookId') bookId: string,
     @CurrentUser() user: { userId: string },
     @Body() body: { successUrl?: string; cancelUrl?: string },
   ) {
-    return this.booksService.purchaseBook(user.userId, id, body.successUrl, body.cancelUrl);
+    return this.booksService.purchaseBook(user.userId, bookId, body.successUrl, body.cancelUrl);
   }
 
   @Post('purchases/:purchaseId/verify')

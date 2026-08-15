@@ -36,11 +36,11 @@ export class SocialLinksController {
     });
   }
 
-  @Get(':id')
+  @Get(':socialLinkId')
   @ApiOperation({ summary: 'Get a social link by id' })
   @ApiResponse({ status: 404, description: 'Social link not found' })
-  findOne(@Param('id') id: string) {
-    return this.socialLinksService.findOne(id);
+  findOne(@Param('socialLinkId') socialLinkId: string) {
+    return this.socialLinksService.findOne(socialLinkId);
   }
 
   @Post()
@@ -49,17 +49,17 @@ export class SocialLinksController {
     return this.socialLinksService.create(dto);
   }
 
-  @Patch(':id')
+  @Patch(':socialLinkId')
   @ApiOperation({ summary: 'Update a social link' })
   @ApiResponse({ status: 404, description: 'Social link not found' })
-  update(@Param('id') id: string, @Body() dto: UpdateSocialLinkDto) {
-    return this.socialLinksService.update(id, dto);
+  update(@Param('socialLinkId') socialLinkId: string, @Body() dto: UpdateSocialLinkDto) {
+    return this.socialLinksService.update(socialLinkId, dto);
   }
 
-  @Delete(':id')
+  @Delete(':socialLinkId')
   @ApiOperation({ summary: 'Delete a social link' })
   @ApiResponse({ status: 404, description: 'Social link not found' })
-  remove(@Param('id') id: string) {
-    return this.socialLinksService.remove(id);
+  remove(@Param('socialLinkId') socialLinkId: string) {
+    return this.socialLinksService.remove(socialLinkId);
   }
 }

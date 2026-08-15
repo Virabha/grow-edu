@@ -43,9 +43,9 @@ export class CompaniesController {
   @ApiResponse({ status: 200, description: 'Company details' })
   @ApiResponse({ status: 404, description: 'Company not found' })
   @Roles(UserRole.PLATFORM_ADMIN, UserRole.CORPORATE_ADMIN)
-  @Get(':id')
-  async findOne(@Param('id') id: string) {
-    return this.companiesService.findOne(id);
+  @Get(':companyId')
+  async findOne(@Param('companyId') companyId: string) {
+    return this.companiesService.findOne(companyId);
   }
 
   @ApiOperation({ summary: 'Create a new company' })
@@ -59,21 +59,20 @@ export class CompaniesController {
   @ApiOperation({ summary: 'Update a company' })
   @ApiResponse({ status: 200, description: 'Company updated successfully' })
   @Roles(UserRole.PLATFORM_ADMIN)
-  @Put(':id')
+  @Put(':companyId')
   async update(
-    @Param('id') id: string,
+    @Param('companyId') companyId: string,
     @Body() dto: UpdateCompanyDto,
     @CurrentUser() user: { role: string },
   ) {
-    return this.companiesService.update(id, dto, user.role);
+    return this.companiesService.update(companyId, dto, user.role);
   }
 
   @ApiOperation({ summary: 'Delete a company' })
   @ApiResponse({ status: 200, description: 'Company deleted successfully' })
   @Roles(UserRole.PLATFORM_ADMIN)
-  @Delete(':id')
-  async delete(@Param('id') id: string, @CurrentUser() user: { role: string }) {
-    return this.companiesService.delete(id, user.role);
+  @Delete(':companyId')
+  async delete(@Param('companyId') companyId: string, @CurrentUser() user: { role: string }) {
+    return this.companiesService.delete(companyId, user.role);
   }
 }
-

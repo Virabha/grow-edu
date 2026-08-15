@@ -32,11 +32,11 @@ export class CurrenciesController {
     return this.service.findAll(query);
   }
 
-  @Get(':id')
+  @Get(':currencyId')
   @ApiOperation({ summary: 'Get a currency by id' })
   @ApiResponse({ status: 404, description: 'Not found' })
-  findOne(@Param('id') id: string) {
-    return this.service.findOne(id);
+  findOne(@Param('currencyId') currencyId: string) {
+    return this.service.findOne(currencyId);
   }
 
   @Post()
@@ -46,18 +46,18 @@ export class CurrenciesController {
     return this.service.create(dto);
   }
 
-  @Patch(':id')
+  @Patch(':currencyId')
   @ApiOperation({ summary: 'Update a currency' })
   @ApiResponse({ status: 404, description: 'Not found' })
   @ApiResponse({ status: 409, description: 'Duplicate code' })
-  update(@Param('id') id: string, @Body() dto: UpdateCurrencyDto) {
-    return this.service.update(id, dto);
+  update(@Param('currencyId') currencyId: string, @Body() dto: UpdateCurrencyDto) {
+    return this.service.update(currencyId, dto);
   }
 
-  @Delete(':id')
+  @Delete(':currencyId')
   @ApiOperation({ summary: 'Delete a currency' })
   @ApiResponse({ status: 404, description: 'Not found' })
-  remove(@Param('id') id: string) {
-    return this.service.remove(id);
+  remove(@Param('currencyId') currencyId: string) {
+    return this.service.remove(currencyId);
   }
 }

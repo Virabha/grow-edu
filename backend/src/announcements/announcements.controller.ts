@@ -65,12 +65,12 @@ export class AnnouncementsController {
   @ApiOperation({ summary: 'Get a single announcement — ResourcePage GET /:id' })
   @ApiResponse({ status: 200 })
   @ApiResponse({ status: 404, description: 'Not found or not owned by caller' })
-  @Get('announcements/:id')
+  @Get('announcements/:announcementId')
   findById(
-    @Param('id') id: string,
+    @Param('announcementId') announcementId: string,
     @CurrentUser() user: { userId: string; role: string },
   ) {
-    return this.announcementsService.findById(id, user);
+    return this.announcementsService.findById(announcementId, user);
   }
 
   @ApiOperation({ summary: 'Create announcement — ResourcePage flat POST (courseId in body)' })
@@ -112,22 +112,22 @@ export class AnnouncementsController {
 
   @ApiOperation({ summary: 'Update an announcement' })
   @ApiResponse({ status: 200 })
-  @Patch('announcements/:id')
+  @Patch('announcements/:announcementId')
   update(
-    @Param('id') id: string,
+    @Param('announcementId') announcementId: string,
     @Body() dto: UpdateAnnouncementDto,
     @CurrentUser() user: { userId: string; role: string },
   ) {
-    return this.announcementsService.update(id, dto, user);
+    return this.announcementsService.update(announcementId, dto, user);
   }
 
   @ApiOperation({ summary: 'Delete an announcement' })
   @ApiResponse({ status: 200 })
-  @Delete('announcements/:id')
+  @Delete('announcements/:announcementId')
   remove(
-    @Param('id') id: string,
+    @Param('announcementId') announcementId: string,
     @CurrentUser() user: { userId: string; role: string },
   ) {
-    return this.announcementsService.remove(id, user);
+    return this.announcementsService.remove(announcementId, user);
   }
 }

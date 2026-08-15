@@ -23,8 +23,11 @@ export class AuthController {
   @UseGuards(AuthGuard('local'))
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  async login(@Request() req: { user: UserPayload }) {
-    return this.authService.login(req.user);
+  async login(@Request() req: { user: UserPayload; headers: Record<string, string>; ip?: string }) {
+    const ua = req.headers['user-agent'] ?? null;
+    const ip = req.ip ?? null;
+    const deviceId = await this.authService.upsertDevice(req.user.id, ua, ip);
+    return this.authService.login(req.user, deviceId);
   }
 
   @ApiOperation({ summary: 'User registration' })

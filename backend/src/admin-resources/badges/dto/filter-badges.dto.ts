@@ -7,4 +7,9 @@ export class FilterBadgesDto extends PaginationDto {
   @IsOptional()
   @IsString()
   search?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by active status ("true" or "false")' })
+  @IsOptional()
+  @IsString()
+  isActive?: string;
 }

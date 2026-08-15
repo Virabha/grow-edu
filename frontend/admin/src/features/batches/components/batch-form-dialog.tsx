@@ -250,36 +250,18 @@ export function BatchFormDialog(props: {
       setThumbnailPreview(batch.thumbnail);
       setThumbnailInitial(batch.thumbnail ?? "");
 
-      if (batch.teachers?.length) {
+      const resolvedTeachers = batch.teachers?.length
+        ? batch.teachers
+        : [];
+      if (resolvedTeachers.length > 0) {
         setTeacherOptions(
-          batch.teachers.map((t) => ({
+          resolvedTeachers.map((t) => ({
             value: t.userId,
             label:
               [t.firstName, t.lastName].filter(Boolean).join(" ") || t.email,
             secondary: t.email,
           })),
         );
-      } else if (batch.teacherIds?.length) {
-        setTeacherOptions(
-          batch.teacherIds.map((id) => ({ value: id, label: id })),
-        );
-        Promise.all(
-          batch.teacherIds.map((id) =>
-            usersApi.getById(id).catch(() => null),
-          ),
-        ).then((users) => {
-          setTeacherOptions(
-            users
-              .filter((u): u is NonNullable<typeof u> => !!u)
-              .map((u) => ({
-                value: u.id,
-                label:
-                  [u.firstName, u.lastName].filter(Boolean).join(" ") ||
-                  u.email,
-                secondary: u.email,
-              })),
-          );
-        });
       } else {
         setTeacherOptions([]);
       }

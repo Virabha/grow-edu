@@ -1,8 +1,10 @@
-import { Injectable, NotFoundException, ForbiddenException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, UnauthorizedException, ConflictException, Logger } from '@nestjs/common';
 import { Inject } from '@nestjs/common';
-import { eq, desc, and, sql } from 'drizzle-orm';
-import { users } from '../database/schema';
+import * as bcrypt from 'bcrypt';
+import { eq, desc, and, sql, isNull, ne } from 'drizzle-orm';
+import { userDevices, users } from '../database/schema';
 import { DATABASE_CONNECTION } from '../database/database.module';
+import { DeviceRevocationService } from '../auth/device-revocation.service';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../database/schema';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -18,6 +20,7 @@ export class UsersService {
   constructor(
     @Inject(DATABASE_CONNECTION)
     private readonly db: PostgresJsDatabase<typeof schema>,
+    private readonly deviceRevocation: DeviceRevocationService,
     private emailService: EmailService,
     private filesService: FilesService,
   ) {}
@@ -205,6 +208,203 @@ export class UsersService {
     await this.db.delete(users).where(eq(users.userId, id));
 
     return { message: 'User deleted successfully' };
+  }
+
+  async getMe(userId: string) {
+    const [user] = await this.db
+      .select({
+        id: users.userId,
+        email: users.email,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        role: users.role,
+        profileImage: users.profileImage,
+        emailVerified: users.emailVerified,
+        headline: users.headline,
+        bio: users.bio,
+        phone: users.phone,
+        addressLine: users.addressLine,
+        city: users.city,
+        state: users.state,
+        country: users.country,
+        postalCode: users.postalCode,
+        social: users.social,
+        createdAt: users.createdAt,
+        updatedAt: users.updatedAt,
+      })
+      .from(users)
+      .where(eq(users.userId, userId))
+      .limit(1);
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return {
+      ...user,
+      profileImage: this.ensureProfileImageUrl(user.profileImage),
+    };
+  }
+
+  async updateMe(userId: string, dto: {
+    firstName?: string;
+    lastName?: string;
+    profileImage?: string | null;
+    headline?: string;
+    bio?: string;
+    phone?: string;
+    addressLine?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    postalCode?: string;
+    social?: Record<string, string>;
+  }) {
+    const [user] = await this.db
+      .select({ userId: users.userId, profileImage: users.profileImage })
+      .from(users)
+      .where(eq(users.userId, userId))
+      .limit(1);
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (dto.profileImage !== undefined && dto.profileImage !== null) {
+      dto.profileImage = this.filesService.extractKey(dto.profileImage);
+      const oldKey = user.profileImage ? this.filesService.extractKey(user.profileImage) : null;
+      if (oldKey && oldKey !== dto.profileImage) {
+        this.filesService.deleteFile(oldKey).catch((err: Error) => {
+          this.logger.warn(`Failed to delete old profile image: ${err.message}`);
+        });
+      }
+    }
+
+    const updates: Partial<typeof users.$inferInsert> = { updatedAt: new Date() };
+    if (dto.firstName !== undefined) updates.firstName = dto.firstName;
+    if (dto.lastName !== undefined) updates.lastName = dto.lastName;
+    if (dto.profileImage !== undefined) updates.profileImage = dto.profileImage;
+    if (dto.headline !== undefined) updates.headline = dto.headline;
+    if (dto.bio !== undefined) updates.bio = dto.bio;
+    if (dto.phone !== undefined) updates.phone = dto.phone;
+    if (dto.addressLine !== undefined) updates.addressLine = dto.addressLine;
+    if (dto.city !== undefined) updates.city = dto.city;
+    if (dto.state !== undefined) updates.state = dto.state;
+    if (dto.country !== undefined) updates.country = dto.country;
+    if (dto.postalCode !== undefined) updates.postalCode = dto.postalCode;
+    if (dto.social !== undefined) updates.social = dto.social;
+
+    await this.db.update(users).set(updates).where(eq(users.userId, userId));
+
+    return this.getMe(userId);
+  }
+
+  async listDevices(userId: string) {
+    return this.db
+      .select({
+        deviceId: userDevices.deviceId,
+        label: userDevices.label,
+        userAgent: userDevices.userAgent,
+        ipAddress: userDevices.ipAddress,
+        lastSeenAt: userDevices.lastSeenAt,
+        createdAt: userDevices.createdAt,
+      })
+      .from(userDevices)
+      .where(and(eq(userDevices.userId, userId), isNull(userDevices.revokedAt)))
+      .orderBy(desc(userDevices.lastSeenAt));
+  }
+
+  async revokeDevice(requestingUserId: string, deviceId: string) {
+    const [device] = await this.db
+      .select({ deviceId: userDevices.deviceId, userId: userDevices.userId })
+      .from(userDevices)
+      .where(and(eq(userDevices.deviceId, deviceId), isNull(userDevices.revokedAt)))
+      .limit(1);
+
+    if (!device || device.userId !== requestingUserId) {
+      throw new NotFoundException('Device not found');
+    }
+
+    await this.db
+      .update(userDevices)
+      .set({ revokedAt: new Date() })
+      .where(eq(userDevices.deviceId, deviceId));
+
+    this.deviceRevocation.forget(deviceId);
+
+    return { message: 'Device signed out' };
+  }
+
+  async revokeOtherDevices(userId: string, currentDeviceId: string | undefined) {
+    const conditions = [
+      eq(userDevices.userId, userId),
+      isNull(userDevices.revokedAt),
+    ];
+
+    if (currentDeviceId) {
+      conditions.push(ne(userDevices.deviceId, currentDeviceId));
+    }
+
+    const rows = await this.db
+      .select({ deviceId: userDevices.deviceId })
+      .from(userDevices)
+      .where(and(...conditions));
+
+    if (rows.length === 0) {
+      return { message: 'No other active devices', removed: 0 };
+    }
+
+    await this.db
+      .update(userDevices)
+      .set({ revokedAt: new Date() })
+      .where(and(...conditions));
+
+    for (const row of rows) {
+      this.deviceRevocation.forget(row.deviceId);
+    }
+
+    return { message: 'Other devices signed out', removed: rows.length };
+  }
+
+  async changePassword(userId: string, currentPassword: string, newPassword: string) {
+    const [user] = await this.db
+      .select({ password: users.password })
+      .from(users)
+      .where(eq(users.userId, userId))
+      .limit(1);
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const valid = await bcrypt.compare(currentPassword, user.password);
+    if (!valid) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await this.db.update(users).set({ password: hashed, updatedAt: new Date() }).where(eq(users.userId, userId));
+
+    return { message: 'Password updated successfully' };
+  }
+
+  async changeEmail(userId: string, email: string) {
+    const [existing] = await this.db
+      .select({ userId: users.userId })
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
+
+    if (existing && existing.userId !== userId) {
+      throw new ConflictException('Email is already in use');
+    }
+
+    await this.db
+      .update(users)
+      .set({ email, emailVerified: false, updatedAt: new Date() })
+      .where(eq(users.userId, userId));
+
+    return { message: 'Email updated. Please verify your new address.', email };
   }
 }
 

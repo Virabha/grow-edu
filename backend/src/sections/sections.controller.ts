@@ -54,23 +54,23 @@ export class SectionsController {
 
   @ApiOperation({ summary: 'Update section' })
   @ApiResponse({ status: 200, description: 'Section updated successfully' })
-  @Put(':id')
+  @Put(':sectionId')
   async update(
-    @Param('id') id: string,
+    @Param('sectionId') sectionId: string,
     @Body() dto: UpdateSectionDto,
     @CurrentUser() user: { userId: string; role: string },
   ) {
-    return this.sectionsService.update(id, dto, user.userId, user.role);
+    return this.sectionsService.update(sectionId, dto, user.userId, user.role);
   }
 
   @ApiOperation({ summary: 'Delete section' })
   @ApiResponse({ status: 200, description: 'Section deleted successfully' })
-  @Delete(':id')
+  @Delete(':sectionId')
   async delete(
-    @Param('id') id: string,
+    @Param('sectionId') sectionId: string,
     @Query('courseId') courseId: string,
     @CurrentUser() user: { userId: string; role: string },
   ) {
-    return this.sectionsService.delete(id, courseId, user.userId, user.role);
+    return this.sectionsService.delete(sectionId, courseId, user.userId, user.role);
   }
 }

@@ -2,6 +2,8 @@ import {
   Controller,
   Get,
   Put,
+  Patch,
+  Post,
   Delete,
   Param,
   Body,
@@ -40,37 +42,111 @@ export class UsersController {
     });
   }
 
+  @ApiOperation({ summary: 'Get own profile' })
+  @ApiResponse({ status: 200, description: 'Current user profile' })
+  @Get('me')
+  async getMe(@CurrentUser() user: { userId: string }) {
+    return this.usersService.getMe(user.userId);
+  }
+
+  @ApiOperation({ summary: 'Update own profile' })
+  @ApiResponse({ status: 200, description: 'Updated profile' })
+  @Patch('me')
+  async updateMe(
+    @CurrentUser() user: { userId: string },
+    @Body() dto: {
+      firstName?: string;
+      lastName?: string;
+      profileImage?: string | null;
+      headline?: string;
+      bio?: string;
+      phone?: string;
+      addressLine?: string;
+      city?: string;
+      state?: string;
+      country?: string;
+      postalCode?: string;
+      social?: Record<string, string>;
+    },
+  ) {
+    return this.usersService.updateMe(user.userId, dto);
+  }
+
+  @ApiOperation({ summary: 'Change own password' })
+  @ApiResponse({ status: 200, description: 'Password changed' })
+  @Post('me/password')
+  async changePassword(
+    @CurrentUser() user: { userId: string },
+    @Body() dto: { currentPassword: string; newPassword: string },
+  ) {
+    return this.usersService.changePassword(user.userId, dto.currentPassword, dto.newPassword);
+  }
+
+  @ApiOperation({ summary: 'Change own email' })
+  @ApiResponse({ status: 200, description: 'Email changed' })
+  @Post('me/email')
+  async changeEmail(
+    @CurrentUser() user: { userId: string },
+    @Body() dto: { email: string },
+  ) {
+    return this.usersService.changeEmail(user.userId, dto.email);
+  }
+
+  @ApiOperation({ summary: 'List active devices' })
+  @ApiResponse({ status: 200, description: 'Device list' })
+  @Get('me/devices')
+  listDevices(@CurrentUser() user: { userId: string }) {
+    return this.usersService.listDevices(user.userId);
+  }
+
+  @ApiOperation({ summary: 'Sign out a device' })
+  @ApiResponse({ status: 200 })
+  @ApiResponse({ status: 404, description: 'Device not found' })
+  @Delete('me/devices/:deviceId')
+  signOutDevice(
+    @CurrentUser() user: { userId: string },
+    @Param('deviceId') deviceId: string,
+  ) {
+    return this.usersService.revokeDevice(user.userId, deviceId);
+  }
+
+  @ApiOperation({ summary: 'Sign out all other devices' })
+  @ApiResponse({ status: 200 })
+  @Post('me/devices/logout-others')
+  signOutOtherDevices(@CurrentUser() user: { userId: string; deviceId?: string }) {
+    return this.usersService.revokeOtherDevices(user.userId, user.deviceId);
+  }
+
   @ApiOperation({ summary: 'Get user by ID' })
   @ApiResponse({ status: 200, description: 'User details' })
   @ApiResponse({ status: 404, description: 'User not found' })
-  @Get(':id')
-  async findOne(@Param('id') id: string, @CurrentUser() user: { userId: string; role: string }) {
-    // Users can only view themselves unless admin
-    if (user.role !== 'PLATFORM_ADMIN' && id !== user.userId) {
+  @Get(':userId')
+  async findOne(@Param('userId') userId: string, @CurrentUser() user: { userId: string; role: string }) {
+    if (user.role !== 'PLATFORM_ADMIN' && userId !== user.userId) {
       throw new ForbiddenException('You can only view your own profile');
     }
-    return this.usersService.findOne(id);
+    return this.usersService.findOne(userId);
   }
 
   @ApiOperation({ summary: 'Update user' })
   @ApiResponse({ status: 200, description: 'User updated successfully' })
   @ApiResponse({ status: 403, description: 'Forbidden' })
-  @Put(':id')
+  @Put(':userId')
   async update(
-    @Param('id') id: string,
+    @Param('userId') userId: string,
     @Body() dto: UpdateUserDto,
     @CurrentUser() user: { userId: string; role: string },
   ) {
-    return this.usersService.update(id, dto, user.userId, user.role);
+    return this.usersService.update(userId, dto, user.userId, user.role);
   }
 
   @ApiOperation({ summary: 'Delete user' })
   @ApiResponse({ status: 200, description: 'User deleted successfully' })
   @UseGuards(RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN)
-  @Delete(':id')
-  async delete(@Param('id') id: string, @CurrentUser() user: { role: string }) {
-    return this.usersService.delete(id, user.role);
+  @Delete(':userId')
+  async delete(@Param('userId') userId: string, @CurrentUser() user: { role: string }) {
+    return this.usersService.delete(userId, user.role);
   }
 }
 

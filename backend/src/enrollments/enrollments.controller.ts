@@ -45,6 +45,7 @@ export class EnrollmentsController {
       courseId: query.courseId,
       companyId: query.companyId,
       status: query.status,
+      source: query.source,
       search: query.search,
       page: query.page,
       limit: query.limit,
@@ -77,12 +78,12 @@ export class EnrollmentsController {
   @ApiOperation({ summary: 'Get enrollment by ID' })
   @ApiResponse({ status: 200, description: 'Enrollment details' })
   @ApiResponse({ status: 404, description: 'Enrollment not found' })
-  @Get(':id')
+  @Get(':enrollmentId')
   async findOne(
-    @Param('id') id: string,
+    @Param('enrollmentId') enrollmentId: string,
     @CurrentUser() user: { userId: string; role: string },
   ) {
-    return this.enrollmentsService.findOne(id, user.userId, user.role);
+    return this.enrollmentsService.findOne(enrollmentId, user.userId, user.role);
   }
 
   @ApiOperation({ summary: 'Create a new enrollment' })
@@ -94,6 +95,19 @@ export class EnrollmentsController {
     @CurrentUser() user: { userId: string; role: string },
   ) {
     return this.enrollmentsService.create(dto, user.userId, user.role);
+  }
+
+  @ApiOperation({ summary: 'Manually enrol a learner in a course (admin only)' })
+  @ApiResponse({ status: 201, description: 'Learner enrolled' })
+  @ApiResponse({ status: 409, description: 'Already enrolled' })
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.PLATFORM_ADMIN)
+  @Post('manual')
+  async manualEnrol(
+    @Body() dto: { userId: string; courseId: string },
+    @CurrentUser() user: { userId: string; role: string },
+  ) {
+    return this.enrollmentsService.manualCreate(dto.userId, dto.courseId, user.userId);
   }
 
   @ApiOperation({ summary: 'Bulk create enrollments' })
@@ -112,22 +126,22 @@ export class EnrollmentsController {
   @ApiResponse({ status: 200, description: 'Enrollment status updated' })
   @UseGuards(RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN, UserRole.CORPORATE_ADMIN)
-  @Put(':id/status')
+  @Put(':enrollmentId/status')
   async updateStatus(
-    @Param('id') id: string,
+    @Param('enrollmentId') enrollmentId: string,
     @Body('status') status: 'ACTIVE' | 'COMPLETED' | 'REVOKED',
     @CurrentUser() user: { role: string },
   ) {
-    return this.enrollmentsService.updateStatus(id, status, user.role);
+    return this.enrollmentsService.updateStatus(enrollmentId, status, user.role);
   }
 
   @ApiOperation({ summary: 'Delete an enrollment' })
   @ApiResponse({ status: 200, description: 'Enrollment deleted successfully' })
   @UseGuards(RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN, UserRole.CORPORATE_ADMIN)
-  @Delete(':id')
-  async delete(@Param('id') id: string, @CurrentUser() user: { role: string }) {
-    return this.enrollmentsService.delete(id, user.role);
+  @Delete(':enrollmentId')
+  async delete(@Param('enrollmentId') enrollmentId: string, @CurrentUser() user: { role: string }) {
+    return this.enrollmentsService.delete(enrollmentId, user.role);
   }
 }
 

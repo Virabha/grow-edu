@@ -2,8 +2,8 @@ import { Injectable, ConflictException, BadRequestException, Logger } from '@nes
 import { JwtService } from '@nestjs/jwt';
 import { Inject } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { eq } from 'drizzle-orm';
-import { users } from '../database/schema';
+import { and, eq, isNull } from 'drizzle-orm';
+import { userDevices, users } from '../database/schema';
 import { DATABASE_CONNECTION } from '../database/database.module';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../database/schema';
@@ -136,8 +136,8 @@ export class AuthService {
     };
   }
 
-  async login(user: UserPayload): Promise<{ access_token: string; user: UserPayload }> {
-    const payload = { email: user.email, sub: user.id, role: user.role };
+  async login(user: UserPayload, deviceId: string): Promise<{ access_token: string; user: UserPayload }> {
+    const payload = { email: user.email, sub: user.id, role: user.role, deviceId };
     return {
       access_token: this.jwtService.sign(payload),
       user: {
@@ -148,6 +148,47 @@ export class AuthService {
         lastName: user.lastName,
       },
     };
+  }
+
+  async upsertDevice(userId: string, userAgent: string | null, ipAddress: string | null): Promise<string> {
+    const conditions = [
+      eq(userDevices.userId, userId),
+      isNull(userDevices.revokedAt),
+      userAgent !== null ? eq(userDevices.userAgent, userAgent) : isNull(userDevices.userAgent),
+      ipAddress !== null ? eq(userDevices.ipAddress, ipAddress) : isNull(userDevices.ipAddress),
+    ];
+
+    const [existing] = await this.db
+      .select({ deviceId: userDevices.deviceId })
+      .from(userDevices)
+      .where(and(...conditions))
+      .limit(1);
+
+    if (existing) {
+      await this.db
+        .update(userDevices)
+        .set({ lastSeenAt: new Date() })
+        .where(eq(userDevices.deviceId, existing.deviceId));
+      return existing.deviceId;
+    }
+
+    const label = userAgent ? this.extractBrowserLabel(userAgent) : null;
+
+    const [created] = await this.db
+      .insert(userDevices)
+      .values({ userId, userAgent, ipAddress, label })
+      .returning({ deviceId: userDevices.deviceId });
+
+    return created.deviceId;
+  }
+
+  private extractBrowserLabel(ua: string): string {
+    if (/Edg\//.test(ua)) return 'Edge';
+    if (/Chrome\//.test(ua) && !/Chromium\//.test(ua)) return 'Chrome';
+    if (/Firefox\//.test(ua)) return 'Firefox';
+    if (/Safari\//.test(ua) && !/Chrome\//.test(ua)) return 'Safari';
+    if (/OPR\//.test(ua)) return 'Opera';
+    return 'Browser';
   }
 
   async forgotPassword(email: string): Promise<{ message: string }> {

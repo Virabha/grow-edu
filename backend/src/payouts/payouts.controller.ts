@@ -80,10 +80,10 @@ export class PayoutsController {
   @ApiResponse({ status: 404, description: 'Not found or does not belong to caller' })
   @ApiResponse({ status: 400, description: 'Request is not in PENDING status' })
   @Roles(UserRole.INSTRUCTOR, UserRole.PLATFORM_ADMIN)
-  @Delete(':id')
+  @Delete(':payoutId')
   async cancelPayout(
     @CurrentUser() user: { userId: string },
-    @Param('id') payoutId: string,
+    @Param('payoutId') payoutId: string,
   ) {
     return this.payoutsService.cancelPayout(payoutId, user.userId);
   }
@@ -101,10 +101,10 @@ export class PayoutsController {
   @ApiOperation({ summary: 'Admin: approve, reject, or mark a payout as paid' })
   @ApiResponse({ status: 200 })
   @Roles(UserRole.PLATFORM_ADMIN)
-  @Patch('admin/:id/status')
+  @Patch('admin/:payoutId/status')
   async adminUpdateStatus(
     @CurrentUser() user: { userId: string },
-    @Param('id') payoutId: string,
+    @Param('payoutId') payoutId: string,
     @Body() dto: UpdatePayoutStatusDto,
   ) {
     return this.payoutsService.adminUpdateStatus(payoutId, user.userId, dto);

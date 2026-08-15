@@ -1,5 +1,5 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { asc, eq, ilike, sql } from 'drizzle-orm';
+import { and, asc, eq, ilike, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { DATABASE_CONNECTION } from '../../database/database.module';
 import * as schema from '../../database/schema';
@@ -14,14 +14,16 @@ export class BadgesService {
     private readonly db: PostgresJsDatabase<typeof schema>,
   ) {}
 
-  async findAll(filters: { search?: string; page?: number; limit?: number } = {}) {
+  async findAll(filters: { search?: string; isActive?: boolean; page?: number; limit?: number } = {}) {
     const limit = Math.min(filters.limit ?? 20, 100);
     const page = Math.max(filters.page ?? 1, 1);
     const offset = (page - 1) * limit;
 
-    const whereClause = filters.search
-      ? ilike(instructorBadges.name, `%${filters.search}%`)
-      : undefined;
+    const searchWhere = filters.search ? ilike(instructorBadges.name, `%${filters.search}%`) : undefined;
+    const activeWhere = filters.isActive !== undefined ? eq(instructorBadges.isActive, filters.isActive) : undefined;
+    const whereClause = searchWhere && activeWhere
+      ? and(searchWhere, activeWhere)
+      : searchWhere ?? activeWhere;
 
     const [rows, countRows] = await Promise.all([
       this.db

@@ -26,6 +26,15 @@ export const users = pgTable(
     role: userRoleEnum("role").notNull().default("LEARNER"),
     emailVerified: boolean("email_verified").notNull().default(false),
     profileImage: text("profile_image"),
+    headline: text("headline"),
+    bio: text("bio"),
+    phone: text("phone"),
+    addressLine: text("address_line"),
+    city: text("city"),
+    state: text("state"),
+    country: text("country"),
+    postalCode: text("postal_code"),
+    social: jsonb("social").$type<Record<string, string>>().default({}),
     companyId: text("company_id"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -128,5 +137,28 @@ export const instructorMeetingCredentials = pgTable(
   },
   (table) => ({
     userIdx: index("instructor_meeting_credentials_user_idx").on(table.userId),
+  }),
+);
+
+export const userDevices = pgTable(
+  "user_devices",
+  {
+    deviceId: text("device_id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id").notNull(),
+    label: text("label"),
+    userAgent: text("user_agent"),
+    ipAddress: text("ip_address"),
+    lastSeenAt: timestamp("last_seen_at").notNull().defaultNow(),
+    revokedAt: timestamp("revoked_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    userIdx: index("user_devices_user_idx").on(table.userId),
+    userLastSeenIdx: index("user_devices_user_last_seen_idx").on(
+      table.userId,
+      table.lastSeenAt,
+    ),
   }),
 );

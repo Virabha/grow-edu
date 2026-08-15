@@ -28,6 +28,7 @@ export interface Batch {
   startDate: string;
   endDate: string;
   teacherIds: string[];
+  teachers?: BatchTeacher[];
   categoryId: string | null;
   status: BatchStatus;
   createdBy: string;

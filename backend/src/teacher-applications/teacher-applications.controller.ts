@@ -84,24 +84,24 @@ export class TeacherApplicationsController {
     });
   }
 
-  @Get(':id')
+  @Get(':applicationId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get application by ID (admin)' })
-  findOne(@Param('id') id: string) {
-    return this.teacherApplicationsService.findOne(id);
+  findOne(@Param('applicationId') applicationId: string) {
+    return this.teacherApplicationsService.findOne(applicationId);
   }
 
-  @Patch(':id/status')
+  @Patch(':applicationId/status')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update application status (admin)' })
   updateStatus(
-    @Param('id') id: string,
+    @Param('applicationId') applicationId: string,
     @Body() dto: UpdateTeacherApplicationStatusDto,
   ) {
-    return this.teacherApplicationsService.updateStatus(id, dto.status);
+    return this.teacherApplicationsService.updateStatus(applicationId, dto.status);
   }
 }

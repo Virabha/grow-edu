@@ -52,75 +52,75 @@ export class LessonsController {
 
   @ApiOperation({ summary: 'Get lesson by ID' })
   @ApiResponse({ status: 200, description: 'Lesson details' })
-  @Get(':id')
+  @Get(':lessonId')
   async getById(
-    @Param('id') id: string,
+    @Param('lessonId') lessonId: string,
     @CurrentUser() user: { userId: string; role: string },
   ) {
-    return this.lessonsService.getById(id, user.userId, user.role);
+    return this.lessonsService.getById(lessonId, user.userId, user.role);
   }
 
   @ApiOperation({ summary: 'Update lesson' })
   @ApiResponse({ status: 200, description: 'Lesson updated successfully' })
-  @Put(':id')
+  @Put(':lessonId')
   async update(
-    @Param('id') id: string,
+    @Param('lessonId') lessonId: string,
     @Body() dto: UpdateLessonDto,
     @CurrentUser() user: { userId: string; role: string },
   ) {
-    return this.lessonsService.update(id, dto, user.userId, user.role);
+    return this.lessonsService.update(lessonId, dto, user.userId, user.role);
   }
 
   @ApiOperation({ summary: 'Delete lesson' })
   @ApiResponse({ status: 200, description: 'Lesson deleted successfully' })
-  @Delete(':id')
+  @Delete(':lessonId')
   async delete(
-    @Param('id') id: string,
+    @Param('lessonId') lessonId: string,
     @CurrentUser() user: { userId: string; role: string },
   ) {
-    return this.lessonsService.delete(id, user.userId, user.role);
+    return this.lessonsService.delete(lessonId, user.userId, user.role);
   }
 
   @ApiOperation({ summary: 'Approve lesson (Admin only)' })
   @ApiResponse({ status: 200, description: 'Lesson approved' })
   @UseGuards(RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN)
-  @Post(':id/approve')
+  @Post(':lessonId/approve')
   @HttpCode(HttpStatus.OK)
   async approve(
-    @Param('id') id: string,
+    @Param('lessonId') lessonId: string,
     @CurrentUser() user: { role: string },
   ) {
-    return this.lessonsService.approve(id, user.role);
+    return this.lessonsService.approve(lessonId, user.role);
   }
 
   @ApiOperation({ summary: 'Update quiz questions' })
   @ApiResponse({ status: 200, description: 'Quiz questions updated' })
-  @Post(':id/quiz-questions')
+  @Post(':lessonId/quiz-questions')
   @HttpCode(HttpStatus.OK)
   async updateQuizQuestions(
-    @Param('id') id: string,
+    @Param('lessonId') lessonId: string,
     @Body() dto: UpdateQuizQuestionsDto,
     @CurrentUser() user: { userId: string; role: string },
   ) {
-    return this.lessonsService.updateQuizQuestions(id, dto, user.userId, user.role);
+    return this.lessonsService.updateQuizQuestions(lessonId, dto, user.userId, user.role);
   }
 
   @ApiOperation({ summary: 'Get playback URL for lesson' })
   @ApiResponse({ status: 200, description: 'Playback URL generated' })
-  @Get(':id/play')
+  @Get(':lessonId/play')
   async getPlaybackUrl(
-    @Param('id') id: string,
+    @Param('lessonId') lessonId: string,
     @CurrentUser() user: { userId: string; role: string },
   ) {
-    return this.lessonsService.getPlaybackUrl(id, user.userId, user.role);
+    return this.lessonsService.getPlaybackUrl(lessonId, user.userId, user.role);
   }
 
   @ApiOperation({ summary: 'Get preview URL for free preview lessons (public)' })
   @ApiResponse({ status: 200, description: 'Preview URL generated' })
   @Public()
-  @Get(':id/preview')
-  async getPreviewUrl(@Param('id') id: string) {
-    return this.lessonsService.getPreviewUrl(id);
+  @Get(':lessonId/preview')
+  async getPreviewUrl(@Param('lessonId') lessonId: string) {
+    return this.lessonsService.getPreviewUrl(lessonId);
   }
 }

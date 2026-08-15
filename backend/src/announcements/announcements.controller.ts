@@ -31,7 +31,26 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 export class AnnouncementsController {
   constructor(private readonly announcementsService: AnnouncementsService) {}
 
-  // ── IMPORTANT: /announcements/mine MUST be declared before /announcements/:id ──
+  // ── ResourcePage contract ────────────────────────────────────────────────
+  // IMPORTANT: /announcements/mine and /announcements (list) MUST be declared
+  // before /announcements/:id to avoid the literal "mine" matching as an id.
+
+  @ApiOperation({ summary: 'List announcements — ResourcePage flat GET (instructor or admin)' })
+  @ApiResponse({ status: 200, description: 'Paginated list with id mapped from announcementId' })
+  @Get('announcements')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.INSTRUCTOR, UserRole.PLATFORM_ADMIN)
+  listPage(
+    @CurrentUser() user: { userId: string; role: string },
+    @Query() query: PaginationDto & { search?: string; courseId?: string },
+  ) {
+    return this.announcementsService.listPage(user, {
+      page: query.page,
+      limit: query.limit,
+      search: query.search,
+      courseId: query.courseId,
+    });
+  }
 
   @ApiOperation({ summary: 'List all announcements across my courses (paginated)' })
   @ApiResponse({ status: 200 })
@@ -43,7 +62,32 @@ export class AnnouncementsController {
     return this.announcementsService.listMine(user, pagination);
   }
 
-  @ApiOperation({ summary: 'Post an announcement to a course' })
+  @ApiOperation({ summary: 'Get a single announcement — ResourcePage GET /:id' })
+  @ApiResponse({ status: 200 })
+  @ApiResponse({ status: 404, description: 'Not found or not owned by caller' })
+  @Get('announcements/:id')
+  findById(
+    @Param('id') id: string,
+    @CurrentUser() user: { userId: string; role: string },
+  ) {
+    return this.announcementsService.findById(id, user);
+  }
+
+  @ApiOperation({ summary: 'Create announcement — ResourcePage flat POST (courseId in body)' })
+  @ApiResponse({ status: 201 })
+  @Post('announcements')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.INSTRUCTOR, UserRole.PLATFORM_ADMIN)
+  createFromResource(
+    @Body() dto: CreateAnnouncementDto,
+    @CurrentUser() user: { userId: string; role: string },
+  ) {
+    return this.announcementsService.createFromResource(dto, user);
+  }
+
+  // ── Legacy course-scoped routes (kept for learner access and other clients) ─
+
+  @ApiOperation({ summary: 'Post an announcement to a course (course-scoped route)' })
   @ApiResponse({ status: 201 })
   @Post('courses/:courseId/announcements')
   @UseGuards(RolesGuard)

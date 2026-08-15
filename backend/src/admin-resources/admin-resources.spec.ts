@@ -35,47 +35,6 @@ import { ROLES_KEY, UserRole } from '../auth/decorators/roles.decorator';
 // resolves at the final call. We swap the resolved value per test.
 // ---------------------------------------------------------------------------
 
-function makeQueryMock(resolvedRows: Record<string, unknown>[], countValue = 0) {
-  const countRows = [{ count: countValue }];
-
-  // Counts query ends at .where() (no orderBy/limit/offset after it in the
-  // service's Promise.all second branch).
-  // Data query ends at .offset().
-  // We return an array-thenable so that both paths resolve correctly.
-
-  let callIndex = 0;
-
-  const builder = {
-    select: jest.fn().mockReturnThis(),
-    from: jest.fn().mockReturnThis(),
-    where: jest.fn().mockReturnThis(),
-    orderBy: jest.fn().mockReturnThis(),
-    limit: jest.fn().mockReturnThis(),
-    // offset is the terminal call for the data query
-    offset: jest.fn().mockResolvedValue(resolvedRows),
-  };
-
-  // The count query ends at .where() – make it also thenable.
-  // We track invocations of .where() and return different promises on each.
-  builder.where.mockImplementation(() => {
-    callIndex++;
-    const isCountQuery = callIndex % 2 === 0; // second parallel call is the count
-    if (isCountQuery) {
-      return Promise.resolve(countRows);
-    }
-    // For the data query, continue the chain
-    return {
-      orderBy: jest.fn().mockReturnValue({
-        limit: jest.fn().mockReturnValue({
-          offset: jest.fn().mockResolvedValue(resolvedRows),
-        }),
-      }),
-    };
-  });
-
-  return builder;
-}
-
 // ---------------------------------------------------------------------------
 // 1. List returns pagination envelope
 // ---------------------------------------------------------------------------
@@ -212,7 +171,7 @@ describe('RolesGuard › non-admin denied', () => {
     const reflector = new Reflector();
     jest
       .spyOn(reflector, 'getAllAndOverride')
-      .mockImplementation((key: string) => {
+      .mockImplementation((key: unknown) => {
         if (key === ROLES_KEY) return [UserRole.PLATFORM_ADMIN];
         return undefined;
       });
@@ -235,7 +194,7 @@ describe('RolesGuard › non-admin denied', () => {
     const reflector = new Reflector();
     jest
       .spyOn(reflector, 'getAllAndOverride')
-      .mockImplementation((key: string) => {
+      .mockImplementation((key: unknown) => {
         if (key === ROLES_KEY) return [UserRole.PLATFORM_ADMIN];
         return undefined;
       });

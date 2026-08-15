@@ -3,8 +3,9 @@ import {
   Inject,
   NotFoundException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { SQL, and, count, desc, eq, ilike, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { DATABASE_CONNECTION } from '../database/database.module';
 import * as schema from '../database/schema';
@@ -26,6 +27,34 @@ export class AnnouncementsService {
   constructor(
     @Inject(DATABASE_CONNECTION) private readonly db: DbType,
   ) {}
+
+  // ── Response mapper (announcementId → id per ResourcePage contract) ───────
+
+  /** Map a raw DB row to the ResourcePage response shape.
+   *  The page declares idKey="id" so we expose the PK under that key. */
+  private toResourceResponse(row: {
+    announcementId: string;
+    courseId: string;
+    instructorId: string;
+    title: string;
+    body: string;
+    createdAt: Date;
+    updatedAt: Date;
+    courseTitle?: string | null;
+    sentTo?: number | null;
+  }) {
+    return {
+      id: row.announcementId,
+      courseId: row.courseId,
+      instructorId: row.instructorId,
+      title: row.title,
+      body: row.body,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+      courseTitle: row.courseTitle ?? null,
+      sentTo: row.sentTo ?? 0,
+    };
+  }
 
   // ── Private helpers ──────────────────────────────────────────────────────
 
@@ -228,5 +257,128 @@ export class AnnouncementsService {
         totalPages: Math.ceil(total / limit),
       },
     };
+  }
+
+  // ── ResourcePage-shaped endpoints (GET /announcements, :id, POST, PATCH, DELETE) ─
+
+  /** GET /announcements — instructor sees their own; admin sees all.
+   *  announcementId is exposed as `id` for the ResourcePage idKey="id" contract.
+   *  sentTo = active enrollment count for the announcement's course.
+   */
+  async listPage(
+    caller: { userId: string; role: string },
+    query: {
+      page?: number;
+      limit?: number;
+      search?: string;
+      courseId?: string;
+    },
+  ) {
+    const page = query.page ?? 1;
+    const limit = Math.min(query.limit ?? 20, MAX_PAGE_LIMIT);
+    const offset = (page - 1) * limit;
+
+    const isAdmin = caller.role === 'PLATFORM_ADMIN';
+
+    const conditions: (SQL<unknown> | undefined)[] = [];
+    if (!isAdmin) {
+      conditions.push(eq(courses.instructorId, caller.userId));
+    }
+    if (query.search) {
+      conditions.push(ilike(courseAnnouncements.title, `%${query.search}%`));
+    }
+    if (query.courseId) {
+      conditions.push(eq(courseAnnouncements.courseId, query.courseId));
+    }
+
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const sentToSubquery = sql<number>`(
+      SELECT count(*)::int FROM enrollments e
+      WHERE e.course_id = ${courseAnnouncements.courseId}
+        AND e.status = 'ACTIVE'
+    )`;
+
+    const [rows, [{ total }]] = await Promise.all([
+      this.db
+        .select({
+          announcementId: courseAnnouncements.announcementId,
+          courseId: courseAnnouncements.courseId,
+          instructorId: courseAnnouncements.instructorId,
+          title: courseAnnouncements.title,
+          body: courseAnnouncements.body,
+          createdAt: courseAnnouncements.createdAt,
+          updatedAt: courseAnnouncements.updatedAt,
+          courseTitle: courses.title,
+          sentTo: sentToSubquery,
+        })
+        .from(courseAnnouncements)
+        .innerJoin(courses, eq(courseAnnouncements.courseId, courses.courseId))
+        .where(where)
+        .orderBy(desc(courseAnnouncements.createdAt))
+        .limit(limit)
+        .offset(offset),
+      this.db
+        .select({ total: count() })
+        .from(courseAnnouncements)
+        .innerJoin(courses, eq(courseAnnouncements.courseId, courses.courseId))
+        .where(where),
+    ]);
+
+    return {
+      data: rows.map((r) => this.toResourceResponse(r)),
+      pagination: {
+        page,
+        limit,
+        total: Number(total),
+        totalPages: Math.ceil(Number(total) / limit),
+      },
+    };
+  }
+
+  /** GET /announcements/:id — instructor must be the author; admin sees all. */
+  async findById(
+    announcementId: string,
+    caller: { userId: string; role: string },
+  ) {
+    const isAdmin = caller.role === 'PLATFORM_ADMIN';
+
+    const [row] = await this.db
+      .select({
+        announcementId: courseAnnouncements.announcementId,
+        courseId: courseAnnouncements.courseId,
+        instructorId: courseAnnouncements.instructorId,
+        title: courseAnnouncements.title,
+        body: courseAnnouncements.body,
+        createdAt: courseAnnouncements.createdAt,
+        updatedAt: courseAnnouncements.updatedAt,
+        courseTitle: courses.title,
+        sentTo: sql<number>`(
+          SELECT count(*)::int FROM enrollments e
+          WHERE e.course_id = ${courseAnnouncements.courseId}
+            AND e.status = 'ACTIVE'
+        )`,
+      })
+      .from(courseAnnouncements)
+      .innerJoin(courses, eq(courseAnnouncements.courseId, courses.courseId))
+      .where(eq(courseAnnouncements.announcementId, announcementId))
+      .limit(1);
+
+    if (!row || (!isAdmin && row.instructorId !== caller.userId)) {
+      throw new NotFoundException('Announcement not found');
+    }
+
+    return this.toResourceResponse(row);
+  }
+
+  /** POST /announcements — courseId comes from the request body (ResourcePage flat POST). */
+  async createFromResource(
+    dto: CreateAnnouncementDto,
+    caller: { userId: string; role: string },
+  ) {
+    if (!dto.courseId) {
+      throw new BadRequestException('courseId is required');
+    }
+    return this.create(dto.courseId, { title: dto.title, body: dto.body }, caller);
   }
 }

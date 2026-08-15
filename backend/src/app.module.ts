@@ -5,6 +5,11 @@ import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { JwtAuthGuard } from "./auth/guards/jwt-auth.guard";
 import { InstructorModule } from "./instructor/instructor.module";
+import { DashboardModule } from "./dashboard/dashboard.module";
+import { AdminResourcesModule } from "./admin-resources/admin-resources.module";
+import { LookupsModule } from "./lookups/lookups.module";
+import { WithdrawMethodsModule } from "./withdraw-methods/withdraw-methods.module";
+import { SubscribersModule } from "./subscribers/subscribers.module";
 import { PayoutsModule } from "./payouts/payouts.module";
 import { AnnouncementsModule } from "./announcements/announcements.module";
 import { AppConfigModule } from "./config/config.module";
@@ -58,6 +63,21 @@ import { NotificationsModule } from "./notifications/notifications.module";
     LessonsModule,
     SectionsModule,
     InstructorModule,
+
+    DashboardModule,
+
+
+    AdminResourcesModule,
+
+
+    LookupsModule,
+
+
+    WithdrawMethodsModule,
+
+
+    SubscribersModule,
+
 
     PayoutsModule,
 

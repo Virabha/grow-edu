@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, count, eq, ilike, sql } from 'drizzle-orm';
+import { SQL, and, count, eq, ilike, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../database/schema';
 import { newsletterSubscribers } from '../database/schema';
@@ -43,7 +43,7 @@ export class SubscribersService {
     const limit = query.limit ?? 20;
     const offset = (page - 1) * limit;
 
-    const conditions: ReturnType<typeof eq>[] = [];
+    const conditions: (SQL<unknown> | undefined)[] = [];
 
     if (query.search) {
       conditions.push(ilike(newsletterSubscribers.email, `%${query.search}%`));

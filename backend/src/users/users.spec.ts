@@ -14,37 +14,6 @@ const filesServiceMock = {
   deleteFile: jest.fn().mockResolvedValue(undefined),
 };
 
-function buildDbMock(overrides: Record<string, jest.Mock> = {}) {
-  const noop = jest.fn().mockResolvedValue([]);
-
-  const selectChain = (resolvedValue: unknown) => ({
-    from: jest.fn().mockReturnValue({
-      where: jest.fn().mockReturnValue({
-        limit: jest.fn().mockResolvedValue(resolvedValue),
-        orderBy: jest.fn().mockReturnValue({
-          limit: jest.fn().mockResolvedValue(resolvedValue),
-        }),
-      }),
-    }),
-  });
-
-  return {
-    select: jest.fn().mockReturnValue(selectChain([])),
-    update: jest.fn().mockReturnValue({
-      set: jest.fn().mockReturnValue({
-        where: jest.fn().mockResolvedValue([]),
-      }),
-    }),
-    insert: jest.fn().mockReturnValue({
-      values: jest.fn().mockReturnValue({
-        returning: jest.fn().mockResolvedValue([]),
-      }),
-    }),
-    delete: noop,
-    ...overrides,
-  };
-}
-
 async function buildService(db: object) {
   const moduleRef = await Test.createTestingModule({
     providers: [
@@ -83,11 +52,8 @@ describe('UsersService › profile location/social round-trip', () => {
       updatedAt: new Date(),
     };
 
-    let selectCallCount = 0;
-
     const dbMock = {
       select: jest.fn().mockImplementation(() => {
-        selectCallCount++;
         return {
           from: jest.fn().mockReturnValue({
             where: jest.fn().mockReturnValue({
@@ -178,11 +144,8 @@ describe('UsersService › revokeOtherDevices — returns correct count', () => 
       { deviceId: 'dev-c' },
     ];
 
-    let selectCallCount = 0;
-
     const dbMock = {
       select: jest.fn().mockImplementation(() => {
-        selectCallCount++;
         return {
           from: jest.fn().mockReturnValue({
             where: jest.fn().mockResolvedValue(activeDevices),

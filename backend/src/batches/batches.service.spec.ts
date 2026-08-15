@@ -9,14 +9,29 @@
  * without a real database connection.
  */
 import { BadRequestException, ConflictException } from "@nestjs/common";
+import { Test } from "@nestjs/testing";
+
+import { DATABASE_CONNECTION } from "../database/database.module";
+import { CacheService } from "../cache/cache.service";
+import { CdnService } from "../cdn/cdn.service";
+import { CouponsService } from "../coupons/coupons.service";
+import { EmailService } from "../email/email.service";
+import { FilesService } from "../files/files.service";
+import { NotificationsService } from "../notifications/notifications.service";
+import { PaymentService } from "../payment/payment.service";
 import { BatchesService } from "./batches.service";
 
 // ─── Minimal stubs ────────────────────────────────────────────────────────────
 
-/** Build a minimal BatchesService with injected fakes. */
-function makeService(dbOverrides: Record<string, jest.Mock>) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const db: any = {
+/**
+ * Build a BatchesService with injected fakes.
+ *
+ * The collaborators are resolved through the Nest testing module rather than
+ * the constructor directly, so the stubs stay as small as each test needs
+ * without the call site having to restate the real dependency types.
+ */
+async function makeService(dbOverrides: Record<string, jest.Mock>) {
+  const db = {
     select: jest.fn(),
     insert: jest.fn(),
     update: jest.fn(),
@@ -25,18 +40,24 @@ function makeService(dbOverrides: Record<string, jest.Mock>) {
   };
 
   const noop = () => Promise.resolve();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const service = new (BatchesService as any)(
-    db,
-    { getDownloadUrl: () => "" }, // FilesService
-    { getSignedEmbedUrl: () => "" }, // CdnService
-    { get: () => Promise.resolve(null), set: noop, delByPrefix: noop }, // CacheService
-    { send: noop }, // EmailService
-    { create: noop, fanout: noop }, // NotificationsService
-    { registerBatchEnrollHandler: noop }, // PaymentService
-    {}, // CouponsService
-  );
-  return service as BatchesService;
+  const moduleRef = await Test.createTestingModule({
+    providers: [
+      BatchesService,
+      { provide: DATABASE_CONNECTION, useValue: db },
+      { provide: FilesService, useValue: { getDownloadUrl: () => "" } },
+      { provide: CdnService, useValue: { getSignedEmbedUrl: () => "" } },
+      {
+        provide: CacheService,
+        useValue: { get: () => Promise.resolve(null), set: noop, delByPrefix: noop },
+      },
+      { provide: EmailService, useValue: { send: noop } },
+      { provide: NotificationsService, useValue: { create: noop, fanout: noop } },
+      { provide: PaymentService, useValue: { registerBatchEnrollHandler: noop } },
+      { provide: CouponsService, useValue: {} },
+    ],
+  }).compile();
+
+  return moduleRef.get(BatchesService);
 }
 
 // ─── 1. Duplicate slug → ConflictException ────────────────────────────────────
@@ -52,7 +73,7 @@ describe("BatchesService › create › duplicate slug", () => {
     };
     const dbSelect = jest.fn().mockReturnValue(selectChain);
 
-    const service = makeService({ select: dbSelect });
+    const service = await makeService({ select: dbSelect });
 
     const dto = {
       title: "Test Batch",
@@ -75,7 +96,7 @@ describe("BatchesService › create › duplicate slug", () => {
       where: jest.fn().mockReturnThis(),
       limit: jest.fn().mockResolvedValue([existingBatch]),
     };
-    const service = makeService({ select: jest.fn().mockReturnValue(selectChain) });
+    const service = await makeService({ select: jest.fn().mockReturnValue(selectChain) });
 
     const dto = {
       title: "Test Batch",
@@ -135,7 +156,7 @@ describe("BatchesService › addEnrollments › capacity guard", () => {
       };
     });
 
-    const service = makeService({ select: selectMock });
+    const service = await makeService({ select: selectMock });
 
     await expect(
       service.addEnrollments(
@@ -181,7 +202,7 @@ describe("BatchesService › addEnrollments › capacity guard", () => {
       };
     });
 
-    const service = makeService({ select: selectMock });
+    const service = await makeService({ select: selectMock });
 
     await expect(
       service.addEnrollments(
@@ -229,7 +250,7 @@ describe("BatchesService › addEnrollments › capacity guard", () => {
       };
     });
 
-    const service = makeService({ select: selectMock, insert: insertMock });
+    const service = await makeService({ select: selectMock, insert: insertMock });
 
     const result = await service.addEnrollments(
       "batch-uuid",

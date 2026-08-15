@@ -31,15 +31,24 @@ export class UsersController {
   @ApiOperation({ summary: 'Get all users' })
   @ApiResponse({ status: 200, description: 'List of users' })
   @UseGuards(RolesGuard)
-  @Roles(UserRole.PLATFORM_ADMIN)
+  @Roles(UserRole.PLATFORM_ADMIN, UserRole.CORPORATE_ADMIN)
   @Get()
-  async findAll(@Query() query: FilterUsersDto) {
-    return this.usersService.findAll({
-      role: query.role,
-      search: query.search,
-      page: query.page,
-      limit: query.limit,
-    });
+  async findAll(
+    @Query() query: FilterUsersDto,
+    @CurrentUser() user: { userId: string; role: string },
+  ) {
+    // A corporate admin may only ever see their own company's people. The JWT
+    // carries no companyId, so the service resolves it from the caller's own
+    // record — it can never be widened by a query parameter.
+    return this.usersService.findAll(
+      {
+        role: query.role,
+        search: query.search,
+        page: query.page,
+        limit: query.limit,
+      },
+      user.role === UserRole.CORPORATE_ADMIN ? user.userId : undefined,
+    );
   }
 
   @ApiOperation({ summary: 'Get own profile' })

@@ -76,7 +76,7 @@ export interface ResourceDef {
 export const RESOURCES: ResourceDef[] = [
   { name: "courses", path: "courses", idKey: "courseId", searchFields: ["title", "slug", "instructorName"], seed: () => COURSES },
   { name: "categories", path: "categories", idKey: "categoryId", searchFields: ["name", "slug"], seed: () => CATEGORIES },
-  { name: "users", path: "users", idKey: "userId", searchFields: ["firstName", "lastName", "email"], seed: () => USERS },
+  { name: "users", path: "users", idKey: "id", searchFields: ["firstName", "lastName", "email"], seed: () => USERS },
   { name: "companies", path: "companies", idKey: "companyId", searchFields: ["name", "email"], seed: () => COMPANIES },
   { name: "enrollments", path: "enrollments", idKey: "enrollmentId", searchFields: ["userName", "userEmail", "courseTitle"], seed: () => ENROLLMENTS },
   { name: "payments", path: "payments", idKey: "paymentId", searchFields: ["invoiceNo", "userName", "userEmail", "courseTitle"], seed: () => PAYMENTS },

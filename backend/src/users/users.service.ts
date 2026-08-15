@@ -36,12 +36,30 @@ export class UsersService {
     search?: string;
     page?: number;
     limit?: number;
-  }) {
+  },
+  /** When set, results are limited to this user's own company. Used for
+   *  corporate admins, whose JWT carries no companyId — it is read from their
+   *  record here so a query parameter can never widen the scope. */
+  scopeToCompanyOfUserId?: string) {
     const page = filters?.page || 1;
     const limit = Math.min(filters?.limit || 10, MAX_PAGE_LIMIT);
     const offset = (page - 1) * limit;
 
     const conditions = [];
+
+    if (scopeToCompanyOfUserId) {
+      const [caller] = await this.db
+        .select({ companyId: users.companyId })
+        .from(users)
+        .where(eq(users.userId, scopeToCompanyOfUserId))
+        .limit(1);
+      // No company means no colleagues to list, never the whole directory.
+      conditions.push(
+        caller?.companyId
+          ? eq(users.companyId, caller.companyId)
+          : sql`false`,
+      );
+    }
 
     if (filters?.role) {
       conditions.push(eq(users.role, filters.role as 'LEARNER' | 'INSTRUCTOR' | 'CORPORATE_ADMIN' | 'PLATFORM_ADMIN'));
@@ -218,6 +236,7 @@ export class UsersService {
         firstName: users.firstName,
         lastName: users.lastName,
         role: users.role,
+        companyId: users.companyId,
         profileImage: users.profileImage,
         emailVerified: users.emailVerified,
         headline: users.headline,

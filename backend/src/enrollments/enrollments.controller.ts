@@ -117,9 +117,12 @@ export class EnrollmentsController {
   @Post('bulk')
   async bulkCreate(
     @Body() dto: BulkEnrollmentDto,
-    @CurrentUser() user: { userId: string; role: string; companyId?: string },
+    @CurrentUser() user: { userId: string; role: string },
   ) {
-    return this.enrollmentsService.bulkCreate(dto, user.companyId || '', user.role);
+    // The company is resolved from the caller's own record inside the service.
+    // It cannot be read from the JWT — that payload carries only userId, email,
+    // role and deviceId — and it must not be taken from the request body.
+    return this.enrollmentsService.bulkCreate(dto, user.userId, user.role);
   }
 
   @ApiOperation({ summary: 'Update enrollment status (admin only)' })

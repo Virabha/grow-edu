@@ -23,12 +23,15 @@ import { useBookBySlug, usePurchaseBook, useMyBookPurchases } from "@/lib/hooks/
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { getApiError } from "@/lib/api/errors";
+import { useAuthStore } from "@/lib/store/auth-store";
 
 function BookDetailContent({ slug }: { slug: string }) {
   const router = useRouter();
+  const { user, isHydrated } = useAuthStore();
+  const isLoggedIn = isHydrated && !!user;
   const { data: book, isLoading } = useBookBySlug(slug);
   const purchaseBook = usePurchaseBook();
-  const { data: purchases } = useMyBookPurchases();
+  const { data: purchases } = useMyBookPurchases(isLoggedIn);
 
   const hasPurchased = purchases?.some(
     (p: { bookId: string }) => p.bookId === book?.bookId,
@@ -36,6 +39,10 @@ function BookDetailContent({ slug }: { slug: string }) {
 
   function handlePurchase() {
     if (!book) return;
+    if (!isLoggedIn) {
+      router.push(`/login?redirect=/books/${slug}`);
+      return;
+    }
     purchaseBook.mutate(
       {
         bookId: book.bookId,

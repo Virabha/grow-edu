@@ -124,14 +124,15 @@ function RecordingPlayer({
 export default function BatchDetailPage(props: { params: Promise<{ slug: string }> }) {
   const { slug } = use(props.params);
   const { data: batch, isLoading: batchLoading } = useBatchBySlug(slug);
-  const { data: sessions = [] } = useBatchSessions(batch?.batchId ?? null);
-  const { data: announcements = [] } = useBatchAnnouncements(batch?.batchId ?? null);
-  const { data: resources = [] } = useBatchResources(batch?.batchId ?? null);
-  const { data: doubts = [] } = useBatchDoubts(batch?.batchId ?? null);
-  const { data: quizzes = [] } = useBatchQuizzes(batch?.batchId ?? null);
+  const isEnrolledOrCanManage = !!batch && (batch.isEnrolled || batch.canManage);
+  const { data: sessions = [] } = useBatchSessions(batch?.batchId ?? null, undefined, isEnrolledOrCanManage);
+  const { data: announcements = [] } = useBatchAnnouncements(batch?.batchId ?? null, isEnrolledOrCanManage);
+  const { data: resources = [] } = useBatchResources(batch?.batchId ?? null, undefined, isEnrolledOrCanManage);
+  const { data: doubts = [] } = useBatchDoubts(batch?.batchId ?? null, undefined, isEnrolledOrCanManage);
+  const { data: quizzes = [] } = useBatchQuizzes(batch?.batchId ?? null, isEnrolledOrCanManage);
   const { data: progress } = useMyBatchProgress(
     batch?.batchId ?? null,
-    !!batch && (batch.isEnrolled || batch.canManage)
+    isEnrolledOrCanManage
   );
   const recordAttendance = useRecordAttendance(batch?.batchId ?? "");
   const createDoubt = useCreateDoubt(batch?.batchId ?? "");
@@ -210,6 +211,27 @@ export default function BatchDetailPage(props: { params: Promise<{ slug: string 
             </Link>
           </Button>
         </div>
+        {batch.pendingPaymentId && (
+          <div className="mb-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3">
+            <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
+              {batch.pendingPaymentStatus === "PROOF_UPLOADED"
+                ? "Your payment is under review"
+                : "Your payment is not complete yet"}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {batch.pendingPaymentStatus === "PROOF_UPLOADED"
+                ? "We have received your payment proof. You will be enrolled as soon as an admin approves it."
+                : "Finish the payment to get access to this batch."}
+            </p>
+            <Button asChild size="sm" variant="outline" className="mt-2 h-7 text-xs">
+              <Link href={`/batches/${slug}/checkout`}>
+                {batch.pendingPaymentStatus === "PROOF_UPLOADED"
+                  ? "View payment status"
+                  : "Complete payment"}
+              </Link>
+            </Button>
+          </div>
+        )}
         <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
           <div className="space-y-3">
             <div className="relative aspect-[16/9] overflow-hidden rounded-xl bg-muted">

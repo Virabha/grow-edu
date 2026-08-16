@@ -62,6 +62,8 @@ export interface BatchDetail extends Batch {
   subjects: BatchSubject[];
   teachers: BatchTeacher[];
   isEnrolled: boolean;
+  pendingPaymentId: string | null;
+  pendingPaymentStatus: "PENDING" | "PROOF_UPLOADED" | null;
   canManage: boolean;
 }
 

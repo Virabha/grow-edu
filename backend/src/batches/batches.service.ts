@@ -241,10 +241,9 @@ export class BatchesService implements OnModuleInit {
         )
       );
 
-    const existingPending = candidatePayments.find((p) => {
-      const meta = (p.metadata as Record<string, unknown> | null) ?? {};
-      return meta.batchId === batchId;
-    });
+    const existingPending = candidatePayments.find(
+      (p) => this.metadataBatchId(p.metadata) === batchId
+    );
 
     if (existingPending) {
       return {
@@ -575,6 +574,8 @@ export class BatchesService implements OnModuleInit {
     if (!batch) throw new NotFoundException("Batch not found");
 
     let isEnrolled = false;
+    let pendingPaymentId: string | null = null;
+    let pendingPaymentStatus: "PENDING" | "PROOF_UPLOADED" | null = null;
     if (userId) {
       const [e] = await this.db
         .select()
@@ -588,6 +589,32 @@ export class BatchesService implements OnModuleInit {
         )
         .limit(1);
       isEnrolled = !!e;
+
+      if (!isEnrolled) {
+        const candidates = await this.db
+          .select({
+            paymentId: payments.paymentId,
+            status: payments.status,
+            metadata: payments.metadata,
+          })
+          .from(payments)
+          .where(
+            and(
+              eq(payments.userId, userId),
+              eq(payments.itemType, "BATCH"),
+              inArray(payments.status, ["PENDING", "PROOF_UPLOADED"])
+            )
+          );
+
+        const match = candidates.find(
+          (p) => this.metadataBatchId(p.metadata) === batch.batchId
+        );
+        if (match) {
+          pendingPaymentId = match.paymentId;
+          pendingPaymentStatus =
+            match.status === "PROOF_UPLOADED" ? "PROOF_UPLOADED" : "PENDING";
+        }
+      }
     }
 
     const subjects = await this.db
@@ -628,8 +655,16 @@ export class BatchesService implements OnModuleInit {
         profileImage: this.resolveImageUrl(t.profileImage),
       })),
       isEnrolled,
+      pendingPaymentId,
+      pendingPaymentStatus,
       canManage: this.isBatchStaff(batch, userId, userRole),
     };
+  }
+
+  private metadataBatchId(metadata: unknown): string | null {
+    if (typeof metadata !== "object" || metadata === null) return null;
+    const value = Reflect.get(metadata, "batchId");
+    return typeof value === "string" ? value : null;
   }
 
   async create(dto: CreateBatchDto, createdBy: string) {

@@ -104,6 +104,17 @@ export class VideoEncodingController {
 
     const status = await this.videoEncodingService.getJobStatus(jobId);
 
+    if (
+      (status.status === "COMPLETED" || status.status === "FAILED") &&
+      job.status !== status.status
+    ) {
+      await this.videoEncodingService.handleJobCompletion(
+        jobId,
+        status.status,
+        status.errorMessage,
+      );
+    }
+
     return {
       jobId,
       status: status.status,

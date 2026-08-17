@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { CheckCircle, X, Loader2 } from "lucide-react";
@@ -17,6 +17,15 @@ interface VideoUploadProps {
   lessonId: string;
 }
 
+interface EncodingStatusResponse {
+  jobId: string;
+  status: string;
+  progress: number | undefined;
+  errorMessage: string | undefined;
+  lessonId: string;
+  courseId: string;
+}
+
 export function VideoUpload({
   currentUrl,
   onUploadComplete,
@@ -28,7 +37,48 @@ export function VideoUpload({
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [encoding, setEncoding] = useState(false);
+  const [encodingJobId, setEncodingJobId] = useState<string | null>(null);
   const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
+  const onUploadCompleteRef = useRef(onUploadComplete);
+
+  useEffect(() => {
+    onUploadCompleteRef.current = onUploadComplete;
+  }, [onUploadComplete]);
+
+  useEffect(() => {
+    if (!encoding || !encodingJobId) return;
+
+    const jobId = encodingJobId;
+    let active = true;
+
+    const intervalId = setInterval(() => {
+      apiClient
+        .get<EncodingStatusResponse>(`/video-encoding/status/${jobId}`)
+        .then(({ data }) => {
+          if (!active) return;
+          if (data.status === "COMPLETED") {
+            clearInterval(intervalId);
+            active = false;
+            setEncoding(false);
+            setEncodingJobId(null);
+            toast.success("Video encoded successfully.");
+            onUploadCompleteRef.current(jobId);
+          } else if (data.status === "FAILED") {
+            clearInterval(intervalId);
+            active = false;
+            setEncoding(false);
+            setEncodingJobId(null);
+            toast.error(data.errorMessage ?? "Video encoding failed.");
+          }
+        })
+        .catch(() => {});
+    }, 5000);
+
+    return () => {
+      active = false;
+      clearInterval(intervalId);
+    };
+  }, [encoding, encodingJobId]);
 
   const handleRemove = () => {
     onUploadComplete("");
@@ -48,7 +98,6 @@ export function VideoUpload({
       return;
     }
 
-    // Create local preview from selected file
     if (localPreviewUrl) URL.revokeObjectURL(localPreviewUrl);
     setLocalPreviewUrl(URL.createObjectURL(file));
 
@@ -67,7 +116,6 @@ export function VideoUpload({
     setProgress(0);
 
     try {
-      // 1. Create video in Bunny Stream and get TUS auth
       const { data } = await apiClient.post<{
         videoId: string;
         tusUploadUrl: string;
@@ -83,7 +131,6 @@ export function VideoUpload({
         title: file.name,
       });
 
-      // 2. Upload via TUS protocol (resumable)
       await new Promise<void>((resolve, reject) => {
         const upload = new tus.Upload(file, {
           endpoint: data.tusUploadUrl,
@@ -116,12 +163,10 @@ export function VideoUpload({
       });
 
       setProgress(100);
-      toast.success(
-        "Video uploaded successfully. Encoding will start automatically.",
-      );
       setUploading(false);
-      setEncoding(false);
-      onUploadComplete(data.videoId);
+      setEncodingJobId(data.videoId);
+      setEncoding(true);
+      toast.success("Upload complete. Encoding in progress…");
     } catch (error: unknown) {
       setProgress(0);
       setUploading(false);
@@ -188,7 +233,7 @@ export function VideoUpload({
         </div>
       )}
 
-      {showUpload && !uploading && (
+      {showUpload && !uploading && !encoding && (
         <div className="space-y-2">
           <Input
             type="file"

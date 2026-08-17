@@ -487,7 +487,7 @@ export function CourseBuilder({ courseId }: CourseBuilderProps) {
             <DialogDescription>Preview your video lesson</DialogDescription>
           </DialogHeader>
           <div className="w-full">
-            {previewLessonId && (<SecureVideoPlayer lessonId={previewLessonId} showStatus={true} className="rounded-lg"/>)}
+            {previewLessonId && (<SecureVideoPlayer lessonId={previewLessonId} className="rounded-lg"/>)}
           </div>
         </DialogContent>
       </Dialog>

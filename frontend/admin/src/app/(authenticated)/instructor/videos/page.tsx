@@ -86,7 +86,6 @@ function VideoCard({
           <SecureVideoPlayer
             lessonId={video.lessonId}
             className="size-full"
-            showStatus={false}
           />
         ) : (
           <div className="flex size-full flex-col items-center justify-center gap-1 text-background/55">

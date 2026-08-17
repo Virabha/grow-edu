@@ -225,7 +225,6 @@ export function LessonEditorDialog({
                       </Label>
                       <SecureVideoPlayer
                         lessonId={lessonId}
-                        showStatus
                         className="rounded-lg"
                       />
                     </div>

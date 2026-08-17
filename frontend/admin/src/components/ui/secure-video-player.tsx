@@ -34,7 +34,6 @@ interface SecureVideoPlayerProps {
   videoKey?: string;
   className?: string;
   autoPlay?: boolean;
-  showStatus?: boolean;
 }
 
 export function SecureVideoPlayer({

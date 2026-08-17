@@ -1,4 +1,13 @@
-import { IsArray, IsNumber, IsOptional, IsString, ValidateNested } from 'class-validator';
+import {
+  ArrayMinSize,
+  IsArray,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Min,
+  MinLength,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -10,15 +19,18 @@ export class QuizQuestionDto {
 
   @ApiProperty()
   @IsString()
+  @MinLength(1)
   text: string;
 
   @ApiProperty({ type: [String] })
   @IsArray()
+  @ArrayMinSize(2)
   @IsString({ each: true })
   options: string[];
 
-  @ApiProperty()
+  @ApiProperty({ description: 'Zero-based index of the correct option; must be >= 0 and < options.length' })
   @IsNumber()
+  @Min(0)
   correctOptionIndex: number;
 
   @ApiPropertyOptional()

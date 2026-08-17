@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  BadRequestException,
   Inject,
 } from "@nestjs/common";
 import { eq, and } from "drizzle-orm";
@@ -307,6 +308,14 @@ export class LessonsService {
       );
     }
 
+    for (const q of dto.questions) {
+      if (q.correctOptionIndex >= q.options.length) {
+        throw new BadRequestException(
+          `correctOptionIndex ${q.correctOptionIndex} is out of bounds for question "${q.text}" which has ${q.options.length} option(s)`,
+        );
+      }
+    }
+
     await this.db.transaction(async (tx) => {
       await tx
         .delete(quizQuestions)
@@ -351,10 +360,11 @@ export class LessonsService {
     }
 
     const isAdmin = userRole === "PLATFORM_ADMIN";
-    const isInstructor = userRole === "INSTRUCTOR";
+    const ownsCourse =
+      userRole === "INSTRUCTOR" &&
+      lesson.section.course.instructorId === userId;
 
-    // Allow admins and instructors to bypass enrollment and status checks
-    if (!isAdmin && !isInstructor) {
+    if (!isAdmin && !ownsCourse) {
       if (lesson.status !== "READY") {
         throw new ForbiddenException("Lesson is not ready for playback");
       }

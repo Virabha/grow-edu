@@ -31,7 +31,9 @@
     "db:verify:isolation": "ts-node -r tsconfig-paths/register scripts/verify-isolation.ts",
     "check:route-params": "node scripts/check-route-params.mjs",
     "e2e:menus": "node scripts/e2e-menus.mjs",
-    "e2e:api-sweep": "node scripts/e2e-api-sweep.mjs"
+    "e2e:api-sweep": "node scripts/e2e-api-sweep.mjs",
+    "check:env": "ts-node -r tsconfig-paths/register scripts/check-env.ts",
+    "check:env:prod": "ts-node -r tsconfig-paths/register scripts/check-env.ts --production"
   },
   "dependencies": {
     "@nestjs/common": "^10.3.0",

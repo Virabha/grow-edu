@@ -14,6 +14,8 @@ import { ReviewsModule } from "./reviews/reviews.module";
 import { QuizAttemptsModule } from "./quiz-attempts/quiz-attempts.module";
 import { OrdersModule } from "./orders/orders.module";
 import { DeviceRevocationModule } from "./auth/device-revocation.module";
+import { AssignmentsModule } from "./assignments/assignments.module";
+import { LiveSessionsModule } from "./live-sessions/live-sessions.module";
 import { WithdrawMethodsModule } from "./withdraw-methods/withdraw-methods.module";
 import { SubscribersModule } from "./subscribers/subscribers.module";
 import { PayoutsModule } from "./payouts/payouts.module";
@@ -106,6 +108,8 @@ import { NotificationsModule } from "./notifications/notifications.module";
     QuizAttemptsModule,
     OrdersModule,
     DeviceRevocationModule,
+    AssignmentsModule,
+    LiveSessionsModule,
   ],
   controllers: [AppController],
   providers: [

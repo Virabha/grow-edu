@@ -318,8 +318,8 @@ export class UsersService {
     return this.getMe(userId);
   }
 
-  async listDevices(userId: string) {
-    return this.db
+  async listDevices(userId: string, currentDeviceId?: string) {
+    const rows = await this.db
       .select({
         deviceId: userDevices.deviceId,
         label: userDevices.label,
@@ -331,6 +331,20 @@ export class UsersService {
       .from(userDevices)
       .where(and(eq(userDevices.userId, userId), isNull(userDevices.revokedAt)))
       .orderBy(desc(userDevices.lastSeenAt));
+
+    return rows.map((row) => {
+      const agent = row.userAgent ?? "";
+      return {
+        deviceId: row.deviceId,
+        browser: describeBrowser(agent),
+        os: describeOs(agent),
+        deviceType: describeDeviceType(agent),
+        location: "",
+        ipAddress: row.ipAddress ?? "",
+        lastActiveAt: row.lastSeenAt.toISOString(),
+        current: currentDeviceId !== undefined && row.deviceId === currentDeviceId,
+      };
+    });
   }
 
   async revokeDevice(requestingUserId: string, deviceId: string) {
@@ -427,3 +441,26 @@ export class UsersService {
   }
 }
 
+function describeBrowser(userAgent: string): string {
+  if (/edg\//i.test(userAgent)) return "Edge";
+  if (/opr\/|opera/i.test(userAgent)) return "Opera";
+  if (/chrome|crios/i.test(userAgent)) return "Chrome";
+  if (/firefox|fxios/i.test(userAgent)) return "Firefox";
+  if (/safari/i.test(userAgent)) return "Safari";
+  return "Unknown browser";
+}
+
+function describeOs(userAgent: string): string {
+  if (/windows/i.test(userAgent)) return "Windows";
+  if (/iphone|ipad|ipod/i.test(userAgent)) return "iOS";
+  if (/android/i.test(userAgent)) return "Android";
+  if (/mac os x|macintosh/i.test(userAgent)) return "macOS";
+  if (/linux/i.test(userAgent)) return "Linux";
+  return "Unknown OS";
+}
+
+function describeDeviceType(userAgent: string): "desktop" | "mobile" | "tablet" {
+  if (/ipad|tablet/i.test(userAgent)) return "tablet";
+  if (/mobi|iphone|android/i.test(userAgent)) return "mobile";
+  return "desktop";
+}

@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { motion, useScroll, useMotionValueEvent } from "framer-motion";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ModeToggle } from "@/components/theme-toggle";
@@ -9,7 +10,7 @@ import { useAuthStore } from "@/lib/store/auth-store";
 import { useQueryClient } from "@tanstack/react-query";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { LogOut, Settings, LayoutDashboard, Shield, Bell, } from "lucide-react";
+import { LogOut, Settings, LayoutDashboard, Bell, } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 export function AdminNavbar() {
     const { scrollY } = useScroll();
@@ -50,11 +51,18 @@ export function AdminNavbar() {
         }} animate={hidden ? "hidden" : "visible"} transition={{ duration: 0.35, ease: "easeInOut" }} className={cn("fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-3 sm:px-4 md:px-5 py-2 transition-colors duration-300 h-12 sm:h-14", scrolled
             ? "bg-background/95 backdrop-blur-md border-b border-border shadow-sm"
             : "bg-background/80 backdrop-blur-sm border-b border-border")}>
-      <Link href="/admin/dashboard" className="text-sm sm:text-base font-bold tracking-tight text-foreground flex items-center gap-1.5">
-        <Shield className="h-4 w-4 text-primary"/>
-        <span className="hidden sm:inline">grotutor</span>
-        <span className="text-primary hidden sm:inline ml-1">Admin</span>
-        <span className="sm:hidden text-primary">Admin</span>
+      <Link href="/admin/dashboard" className="flex items-center gap-2.5">
+        <Image
+          src="/logo.png"
+          alt="grotutor"
+          width={32}
+          height={32}
+          className="size-8 shrink-0 rounded-lg object-cover"
+          priority
+        />
+        <span className="font-display text-base font-medium tracking-tight text-foreground hidden sm:inline">
+          grotutor <span className="text-primary">Admin</span>
+        </span>
       </Link>
 
       <div className="flex items-center gap-1.5 sm:gap-2">

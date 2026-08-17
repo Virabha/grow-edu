@@ -6,16 +6,19 @@ export const userRoleEnum = pgEnum("user_role", [
   "CORPORATE_ADMIN",
   "PLATFORM_ADMIN",
 ]);
+
 export const courseStatusEnum = pgEnum("course_status", [
   "DRAFT",
   "PUBLISHED",
   "ARCHIVED",
 ]);
+
 export const enrollmentStatusEnum = pgEnum("enrollment_status", [
   "ACTIVE",
   "COMPLETED",
   "REVOKED",
 ]);
+
 export const paymentStatusEnum = pgEnum("payment_status", [
   "PENDING",
   "PROOF_UPLOADED",
@@ -24,30 +27,36 @@ export const paymentStatusEnum = pgEnum("payment_status", [
   "REJECTED",
   "REFUNDED",
 ]);
+
 export const paymentGatewayEnum = pgEnum("payment_gateway", [
   "RAZORPAY",
   "MANUAL_QR",
   "PHONEPE",
   "FREE",
 ]);
+
 export const courseLevelEnum = pgEnum("course_level", [
   "BEGINNER",
   "INTERMEDIATE",
   "ADVANCED",
   "ALL_LEVELS",
 ]);
+
 export const lessonTypeEnum = pgEnum("lesson_type", ["VIDEO", "TEXT", "QUIZ"]);
+
 export const lessonStatusEnum = pgEnum("lesson_status", [
   "DRAFT",
   "PENDING_APPROVAL",
   "PROCESSING",
   "READY",
 ]);
+
 export const sectionPriceTypeEnum = pgEnum("section_price_type", [
   "INCLUDED",
   "INDIVIDUAL",
   "BOTH",
 ]);
+
 export const courseReviewStatusEnum = pgEnum("course_review_status", [
   "DRAFT",
   "PENDING_REVIEW",
@@ -55,16 +64,20 @@ export const courseReviewStatusEnum = pgEnum("course_review_status", [
   "APPROVED",
   "REJECTED",
 ]);
+
 export const itemTypeEnum = pgEnum("item_type", ["COURSE", "SECTION", "BATCH"]);
+
 export const accessSourceEnum = pgEnum("access_source", [
   "SECTION_PURCHASE",
   "COURSE_PURCHASE",
   "ADMIN_GRANT",
 ]);
+
 export const emailTokenTypeEnum = pgEnum("email_token_type", [
   "EMAIL_VERIFICATION",
   "PASSWORD_RESET",
 ]);
+
 export const videoEncodingJobStatusEnum = pgEnum("video_encoding_job_status", [
   "PENDING",
   "PROCESSING",
@@ -85,11 +98,10 @@ export const couponUsageStatusEnum = pgEnum("coupon_usage_status", [
   "CANCELLED",
 ]);
 
-export const teacherApplicationStatusEnum = pgEnum("teacher_application_status", [
-  "PENDING",
-  "APPROVED",
-  "REJECTED",
-]);
+export const teacherApplicationStatusEnum = pgEnum(
+  "teacher_application_status",
+  ["PENDING", "APPROVED", "REJECTED"],
+);
 
 export const applicationStatusEnum = pgEnum("application_status", [
   "NEW",
@@ -220,3 +232,13 @@ export const enrollmentSourceEnum = pgEnum("enrollment_source", [
   "COMPANY_ASSIGNMENT",
   "FREE_COURSE",
 ]);
+
+export const assignmentSubmissionTypeEnum = pgEnum(
+  "assignment_submission_type",
+  ["FILE", "TEXT", "LINK"],
+);
+
+export const assignmentSubmissionStatusEnum = pgEnum(
+  "assignment_submission_status",
+  ["SUBMITTED", "GRADED", "RETURNED"],
+);

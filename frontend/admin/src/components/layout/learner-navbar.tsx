@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { motion, useScroll, useMotionValueEvent } from "framer-motion";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -60,10 +61,18 @@ export function LearnerNavbar() {
             <ArrowLeft className="h-4 w-4"/>
             <span>Back</span>
           </Button>)}
-        <Link href="/learner/dashboard" className="text-base sm:text-lg md:text-xl font-bold tracking-tight text-foreground flex items-center gap-1 sm:gap-2">
-          <span className="hidden sm:inline">PRIME</span>
-          <span className="text-primary hidden sm:inline">LEARNING</span>
-          <span className="sm:hidden">PRIME</span>
+        <Link href="/learner/dashboard" className="flex items-center gap-2.5">
+          <Image
+            src="/logo.png"
+            alt="grotutor"
+            width={32}
+            height={32}
+            className="size-8 shrink-0 rounded-lg object-cover"
+            priority
+          />
+          <span className="font-display text-base font-medium tracking-tight text-foreground hidden sm:inline">
+            grotutor
+          </span>
         </Link>
       </div>
 

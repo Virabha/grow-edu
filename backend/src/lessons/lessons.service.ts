@@ -210,10 +210,11 @@ export class LessonsService {
     }
 
     const isAdmin = userRole === "PLATFORM_ADMIN";
-    const isInstructor = userRole === "INSTRUCTOR";
+    const ownsCourse =
+      userRole === "INSTRUCTOR" &&
+      lesson.section.course.instructorId === userId;
 
-    // Instructors and admins bypass the enrollment gate.
-    if (!isAdmin && !isInstructor) {
+    if (!isAdmin && !ownsCourse) {
       // Free-preview lessons are accessible to all authenticated users.
       if (!lesson.isFreePreview) {
         const [enrollment] = await this.db
@@ -249,7 +250,20 @@ export class LessonsService {
       }
     }
 
-    return lesson;
+    if (isAdmin || ownsCourse) {
+      return lesson;
+    }
+
+    return {
+      ...lesson,
+      questions: lesson.questions.map((question) => ({
+        ...question,
+        answers: (question.answers ?? []).map((answer) => ({
+          text: answer.text,
+        })),
+        explanation: null,
+      })),
+    };
   }
 
   async reorder(dto: ReorderLessonsDto, userId: string, userRole: string) {

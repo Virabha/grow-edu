@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -43,8 +44,18 @@ export function InstructorNavbar() {
         { href: "/instructor/settings/live", label: "Live Settings", icon: Radio },
     ];
     return (<header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 bg-background/80 backdrop-blur-md border-b border-border">
-      <Link href="/instructor/dashboard" className="flex items-center gap-2">
-        <span className="text-xl font-bold tracking-tight">grotutor <span className="text-primary">Instructor</span></span>
+      <Link href="/instructor/dashboard" className="flex items-center gap-2.5">
+        <Image
+          src="/logo.png"
+          alt="grotutor"
+          width={32}
+          height={32}
+          className="size-8 shrink-0 rounded-lg object-cover"
+          priority
+        />
+        <span className="font-display text-base font-medium tracking-tight text-foreground">
+          grotutor <span className="text-primary">Instructor</span>
+        </span>
       </Link>
 
       <nav className="hidden md:flex items-center gap-1">

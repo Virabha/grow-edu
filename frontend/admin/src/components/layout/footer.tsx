@@ -1,13 +1,21 @@
 import Link from "next/link";
+import Image from "next/image";
 export function Footer() {
     const currentYear = new Date().getFullYear();
     return (<footer className="bg-muted/50 border-t border-border py-6 sm:py-8 px-4 sm:px-5" role="contentinfo" aria-label="Site footer">
       <div className="max-w-7xl mx-auto grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
         <div className="space-y-2 col-span-2 sm:col-span-2 md:col-span-1">
-          <Link href="/" aria-label="grotutor - Home">
-            <h2 className="text-sm sm:text-base font-bold text-foreground">
-              <span className="text-primary">gro</span>tutor
-            </h2>
+          <Link href="/" aria-label="grotutor - Home" className="inline-flex items-center gap-2">
+            <Image
+              src="/logo.png"
+              alt="grotutor"
+              width={32}
+              height={32}
+              className="size-8 shrink-0 rounded-lg object-cover"
+            />
+            <span className="font-display text-base font-medium tracking-tight text-foreground">
+              grotutor
+            </span>
           </Link>
           <p className="text-muted-foreground text-xs">
             Premium online courses for learners, professionals, and organisations.

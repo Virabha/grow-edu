@@ -10,6 +10,6 @@ import { FilesModule } from '../files/files.module';
   imports: [DatabaseModule, FilesModule],
   controllers: [InstructorController, MeetingCredentialsController],
   providers: [InstructorService, MeetingCredentialsService],
-  exports: [InstructorService],
+  exports: [InstructorService, MeetingCredentialsService],
 })
 export class InstructorModule {}

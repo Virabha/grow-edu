@@ -274,13 +274,8 @@ const INSTRUCTOR_NAV: NavItem[] = [
     icon: <Wallet className="h-4 w-4" />,
   },
   {
-    label: "Zoom settings",
-    href: "/instructor/zoom",
-    icon: <VideoIcon className="h-4 w-4" />,
-  },
-  {
-    label: "Jitsi settings",
-    href: "/instructor/jitsi",
+    label: "Live settings",
+    href: "/instructor/settings/live",
     icon: <VideoIcon className="h-4 w-4" />,
   },
   {

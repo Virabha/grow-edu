@@ -104,8 +104,8 @@ export class UsersController {
   @ApiOperation({ summary: 'List active devices' })
   @ApiResponse({ status: 200, description: 'Device list' })
   @Get('me/devices')
-  listDevices(@CurrentUser() user: { userId: string }) {
-    return this.usersService.listDevices(user.userId);
+  listDevices(@CurrentUser() user: { userId: string; deviceId?: string }) {
+    return this.usersService.listDevices(user.userId, user.deviceId);
   }
 
   @ApiOperation({ summary: 'Sign out a device' })

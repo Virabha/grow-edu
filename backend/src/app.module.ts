@@ -16,6 +16,7 @@ import { OrdersModule } from "./orders/orders.module";
 import { DeviceRevocationModule } from "./auth/device-revocation.module";
 import { AssignmentsModule } from "./assignments/assignments.module";
 import { LiveSessionsModule } from "./live-sessions/live-sessions.module";
+import { SettingsModule } from "./settings/settings.module";
 import { WithdrawMethodsModule } from "./withdraw-methods/withdraw-methods.module";
 import { SubscribersModule } from "./subscribers/subscribers.module";
 import { PayoutsModule } from "./payouts/payouts.module";
@@ -110,6 +111,7 @@ import { NotificationsModule } from "./notifications/notifications.module";
     DeviceRevocationModule,
     AssignmentsModule,
     LiveSessionsModule,
+    SettingsModule,
   ],
   controllers: [AppController],
   providers: [

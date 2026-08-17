@@ -6,9 +6,21 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod/v3";
 import { toast } from "sonner";
 import { useMutation } from "@tanstack/react-query";
-import { Camera, Loader2, Trash2, User } from "lucide-react";
+import {
+  Camera,
+  Github,
+  Globe,
+  Linkedin,
+  Loader2,
+  Lock,
+  Mail,
+  MapPin,
+  Shield,
+  Trash2,
+  Twitter,
+  User,
+} from "lucide-react";
 
-import { PageLayout } from "@/components/layout/page-layout";
 import { DeviceList } from "@/components/profile/device-list";
 import {
   Card,
@@ -22,7 +34,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SecureImage } from "@/components/ui/secure-image";
 import { apiClient } from "@/lib/api/client";
 import { getApiError } from "@/lib/api/errors";
 import {
@@ -30,9 +42,9 @@ import {
   useChangePassword,
   useProfile,
   useUpdateProfile,
+  type Profile,
 } from "@/lib/hooks/use-profile";
-
-/* ------------------------------------------------------------- schemas */
+import { cn } from "@/lib/utils";
 
 const personalSchema = z.object({
   firstName: z.string().trim().min(1, "First name is required").max(50, "Too long"),
@@ -99,100 +111,110 @@ function useUploadAvatar() {
   });
 }
 
-/* ---------------------------------------------------------------- page */
+type Section = "profile" | "account" | "location" | "security";
+
+interface NavItem {
+  key: Section;
+  label: string;
+  icon: React.ReactNode;
+  description: string;
+}
+
+const NAV_ITEMS: NavItem[] = [
+  {
+    key: "profile",
+    label: "Profile",
+    icon: <User className="size-4" aria-hidden={true} />,
+    description: "Name, bio & photo",
+  },
+  {
+    key: "account",
+    label: "Account",
+    icon: <Mail className="size-4" aria-hidden={true} />,
+    description: "Email & password",
+  },
+  {
+    key: "location",
+    label: "Location & Links",
+    icon: <MapPin className="size-4" aria-hidden={true} />,
+    description: "Address & social",
+  },
+  {
+    key: "security",
+    label: "Devices",
+    icon: <Shield className="size-4" aria-hidden={true} />,
+    description: "Active sessions",
+  },
+];
 
 export default function ProfilePage() {
   const { data: profile, isLoading } = useProfile();
+  const [section, setSection] = useState<Section>("profile");
 
   if (isLoading) {
-    return (
-      <PageLayout header="Profile settings">
-        <div className="space-y-3">
-          <Skeleton className="h-9 w-72 rounded-md" />
-          <Skeleton className="h-72 w-full rounded-xl" />
-        </div>
-      </PageLayout>
-    );
+    return <ProfileSkeleton />;
   }
 
   return (
-    <PageLayout
-      subtitle="Your account"
-      header="Profile settings"
-      description="Your details, how you sign in, and where you are signed in."
-    >
-      <Tabs defaultValue="profile">
-        <TabsList>
-          <TabsTrigger value="profile">Profile</TabsTrigger>
-          <TabsTrigger value="account">Account</TabsTrigger>
-          <TabsTrigger value="location">Location</TabsTrigger>
-          <TabsTrigger value="security">Devices</TabsTrigger>
-        </TabsList>
+    <div className="container mx-auto px-4 pb-10 pt-2 sm:px-6 lg:px-8">
+      <div className="space-y-5">
+        <ProfileHero profile={profile} />
 
-        <TabsContent value="profile" className="mt-3">
-          <div className="grid gap-4 [&>*]:min-w-0 md:grid-cols-[220px_1fr]">
-            <AvatarCard image={profile?.profileImage ?? null} />
-            <PersonalCard />
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
+          <ProfileNav active={section} onChange={setSection} />
+
+          <div className="min-w-0 flex-1">
+            {section === "profile" && (
+              <div className="animate-in fade-in-0 slide-in-from-bottom-1 duration-150">
+                <PersonalSection />
+              </div>
+            )}
+            {section === "account" && (
+              <div className="animate-in fade-in-0 slide-in-from-bottom-1 duration-150 space-y-4">
+                <EmailSection email={profile?.email ?? ""} />
+                <PasswordSection />
+              </div>
+            )}
+            {section === "location" && (
+              <div className="animate-in fade-in-0 slide-in-from-bottom-1 duration-150 grid gap-4 [&>*]:min-w-0 lg:grid-cols-2">
+                <LocationSection />
+                <SocialSection />
+              </div>
+            )}
+            {section === "security" && (
+              <div className="animate-in fade-in-0 slide-in-from-bottom-1 duration-150">
+                <SecuritySection />
+              </div>
+            )}
           </div>
-        </TabsContent>
-
-        <TabsContent value="account" className="mt-3">
-          <div className="grid gap-4 [&>*]:min-w-0 lg:grid-cols-2">
-            <EmailCard currentEmail={profile?.email ?? ""} />
-            <PasswordCard />
-          </div>
-        </TabsContent>
-
-        <TabsContent value="location" className="mt-3">
-          <div className="grid gap-4 [&>*]:min-w-0 lg:grid-cols-2">
-            <LocationCard />
-            <SocialCard />
-          </div>
-        </TabsContent>
-
-        <TabsContent value="security" className="mt-3">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle>Where you are signed in</CardTitle>
-              <CardDescription>
-                Sign out any device you do not recognise. Signing out does not
-                affect your enrolments.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <DeviceList />
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-    </PageLayout>
+        </div>
+      </div>
+    </div>
   );
 }
 
-/* --------------------------------------------------------------- cards */
-
-function AvatarCard({ image }: { image: string | null }) {
+function ProfileHero({ profile }: { profile: Profile | undefined }) {
   const updateProfile = useUpdateProfile();
   const uploadAvatar = useUploadAvatar();
   const [preview, setPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const displayImage = preview ?? image;
+  const displayImage = preview ?? profile?.profileImage ?? null;
   const uploading = uploadAvatar.isPending;
+  const firstName = profile?.firstName ?? "";
+  const lastName = profile?.lastName ?? "";
+  const fullName = [firstName, lastName].filter(Boolean).join(" ") || "Your Profile";
 
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-
     if (!file.type.startsWith("image/")) {
       toast.error("Choose an image file");
       if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
-
     const localUrl = URL.createObjectURL(file);
     setPreview(localUrl);
-
     try {
       const { key, url } = await uploadAvatar.mutateAsync(file);
       await updateProfile.mutateAsync({ profileImage: key });
@@ -218,69 +240,230 @@ function AvatarCard({ image }: { image: string | null }) {
   }
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-sm">Profile photo</CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col items-center gap-3">
-        <div className="relative flex size-28 items-center justify-center overflow-hidden rounded-full border-2 border-border bg-muted">
-          {displayImage ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={displayImage}
-              alt="Your profile photo"
-              className="size-full object-cover"
-            />
-          ) : (
-            <User className="size-12 text-muted-foreground/50" aria-hidden="true" />
-          )}
+    <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-card shadow-[0_1px_2px_rgba(28,25,23,0.04),0_4px_12px_-4px_rgba(28,25,23,0.08)]">
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(ellipse 120% 90% at top left, oklch(0.72 0.13 75 / 0.11), transparent 60%), radial-gradient(ellipse 80% 60% at bottom right, oklch(0.58 0.13 72 / 0.06), transparent 70%)",
+        }}
+        aria-hidden={true}
+      />
+
+      <div className="relative flex flex-col items-center gap-5 px-6 py-7 sm:flex-row sm:gap-6 sm:px-8 sm:py-8">
+        <div className="relative shrink-0">
+          <div
+            className="size-24 rounded-full p-[3px] sm:size-28"
+            style={{
+              background:
+                "linear-gradient(135deg, oklch(0.78 0.14 75), oklch(0.58 0.13 72) 50%, oklch(0.7 0.13 75))",
+            }}
+          >
+            <div className="flex size-full items-center justify-center overflow-hidden rounded-full border-2 border-background bg-muted">
+              {displayImage ? (
+                <SecureImage
+                  src={displayImage}
+                  alt={fullName}
+                  className="size-full object-cover"
+                />
+              ) : (
+                <User className="size-10 text-muted-foreground/50" aria-hidden={true} />
+              )}
+            </div>
+          </div>
 
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
             aria-label="Change profile photo"
-            className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            className="absolute bottom-0.5 right-0.5 flex size-7 items-center justify-center rounded-full border-2 border-background bg-primary text-primary-foreground shadow-md transition-transform hover:scale-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50"
           >
             {uploading ? (
-              <Loader2 className="size-6 animate-spin text-white" />
+              <Loader2 className="size-3.5 animate-spin" />
             ) : (
-              <Camera className="size-6 text-white" />
+              <Camera className="size-3.5" />
             )}
           </button>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleImageUpload}
+            className="hidden"
+            aria-label="Upload profile photo"
+          />
         </div>
 
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          onChange={handleImageUpload}
-          className="hidden"
-        />
+        <div className="min-w-0 flex-1 text-center sm:text-left">
+          <h1 className="font-display text-2xl font-medium leading-tight tracking-tight text-foreground sm:text-3xl">
+            {fullName}
+          </h1>
 
-        <p className="text-center text-[11px] text-muted-foreground">
-          JPG or PNG, up to 8&nbsp;MB.
-        </p>
+          {profile?.headline && (
+            <p className="mt-1 text-sm text-muted-foreground">{profile.headline}</p>
+          )}
 
-        {displayImage && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={handleRemoveImage}
-            disabled={uploading || updateProfile.isPending}
-            className="text-destructive hover:text-destructive"
-          >
-            <Trash2 className="mr-1 size-3.5" />
-            Remove
-          </Button>
-        )}
-      </CardContent>
-    </Card>
+          {profile?.email && (
+            <span className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-0.5 text-[11px] text-muted-foreground">
+              <Mail className="size-3 shrink-0" aria-hidden={true} />
+              {profile.email}
+            </span>
+          )}
+
+          {displayImage && (
+            <div className="mt-3">
+              <Button
+                type="button"
+                variant="ghost"
+                size="xs"
+                onClick={handleRemoveImage}
+                disabled={uploading || updateProfile.isPending}
+                className="text-destructive hover:text-destructive"
+              >
+                <Trash2 className="size-3" />
+                Remove photo
+              </Button>
+            </div>
+          )}
+        </div>
+
+        <div className="hidden sm:block">
+          <p className="text-right text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground/50">
+            Your account
+          </p>
+        </div>
+      </div>
+    </div>
   );
 }
 
-function PersonalCard() {
+function ProfileNav({
+  active,
+  onChange,
+}: {
+  active: Section;
+  onChange: (s: Section) => void;
+}) {
+  return (
+    <>
+      <div className="-mx-4 overflow-x-auto scrollbar-none pb-1 sm:-mx-6 lg:hidden">
+        <div
+          role="tablist"
+          aria-label="Profile settings sections"
+          className="flex gap-2 px-4 sm:px-6"
+        >
+          {NAV_ITEMS.map((item) => (
+            <button
+              key={item.key}
+              type="button"
+              role="tab"
+              aria-selected={active === item.key}
+              onClick={() => onChange(item.key)}
+              className={cn(
+                "flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                active === item.key
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+              )}
+            >
+              {item.icon}
+              {item.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <nav
+        aria-label="Profile settings sections"
+        className="hidden w-52 shrink-0 lg:block"
+      >
+        <ul className="space-y-0.5">
+          {NAV_ITEMS.map((item) => {
+            const isActive = active === item.key;
+            return (
+              <li key={item.key}>
+                <button
+                  type="button"
+                  onClick={() => onChange(item.key)}
+                  aria-current={isActive ? "page" : undefined}
+                  className={cn(
+                    "group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                    isActive
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "flex size-8 shrink-0 items-center justify-center rounded-md transition-colors",
+                      isActive
+                        ? "bg-primary/15 text-primary"
+                        : "bg-muted text-muted-foreground group-hover:bg-accent",
+                    )}
+                  >
+                    {item.icon}
+                  </span>
+                  <div className="min-w-0">
+                    <p
+                      className={cn(
+                        "text-sm font-medium",
+                        isActive ? "text-primary" : "text-foreground",
+                      )}
+                    >
+                      {item.label}
+                    </p>
+                    <p className="mt-0.5 text-[11px] leading-tight text-muted-foreground/80">
+                      {item.description}
+                    </p>
+                  </div>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+    </>
+  );
+}
+
+function SectionHeader({
+  icon,
+  title,
+  description,
+  accent = "primary",
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  accent?: "primary" | "destructive" | "amber";
+}) {
+  const accentClasses = {
+    primary: "bg-primary/10 text-primary",
+    destructive: "bg-destructive/10 text-destructive",
+    amber: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+  };
+
+  return (
+    <div className="flex items-center gap-2.5">
+      <div
+        className={cn(
+          "flex size-9 shrink-0 items-center justify-center rounded-lg",
+          accentClasses[accent],
+        )}
+      >
+        {icon}
+      </div>
+      <div>
+        <CardTitle>{title}</CardTitle>
+        <CardDescription className="mt-0.5">{description}</CardDescription>
+      </div>
+    </div>
+  );
+}
+
+function PersonalSection() {
   const { data: profile } = useProfile();
   const updateProfile = useUpdateProfile();
 
@@ -337,47 +520,149 @@ function PersonalCard() {
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle>Personal information</CardTitle>
-        <CardDescription>
-          This is what other learners and instructors see.
-        </CardDescription>
+        <SectionHeader
+          icon={<User className="size-4" aria-hidden={true} />}
+          title="Personal information"
+          description="This is what other learners and instructors see."
+        />
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="grid gap-3 md:grid-cols-2">
+        <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2">
             <FormField label="First name" error={errors.firstName?.message}>
-              <Input {...register("firstName")} placeholder="First name" />
+              <Input
+                {...register("firstName")}
+                placeholder="First name"
+                autoComplete="given-name"
+              />
             </FormField>
             <FormField label="Last name" error={errors.lastName?.message}>
-              <Input {...register("lastName")} placeholder="Last name" />
+              <Input
+                {...register("lastName")}
+                placeholder="Last name"
+                autoComplete="family-name"
+              />
             </FormField>
           </div>
 
-          <FormField label="Headline" error={errors.headline?.message}>
-            <Input
-              {...register("headline")}
-              placeholder="Preparing for UPSC CSE 2027"
-            />
-          </FormField>
-
-          <FormField label="Phone" error={errors.phone?.message}>
-            <Input {...register("phone")} placeholder="+91 98765 43210" />
-          </FormField>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <FormField label="Headline" error={errors.headline?.message}>
+              <Input
+                {...register("headline")}
+                placeholder="Preparing for UPSC CSE 2027"
+              />
+            </FormField>
+            <FormField label="Phone" error={errors.phone?.message}>
+              <Input
+                {...register("phone")}
+                placeholder="+91 98765 43210"
+                type="tel"
+                autoComplete="tel"
+              />
+            </FormField>
+          </div>
 
           <FormField label="About you" error={errors.bio?.message}>
             <Textarea
               {...register("bio")}
               rows={4}
-              placeholder="A line or two about what you are studying and why."
+              placeholder="A few lines about what you are studying and why."
             />
           </FormField>
 
+          <div className="flex items-center justify-between border-t border-border/50 pt-3">
+            {isDirty ? (
+              <p className="text-[11px] text-muted-foreground">Unsaved changes</p>
+            ) : (
+              <span />
+            )}
+            <Button
+              type="submit"
+              disabled={updateProfile.isPending || !isDirty}
+              className="w-full sm:w-auto"
+            >
+              {updateProfile.isPending ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  Saving…
+                </>
+              ) : (
+                "Save changes"
+              )}
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
+function EmailSection({ email }: { email: string }) {
+  const changeEmail = useChangeEmail();
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setError,
+    formState: { errors, isDirty },
+  } = useForm<EmailValues>({
+    resolver: zodResolver(emailSchema),
+    defaultValues: { email: "" },
+  });
+
+  useEffect(() => {
+    reset({ email });
+  }, [email, reset]);
+
+  function onSubmit(values: EmailValues) {
+    changeEmail.mutate(values, {
+      onSuccess: () => {
+        toast.success("Email updated. Verify it from the link we just sent.");
+        reset(values);
+      },
+      onError: (err) => {
+        const apiError = getApiError(err, "Could not change your email");
+        toast.error(apiError.message);
+        for (const [field, message] of Object.entries(apiError.fieldErrors)) {
+          setError(field as FieldPath<EmailValues>, { message });
+        }
+      },
+    });
+  }
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <SectionHeader
+          icon={<Mail className="size-4" aria-hidden={true} />}
+          title="Email address"
+          description="You sign in with this address and we send receipts to it."
+        />
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
+          <FormField label="Email" error={errors.email?.message}>
+            <Input
+              {...register("email")}
+              type="email"
+              autoComplete="email"
+              placeholder="you@example.com"
+            />
+          </FormField>
           <Button
             type="submit"
-            disabled={updateProfile.isPending || !isDirty}
+            disabled={changeEmail.isPending || !isDirty}
             className="w-full sm:w-auto"
           >
-            {updateProfile.isPending ? "Saving…" : "Save changes"}
+            {changeEmail.isPending ? (
+              <>
+                <Loader2 className="size-4 animate-spin" />
+                Saving…
+              </>
+            ) : (
+              "Change email"
+            )}
           </Button>
         </form>
       </CardContent>
@@ -385,7 +670,100 @@ function PersonalCard() {
   );
 }
 
-function LocationCard() {
+function PasswordSection() {
+  const changePassword = useChangePassword();
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setError,
+    formState: { errors },
+  } = useForm<PasswordValues>({
+    resolver: zodResolver(passwordSchema),
+    defaultValues: {
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    },
+  });
+
+  function onSubmit(values: PasswordValues) {
+    changePassword.mutate(
+      { currentPassword: values.currentPassword, newPassword: values.newPassword },
+      {
+        onSuccess: () => {
+          toast.success("Password updated");
+          reset();
+        },
+        onError: (err) => {
+          const apiError = getApiError(err, "Could not change your password");
+          toast.error(apiError.message);
+          for (const [field, message] of Object.entries(apiError.fieldErrors)) {
+            setError(field as FieldPath<PasswordValues>, { message });
+          }
+        },
+      },
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <SectionHeader
+          icon={<Lock className="size-4" aria-hidden={true} />}
+          title="Password"
+          description="Use at least 8 characters. Changing it signs out your other devices."
+          accent="destructive"
+        />
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
+          <FormField label="Current password" error={errors.currentPassword?.message}>
+            <Input
+              {...register("currentPassword")}
+              type="password"
+              autoComplete="current-password"
+            />
+          </FormField>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <FormField label="New password" error={errors.newPassword?.message}>
+              <Input
+                {...register("newPassword")}
+                type="password"
+                autoComplete="new-password"
+              />
+            </FormField>
+            <FormField label="Repeat new password" error={errors.confirmPassword?.message}>
+              <Input
+                {...register("confirmPassword")}
+                type="password"
+                autoComplete="new-password"
+              />
+            </FormField>
+          </div>
+          <Button
+            type="submit"
+            variant="destructive"
+            disabled={changePassword.isPending}
+            className="w-full sm:w-auto"
+          >
+            {changePassword.isPending ? (
+              <>
+                <Loader2 className="size-4 animate-spin" />
+                Saving…
+              </>
+            ) : (
+              "Change password"
+            )}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
+function LocationSection() {
   const { data: profile } = useProfile();
   const updateProfile = useUpdateProfile();
 
@@ -436,26 +814,49 @@ function LocationCard() {
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle>Billing address</CardTitle>
-        <CardDescription>Used on the invoices for your orders.</CardDescription>
+        <SectionHeader
+          icon={<MapPin className="size-4" aria-hidden={true} />}
+          title="Billing address"
+          description="Used on the invoices for your orders."
+        />
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
           <FormField label="Address" error={errors.addressLine?.message}>
-            <Input {...register("addressLine")} placeholder="Flat, street" />
+            <Input
+              {...register("addressLine")}
+              placeholder="Flat, street"
+              autoComplete="street-address"
+            />
           </FormField>
           <div className="grid gap-3 sm:grid-cols-2">
             <FormField label="City" error={errors.city?.message}>
-              <Input {...register("city")} placeholder="Pune" />
+              <Input
+                {...register("city")}
+                placeholder="Pune"
+                autoComplete="address-level2"
+              />
             </FormField>
             <FormField label="State" error={errors.state?.message}>
-              <Input {...register("state")} placeholder="Maharashtra" />
+              <Input
+                {...register("state")}
+                placeholder="Maharashtra"
+                autoComplete="address-level1"
+              />
             </FormField>
             <FormField label="Country" error={errors.country?.message}>
-              <Input {...register("country")} placeholder="India" />
+              <Input
+                {...register("country")}
+                placeholder="India"
+                autoComplete="country-name"
+              />
             </FormField>
             <FormField label="PIN code" error={errors.postalCode?.message}>
-              <Input {...register("postalCode")} placeholder="411038" />
+              <Input
+                {...register("postalCode")}
+                placeholder="411038"
+                autoComplete="postal-code"
+              />
             </FormField>
           </div>
           <Button
@@ -463,7 +864,14 @@ function LocationCard() {
             disabled={updateProfile.isPending || !isDirty}
             className="w-full sm:w-auto"
           >
-            {updateProfile.isPending ? "Saving…" : "Save address"}
+            {updateProfile.isPending ? (
+              <>
+                <Loader2 className="size-4 animate-spin" />
+                Saving…
+              </>
+            ) : (
+              "Save address"
+            )}
           </Button>
         </form>
       </CardContent>
@@ -471,7 +879,34 @@ function LocationCard() {
   );
 }
 
-function SocialCard() {
+const SOCIAL_FIELDS = [
+  {
+    key: "website" as const,
+    label: "Website",
+    Icon: Globe,
+    placeholder: "https://yoursite.com",
+  },
+  {
+    key: "linkedin" as const,
+    label: "LinkedIn",
+    Icon: Linkedin,
+    placeholder: "https://linkedin.com/in/…",
+  },
+  {
+    key: "twitter" as const,
+    label: "X / Twitter",
+    Icon: Twitter,
+    placeholder: "https://x.com/…",
+  },
+  {
+    key: "github" as const,
+    label: "GitHub",
+    Icon: Github,
+    placeholder: "https://github.com/…",
+  },
+];
+
+function SocialSection() {
   const { data: profile } = useProfile();
   const updateProfile = useUpdateProfile();
 
@@ -518,39 +953,49 @@ function SocialCard() {
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle>Social links</CardTitle>
-        <CardDescription>
-          Shown on your public profile. Leave any of them blank.
-        </CardDescription>
+        <SectionHeader
+          icon={<Globe className="size-4" aria-hidden={true} />}
+          title="Social links"
+          description="Shown on your public profile. Leave any of them blank."
+        />
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <FormField label="Website" error={errors.website?.message}>
-            <Input {...register("website")} placeholder="https://" inputMode="url" />
-          </FormField>
-          <FormField label="LinkedIn" error={errors.linkedin?.message}>
-            <Input
-              {...register("linkedin")}
-              placeholder="https://www.linkedin.com/in/…"
-              inputMode="url"
-            />
-          </FormField>
-          <FormField label="X / Twitter" error={errors.twitter?.message}>
-            <Input {...register("twitter")} placeholder="https://x.com/…" inputMode="url" />
-          </FormField>
-          <FormField label="GitHub" error={errors.github?.message}>
-            <Input
-              {...register("github")}
-              placeholder="https://github.com/…"
-              inputMode="url"
-            />
-          </FormField>
+        <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            {SOCIAL_FIELDS.map((field) => (
+              <FormField
+                key={field.key}
+                label={field.label}
+                error={errors[field.key]?.message}
+              >
+                <div className="relative">
+                  <field.Icon
+                    className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
+                    aria-hidden={true}
+                  />
+                  <Input
+                    {...register(field.key)}
+                    placeholder={field.placeholder}
+                    inputMode="url"
+                    className="pl-8"
+                  />
+                </div>
+              </FormField>
+            ))}
+          </div>
           <Button
             type="submit"
             disabled={updateProfile.isPending || !isDirty}
             className="w-full sm:w-auto"
           >
-            {updateProfile.isPending ? "Saving…" : "Save links"}
+            {updateProfile.isPending ? (
+              <>
+                <Loader2 className="size-4 animate-spin" />
+                Saving…
+              </>
+            ) : (
+              "Save links"
+            )}
           </Button>
         </form>
       </CardContent>
@@ -558,157 +1003,50 @@ function SocialCard() {
   );
 }
 
-function EmailCard({ currentEmail }: { currentEmail: string }) {
-  const changeEmail = useChangeEmail();
-
-  const {
-    register,
-    handleSubmit,
-    reset,
-    setError,
-    formState: { errors, isDirty },
-  } = useForm<EmailValues>({
-    resolver: zodResolver(emailSchema),
-    defaultValues: { email: "" },
-  });
-
-  useEffect(() => {
-    reset({ email: currentEmail });
-  }, [currentEmail, reset]);
-
-  function onSubmit(values: EmailValues) {
-    changeEmail.mutate(values, {
-      onSuccess: () => {
-        toast.success("Email updated. Verify it from the link we just sent.");
-        reset(values);
-      },
-      onError: (err) => {
-        const apiError = getApiError(err, "Could not change your email");
-        toast.error(apiError.message);
-        for (const [field, message] of Object.entries(apiError.fieldErrors)) {
-          setError(field as FieldPath<EmailValues>, { message });
-        }
-      },
-    });
-  }
-
+function SecuritySection() {
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle>Email address</CardTitle>
-        <CardDescription>
-          You sign in with this address, and we send receipts to it.
-        </CardDescription>
+        <SectionHeader
+          icon={<Shield className="size-4" aria-hidden={true} />}
+          title="Active sessions"
+          description="Sign out any device you do not recognise. Signing out does not affect your enrolments."
+          accent="amber"
+        />
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <FormField label="Email" error={errors.email?.message}>
-            <Input
-              {...register("email")}
-              type="email"
-              autoComplete="email"
-              placeholder="you@example.com"
-            />
-          </FormField>
-          <Button
-            type="submit"
-            disabled={changeEmail.isPending || !isDirty}
-            className="w-full sm:w-auto"
-          >
-            {changeEmail.isPending ? "Saving…" : "Change email"}
-          </Button>
-        </form>
+        <DeviceList />
       </CardContent>
     </Card>
   );
 }
 
-function PasswordCard() {
-  const changePassword = useChangePassword();
-
-  const {
-    register,
-    handleSubmit,
-    reset,
-    setError,
-    formState: { errors },
-  } = useForm<PasswordValues>({
-    resolver: zodResolver(passwordSchema),
-    defaultValues: {
-      currentPassword: "",
-      newPassword: "",
-      confirmPassword: "",
-    },
-  });
-
-  function onSubmit(values: PasswordValues) {
-    changePassword.mutate(
-      {
-        currentPassword: values.currentPassword,
-        newPassword: values.newPassword,
-      },
-      {
-        onSuccess: () => {
-          toast.success("Password updated");
-          reset();
-        },
-        onError: (err) => {
-          const apiError = getApiError(err, "Could not change your password");
-          toast.error(apiError.message);
-          for (const [field, message] of Object.entries(apiError.fieldErrors)) {
-            setError(field as FieldPath<PasswordValues>, { message });
-          }
-        },
-      },
-    );
-  }
-
+function ProfileSkeleton() {
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle>Password</CardTitle>
-        <CardDescription>
-          Use at least 8 characters. Changing it signs out your other devices.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <FormField
-            label="Current password"
-            error={errors.currentPassword?.message}
-          >
-            <Input
-              {...register("currentPassword")}
-              type="password"
-              autoComplete="current-password"
-            />
-          </FormField>
-          <FormField label="New password" error={errors.newPassword?.message}>
-            <Input
-              {...register("newPassword")}
-              type="password"
-              autoComplete="new-password"
-            />
-          </FormField>
-          <FormField
-            label="Repeat new password"
-            error={errors.confirmPassword?.message}
-          >
-            <Input
-              {...register("confirmPassword")}
-              type="password"
-              autoComplete="new-password"
-            />
-          </FormField>
-          <Button
-            type="submit"
-            disabled={changePassword.isPending}
-            className="w-full sm:w-auto"
-          >
-            {changePassword.isPending ? "Saving…" : "Change password"}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+    <div className="container mx-auto px-4 pb-10 pt-2 sm:px-6 lg:px-8">
+      <div className="space-y-5">
+        <div className="overflow-hidden rounded-2xl border border-border/70 bg-card px-6 py-7 sm:px-8 sm:py-8">
+          <div className="flex flex-col items-center gap-5 sm:flex-row">
+            <Skeleton className="size-24 shrink-0 rounded-full sm:size-28" />
+            <div className="flex-1 space-y-2.5">
+              <Skeleton className="mx-auto h-8 w-48 sm:mx-0" />
+              <Skeleton className="mx-auto h-4 w-64 sm:mx-0" />
+              <Skeleton className="mx-auto h-5 w-36 rounded-full sm:mx-0" />
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-5 lg:flex-row">
+          <div className="flex gap-2 overflow-hidden lg:w-52 lg:flex-col lg:space-y-0.5">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-9 flex-1 rounded-full lg:h-12 lg:flex-none lg:rounded-lg" />
+            ))}
+          </div>
+          <div className="flex-1">
+            <Skeleton className="h-72 w-full rounded-xl" />
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

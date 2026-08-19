@@ -33,7 +33,15 @@
     "e2e:menus": "node scripts/e2e-menus.mjs",
     "e2e:api-sweep": "node scripts/e2e-api-sweep.mjs",
     "check:env": "ts-node -r tsconfig-paths/register scripts/check-env.ts",
-    "check:env:prod": "ts-node -r tsconfig-paths/register scripts/check-env.ts --production"
+    "check:env:prod": "ts-node -r tsconfig-paths/register scripts/check-env.ts --production",
+    "e2e:course-video": "node scripts/e2e-course-video.mjs",
+    "e2e:batch-content": "node scripts/e2e-batch-content.mjs",
+    "e2e:course-lifecycle": "node scripts/e2e-course-lifecycle.mjs",
+    "e2e:batch-quizzes": "node scripts/e2e-batch-quizzes.mjs",
+    "e2e:live-sessions": "node scripts/e2e-live-sessions.mjs",
+    "e2e:assignments": "node scripts/e2e-assignments.mjs",
+    "e2e:doubts-reviews": "node scripts/e2e-doubts-reviews.mjs",
+    "e2e:settings": "node scripts/e2e-settings.mjs"
   },
   "dependencies": {
     "@nestjs/common": "^10.3.0",

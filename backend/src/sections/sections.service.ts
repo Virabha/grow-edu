@@ -132,25 +132,31 @@ export class SectionsService {
 
   async reorder(dto: ReorderSectionsDto, userId: string, userRole: string) {
     if (userRole !== 'PLATFORM_ADMIN' && dto.modules.length > 0) {
-      // Verify actual section ownership — don't trust the client-supplied courseId alone,
-      // since an attacker could pass their own courseId while submitting another course's sectionIds.
-      const sectionIds = dto.modules.map(m => m.sectionId);
-      const [sectionRecord] = await this.db
+      const sectionIds = [...new Set(dto.modules.map(m => m.sectionId))];
+      const sections = await this.db
         .select({ courseId: courseSections.courseId })
         .from(courseSections)
-        .where(inArray(courseSections.sectionId, sectionIds))
-        .limit(1);
+        .where(inArray(courseSections.sectionId, sectionIds));
 
-      if (!sectionRecord) {
+      if (sections.length !== sectionIds.length) {
         throw new NotFoundException('Sections not found');
       }
 
+      const notOwner = new ForbiddenException(
+        'Only the course owner or a platform admin can reorder sections',
+      );
+
+      const owningCourseIds = [...new Set(sections.map(s => s.courseId))];
+      if (owningCourseIds.length !== 1) {
+        throw notOwner;
+      }
+
       const course = await this.db.query.courses.findFirst({
-        where: eq(courses.courseId, sectionRecord.courseId),
+        where: eq(courses.courseId, owningCourseIds[0]),
       });
 
       if (!course || course.instructorId !== userId) {
-        throw new ForbiddenException('Only the course owner or a platform admin can reorder sections');
+        throw notOwner;
       }
     }
 

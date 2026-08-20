@@ -93,7 +93,6 @@ export class PaymentService {
    * Shared validation: resolves course/section and validates it exists and is published.
    */
   private async resolveItem(payload: {
-    userId: string;
     itemType: 'COURSE' | 'SECTION';
     courseId?: string;
     sectionId?: string;
@@ -186,7 +185,6 @@ export class PaymentService {
         itemType: payload.itemType,
         amount: '0',
         originalAmount: String(originalAmount),
-        discountAmount: '0',
         currency: PLATFORM_CURRENCY,
         gateway: PaymentGateway.FREE,
         status: 'COMPLETED',
@@ -318,7 +316,6 @@ export class PaymentService {
         itemType: payload.itemType,
         amount: String(amount),
         originalAmount: String(originalAmount),
-        discountAmount: '0',
         currency: PLATFORM_CURRENCY,
         gateway: PaymentGateway.MANUAL_QR,
         status: 'PENDING',
@@ -658,7 +655,6 @@ export class PaymentService {
         itemType: payload.itemType,
         amount: String(amount),
         originalAmount: String(originalAmount),
-        discountAmount: '0',
         currency: PLATFORM_CURRENCY,
         gateway: PaymentGateway.RAZORPAY,
         status: 'PENDING',

@@ -1,9 +1,6 @@
 import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
 
-const MAX_DEVICES = 2;
-process.env.AUTH_MAX_DEVICES_PER_USER = String(MAX_DEVICES);
-
 import {
   createTestDatabase,
   truncateAll,
@@ -11,7 +8,10 @@ import {
 } from './support/test-database';
 import { createTestApp, TestActor } from './support/test-app';
 import { createSignInUser } from './support/factories';
+import { TEST_MAX_DEVICES } from './support/test-env';
+import { AppConfigService } from '../src/config';
 
+const MAX_DEVICES = TEST_MAX_DEVICES;
 const PASSWORD = 'correct-horse-battery-staple';
 
 type Device = { userAgent: string; ip: string };
@@ -29,6 +29,11 @@ describe('device limit at sign-in', () => {
   beforeAll(async () => {
     database = await createTestDatabase();
     app = await createTestApp(database);
+
+    const configured = app
+      .get(AppConfigService, { strict: false })
+      .maxDevicesPerUser;
+    expect(configured).toBe(MAX_DEVICES);
   });
 
   afterAll(async () => {

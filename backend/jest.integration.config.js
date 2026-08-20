@@ -13,6 +13,7 @@ module.exports = {
     'reflect-metadata',
     '<rootDir>/test/support/load-env.ts',
     '<rootDir>/jest.setup.ts',
+    '<rootDir>/test/support/test-env.ts',
   ],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',

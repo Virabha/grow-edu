@@ -97,6 +97,12 @@ describe('account suspension', () => {
     await signIn().expect(200);
   });
 
+  it('refuses to let an admin suspend themselves', async () => {
+    await suspend(admin, admin.userId, 'Locking myself out').expect(403);
+
+    await whoAmI(admin).expect(200);
+  });
+
   it('leaves other accounts alone', async () => {
     const bystander = await createUser(database, 'LEARNER');
 

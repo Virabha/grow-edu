@@ -1,4 +1,5 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { AccountSuspensionService } from '../auth/account-suspension.service';
 import { DeviceRevocationService } from '../auth/device-revocation.service';
 import { Test } from '@nestjs/testing';
 import { AnnouncementsController } from './announcements.controller';
@@ -51,6 +52,7 @@ async function buildController(): Promise<{
     controllers: [AnnouncementsController],
     providers: [
       { provide: DeviceRevocationService, useValue: { isRevoked: async () => false, forget: () => undefined } },
+      { provide: AccountSuspensionService, useValue: { isSuspended: async () => false, forget: () => undefined } },
       { provide: AnnouncementsService, useValue: svc }],
   }).compile();
 

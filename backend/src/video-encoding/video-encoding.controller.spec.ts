@@ -1,4 +1,5 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { AccountSuspensionService } from '../auth/account-suspension.service';
 import { DeviceRevocationService } from '../auth/device-revocation.service';
 import { Test } from '@nestjs/testing';
 import { VideoEncodingController } from './video-encoding.controller';
@@ -76,6 +77,7 @@ async function buildMocks(): Promise<{
     controllers: [VideoEncodingController],
     providers: [
       { provide: DeviceRevocationService, useValue: { isRevoked: async () => false, forget: () => undefined } },
+      { provide: AccountSuspensionService, useValue: { isSuspended: async () => false, forget: () => undefined } },
       
       { provide: VideoEncodingService, useValue: mockService },
       { provide: AppConfigService, useValue: mockConfig },

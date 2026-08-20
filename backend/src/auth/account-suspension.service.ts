@@ -4,17 +4,11 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 
 import { DATABASE_CONNECTION } from '../database/database.module';
 import * as schema from '../database/schema';
-
-const CACHE_TTL_MS = 60_000;
-
-interface CacheEntry {
-  suspended: boolean;
-  checkedAt: number;
-}
+import { TtlFlagCache } from './ttl-flag-cache';
 
 @Injectable()
 export class AccountSuspensionService {
-  private readonly cache = new Map<string, CacheEntry>();
+  private readonly cache = new TtlFlagCache();
 
   constructor(
     @Inject(DATABASE_CONNECTION)
@@ -22,37 +16,23 @@ export class AccountSuspensionService {
   ) {}
 
   async isSuspended(userId: string, now: number): Promise<boolean> {
-    const cached = this.cache.get(userId);
-    if (cached && now - cached.checkedAt < CACHE_TTL_MS) {
-      return cached.suspended;
-    }
+    return this.cache.read(userId, now, async () => {
+      const [row] = await this.db
+        .select({ userId: schema.users.userId })
+        .from(schema.users)
+        .where(
+          and(
+            eq(schema.users.userId, userId),
+            isNotNull(schema.users.suspendedAt),
+          ),
+        )
+        .limit(1);
 
-    const [row] = await this.db
-      .select({ userId: schema.users.userId })
-      .from(schema.users)
-      .where(
-        and(
-          eq(schema.users.userId, userId),
-          isNotNull(schema.users.suspendedAt),
-        ),
-      )
-      .limit(1);
-
-    const suspended = row !== undefined;
-    this.cache.set(userId, { suspended, checkedAt: now });
-    this.prune(now);
-    return suspended;
+      return row !== undefined;
+    });
   }
 
   forget(userId: string): void {
-    this.cache.delete(userId);
-  }
-
-  private prune(now: number): void {
-    for (const [key, entry] of this.cache) {
-      if (now - entry.checkedAt >= CACHE_TTL_MS) {
-        this.cache.delete(key);
-      }
-    }
+    this.cache.forget(userId);
   }
 }

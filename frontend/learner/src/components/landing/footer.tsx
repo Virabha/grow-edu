@@ -16,10 +16,10 @@ import { BRAND } from "@/lib/constants";
 
 const footerLinks = {
   Learn: [
-    { label: "All courses", href: "/courses" },
-    { label: "Academics", href: "/courses?category=academics" },
-    { label: "Executive programs", href: "/courses?category=executive-and-certificate-program" },
-    { label: "Languages", href: "/courses?category=language" },
+    { label: "All batches", href: "/batches" },
+    { label: "Academics", href: "/batches?category=academics" },
+    { label: "Executive programs", href: "/batches?category=executive-and-certificate-program" },
+    { label: "Languages", href: "/batches?category=language" },
     { label: "Instructors", href: "/instructors" },
   ],
   Company: [

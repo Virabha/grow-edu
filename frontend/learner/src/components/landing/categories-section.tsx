@@ -44,7 +44,7 @@ export function CategoriesSection() {
             </p>
           </div>
           <Link
-            href="/courses"
+            href="/batches"
             className="group inline-flex shrink-0 items-center gap-2 self-start border-b border-foreground pb-1 text-sm font-medium text-foreground transition-colors hover:border-primary hover:text-primary sm:self-end"
           >
             Browse the catalogue

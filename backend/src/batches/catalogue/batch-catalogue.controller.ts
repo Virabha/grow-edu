@@ -13,6 +13,7 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 
 import { CurrentUser } from "../../auth/decorators/current-user.decorator";
+import { Authenticated } from "../../auth/decorators/authenticated.decorator";
 import { BatchAccess } from "../access/batch-access.decorator";
 import { Public } from "../../auth/decorators/public.decorator";
 import { Roles, UserRole } from "../../auth/decorators/roles.decorator";
@@ -206,7 +207,7 @@ export class BatchCatalogueController {
     return this.catalogue.reorderLessons(batchId, dto);
   }
 
-  @BatchAccess("READ")
+  @Authenticated()
   @ApiOperation({ summary: "Read one lesson (enrolled, staff, or free preview)" })
   @ApiBearerAuth()
   @Get(":batchId/lessons/:lessonId")

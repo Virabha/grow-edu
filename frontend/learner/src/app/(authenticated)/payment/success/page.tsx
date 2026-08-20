@@ -71,13 +71,13 @@ function PaymentSuccessContent() {
         <div className="mt-7 flex flex-col gap-2 sm:flex-row sm:justify-center">
           <Button
             variant="outline"
-            onClick={() => router.push("/courses")}
+            onClick={() => router.push("/batches")}
             className="rounded-full"
           >
             Browse more
           </Button>
           <Button
-            onClick={() => router.push("/my-courses")}
+            onClick={() => router.push("/my-batches")}
             className="rounded-full"
           >
             My courses

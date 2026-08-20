@@ -78,7 +78,7 @@ function freshDb(): MockDb {
         body: "Module 7 — Environment and Ecology is now available in UPSC Prelims.",
         read: true,
         createdAt: "2026-08-06T06:15:00.000Z",
-        href: "/my-courses",
+        href: "/my-batches",
       },
     ],
   };

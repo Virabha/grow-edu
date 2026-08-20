@@ -85,7 +85,7 @@ export function WorkshopCta() {
                 className="mt-8 h-12 gap-2 rounded-full bg-background px-6 font-medium text-foreground hover:bg-background/95"
                 asChild
               >
-                <Link href="/courses">
+                <Link href="/batches">
                   Explore courses
                   <ArrowUpRight className="size-4" />
                 </Link>

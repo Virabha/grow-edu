@@ -127,6 +127,8 @@ export interface BatchesListParams {
   status?: BatchStatus;
   targetExam?: string;
   categoryId?: string;
+  deliveryMode?: BatchDeliveryMode;
+  instructorId?: string;
   page?: number;
   limit?: number;
 }

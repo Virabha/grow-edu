@@ -30,4 +30,9 @@ export class FilterBatchesDto extends PaginationDto {
   @IsEnum(["LIVE", "RECORDED", "HYBRID"])
   @IsOptional()
   deliveryMode?: "LIVE" | "RECORDED" | "HYBRID";
+
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
+  instructorId?: string;
 }

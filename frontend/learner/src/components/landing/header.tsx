@@ -13,14 +13,14 @@ import {
   BookOpen,
   Receipt,
   Settings,
-  Target,
+
   ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { NAV_LINKS } from "@/lib/constants";
 import { useCategories } from "@/lib/hooks/use-categories";
-import { useCourses } from "@/lib/hooks/use-courses";
+import { useBatches } from "@/lib/hooks/use-batches";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { NotificationBell } from "@/components/notification-bell";
 
@@ -55,16 +55,15 @@ export function Header() {
   );
   const hasChildren = (activeCategory?.children?.length ?? 0) > 0;
 
-  // Only fetch courses if the hovered category has no children (fallback)
-  const { data: coursesData } = useCourses(
+  // Only fetch batches if the hovered category has no children (fallback)
+  const { data: batchesData } = useBatches(
     {
       categoryId: activeCategoryId ?? undefined,
       limit: 8,
-      status: "PUBLISHED",
     },
     !!activeCategoryId && coursesOpen && !hasChildren,
   );
-  const menuCourses = coursesData?.data ?? [];
+  const menuCourses = batchesData?.data ?? [];
 
   useEffect(() => {
     const onScroll = () => {
@@ -81,7 +80,7 @@ export function Header() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      window.location.href = `/courses?search=${encodeURIComponent(searchQuery.trim())}`;
+      window.location.href = `/batches?search=${encodeURIComponent(searchQuery.trim())}`;
       setSearchQuery("");
       setMenuOpen(false);
       setSearchOpen(false);
@@ -97,7 +96,6 @@ export function Header() {
 
   const LOGGED_IN_LINKS = [
     { href: "/dashboard", label: "Dashboard" },
-    { href: "/my-courses", label: "My Courses" },
     { href: "/my-batches", label: "My Batches" },
     { href: "/profile", label: "Profile" },
   ];
@@ -106,14 +104,13 @@ export function Header() {
   // which is already at its limit, and are appended to the mobile sheet.
   const ACCOUNT_LINKS = [
     { href: "/orders", label: "Order history", icon: Receipt },
-    { href: "/quizzes", label: "Quiz attempts", icon: Target },
   ];
 
   const navLinks = isLoggedIn
-    ? [{ href: "/courses", label: "Courses" }, { href: "/batches", label: "Batches" }, ...LOGGED_IN_LINKS]
+    ? [{ href: "/batches", label: "Batches" }, ...LOGGED_IN_LINKS]
     : [...NAV_LINKS, { href: "/batches", label: "Batches" }];
 
-  const navLinksWithoutCourses = navLinks.filter((l) => l.href !== "/courses");
+  const navLinksWithoutCourses = navLinks.filter((l) => l.href !== "/batches");
 
   // The mobile sheet has room for the account pages; the desktop bar does not.
   const mobileNavLinks = isLoggedIn
@@ -174,15 +171,15 @@ export function Header() {
               }}
             >
               <Link
-                href="/courses"
+                href="/batches"
                 className={cn(
                   "relative flex items-center gap-0.5 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-150",
-                  pathname === "/courses"
+                  pathname === "/batches"
                     ? "text-primary"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/70",
                 )}
               >
-                Courses
+                Batches
                 <ChevronDown
                   className={cn(
                     "size-3.5 transition-transform",
@@ -190,7 +187,7 @@ export function Header() {
                   )}
                 />
               </Link>
-              {pathname === "/courses" && (
+              {pathname === "/batches" && (
                 <motion.span
                   layoutId="nav-underline"
                   className="absolute inset-x-2 bottom-1 h-0.5 rounded-full bg-primary"
@@ -243,7 +240,7 @@ export function Header() {
                             </Link>
                           ))}
                           <Link
-                            href="/courses"
+                            href="/batches"
                             className="mt-2 flex items-center gap-2 rounded-lg border border-dashed border-primary/40 px-3 py-2.5 text-sm font-semibold text-primary transition-all hover:border-primary hover:bg-primary/5"
                           >
                             All categories →
@@ -282,7 +279,7 @@ export function Header() {
                                 ))}
                               </div>
                               <Link
-                                href="/courses"
+                                href="/batches"
                                 className="mt-3 inline-block text-sm font-semibold text-primary hover:underline"
                               >
                                 View all courses →
@@ -293,13 +290,13 @@ export function Header() {
                               <div className="grid grid-cols-2 gap-2">
                                 {menuCourses.length === 0 ? (
                                   <p className="text-sm text-muted-foreground py-4 col-span-2">
-                                    Loading courses…
+                                    Loading batches…
                                   </p>
                                 ) : (
                                   menuCourses.map((course) => (
                                     <Link
-                                      key={course.courseId}
-                                      href={`/courses/${course.slug}`}
+                                      key={course.batchId}
+                                      href={`/batches/${course.slug}`}
                                       className="flex items-center gap-3 rounded-lg border border-border/60 px-3 py-2.5 text-sm transition-all duration-200 hover:border-primary/40 hover:bg-primary/5 hover:shadow-sm"
                                     >
                                       {course.thumbnail ? (
@@ -323,7 +320,7 @@ export function Header() {
                                 )}
                               </div>
                               <Link
-                                href="/courses"
+                                href="/batches"
                                 className="mt-3 inline-block text-sm font-semibold text-primary hover:underline"
                               >
                                 View all courses →
@@ -441,7 +438,7 @@ export function Header() {
                         </p>
                       </div>
                       <Link
-                        href="/my-courses"
+                        href="/my-batches"
                         onClick={() => setUserMenuOpen(false)}
                         className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground transition-colors hover:bg-muted/50"
                       >

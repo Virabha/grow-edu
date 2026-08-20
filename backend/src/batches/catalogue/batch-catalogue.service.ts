@@ -105,6 +105,13 @@ export class BatchCatalogueService {
     if (teachingScope !== null) {
       conditions.push(inArray(batches.batchId, teachingScope));
     }
+    if (filters.instructorId) {
+      const taught = await this.access.taughtBatchIds(filters.instructorId);
+      if (taught.length === 0) {
+        return { data: [], pagination: { page, limit, total: 0, totalPages: 0 } };
+      }
+      conditions.push(inArray(batches.batchId, taught));
+    }
 
     const where = and(...conditions);
 

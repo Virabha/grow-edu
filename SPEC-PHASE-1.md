@@ -3,7 +3,7 @@
 **Target window:** 2026-08-19 → 2026-09-16
 **Derived from:** `AUDIT.md` §7 Phase 1
 **Triage label:** `ready-for-agent`
-**Status:** awaiting publication — issue tracker not configured (`/setup-matt-pocock-skills`)
+**Status:** delivered 2026-08-21 on `phase-1/test-harness`, except the Redis job queue (item 7), which is blocked on a local pnpm store mismatch and a REDIS_URL. 89 unit + 77 integration tests green.
 
 ---
 

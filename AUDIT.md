@@ -201,18 +201,20 @@ Phase 1 ends at your mid-September target. Everything after is sequenced by depe
 
 **This phase is mostly structural.** It is the phase that makes every later phase possible, and it is the one where your college contract path becomes real.
 
-1. Execute the cut list — delete 10 modules + `tenancy` + ~9 admin sections (~3,800 backend LOC)
-2. Collapse `batches` + `courses` into one product with a live flag; `batches` engine as base, salvage attempt versioning
-3. Merge `liveSessions` + `batchSessions`; merge both quiz engines; merge both enrolment models
-4. `organization_id` on all tenant-owned tables + composite uniques (cheapest it will ever be — database is empty)
-5. Fix `batches.teacherIds` → join table with per-instructor roles
-6. Fix `payments`: add `companyId`, add real `batchId` column, drop the metadata blob
-7. **Redis + BullMQ** — the foundation eight later features sit on
-8. Rewrite `companies` → contracts + seat pools + roster
-9. Join link: seat cap, expiry, admin revoke/regenerate
-10. Enforce the device limit
-11. Fix S2; consolidate authorization into declarative guards (S1)
-13. CI pipeline; tests on money + access paths
+**Delivered 2026-08-21**, except item 7. Struck items are done and verified.
+
+1. ~~Execute the cut list — delete 10 modules + `tenancy` + ~9 admin sections~~ — plus the 4,870-line demo-mode mock layer
+2. ~~Collapse `batches` + `courses` into one product~~ — delivery mode enum, attempt versioning salvaged
+3. ~~Merge `liveSessions` + `batchSessions`; merge both quiz engines; merge both enrolment models~~
+4. ~~`organization_id` on all tenant-owned tables + composite uniques~~ — 42 of 46 tables
+5. ~~Fix `batches.teacherIds` → join table with per-instructor roles~~
+6. ~~Fix `payments`: real `batchId` column, drop the metadata blob~~ — the corporate link is `corporateContractId`, which resolves to a company, so no `companyId` column was added
+7. **Redis + BullMQ** — **STILL OPEN.** Blocked: the local pnpm store major version no longer matches `node_modules`, so `pnpm add` refuses; needs `pnpm install` in `backend/` and a `REDIS_URL`
+8. ~~Rewrite `companies` → contracts + seat pools + roster~~
+9. ~~Join link: seat cap, expiry, admin revoke/regenerate~~ — four distinguishable refusals
+10. ~~Enforce the device limit~~
+11. ~~Fix S2; consolidate authorization into declarative guards (S1)~~ — every one of 258 routes declares a stance, enforced by a test
+12. ~~CI pipeline; tests on money + access paths~~ — 89 unit + 77 integration
 
 **Not in phase 1:** most student-visible features. If that is not acceptable, say so and I will rebalance toward demo-visible work — at the cost of the foundation.
 

@@ -506,4 +506,26 @@ describe('corporate contracts', () => {
     expect(refused.status).toBe(403);
     expect(refused.body.code).toBe('CONTRACT_NOT_ACTIVE');
   });
+
+  it('refuses a seat while the college has not paid yet', async () => {
+    const { body: contract } = await createContract(admin, validContract());
+    await attachBatches(admin, contract.contractId, [
+      await createBatch(database, admin.userId),
+    ]);
+    await recordPayment(admin, contract.contractId, { amount: 1000 });
+
+    const { body: awaiting } = await request(app.getHttpServer())
+      .get(`/corporate/contracts/${contract.contractId}`)
+      .set(...authHeader(app, admin))
+      .expect(200);
+    expect(awaiting.status).toBe('AWAITING_PAYMENT');
+
+    const { body: link } = await issueJoinLink(admin, contract.contractId);
+    const student = await createUser(database, 'LEARNER');
+
+    const refused = await redeem(student, link.token);
+
+    expect(refused.status).toBe(403);
+    expect(refused.body.code).toBe('CONTRACT_NOT_ACTIVE');
+  });
 });

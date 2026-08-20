@@ -5,23 +5,21 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import * as PDFDocument from "pdfkit";
 import { DATABASE_CONNECTION } from "../../database/database.module";
 import * as schema from "../../database/schema";
 import {
-  batchAttendance,
   batchCertificates,
-  batchEnrollments,
   batchQuizAttempts,
   batchQuizzes,
-  batchSessions,
   batches,
   users,
 } from "../../database/schema";
 import { NotificationsService } from "../../notifications/notifications.service";
 import { CertificateTemplateService } from "../../certificate-template/certificate-template.service";
+import { BatchAccessService } from "../access/batch-access.service";
 import { BatchSchedulingService } from "../scheduling/batch-scheduling.service";
 
 type DbType = PostgresJsDatabase<typeof schema>;
@@ -44,6 +42,7 @@ export class CertificateService {
     private readonly notificationsService: NotificationsService,
     private readonly certificateTemplateService: CertificateTemplateService,
     private readonly scheduling: BatchSchedulingService,
+    private readonly access: BatchAccessService,
   ) {}
 
   private generateCertificateNumber(batchId: string, userId: string): string {
@@ -58,25 +57,11 @@ export class CertificateService {
     userId: string,
     opts: { requireCompletion?: boolean } = {}
   ): Promise<CertificateRow> {
-    const [batch] = await this.db
-      .select()
-      .from(batches)
-      .where(and(eq(batches.batchId, batchId), eq(batches.isDeleted, false)))
-      .limit(1);
-    if (!batch) throw new NotFoundException("Batch not found");
+    const batch = await this.access.requireBatch(batchId);
 
-    const [enrollment] = await this.db
-      .select()
-      .from(batchEnrollments)
-      .where(
-        and(
-          eq(batchEnrollments.batchId, batchId),
-          eq(batchEnrollments.userId, userId),
-          eq(batchEnrollments.status, "ACTIVE")
-        )
-      )
-      .limit(1);
-    if (!enrollment) throw new BadRequestException("Student is not enrolled");
+    if (!(await this.access.isEnrolled(batchId, userId))) {
+      throw new BadRequestException("Student is not enrolled");
+    }
 
     if (opts.requireCompletion) {
       const { percent } = await this.scheduling.attendanceFor(batchId, userId);
@@ -204,25 +189,7 @@ export class CertificateService {
       .limit(1);
     if (!batch || !user) throw new NotFoundException("Source data missing");
 
-    const [{ liveTotal }] = await this.db
-      .select({ liveTotal: sql<number>`count(*)::int` })
-      .from(batchSessions)
-      .where(
-        and(
-          eq(batchSessions.batchId, batchId),
-          eq(batchSessions.type, "LIVE"),
-          eq(batchSessions.isDeleted, false)
-        )
-      );
-    const [{ attended }] = await this.db
-      .select({ attended: sql<number>`count(*)::int` })
-      .from(batchAttendance)
-      .where(
-        and(
-          eq(batchAttendance.batchId, batchId),
-          eq(batchAttendance.userId, userId)
-        )
-      );
+    const attendance = await this.scheduling.attendanceFor(batchId, userId);
     const myQuizAttempts = await this.db
       .select({
         score: batchQuizAttempts.score,
@@ -248,7 +215,7 @@ export class CertificateService {
     const totalScore = [...bestByQuiz.values()].reduce((s, v) => s + v.score, 0);
     const totalMax = [...bestByQuiz.values()].reduce((s, v) => s + v.max, 0);
     const quizPct = totalMax > 0 ? (totalScore / totalMax) * 100 : null;
-    const attendancePct = liveTotal > 0 ? (attended / liveTotal) * 100 : null;
+    const attendancePct = attendance.percent;
 
     const learnerName =
       [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email;

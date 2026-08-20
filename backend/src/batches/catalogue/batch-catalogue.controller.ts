@@ -13,7 +13,6 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 
 import { CurrentUser } from "../../auth/decorators/current-user.decorator";
-import { Authenticated } from "../../auth/decorators/authenticated.decorator";
 import { BatchAccess } from "../access/batch-access.decorator";
 import { Public } from "../../auth/decorators/public.decorator";
 import { Roles, UserRole } from "../../auth/decorators/roles.decorator";
@@ -184,7 +183,7 @@ export class BatchCatalogueController {
     return this.catalogue.createLesson(batchId, dto, user);
   }
 
-  @BatchAccess("MANAGE")
+  @Roles(UserRole.PLATFORM_ADMIN)
   @ApiOperation({ summary: "Publish a lesson to students (admin)" })
   @ApiBearerAuth()
   @Post(":batchId/lessons/:lessonId/approve")
@@ -207,15 +206,16 @@ export class BatchCatalogueController {
     return this.catalogue.reorderLessons(batchId, dto);
   }
 
-  @Authenticated()
   @ApiOperation({ summary: "Read one lesson (enrolled, staff, or free preview)" })
+  @Public()
+  @UseGuards(OptionalJwtAuthGuard)
   @ApiBearerAuth()
   @Get(":batchId/lessons/:lessonId")
   getLesson(
     @Param("lessonId") lessonId: string,
-    @CurrentUser() user: AuthedUser,
+    @CurrentUser() user?: AuthedUser,
   ) {
-    return this.catalogue.getLesson(lessonId, user);
+    return this.catalogue.getLesson(lessonId, user ?? {});
   }
 
   @BatchAccess("MANAGE")

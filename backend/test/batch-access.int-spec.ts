@@ -100,6 +100,27 @@ describe('batch access', () => {
     expect(body.lessonId).toBe(lessonId);
   });
 
+  it('opens a free-preview lesson to a visitor who is not signed in', async () => {
+    const subjectId = await createSubject(database, batchId);
+    const lessonId = await createLesson(database, subjectId, {
+      isFreePreview: true,
+    });
+
+    const { body } = await request(app.getHttpServer())
+      .get(`/batches/${batchId}/lessons/${lessonId}`)
+      .expect(200);
+    expect(body.lessonId).toBe(lessonId);
+  });
+
+  it('still hides a paid lesson from a visitor who is not signed in', async () => {
+    const subjectId = await createSubject(database, batchId);
+    const lessonId = await createLesson(database, subjectId);
+
+    await request(app.getHttpServer())
+      .get(`/batches/${batchId}/lessons/${lessonId}`)
+      .expect(404);
+  });
+
   it('keeps a student out once their access window has closed', async () => {
     const expired = await createUser(database, 'LEARNER');
     await enrol(database, batchId, expired.userId, {

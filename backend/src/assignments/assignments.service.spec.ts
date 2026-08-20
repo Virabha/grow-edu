@@ -230,7 +230,7 @@ describe("AssignmentsService › submitAssignment", () => {
 
     const { service } = await makeService({ select: selectChain, insert: dbInsert });
 
-    const result = await service.submitAssignment(ASSIGNMENT_ID, LEARNER_ID, {
+    await service.submitAssignment(ASSIGNMENT_ID, LEARNER_ID, {
       textAnswer: "My second answer",
     });
 
@@ -255,10 +255,6 @@ describe("AssignmentsService › submitAssignment", () => {
   });
 
   it("rejects submission when learner is not enrolled", async () => {
-    const selectChain = jest.fn().mockImplementation(() => {
-      return makeChain([]);
-    });
-
     const PUBLISHED_ASSIGNMENT = { ...FAKE_ASSIGNMENT, isPublished: true };
 
     let selectCount = 0;

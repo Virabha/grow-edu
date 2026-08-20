@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import * as bcrypt from 'bcrypt';
 import {
   users,
   categories,
@@ -25,6 +26,23 @@ export async function createUser(
     email,
     password: 'not-a-real-hash',
     role: role as never,
+  });
+  return { userId, email, role };
+}
+
+export async function createSignInUser(
+  database: TestDatabase,
+  role: string,
+  password: string,
+): Promise<TestActor> {
+  const userId = randomUUID();
+  const email = `${unique(role.toLowerCase())}@example.test`;
+  await database.db.insert(users).values({
+    userId,
+    email,
+    password: await bcrypt.hash(password, 4),
+    role: role as never,
+    emailVerified: true,
   });
   return { userId, email, role };
 }

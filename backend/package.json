@@ -13,7 +13,7 @@
     "lint:fix": "eslint \"src/**/*.ts\" --fix",
     "test": "jest",
     "test:int": "jest --config jest.integration.config.js",
-    "db:baseline": "drizzle-kit generate:pg --config drizzle.baseline.config.ts",
+    "db:baseline": "node scripts/build-baseline.mjs",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",

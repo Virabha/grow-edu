@@ -23,6 +23,12 @@ export const configSchema = z
       .min(8, "JWT_SECRET must be at least 8 characters"),
     JWT_EXPIRES_IN: z.string().default("7d"),
 
+    AUTH_MAX_DEVICES_PER_USER: z
+      .string()
+      .transform(Number)
+      .pipe(z.number().int().min(1))
+      .default("3"),
+
     // Bunny.net Storage
     BUNNY_STORAGE_ZONE_NAME: z.string().min(1).optional(),
     BUNNY_STORAGE_API_KEY: z.string().min(1).optional(),

@@ -11,7 +11,6 @@
     "install:all": "pnpm --dir backend install && pnpm --dir frontend/admin install && pnpm --dir frontend/learner install",
     "typecheck": "cd backend && npx tsc --noEmit && cd ../frontend/admin && npx tsc --noEmit && cd ../learner && npx tsc --noEmit",
     "test": "pnpm --dir backend run test",
-    "db:migrate:tenancy": "pnpm --dir backend run db:migrate:tenancy",
-    "db:verify:isolation": "pnpm --dir backend run db:verify:isolation"
+    "test:int": "pnpm --dir backend run test:int"
   }
 }

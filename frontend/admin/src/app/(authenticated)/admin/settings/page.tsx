@@ -6,7 +6,6 @@ import {
   ChevronRight,
   Cookie,
   CreditCard,
-  Globe,
   Image as ImageIcon,
   LifeBuoy,
   Mail,
@@ -20,7 +19,6 @@ import {
   Shield,
   ShieldCheck,
   Smartphone,
-  Tag,
   Trash2,
   Users,
   Wrench,
@@ -48,7 +46,6 @@ const GROUPS: SettingGroup[] = [
       { href: "/admin/settings/general", label: "General", description: "Site identity, contact details and platform switches.", icon: <SettingsIcon className="h-4 w-4" /> },
       { href: "/admin/settings/logo", label: "Logo and favicon", description: "Marks used in the app, browser tab and social shares.", icon: <ImageIcon className="h-4 w-4" /> },
       { href: "/admin/settings/maintenance", label: "Maintenance mode", description: "Take the site offline for learners while you work.", icon: <Wrench className="h-4 w-4" /> },
-      { href: "/admin/languages", label: "Languages", description: "Interface translations and the default language.", icon: <Globe className="h-4 w-4" /> },
     ],
   },
   {
@@ -68,9 +65,7 @@ const GROUPS: SettingGroup[] = [
     items: [
       { href: "/admin/settings/payment-gateway", label: "Payment gateways", description: "Razorpay, PhonePe and UPI transfer.", icon: <CreditCard className="h-4 w-4" /> },
       { href: "/admin/settings/payments", label: "UPI / QR details", description: "The bank details shown at manual checkout.", icon: <CreditCard className="h-4 w-4" /> },
-      { href: "/admin/currencies", label: "Multi-currency", description: "Currencies learners can pay in.", icon: <Tag className="h-4 w-4" /> },
       { href: "/admin/settings/commission", label: "Commission", description: "How revenue splits with instructors.", icon: <Percent className="h-4 w-4" /> },
-      { href: "/admin/withdraw-methods", label: "Withdraw methods", description: "How instructors take earnings out.", icon: <CreditCard className="h-4 w-4" /> },
     ],
   },
   {

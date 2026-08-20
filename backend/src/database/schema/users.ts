@@ -35,12 +35,16 @@ export const users = pgTable(
     postalCode: text("postal_code"),
     social: jsonb("social").$type<Record<string, string>>().default({}),
     companyId: text("company_id"),
+    suspendedAt: timestamp("suspended_at"),
+    suspensionReason: text("suspension_reason"),
+    suspendedBy: text("suspended_by"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (table) => ({
     emailIdx: index("users_email_idx").on(table.email),
     roleIdx: index("users_role_idx").on(table.role),
+    suspendedIdx: index("users_suspended_at_idx").on(table.suspendedAt),
   })
 );
 

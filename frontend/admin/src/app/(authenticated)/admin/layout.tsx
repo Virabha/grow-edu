@@ -9,33 +9,25 @@ import {
   CreditCard,
   Shield,
   Settings,
-  Tag,
   Layers,
   Layout,
   FileText,
-  Library,
   GraduationCap,
   Video,
   User,
   Award,
   Banknote,
   Blocks,
-  Globe,
   Languages,
-  Mail,
-  MapPin,
   Megaphone,
   Menu as MenuIcon,
-  MessageSquare,
   Newspaper,
   Palette,
   ScrollText,
   Send,
   Sparkles,
-  Star,
   UserPlus,
   Video as VideoIcon,
-  Wallet,
 } from "lucide-react";
 import { useAuthStore } from "@/lib/store/auth-store";
 
@@ -71,11 +63,6 @@ const ADMIN_NAV: NavItem[] = [
     icon: <BookOpen className="h-4 w-4" />,
   },
   {
-    label: "Books",
-    href: "/admin/books",
-    icon: <Library className="h-4 w-4" />,
-  },
-  {
     label: "Categories",
     href: "/admin/categories",
     icon: <Layers className="h-4 w-4" />,
@@ -96,11 +83,6 @@ const ADMIN_NAV: NavItem[] = [
     icon: <CreditCard className="h-4 w-4" />,
   },
   {
-    label: "Coupons",
-    href: "/admin/coupons",
-    icon: <Tag className="h-4 w-4" />,
-  },
-  {
     label: "Moderation",
     href: "/admin/moderation",
     icon: <Shield className="h-4 w-4" />,
@@ -109,16 +91,6 @@ const ADMIN_NAV: NavItem[] = [
     label: "Landing Page",
     href: "/admin/landing",
     icon: <Layout className="h-4 w-4" />,
-  },
-  {
-    label: "Instructor Applications",
-    href: "/admin/teacher-applications",
-    icon: <FileText className="h-4 w-4" />,
-  },
-  {
-    label: "Course reviews",
-    href: "/admin/course-reviews",
-    icon: <Star className="h-4 w-4" />,
   },
   {
     label: "Course languages",
@@ -151,31 +123,6 @@ const ADMIN_NAV: NavItem[] = [
     icon: <FileText className="h-4 w-4" />,
   },
   {
-    label: "Withdraw methods",
-    href: "/admin/withdraw-methods",
-    icon: <Wallet className="h-4 w-4" />,
-  },
-  {
-    label: "Payout requests",
-    href: "/admin/payouts",
-    icon: <Banknote className="h-4 w-4" />,
-  },
-  {
-    label: "Locations",
-    href: "/admin/locations",
-    icon: <MapPin className="h-4 w-4" />,
-  },
-  {
-    label: "Site languages",
-    href: "/admin/languages",
-    icon: <Globe className="h-4 w-4" />,
-  },
-  {
-    label: "Multi-currency",
-    href: "/admin/currencies",
-    icon: <CreditCard className="h-4 w-4" />,
-  },
-  {
     label: "Site theme",
     href: "/admin/themes",
     icon: <Palette className="h-4 w-4" />,
@@ -204,16 +151,6 @@ const ADMIN_NAV: NavItem[] = [
     label: "Social links",
     href: "/admin/social-links",
     icon: <Send className="h-4 w-4" />,
-  },
-  {
-    label: "Subscribers",
-    href: "/admin/subscribers",
-    icon: <Mail className="h-4 w-4" />,
-  },
-  {
-    label: "Contact messages",
-    href: "/admin/contact-messages",
-    icon: <MessageSquare className="h-4 w-4" />,
   },
   {
     label: "Admins",
@@ -267,11 +204,6 @@ const INSTRUCTOR_NAV: NavItem[] = [
     label: "My sales",
     href: "/instructor/sales",
     icon: <Banknote className="h-4 w-4" />,
-  },
-  {
-    label: "Request payout",
-    href: "/instructor/payouts",
-    icon: <Wallet className="h-4 w-4" />,
   },
   {
     label: "Live settings",

@@ -44,7 +44,6 @@ function deleteChainOf() {
 async function buildService(
   selectQueues: unknown[][],
   insertRows: unknown[] = [],
-  deleteResult: unknown = undefined,
 ) {
   let selectIndex = 0;
   const mockDb = {

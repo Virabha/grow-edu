@@ -4,6 +4,7 @@ import * as bcrypt from 'bcrypt';
 import { eq, desc, and, sql, isNull, ne } from 'drizzle-orm';
 import { userDevices, users } from '../database/schema';
 import { DATABASE_CONNECTION } from '../database/database.module';
+import { AccountSuspensionService } from '../auth/account-suspension.service';
 import { DeviceRevocationService } from '../auth/device-revocation.service';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../database/schema';
@@ -21,6 +22,7 @@ export class UsersService {
     @Inject(DATABASE_CONNECTION)
     private readonly db: PostgresJsDatabase<typeof schema>,
     private readonly deviceRevocation: DeviceRevocationService,
+    private readonly accountSuspension: AccountSuspensionService,
     private emailService: EmailService,
     private filesService: FilesService,
   ) {}
@@ -226,6 +228,85 @@ export class UsersService {
     await this.db.delete(users).where(eq(users.userId, id));
 
     return { message: 'User deleted successfully' };
+  }
+
+  async suspend(targetUserId: string, reason: string, actingAdminId: string) {
+    if (targetUserId === actingAdminId) {
+      throw new ForbiddenException('You cannot suspend your own account');
+    }
+
+    const [suspended] = await this.db
+      .update(users)
+      .set({
+        suspendedAt: new Date(),
+        suspensionReason: reason,
+        suspendedBy: actingAdminId,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.userId, targetUserId))
+      .returning({
+        userId: users.userId,
+        suspendedAt: users.suspendedAt,
+        suspensionReason: users.suspensionReason,
+      });
+
+    if (!suspended) {
+      throw new NotFoundException('User not found');
+    }
+
+    this.accountSuspension.forget(targetUserId);
+    await this.revokeEveryDevice(targetUserId);
+
+    return {
+      message: 'Account suspended',
+      userId: suspended.userId,
+      suspendedAt: suspended.suspendedAt,
+      reason: suspended.suspensionReason,
+    };
+  }
+
+  async reinstate(targetUserId: string) {
+    const [reinstated] = await this.db
+      .update(users)
+      .set({
+        suspendedAt: null,
+        suspensionReason: null,
+        suspendedBy: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.userId, targetUserId))
+      .returning({ userId: users.userId });
+
+    if (!reinstated) {
+      throw new NotFoundException('User not found');
+    }
+
+    this.accountSuspension.forget(targetUserId);
+
+    return { message: 'Account reinstated', userId: reinstated.userId };
+  }
+
+  private async revokeEveryDevice(userId: string) {
+    const conditions = and(
+      eq(userDevices.userId, userId),
+      isNull(userDevices.revokedAt),
+    );
+
+    const rows = await this.db
+      .select({ deviceId: userDevices.deviceId })
+      .from(userDevices)
+      .where(conditions);
+
+    if (rows.length === 0) return;
+
+    await this.db
+      .update(userDevices)
+      .set({ revokedAt: new Date() })
+      .where(conditions);
+
+    for (const row of rows) {
+      this.deviceRevocation.forget(row.deviceId);
+    }
   }
 
   async getMe(userId: string) {

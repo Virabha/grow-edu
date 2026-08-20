@@ -19,12 +19,9 @@ import {
   IndianRupee,
   Download,
   ArrowUpRight,
-  Tag,
   CreditCard,
-  FileText,
   Layers,
   Shield,
-  Library,
   Building2,
   Layout,
 } from "lucide-react";
@@ -37,13 +34,10 @@ const quickLinks = [
   { label: "Users", href: "/admin/users", icon: Users },
   { label: "Courses", href: "/admin/courses", icon: BookOpen },
   { label: "Categories", href: "/admin/categories", icon: Layers },
-  { label: "Books", href: "/admin/books", icon: Library },
-  { label: "Coupons", href: "/admin/coupons", icon: Tag },
   { label: "Payments", href: "/admin/payments", icon: CreditCard },
   { label: "Companies", href: "/admin/companies", icon: Building2 },
   { label: "Moderation", href: "/admin/moderation", icon: Shield },
   { label: "Landing page", href: "/admin/landing", icon: Layout },
-  { label: "Instructor apps", href: "/admin/teacher-applications", icon: FileText },
 ];
 
 function formatINR(n: number): string {

@@ -45,11 +45,17 @@ function unpooledUrl(): string {
   return url.replace('-pooler', '');
 }
 
+function isLocal(url: string): boolean {
+  const { hostname } = new URL(url);
+  return hostname === 'localhost' || hostname === '127.0.0.1';
+}
+
 function connect(schemaName?: string): postgres.Sql {
-  return postgres(unpooledUrl(), {
+  const url = unpooledUrl();
+  return postgres(url, {
     max: schemaName ? 3 : 1,
     connect_timeout: 20,
-    ssl: { rejectUnauthorized: false },
+    ssl: isLocal(url) ? false : { rejectUnauthorized: false },
     onnotice: () => undefined,
     ...(schemaName && {
       connection: { options: `-c search_path=${schemaName}` },

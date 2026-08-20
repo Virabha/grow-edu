@@ -26,7 +26,7 @@ export class AuthController {
   async login(@Request() req: { user: UserPayload; headers: Record<string, string>; ip?: string }) {
     const ua = req.headers['user-agent'] ?? null;
     const ip = req.ip ?? null;
-    const deviceId = await this.authService.upsertDevice(req.user.id, ua, ip);
+    const deviceId = await this.authService.upsertDevice(req.user, ua, ip);
     return this.authService.login(req.user, deviceId);
   }
 

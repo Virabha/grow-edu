@@ -8,7 +8,7 @@ import { ModeToggle } from "@/components/theme-toggle";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { LogOut, LayoutDashboard, BookOpen, Settings, Video, Wallet, Megaphone, TrendingUp, Radio } from "lucide-react";
+import { LogOut, LayoutDashboard, BookOpen, Settings, Video, Megaphone, TrendingUp, Radio } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 export function InstructorNavbar() {
     const pathname = usePathname();
@@ -38,7 +38,6 @@ export function InstructorNavbar() {
         { href: "/instructor/dashboard", label: "Dashboard", icon: LayoutDashboard },
         { href: "/instructor/courses", label: "My Courses", icon: BookOpen },
         { href: "/instructor/videos", label: "My Videos", icon: Video },
-        { href: "/instructor/payouts", label: "Payouts", icon: Wallet },
         { href: "/instructor/announcements", label: "Announcements", icon: Megaphone },
         { href: "/instructor/sales", label: "My Sales", icon: TrendingUp },
         { href: "/instructor/settings/live", label: "Live Settings", icon: Radio },

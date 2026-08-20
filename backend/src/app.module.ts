@@ -11,7 +11,7 @@ import { CertificateTemplateModule } from "./certificate-template/certificate-te
 import { BlogModule } from "./blog/blog.module";
 import { QuizAttemptsModule } from "./quiz-attempts/quiz-attempts.module";
 import { OrdersModule } from "./orders/orders.module";
-import { DeviceRevocationModule } from "./auth/device-revocation.module";
+import { SessionIntegrityModule } from "./auth/session-integrity.module";
 import { AssignmentsModule } from "./assignments/assignments.module";
 import { LiveSessionsModule } from "./live-sessions/live-sessions.module";
 import { SettingsModule } from "./settings/settings.module";
@@ -76,7 +76,7 @@ import { NotificationsModule } from "./notifications/notifications.module";
     BlogModule,
     QuizAttemptsModule,
     OrdersModule,
-    DeviceRevocationModule,
+    SessionIntegrityModule,
     AssignmentsModule,
     LiveSessionsModule,
     SettingsModule,

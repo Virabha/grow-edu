@@ -10,11 +10,14 @@ import {
   Query,
   UseGuards,
   ForbiddenException,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { FilterUsersDto } from './dto/filter-users.dto';
+import { SuspendUserDto } from './dto/suspend-user.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -147,6 +150,32 @@ export class UsersController {
     @CurrentUser() user: { userId: string; role: string },
   ) {
     return this.usersService.update(userId, dto, user.userId, user.role);
+  }
+
+  @ApiOperation({ summary: 'Suspend a user account' })
+  @ApiResponse({ status: 200, description: 'Account suspended' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.PLATFORM_ADMIN)
+  @Post(':userId/suspend')
+  @HttpCode(HttpStatus.OK)
+  async suspend(
+    @Param('userId') userId: string,
+    @Body() dto: SuspendUserDto,
+    @CurrentUser() user: { userId: string },
+  ) {
+    return this.usersService.suspend(userId, dto.reason, user.userId);
+  }
+
+  @ApiOperation({ summary: 'Reinstate a suspended user account' })
+  @ApiResponse({ status: 200, description: 'Account reinstated' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.PLATFORM_ADMIN)
+  @Post(':userId/reinstate')
+  @HttpCode(HttpStatus.OK)
+  async reinstate(@Param('userId') userId: string) {
+    return this.usersService.reinstate(userId);
   }
 
   @ApiOperation({ summary: 'Delete user' })

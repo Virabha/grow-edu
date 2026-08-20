@@ -45,6 +45,10 @@ export class AppConfigService {
     return this.configService.get("JWT_EXPIRES_IN", { infer: true });
   }
 
+  get maxDevicesPerUser(): number {
+    return this.configService.get("AUTH_MAX_DEVICES_PER_USER", { infer: true });
+  }
+
   // Bunny Storage
   get bunnyStorageZoneName(): string | undefined {
     return this.configService.get("BUNNY_STORAGE_ZONE_NAME", { infer: true });

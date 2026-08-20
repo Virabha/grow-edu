@@ -1,6 +1,7 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from '../../src/app.module';
 import { DATABASE_CONNECTION } from '../../src/database/database.module';
 import { TestDatabase } from './test-database';
@@ -21,7 +22,8 @@ export async function createTestApp(
     .useValue(database.db)
     .compile();
 
-  const app = moduleRef.createNestApplication();
+  const app = moduleRef.createNestApplication<NestExpressApplication>();
+  app.set('trust proxy', 1);
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

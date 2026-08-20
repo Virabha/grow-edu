@@ -251,6 +251,9 @@ CREATE TABLE IF NOT EXISTS "users" (
 	"postal_code" text,
 	"social" jsonb DEFAULT '{}'::jsonb,
 	"company_id" text,
+	"suspended_at" timestamp,
+	"suspension_reason" text,
+	"suspended_by" text,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "users_email_unique" UNIQUE("email")
@@ -958,6 +961,7 @@ CREATE INDEX IF NOT EXISTS "user_devices_user_idx" ON "user_devices" ("user_id")
 CREATE INDEX IF NOT EXISTS "user_devices_user_last_seen_idx" ON "user_devices" ("user_id","last_seen_at");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "users_email_idx" ON "users" ("email");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "users_role_idx" ON "users" ("role");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "users_suspended_at_idx" ON "users" ("suspended_at");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "companies_name_idx" ON "companies" ("name");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "categories_slug_idx" ON "categories" ("slug");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "categories_is_active_idx" ON "categories" ("is_active");--> statement-breakpoint

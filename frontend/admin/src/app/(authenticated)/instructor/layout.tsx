@@ -10,7 +10,6 @@ import {
   Megaphone,
   User,
   Video,
-  Wallet,
   Cast,
 } from "lucide-react";
 
@@ -54,11 +53,6 @@ const sidebarItems = [
     label: "My sales",
     href: "/instructor/sales",
     icon: <Banknote className="h-4 w-4" />,
-  },
-  {
-    label: "Request payout",
-    href: "/instructor/payouts",
-    icon: <Wallet className="h-4 w-4" />,
   },
   {
     label: "Zoom settings",

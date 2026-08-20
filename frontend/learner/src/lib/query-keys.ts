@@ -1,4 +1,3 @@
-import type { CoursesParams } from "@/lib/api/services/courses";
 import type { BatchesListParams, BatchSessionType } from "@/lib/api/services/batches";
 
 export const queryKeys = {
@@ -12,15 +11,6 @@ export const queryKeys = {
   categories: {
     all: () => ["categories"] as const,
     bySlug: (slug: string) => ["categories", "slug", slug] as const,
-  },
-  courses: {
-    list: (params?: CoursesParams) => ["courses", "list", params] as const,
-    byId: (id: string) => ["courses", "detail", id] as const,
-    bySlug: (slug: string) => ["courses", "slug", slug] as const,
-  },
-  enrollments: {
-    list: (params?: Record<string, unknown>) =>
-      ["enrollments", params] as const,
   },
   profile: {
     me: () => ["profile"] as const,

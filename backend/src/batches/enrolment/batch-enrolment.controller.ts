@@ -12,10 +12,11 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 
 import { CurrentUser } from "../../auth/decorators/current-user.decorator";
+import { Authenticated } from "../../auth/decorators/authenticated.decorator";
+import { BatchAccess } from "../access/batch-access.decorator";
 import { Roles, UserRole } from "../../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../../auth/guards/roles.guard";
-import { BatchManagerGuard } from "../access/batch-manager.guard";
 import { CreateBatchEnrollmentsDto } from "../dto/batch-enrollment.dto";
 import { FilterBatchEnrollmentsDto } from "../dto/filter-batch-enrollments.dto";
 import { RecordLessonProgressDto } from "../dto/lesson-progress.dto";
@@ -32,15 +33,15 @@ interface AuthedUser {
 export class BatchEnrolmentController {
   constructor(private readonly enrolments: BatchEnrolmentService) {}
 
+  @Authenticated()
   @ApiOperation({ summary: "Everything I have access to" })
-  @UseGuards(JwtAuthGuard)
   @Get("mine")
   findMine(@CurrentUser() user: AuthedUser) {
     return this.enrolments.findMine(user.userId);
   }
 
+  @Authenticated()
   @ApiOperation({ summary: "Start a batch checkout (creates pending payment)" })
-  @UseGuards(JwtAuthGuard)
   @Post(":batchId/checkout")
   startCheckout(
     @Param("batchId") batchId: string,
@@ -49,8 +50,8 @@ export class BatchEnrolmentController {
     return this.enrolments.startCheckout(batchId, user.userId);
   }
 
+  @BatchAccess("MANAGE")
   @ApiOperation({ summary: "List enrolled students (admin or batch teacher)" })
-  @UseGuards(JwtAuthGuard, BatchManagerGuard)
   @Get(":batchId/enrollments")
   list(
     @Param("batchId") batchId: string,
@@ -75,8 +76,8 @@ export class BatchEnrolmentController {
     return this.enrolments.addMany(batchId, dto, user.userId);
   }
 
+  @BatchAccess("READ")
   @ApiOperation({ summary: "My lesson progress in a batch" })
-  @UseGuards(JwtAuthGuard)
   @Get(":batchId/progress")
   progress(
     @Param("batchId") batchId: string,
@@ -85,8 +86,8 @@ export class BatchEnrolmentController {
     return this.enrolments.lessonProgressFor(batchId, user);
   }
 
+  @BatchAccess("READ")
   @ApiOperation({ summary: "Record progress through a lesson" })
-  @UseGuards(JwtAuthGuard)
   @Put(":batchId/lessons/:lessonId/progress")
   recordProgress(
     @Param("batchId") batchId: string,

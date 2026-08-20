@@ -6,13 +6,11 @@ import {
   Param,
   Patch,
   Post,
-  UseGuards,
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 
 import { CurrentUser } from "../../auth/decorators/current-user.decorator";
-import { JwtAuthGuard } from "../../auth/guards/jwt-auth.guard";
-import { BatchManagerGuard } from "../access/batch-manager.guard";
+import { BatchAccess } from "../access/batch-access.decorator";
 import {
   CreateBatchQuizDto,
   CreateQuizQuestionDto,
@@ -33,8 +31,8 @@ interface AuthedUser {
 export class BatchAssessmentController {
   constructor(private readonly assessment: BatchAssessmentService) {}
 
+  @BatchAccess("READ")
   @ApiOperation({ summary: "List quizzes in a batch" })
-  @UseGuards(JwtAuthGuard)
   @Get(":batchId/quizzes")
   listQuizzes(
     @Param("batchId") batchId: string,
@@ -43,8 +41,8 @@ export class BatchAssessmentController {
     return this.assessment.listQuizzes(batchId, user);
   }
 
+  @BatchAccess("MANAGE")
   @ApiOperation({ summary: "Create a quiz (admin or batch teacher)" })
-  @UseGuards(JwtAuthGuard, BatchManagerGuard)
   @Post(":batchId/quizzes")
   createQuiz(
     @Param("batchId") batchId: string,
@@ -54,8 +52,8 @@ export class BatchAssessmentController {
     return this.assessment.createQuiz(batchId, dto, user.userId);
   }
 
+  @BatchAccess("READ")
   @ApiOperation({ summary: "Get a quiz with its questions" })
-  @UseGuards(JwtAuthGuard)
   @Get(":batchId/quizzes/:quizId")
   getQuiz(
     @Param("batchId") batchId: string,
@@ -65,8 +63,8 @@ export class BatchAssessmentController {
     return this.assessment.getQuiz(batchId, quizId, user);
   }
 
+  @BatchAccess("MANAGE")
   @ApiOperation({ summary: "Update a quiz (admin or batch teacher)" })
-  @UseGuards(JwtAuthGuard, BatchManagerGuard)
   @Patch(":batchId/quizzes/:quizId")
   updateQuiz(
     @Param("batchId") batchId: string,
@@ -76,8 +74,8 @@ export class BatchAssessmentController {
     return this.assessment.updateQuiz(batchId, quizId, dto);
   }
 
+  @BatchAccess("MANAGE")
   @ApiOperation({ summary: "Delete a quiz (admin or batch teacher)" })
-  @UseGuards(JwtAuthGuard, BatchManagerGuard)
   @Delete(":batchId/quizzes/:quizId")
   deleteQuiz(
     @Param("batchId") batchId: string,
@@ -86,8 +84,8 @@ export class BatchAssessmentController {
     return this.assessment.deleteQuiz(batchId, quizId);
   }
 
+  @BatchAccess("MANAGE")
   @ApiOperation({ summary: "Add a question to a quiz (admin or teacher)" })
-  @UseGuards(JwtAuthGuard, BatchManagerGuard)
   @Post(":batchId/quizzes/:quizId/questions")
   createQuestion(
     @Param("batchId") batchId: string,
@@ -97,8 +95,8 @@ export class BatchAssessmentController {
     return this.assessment.createQuestion(batchId, quizId, dto);
   }
 
+  @BatchAccess("MANAGE")
   @ApiOperation({ summary: "Update a quiz question (admin or teacher)" })
-  @UseGuards(JwtAuthGuard, BatchManagerGuard)
   @Patch(":batchId/quizzes/:quizId/questions/:questionId")
   updateQuestion(
     @Param("batchId") batchId: string,
@@ -109,8 +107,8 @@ export class BatchAssessmentController {
     return this.assessment.updateQuestion(batchId, quizId, questionId, dto);
   }
 
+  @BatchAccess("MANAGE")
   @ApiOperation({ summary: "Delete a quiz question (admin or teacher)" })
-  @UseGuards(JwtAuthGuard, BatchManagerGuard)
   @Delete(":batchId/quizzes/:quizId/questions/:questionId")
   deleteQuestion(
     @Param("batchId") batchId: string,
@@ -120,8 +118,8 @@ export class BatchAssessmentController {
     return this.assessment.deleteQuestion(batchId, quizId, questionId);
   }
 
+  @BatchAccess("READ")
   @ApiOperation({ summary: "Start a quiz attempt (learner)" })
-  @UseGuards(JwtAuthGuard)
   @Post(":batchId/quizzes/:quizId/attempts")
   startAttempt(
     @Param("batchId") batchId: string,
@@ -131,8 +129,8 @@ export class BatchAssessmentController {
     return this.assessment.startAttempt(batchId, quizId, user);
   }
 
+  @BatchAccess("READ")
   @ApiOperation({ summary: "List my attempts for a quiz" })
-  @UseGuards(JwtAuthGuard)
   @Get(":batchId/quizzes/:quizId/attempts")
   listMyAttempts(
     @Param("batchId") batchId: string,
@@ -142,8 +140,8 @@ export class BatchAssessmentController {
     return this.assessment.listMyAttempts(batchId, quizId, user);
   }
 
+  @BatchAccess("READ")
   @ApiOperation({ summary: "Quiz leaderboard" })
-  @UseGuards(JwtAuthGuard)
   @Get(":batchId/quizzes/:quizId/leaderboard")
   leaderboard(
     @Param("batchId") batchId: string,
@@ -153,8 +151,8 @@ export class BatchAssessmentController {
     return this.assessment.leaderboard(batchId, quizId, user);
   }
 
+  @BatchAccess("READ")
   @ApiOperation({ summary: "Get one attempt" })
-  @UseGuards(JwtAuthGuard)
   @Get(":batchId/quizzes/:quizId/attempts/:attemptId")
   getAttempt(
     @Param("batchId") batchId: string,
@@ -165,8 +163,8 @@ export class BatchAssessmentController {
     return this.assessment.getAttempt(batchId, quizId, attemptId, user);
   }
 
+  @BatchAccess("READ")
   @ApiOperation({ summary: "Submit a quiz attempt (learner)" })
-  @UseGuards(JwtAuthGuard)
   @Post(":batchId/quizzes/:quizId/attempts/:attemptId/submit")
   submitAttempt(
     @Param("batchId") batchId: string,

@@ -1,9 +1,9 @@
-import { Controller, Get, Param, UseGuards } from "@nestjs/common";
+import { Controller, Get, Param } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 
 import { CurrentUser } from "../../auth/decorators/current-user.decorator";
-import { JwtAuthGuard } from "../../auth/guards/jwt-auth.guard";
-import { BatchManagerGuard } from "../access/batch-manager.guard";
+import { Authenticated } from "../../auth/decorators/authenticated.decorator";
+import { BatchAccess } from "../access/batch-access.decorator";
 import { BatchReportingService } from "./batch-reporting.service";
 
 interface AuthedUser {
@@ -17,22 +17,22 @@ interface AuthedUser {
 export class BatchReportingController {
   constructor(private readonly reporting: BatchReportingService) {}
 
+  @Authenticated()
   @ApiOperation({ summary: "Unified dashboard for the current user" })
-  @UseGuards(JwtAuthGuard)
   @Get("dashboard")
   dashboard(@CurrentUser() user: AuthedUser) {
     return this.reporting.myDashboard(user.userId);
   }
 
+  @BatchAccess("MANAGE")
   @ApiOperation({ summary: "Batch analytics (admin or batch teacher)" })
-  @UseGuards(JwtAuthGuard, BatchManagerGuard)
   @Get(":batchId/analytics")
   analytics(@Param("batchId") batchId: string) {
     return this.reporting.analytics(batchId);
   }
 
+  @BatchAccess("READ")
   @ApiOperation({ summary: "My progress in a batch (learner)" })
-  @UseGuards(JwtAuthGuard)
   @Get(":batchId/my-progress")
   myProgress(
     @Param("batchId") batchId: string,

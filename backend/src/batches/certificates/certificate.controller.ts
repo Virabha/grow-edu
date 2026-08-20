@@ -13,6 +13,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { Response } from "express";
 
 import { CurrentUser } from "../../auth/decorators/current-user.decorator";
+import { BatchAccess } from "../access/batch-access.decorator";
 import { Roles, UserRole } from "../../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../../auth/guards/roles.guard";
@@ -29,8 +30,8 @@ interface AuthedUser {
 export class CertificateController {
   constructor(private readonly certificates: CertificateService) {}
 
+  @BatchAccess("READ")
   @ApiOperation({ summary: "Get my certificate metadata for a batch" })
-  @UseGuards(JwtAuthGuard)
   @Get(":batchId/my-certificate")
   async myCertificate(
     @Param("batchId") batchId: string,
@@ -39,8 +40,8 @@ export class CertificateController {
     return { certificate: await this.certificates.getForUser(batchId, user.userId) };
   }
 
+  @BatchAccess("READ")
   @ApiOperation({ summary: "Download my certificate as PDF" })
-  @UseGuards(JwtAuthGuard)
   @Get(":batchId/my-certificate/download")
   @Header("Content-Type", "application/pdf")
   async downloadMine(

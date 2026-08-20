@@ -7,7 +7,6 @@ import {
   Patch,
   Post,
   Query,
-  UseGuards,
 } from "@nestjs/common";
 import {
   ApiBearerAuth,
@@ -17,8 +16,7 @@ import {
 } from "@nestjs/swagger";
 
 import { CurrentUser } from "../../auth/decorators/current-user.decorator";
-import { JwtAuthGuard } from "../../auth/guards/jwt-auth.guard";
-import { BatchManagerGuard } from "../access/batch-manager.guard";
+import { BatchAccess } from "../access/batch-access.decorator";
 import {
   CreateBatchAnnouncementDto,
   UpdateBatchAnnouncementDto,
@@ -45,8 +43,8 @@ interface AuthedUser {
 export class BatchEngagementController {
   constructor(private readonly engagement: BatchEngagementService) {}
 
+  @BatchAccess("READ")
   @ApiOperation({ summary: "List batch announcements (enrolled or staff)" })
-  @UseGuards(JwtAuthGuard)
   @Get(":batchId/announcements")
   listAnnouncements(
     @Param("batchId") batchId: string,
@@ -55,8 +53,8 @@ export class BatchEngagementController {
     return this.engagement.listAnnouncements(batchId, user);
   }
 
+  @BatchAccess("MANAGE")
   @ApiOperation({ summary: "Post a batch announcement (admin or teacher)" })
-  @UseGuards(JwtAuthGuard, BatchManagerGuard)
   @Post(":batchId/announcements")
   createAnnouncement(
     @Param("batchId") batchId: string,
@@ -66,8 +64,8 @@ export class BatchEngagementController {
     return this.engagement.createAnnouncement(batchId, dto, user.userId);
   }
 
+  @BatchAccess("MANAGE")
   @ApiOperation({ summary: "Update an announcement (admin or batch teacher)" })
-  @UseGuards(JwtAuthGuard, BatchManagerGuard)
   @Patch(":batchId/announcements/:announcementId")
   updateAnnouncement(
     @Param("batchId") batchId: string,
@@ -77,8 +75,8 @@ export class BatchEngagementController {
     return this.engagement.updateAnnouncement(batchId, announcementId, dto);
   }
 
+  @BatchAccess("MANAGE")
   @ApiOperation({ summary: "Delete an announcement (admin or batch teacher)" })
-  @UseGuards(JwtAuthGuard, BatchManagerGuard)
   @Delete(":batchId/announcements/:announcementId")
   deleteAnnouncement(
     @Param("batchId") batchId: string,
@@ -93,8 +91,8 @@ export class BatchEngagementController {
     enum: ["DPP", "NOTES", "REFERENCE"],
     required: false,
   })
+  @BatchAccess("READ")
   @ApiQuery({ name: "subjectId", required: false })
-  @UseGuards(JwtAuthGuard)
   @Get(":batchId/resources")
   listResources(
     @Param("batchId") batchId: string,
@@ -105,8 +103,8 @@ export class BatchEngagementController {
     return this.engagement.listResources(batchId, user, { type, subjectId });
   }
 
+  @BatchAccess("MANAGE")
   @ApiOperation({ summary: "Upload a PDF resource (admin or batch teacher)" })
-  @UseGuards(JwtAuthGuard, BatchManagerGuard)
   @Post(":batchId/resources")
   createResource(
     @Param("batchId") batchId: string,
@@ -116,8 +114,8 @@ export class BatchEngagementController {
     return this.engagement.createResource(batchId, dto, user.userId);
   }
 
+  @BatchAccess("MANAGE")
   @ApiOperation({ summary: "Update a resource (admin or batch teacher)" })
-  @UseGuards(JwtAuthGuard, BatchManagerGuard)
   @Patch(":batchId/resources/:resourceId")
   updateResource(
     @Param("batchId") batchId: string,
@@ -127,8 +125,8 @@ export class BatchEngagementController {
     return this.engagement.updateResource(batchId, resourceId, dto);
   }
 
+  @BatchAccess("MANAGE")
   @ApiOperation({ summary: "Delete a resource (admin or batch teacher)" })
-  @UseGuards(JwtAuthGuard, BatchManagerGuard)
   @Delete(":batchId/resources/:resourceId")
   deleteResource(
     @Param("batchId") batchId: string,
@@ -137,10 +135,10 @@ export class BatchEngagementController {
     return this.engagement.deleteResource(batchId, resourceId);
   }
 
+  @BatchAccess("READ")
   @ApiOperation({ summary: "List doubts in a batch" })
   @ApiQuery({ name: "mine", required: false, type: Boolean })
   @ApiQuery({ name: "status", required: false })
-  @UseGuards(JwtAuthGuard)
   @Get(":batchId/doubts")
   listDoubts(
     @Param("batchId") batchId: string,
@@ -154,8 +152,8 @@ export class BatchEngagementController {
     });
   }
 
+  @BatchAccess("READ")
   @ApiOperation({ summary: "Post a doubt" })
-  @UseGuards(JwtAuthGuard)
   @Post(":batchId/doubts")
   createDoubt(
     @Param("batchId") batchId: string,
@@ -165,8 +163,8 @@ export class BatchEngagementController {
     return this.engagement.createDoubt(batchId, dto, user);
   }
 
+  @BatchAccess("READ")
   @ApiOperation({ summary: "Get a doubt with replies" })
-  @UseGuards(JwtAuthGuard)
   @Get(":batchId/doubts/:doubtId")
   getDoubt(
     @Param("batchId") batchId: string,
@@ -176,8 +174,8 @@ export class BatchEngagementController {
     return this.engagement.getDoubt(batchId, doubtId, user);
   }
 
+  @BatchAccess("READ")
   @ApiOperation({ summary: "Update a doubt (author or admin)" })
-  @UseGuards(JwtAuthGuard)
   @Patch(":batchId/doubts/:doubtId")
   updateDoubt(
     @Param("batchId") batchId: string,
@@ -188,8 +186,8 @@ export class BatchEngagementController {
     return this.engagement.updateDoubt(batchId, doubtId, dto, user);
   }
 
+  @BatchAccess("READ")
   @ApiOperation({ summary: "Delete a doubt (author or admin)" })
-  @UseGuards(JwtAuthGuard)
   @Delete(":batchId/doubts/:doubtId")
   deleteDoubt(
     @Param("batchId") batchId: string,
@@ -199,8 +197,8 @@ export class BatchEngagementController {
     return this.engagement.deleteDoubt(batchId, doubtId, user);
   }
 
+  @BatchAccess("READ")
   @ApiOperation({ summary: "Reply to a doubt" })
-  @UseGuards(JwtAuthGuard)
   @Post(":batchId/doubts/:doubtId/replies")
   addReply(
     @Param("batchId") batchId: string,
@@ -211,8 +209,8 @@ export class BatchEngagementController {
     return this.engagement.addDoubtReply(batchId, doubtId, dto, user);
   }
 
+  @BatchAccess("READ")
   @ApiOperation({ summary: "Delete a doubt reply" })
-  @UseGuards(JwtAuthGuard)
   @Delete(":batchId/doubts/:doubtId/replies/:replyId")
   deleteReply(
     @Param("batchId") batchId: string,

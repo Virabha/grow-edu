@@ -21,6 +21,7 @@ import { FilterPaymentsDto } from './dto/filter-payments.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Public } from '../auth/decorators/public.decorator';
+import { Authenticated } from '../auth/decorators/authenticated.decorator';
 
 @ApiTags('payments')
 @Controller('payments')
@@ -34,6 +35,7 @@ export class PaymentController {
     return this.paymentService.getQRSettings();
   }
 
+  @Authenticated()
   @ApiOperation({ summary: 'Upload payment proof (screenshot URL)' })
   @ApiResponse({ status: 200, description: 'Proof uploaded; awaiting admin review' })
   @Post(':paymentId/upload-proof')
@@ -53,6 +55,7 @@ export class PaymentController {
     });
   }
 
+  @Authenticated()
   @ApiOperation({ summary: 'Get my payment (learner)' })
   @Get('my/:paymentId')
   @UseGuards(JwtAuthGuard)

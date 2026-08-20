@@ -7,7 +7,6 @@ import {
   Patch,
   Post,
   Query,
-  UseGuards,
 } from "@nestjs/common";
 import {
   ApiBearerAuth,
@@ -17,8 +16,7 @@ import {
 } from "@nestjs/swagger";
 
 import { CurrentUser } from "../../auth/decorators/current-user.decorator";
-import { JwtAuthGuard } from "../../auth/guards/jwt-auth.guard";
-import { BatchManagerGuard } from "../access/batch-manager.guard";
+import { BatchAccess } from "../access/batch-access.decorator";
 import { RecordAttendanceDto } from "../dto/batch-attendance.dto";
 import {
   CreateBatchSessionDto,
@@ -37,9 +35,9 @@ interface AuthedUser {
 export class BatchSchedulingController {
   constructor(private readonly scheduling: BatchSchedulingService) {}
 
+  @BatchAccess("READ")
   @ApiOperation({ summary: "List sessions in a batch (enrolled or staff)" })
   @ApiQuery({ name: "type", enum: ["LIVE", "RECORDING"], required: false })
-  @UseGuards(JwtAuthGuard)
   @Get(":batchId/sessions")
   list(
     @Param("batchId") batchId: string,
@@ -49,8 +47,8 @@ export class BatchSchedulingController {
     return this.scheduling.list(batchId, user, type);
   }
 
+  @BatchAccess("READ")
   @ApiOperation({ summary: "Get a session with a signed playback URL" })
-  @UseGuards(JwtAuthGuard)
   @Get(":batchId/sessions/:sessionId")
   get(
     @Param("batchId") batchId: string,
@@ -60,8 +58,8 @@ export class BatchSchedulingController {
     return this.scheduling.getWithPlayback(batchId, sessionId, user);
   }
 
+  @BatchAccess("MANAGE")
   @ApiOperation({ summary: "Schedule a live class or add a recording" })
-  @UseGuards(JwtAuthGuard, BatchManagerGuard)
   @Post(":batchId/sessions")
   create(
     @Param("batchId") batchId: string,
@@ -70,8 +68,8 @@ export class BatchSchedulingController {
     return this.scheduling.create(batchId, dto);
   }
 
+  @BatchAccess("MANAGE")
   @ApiOperation({ summary: "Update a session (admin or batch teacher)" })
-  @UseGuards(JwtAuthGuard, BatchManagerGuard)
   @Patch(":batchId/sessions/:sessionId")
   update(
     @Param("batchId") batchId: string,
@@ -81,8 +79,8 @@ export class BatchSchedulingController {
     return this.scheduling.update(batchId, sessionId, dto);
   }
 
+  @BatchAccess("MANAGE")
   @ApiOperation({ summary: "Delete a session (admin or batch teacher)" })
-  @UseGuards(JwtAuthGuard, BatchManagerGuard)
   @Delete(":batchId/sessions/:sessionId")
   remove(
     @Param("batchId") batchId: string,
@@ -91,8 +89,8 @@ export class BatchSchedulingController {
     return this.scheduling.remove(batchId, sessionId);
   }
 
+  @BatchAccess("READ")
   @ApiOperation({ summary: "Record attendance for a live session (learner)" })
-  @UseGuards(JwtAuthGuard)
   @Post(":batchId/sessions/:sessionId/attendance")
   recordAttendance(
     @Param("batchId") batchId: string,
@@ -103,8 +101,8 @@ export class BatchSchedulingController {
     return this.scheduling.recordAttendance(batchId, sessionId, user, dto);
   }
 
+  @BatchAccess("MANAGE")
   @ApiOperation({ summary: "List attendance for a session (admin or teacher)" })
-  @UseGuards(JwtAuthGuard, BatchManagerGuard)
   @Get(":batchId/sessions/:sessionId/attendance")
   listAttendance(
     @Param("batchId") batchId: string,

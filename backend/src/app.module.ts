@@ -4,6 +4,9 @@ import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { JwtAuthGuard } from "./auth/guards/jwt-auth.guard";
+import { RolesGuard } from "./auth/guards/roles.guard";
+import { SelfOrAdminGuard } from "./auth/guards/self-or-admin.guard";
+import { BatchAccessGuard } from "./batches/access/batch-access.guard";
 import { InstructorModule } from "./instructor/instructor.module";
 import { AdminResourcesModule } from "./admin-resources/admin-resources.module";
 import { CertificateTemplateModule } from "./certificate-template/certificate-template.module";
@@ -70,6 +73,9 @@ import { NotificationsModule } from "./notifications/notifications.module";
     AppService,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: RolesGuard },
+    { provide: APP_GUARD, useClass: SelfOrAdminGuard },
+    { provide: APP_GUARD, useClass: BatchAccessGuard },
   ],
 })
 export class AppModule {}

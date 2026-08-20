@@ -19,6 +19,7 @@ import {
   ApiQuery,
   ApiConsumes,
 } from "@nestjs/swagger";
+import { Authenticated } from '../auth/decorators/authenticated.decorator';
 
 @ApiTags("files")
 @Controller('files')
@@ -27,6 +28,7 @@ import {
 export class FilesController {
   constructor(private readonly filesService: FilesService) {}
 
+  @Authenticated()
   @Post("storage/upload-url")
   @UseInterceptors(FileInterceptor("file"))
   @ApiOperation({ summary: "Upload a file to storage" })
@@ -47,6 +49,7 @@ export class FilesController {
     );
   }
 
+  @Authenticated()
   @Get("storage/download-url")
   @ApiOperation({ summary: "Get CDN URL for a file" })
   @ApiQuery({ name: "key", type: "string", required: true, description: "Storage key of the file" })

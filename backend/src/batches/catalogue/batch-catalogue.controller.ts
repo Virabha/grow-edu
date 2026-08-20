@@ -13,12 +13,12 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 
 import { CurrentUser } from "../../auth/decorators/current-user.decorator";
+import { BatchAccess } from "../access/batch-access.decorator";
 import { Public } from "../../auth/decorators/public.decorator";
 import { Roles, UserRole } from "../../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../../auth/guards/jwt-auth.guard";
 import { OptionalJwtAuthGuard } from "../../auth/guards/optional-jwt-auth.guard";
 import { RolesGuard } from "../../auth/guards/roles.guard";
-import { BatchManagerGuard } from "../access/batch-manager.guard";
 import {
   AssignInstructorDto,
   CreateLessonDto,
@@ -119,9 +119,9 @@ export class BatchCatalogueController {
     return this.catalogue.listSubjects(batchId);
   }
 
+  @BatchAccess("MANAGE")
   @ApiOperation({ summary: "Create a subject (admin or batch teacher)" })
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, BatchManagerGuard)
   @Post(":batchId/subjects")
   createSubject(
     @Param("batchId") batchId: string,
@@ -130,9 +130,9 @@ export class BatchCatalogueController {
     return this.catalogue.createSubject(batchId, dto);
   }
 
+  @BatchAccess("MANAGE")
   @ApiOperation({ summary: "Update a subject (admin or batch teacher)" })
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, BatchManagerGuard)
   @Patch(":batchId/subjects/:subjectId")
   updateSubject(
     @Param("batchId") batchId: string,
@@ -142,9 +142,9 @@ export class BatchCatalogueController {
     return this.catalogue.updateSubject(batchId, subjectId, dto);
   }
 
+  @BatchAccess("MANAGE")
   @ApiOperation({ summary: "Delete a subject (admin or batch teacher)" })
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, BatchManagerGuard)
   @Delete(":batchId/subjects/:subjectId")
   deleteSubject(
     @Param("batchId") batchId: string,
@@ -160,9 +160,9 @@ export class BatchCatalogueController {
     return this.catalogue.previewContent(batchId);
   }
 
+  @BatchAccess("READ")
   @ApiOperation({ summary: "Subjects with their lessons (enrolled or staff)" })
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
   @Get(":batchId/content")
   listContent(
     @Param("batchId") batchId: string,
@@ -171,9 +171,9 @@ export class BatchCatalogueController {
     return this.catalogue.listContent(batchId, user);
   }
 
+  @BatchAccess("MANAGE")
   @ApiOperation({ summary: "Add a lesson to a subject (admin or teacher)" })
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, BatchManagerGuard)
   @Post(":batchId/lessons")
   createLesson(
     @Param("batchId") batchId: string,
@@ -183,9 +183,9 @@ export class BatchCatalogueController {
     return this.catalogue.createLesson(batchId, dto, user);
   }
 
+  @BatchAccess("MANAGE")
   @ApiOperation({ summary: "Publish a lesson to students (admin)" })
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, BatchManagerGuard)
   @Post(":batchId/lessons/:lessonId/approve")
   approveLesson(
     @Param("batchId") batchId: string,
@@ -195,9 +195,9 @@ export class BatchCatalogueController {
     return this.catalogue.approveLesson(batchId, lessonId, user);
   }
 
+  @BatchAccess("MANAGE")
   @ApiOperation({ summary: "Reorder lessons within a batch (admin or teacher)" })
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, BatchManagerGuard)
   @Put(":batchId/lessons/reorder")
   reorderLessons(
     @Param("batchId") batchId: string,
@@ -206,9 +206,9 @@ export class BatchCatalogueController {
     return this.catalogue.reorderLessons(batchId, dto);
   }
 
+  @BatchAccess("READ")
   @ApiOperation({ summary: "Read one lesson (enrolled, staff, or free preview)" })
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
   @Get(":batchId/lessons/:lessonId")
   getLesson(
     @Param("lessonId") lessonId: string,
@@ -217,9 +217,9 @@ export class BatchCatalogueController {
     return this.catalogue.getLesson(lessonId, user);
   }
 
+  @BatchAccess("MANAGE")
   @ApiOperation({ summary: "Update a lesson (admin or batch teacher)" })
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, BatchManagerGuard)
   @Patch(":batchId/lessons/:lessonId")
   updateLesson(
     @Param("batchId") batchId: string,
@@ -230,9 +230,9 @@ export class BatchCatalogueController {
     return this.catalogue.updateLesson(batchId, lessonId, dto, user);
   }
 
+  @BatchAccess("MANAGE")
   @ApiOperation({ summary: "Delete a lesson (admin or batch teacher)" })
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, BatchManagerGuard)
   @Delete(":batchId/lessons/:lessonId")
   deleteLesson(
     @Param("batchId") batchId: string,

@@ -7,12 +7,14 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ClaimSeatDto } from './dto/claim-seat.dto';
 import { RedeemJoinLinkDto } from './dto/redeem-join-link.dto';
 import { SeatsService } from './seats.service';
+import { Authenticated } from '../auth/decorators/authenticated.decorator';
 
 @ApiTags('corporate')
 @Controller('corporate/join')
 export class JoinController {
   constructor(private readonly seats: SeatsService) {}
 
+  @Authenticated()
   @ApiOperation({ summary: 'Claim a contract seat with a join link' })
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)

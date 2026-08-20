@@ -26,6 +26,7 @@ import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
 import { Roles, UserRole } from "../auth/decorators/roles.decorator";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
+import { Authenticated } from '../auth/decorators/authenticated.decorator';
 
 interface AuthedUser {
   userId: string;
@@ -111,6 +112,7 @@ export class AssignmentsController {
     );
   }
 
+  @Authenticated()
   @ApiOperation({ summary: "Submit an assignment (enrolled learner)" })
   @Post(":assignmentId/submissions")
   async submit(

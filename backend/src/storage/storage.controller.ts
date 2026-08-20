@@ -18,6 +18,7 @@ import {
   ApiResponse,
   ApiTags,
 } from "@nestjs/swagger";
+import { Authenticated } from '../auth/decorators/authenticated.decorator';
 
 interface MulterFile {
   fieldname: string;
@@ -33,6 +34,7 @@ interface MulterFile {
 export class StorageController {
   constructor(private readonly storageService: StorageService) {}
 
+  @Authenticated()
   @ApiOperation({ summary: "Get upload key for storage" })
   @ApiResponse({ status: 200, description: "Upload key generated" })
   @UseGuards(JwtAuthGuard)
@@ -67,6 +69,7 @@ export class StorageController {
     };
   }
 
+  @Authenticated()
   @Post("upload")
   @UseInterceptors(FileInterceptor("file"))
   @UseGuards(JwtAuthGuard)

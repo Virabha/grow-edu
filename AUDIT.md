@@ -175,7 +175,7 @@ No record of who suspended whom, approved which payment, edited what, or imperso
 
 You selected ~190 features. These are the subsystems with **zero** implementation today — not partial, not broken, absent:
 
-**Infrastructure:** job queue and scheduler (no BullMQ, no Redis, no cron — eight-plus selected features are impossible without it) · caching layer · error tracking · structured logging · uptime monitoring · tested backups · CI pipeline · staging environment · audit log
+**Infrastructure:** job queue and scheduler (no BullMQ, no Redis, no cron — eight-plus selected features are impossible without it) · caching layer · structured logging · uptime monitoring · tested backups · CI pipeline · staging environment · audit log
 
 **Assessment:** central question bank with topic + difficulty tagging · bulk question import · auto-generated tests · question groups (passage sets) · subjective/image answers · rubric grading · bulk grading queue · regrade workflow · exam UX (palette, save-resume, sectional timers) · results analysis · weak-topic mapping · error notebook · adaptive difficulty · spaced repetition
 
@@ -208,11 +208,10 @@ Phase 1 ends at your mid-September target. Everything after is sequenced by depe
 5. Fix `batches.teacherIds` → join table with per-instructor roles
 6. Fix `payments`: add `companyId`, add real `batchId` column, drop the metadata blob
 7. **Redis + BullMQ** — the foundation eight later features sit on
-8. **Sentry** — roughly an hour, highest operational value on the list
-9. Rewrite `companies` → contracts + seat pools + roster
-10. Join link: seat cap, expiry, admin revoke/regenerate
-11. Enforce the device limit
-12. Fix S2; consolidate authorization into declarative guards (S1)
+8. Rewrite `companies` → contracts + seat pools + roster
+9. Join link: seat cap, expiry, admin revoke/regenerate
+10. Enforce the device limit
+11. Fix S2; consolidate authorization into declarative guards (S1)
 13. CI pipeline; tests on money + access paths
 
 **Not in phase 1:** most student-visible features. If that is not acceptable, say so and I will rebalance toward demo-visible work — at the cost of the foundation.

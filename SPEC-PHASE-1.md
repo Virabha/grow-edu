@@ -89,47 +89,46 @@ The owner can, from this phase onward, actually see when something breaks.
 ### Owner — trust and control
 
 20. As the platform owner, I want a limit on how many devices one student account can use, so that a single login cannot be shared across a campus and undercut the seats a college paid for.
-21. As the platform owner, I want to know when the platform throws an error, with the stack trace and the affected user, so that I find out from a monitor rather than from a student's email.
-22. As the platform owner, I want authorization to be visible at each endpoint rather than buried in a service, so that I can tell whether something is protected without reading the whole call chain.
+21. As the platform owner, I want authorization to be visible at each endpoint rather than buried in a service, so that I can tell whether something is protected without reading the whole call chain.
 
 ### Instructor
 
-23. As an instructor, I want to be assigned to a batch by an explicit relationship, so that the system knows which batches are mine without guessing.
-24. As an instructor, I want to hold a defined role on a batch, so that a lead instructor, a subject instructor and a teaching assistant are distinguishable.
-25. As an instructor, I want to see only the batches I am assigned to, so that my workspace reflects my actual responsibilities.
-26. As an instructor, I want to author content in draft, so that nothing reaches a paying student before the owner has approved it.
-27. As an instructor, I want to be prevented from modifying another instructor's content, so that a mistake or a bad actor cannot damage a colleague's batch.
+22. As an instructor, I want to be assigned to a batch by an explicit relationship, so that the system knows which batches are mine without guessing.
+23. As an instructor, I want to hold a defined role on a batch, so that a lead instructor, a subject instructor and a teaching assistant are distinguishable.
+24. As an instructor, I want to see only the batches I am assigned to, so that my workspace reflects my actual responsibilities.
+25. As an instructor, I want to author content in draft, so that nothing reaches a paying student before the owner has approved it.
+26. As an instructor, I want to be prevented from modifying another instructor's content, so that a mistake or a bad actor cannot damage a colleague's batch.
 
 ### Corporate admin
 
-28. As a corporate admin, I want to see my organisation's contract, so that I know what we bought and when it ends.
-29. As a corporate admin, I want to see how many seats are claimed and how many remain, so that I can manage distribution.
-30. As a corporate admin, I want to see the list of my students who have joined, so that I can chase the ones who have not.
-31. As a corporate admin, I want to see only my own organisation's students, so that another customer's roster is never visible to me.
-32. As a corporate admin, I want to distribute a join link to my students, so that onboarding does not require me to collect and submit their details.
+27. As a corporate admin, I want to see my organisation's contract, so that I know what we bought and when it ends.
+28. As a corporate admin, I want to see how many seats are claimed and how many remain, so that I can manage distribution.
+29. As a corporate admin, I want to see the list of my students who have joined, so that I can chase the ones who have not.
+30. As a corporate admin, I want to see only my own organisation's students, so that another customer's roster is never visible to me.
+31. As a corporate admin, I want to distribute a join link to my students, so that onboarding does not require me to collect and submit their details.
 
 ### Student
 
-33. As a student, I want to redeem a join link and land in the batch my college bought, so that I can start learning without a purchase step.
-34. As a student, I want to be told clearly when a join link is full, expired or revoked, so that I know to contact my college rather than assuming the platform is broken.
-35. As a student, I want one place that lists everything I have access to, so that I do not have to check two separate pages.
-36. As a student, I want my access to a completed batch to continue, so that I keep the recordings and results I paid for.
-37. As a student, I want to see which devices are signed in to my account and sign one out, so that hitting the device limit does not require a support request.
-38. As a student, I want to be told why a sign-in was refused when I exceed the device limit, so that I can resolve it myself.
+32. As a student, I want to redeem a join link and land in the batch my college bought, so that I can start learning without a purchase step.
+33. As a student, I want to be told clearly when a join link is full, expired or revoked, so that I know to contact my college rather than assuming the platform is broken.
+34. As a student, I want one place that lists everything I have access to, so that I do not have to check two separate pages.
+35. As a student, I want my access to a completed batch to continue, so that I keep the recordings and results I paid for.
+36. As a student, I want to see which devices are signed in to my account and sign one out, so that hitting the device limit does not require a support request.
+37. As a student, I want to be told why a sign-in was refused when I exceed the device limit, so that I can resolve it myself.
 
 ### Purchasing and payment
 
-39. As a student, I want to buy a batch and upload my payment proof, so that I can pay by the method I actually use.
-40. As the platform owner, I want to see pending payment proofs in one queue with the amount, the student and the product, so that approving payments is a short daily task rather than an inbox search.
-41. As the platform owner, I want an approved payment to grant access automatically, so that a student is not left waiting after I have confirmed their money.
-42. As the platform owner, I want every payment to record which batch and which corporate contract it relates to, so that I can answer "who paid for this batch" without reconstructing it from unstructured data.
+38. As a student, I want to buy a batch and upload my payment proof, so that I can pay by the method I actually use.
+39. As the platform owner, I want to see pending payment proofs in one queue with the amount, the student and the product, so that approving payments is a short daily task rather than an inbox search.
+40. As the platform owner, I want an approved payment to grant access automatically, so that a student is not left waiting after I have confirmed their money.
+41. As the platform owner, I want every payment to record which batch and which corporate contract it relates to, so that I can answer "who paid for this batch" without reconstructing it from unstructured data.
 
 ### Platform readiness
 
-43. As the platform owner, I want a job queue in place, so that video encoding, scheduled reports, expiry warnings and lifecycle transitions can be built in later phases without re-architecting.
-44. As the platform owner, I want the database prepared for multiple organisations, so that choosing to go multi-tenant later does not mean a migration against live college data.
-45. As a developer, I want automated checks to run before anything merges, so that a large volume of new code does not silently degrade the codebase.
-46. As a developer, I want tests that survive a rewrite of the code underneath them, so that collapsing two implementations into one does not mean rewriting the test suite at the same time.
+42. As the platform owner, I want a job queue in place, so that video encoding, scheduled reports, expiry warnings and lifecycle transitions can be built in later phases without re-architecting.
+43. As the platform owner, I want the database prepared for multiple organisations, so that choosing to go multi-tenant later does not mean a migration against live college data.
+44. As a developer, I want automated checks to run before anything merges, so that a large volume of new code does not silently degrade the codebase.
+45. As a developer, I want tests that survive a rewrite of the code underneath them, so that collapsing two implementations into one does not mean rewriting the test suite at the same time.
 
 ## Implementation Decisions
 
@@ -203,7 +202,6 @@ The owner can, from this phase onward, actually see when something breaks.
 ### Infrastructure
 
 - **A Redis-backed job queue and scheduler** is introduced. It is not used heavily in this phase — it exists because eight or more features committed in later phases are impossible without it, and retrofitting a queue after those features are half-built is the expensive path.
-- **Error tracking** is wired into both the API and both frontends, capturing stack traces with user and request context.
 - Continuous integration runs type checking, linting and the test suite before merge.
 
 ### Deletions

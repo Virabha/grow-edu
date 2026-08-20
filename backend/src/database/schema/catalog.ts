@@ -7,12 +7,10 @@ import {
   integer,
   jsonb,
   index,
-  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import {
   courseStatusEnum,
   courseReviewStatusEnum,
-  studentReviewStatusEnum,
   courseLevelEnum,
   sectionPriceTypeEnum,
   lessonTypeEnum,
@@ -40,7 +38,7 @@ export const categories = pgTable(
     slugIdx: index("categories_slug_idx").on(table.slug),
     isActiveIdx: index("categories_is_active_idx").on(table.isActive),
     parentIdx: index("categories_parent_idx").on(table.parentCategoryId),
-  })
+  }),
 );
 
 export const courses = pgTable(
@@ -81,8 +79,11 @@ export const courses = pgTable(
     categoryIdx: index("courses_category_idx").on(table.categoryId),
     instructorIdx: index("courses_instructor_idx").on(table.instructorId),
     statusIdx: index("courses_status_idx").on(table.status),
-    statusReviewIdx: index("courses_status_review_idx").on(table.status, table.reviewStatus),
-  })
+    statusReviewIdx: index("courses_status_review_idx").on(
+      table.status,
+      table.reviewStatus,
+    ),
+  }),
 );
 
 export const courseSections = pgTable(
@@ -103,7 +104,7 @@ export const courseSections = pgTable(
   },
   (table) => ({
     courseIdx: index("course_sections_course_idx").on(table.courseId),
-  })
+  }),
 );
 
 export const lessons = pgTable(
@@ -136,7 +137,7 @@ export const lessons = pgTable(
   },
   (table) => ({
     sectionIdx: index("lessons_section_idx").on(table.sectionId),
-  })
+  }),
 );
 
 export const quizQuestions = pgTable(
@@ -155,7 +156,7 @@ export const quizQuestions = pgTable(
   },
   (table) => ({
     lessonIdx: index("quiz_questions_lesson_idx").on(table.lessonId),
-  })
+  }),
 );
 
 export const courseAnnouncements = pgTable(
@@ -175,64 +176,12 @@ export const courseAnnouncements = pgTable(
   },
   (table) => ({
     courseIdx: index("course_announcements_course_idx").on(table.courseId),
-    instructorIdx: index("course_announcements_instructor_idx").on(table.instructorId),
+    instructorIdx: index("course_announcements_instructor_idx").on(
+      table.instructorId,
+    ),
     courseCreatedIdx: index("course_announcements_course_created_idx").on(
       table.courseId,
       table.createdAt,
-    ),
-  }),
-);
-
-/** Languages a course can be taught in (the /course-languages screen).
- *  Separate from siteLanguages: a course may be taught in a language the site
- *  UI is not translated into. */
-export const courseLanguages = pgTable(
-  "course_languages",
-  {
-    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
-    name: text("name").notNull(),
-    code: text("code").notNull().unique(),
-    displayOrder: integer("display_order").notNull().default(0),
-    isActive: boolean("is_active").notNull().default(true),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
-  },
-  (table) => ({
-    codeIdx: index("course_languages_code_idx").on(table.code),
-  }),
-);
-
-export const courseReviews = pgTable(
-  "course_reviews",
-  {
-    reviewId: text("review_id")
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
-    courseId: text("course_id").notNull(),
-    userId: text("user_id").notNull(),
-    rating: integer("rating").notNull(),
-    title: text("title"),
-    body: text("body").notNull(),
-    status: studentReviewStatusEnum("status").notNull().default("PENDING"),
-    moderatedBy: text("moderated_by"),
-    moderatedAt: timestamp("moderated_at"),
-    instructorReply: text("instructor_reply"),
-    instructorRepliedAt: timestamp("instructor_replied_at"),
-    isDeleted: boolean("is_deleted").notNull().default(false),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
-  },
-  (table) => ({
-    courseStatusIdx: index("course_reviews_course_status_idx").on(
-      table.courseId,
-      table.status,
-      table.createdAt,
-    ),
-    userIdx: index("course_reviews_user_idx").on(table.userId, table.createdAt),
-    statusIdx: index("course_reviews_status_idx").on(table.status, table.createdAt),
-    onePerUserCourse: uniqueIndex("course_reviews_course_user_key").on(
-      table.courseId,
-      table.userId,
     ),
   }),
 );

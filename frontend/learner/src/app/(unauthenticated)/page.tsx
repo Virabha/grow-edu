@@ -9,7 +9,6 @@ import { InstructorsSection } from "@/components/landing/instructors-section";
 import { TestimonialsSection } from "@/components/landing/testimonials-section";
 import { WorkshopCta } from "@/components/landing/workshop-cta";
 import { FaqSection } from "@/components/landing/faq-section";
-import { SubscribeSection } from "@/components/landing/subscribe-section";
 
 export const metadata: Metadata = {
   title: "grotutor — Build the career you've always wanted",
@@ -38,7 +37,6 @@ export default function HomePage() {
       <TestimonialsSection />
       <WorkshopCta />
       <FaqSection />
-      <SubscribeSection />
     </main>
   );
 }

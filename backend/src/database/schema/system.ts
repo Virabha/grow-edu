@@ -32,44 +32,6 @@ export const notifications = pgTable(
   })
 );
 
-export const contactSubmissions = pgTable(
-  "contact_submissions",
-  {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
-    name: text("name").notNull(),
-    email: text("email").notNull(),
-    mobile: text("mobile"),
-    subject: text("subject").notNull(),
-    courseInterested: text("course_interested"),
-    role: text("role"),
-    message: text("message").notNull(),
-    documentUrl: text("document_url"),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-  },
-  (table) => ({
-    emailIdx: index("contact_submissions_email_idx").on(table.email),
-    createdAtIdx: index("contact_submissions_created_at_idx").on(table.createdAt),
-  })
-);
-
-export const newsletterSubscribers = pgTable(
-  "newsletter_subscribers",
-  {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
-    email: text("email").notNull().unique(),
-    subscribedAt: timestamp("subscribed_at").notNull().defaultNow(),
-    isActive: boolean("is_active").notNull().default(true),
-  },
-  (table) => ({
-    emailIdx: index("newsletter_subscribers_email_idx").on(table.email),
-    isActiveIdx: index("newsletter_subscribers_is_active_idx").on(table.isActive),
-  })
-);
-
 export const videoEncodingJobs = pgTable(
   "video_encoding_jobs",
   {

@@ -3,7 +3,7 @@ import { users, emailTokens, instructorProfiles } from "./users";
 import { companies } from "./companies";
 import { categories, courses, courseSections, lessons, quizQuestions } from "./catalog";
 import { enrollments, courseProgress, lessonProgress, sectionAccess } from "./learning";
-import { payments, coupons, couponCategories, couponCourses, couponUsages } from "./commerce";
+import { payments } from "./commerce";
 import {
   batches,
   batchSubjects,
@@ -19,7 +19,7 @@ import {
   batchQuizAttempts,
   batchCertificates,
 } from "./batches";
-import { books, bookPurchases, services, serviceApplications } from "./store";
+import { services, serviceApplications } from "./store";
 import { notifications, videoEncodingJobs } from "./system";
 
 // Relations
@@ -34,7 +34,6 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   progress: many(courseProgress),
   sectionAccess: many(sectionAccess),
   emailTokens: many(emailTokens),
-  couponUsages: many(couponUsages),
   instructorProfile: one(instructorProfiles),
 }));
 
@@ -65,7 +64,6 @@ export const categoriesRelations = relations(categories, ({ one, many }) => ({
   }),
   children: many(categories, { relationName: "categoryChildren" }),
   courses: many(courses),
-  couponCategories: many(couponCategories),
 }));
 
 export const coursesRelations = relations(courses, ({ one, many }) => ({
@@ -83,7 +81,6 @@ export const coursesRelations = relations(courses, ({ one, many }) => ({
   sectionAccess: many(sectionAccess),
   payments: many(payments),
   encodingJobs: many(videoEncodingJobs),
-  couponCourses: many(couponCourses),
 }));
 
 export const courseSectionsRelations = relations(
@@ -177,10 +174,6 @@ export const paymentsRelations = relations(payments, ({ one }) => ({
     fields: [payments.sectionId],
     references: [courseSections.sectionId],
   }),
-  coupon: one(coupons, {
-    fields: [payments.couponId],
-    references: [coupons.couponId],
-  }),
 }));
 
 export const sectionAccessRelations = relations(sectionAccess, ({ one }) => ({
@@ -210,77 +203,6 @@ export const videoEncodingJobsRelations = relations(videoEncodingJobs, ({ one })
   course: one(courses, {
     fields: [videoEncodingJobs.courseId],
     references: [courses.courseId],
-  }),
-}));
-
-// =============================================
-// COUPON SYSTEM RELATIONS
-// =============================================
-
-export const couponsRelations = relations(coupons, ({ many }) => ({
-  categories: many(couponCategories),
-  courses: many(couponCourses),
-  usages: many(couponUsages),
-  payments: many(payments),
-}));
-
-export const couponCategoriesRelations = relations(couponCategories, ({ one }) => ({
-  coupon: one(coupons, {
-    fields: [couponCategories.couponId],
-    references: [coupons.couponId],
-  }),
-  category: one(categories, {
-    fields: [couponCategories.categoryId],
-    references: [categories.categoryId],
-  }),
-}));
-
-export const couponCoursesRelations = relations(couponCourses, ({ one }) => ({
-  coupon: one(coupons, {
-    fields: [couponCourses.couponId],
-    references: [coupons.couponId],
-  }),
-  course: one(courses, {
-    fields: [couponCourses.courseId],
-    references: [courses.courseId],
-  }),
-}));
-
-export const couponUsagesRelations = relations(couponUsages, ({ one }) => ({
-  coupon: one(coupons, {
-    fields: [couponUsages.couponId],
-    references: [coupons.couponId],
-  }),
-  user: one(users, {
-    fields: [couponUsages.userId],
-    references: [users.userId],
-  }),
-  payment: one(payments, {
-    fields: [couponUsages.paymentId],
-    references: [payments.paymentId],
-  }),
-  course: one(courses, {
-    fields: [couponUsages.courseId],
-    references: [courses.courseId],
-  }),
-}));
-
-export const booksRelations = relations(books, ({ one, many }) => ({
-  category: one(categories, {
-    fields: [books.categoryId],
-    references: [categories.categoryId],
-  }),
-  purchases: many(bookPurchases),
-}));
-
-export const bookPurchasesRelations = relations(bookPurchases, ({ one }) => ({
-  user: one(users, {
-    fields: [bookPurchases.userId],
-    references: [users.userId],
-  }),
-  book: one(books, {
-    fields: [bookPurchases.bookId],
-    references: [books.bookId],
   }),
 }));
 

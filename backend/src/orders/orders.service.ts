@@ -44,7 +44,6 @@ export interface OrderDto {
   items: OrderItem[];
   subtotal: number;
   discount: number;
-  couponCode: string | null;
   tax: number;
   total: number;
   currency: string;
@@ -116,7 +115,6 @@ type PaymentCore = {
   originalAmount: string | null;
   discountAmount: string | null;
   taxAmount: string | null;
-  couponId: string | null;
   currency: string;
   gateway: 'RAZORPAY' | 'MANUAL_QR' | 'PHONEPE' | 'FREE';
   status: 'PENDING' | 'PROOF_UPLOADED' | 'COMPLETED' | 'FAILED' | 'REJECTED' | 'REFUNDED';
@@ -260,18 +258,6 @@ export class OrdersService {
     return itemMap;
   }
 
-  private async resolveCouponCodes(couponIds: string[]): Promise<Map<string, string>> {
-    if (couponIds.length === 0) return new Map();
-    const rows = await this.db
-      .select({
-        couponId: schema.coupons.couponId,
-        couponCode: schema.coupons.couponCode,
-      })
-      .from(schema.coupons)
-      .where(inArray(schema.coupons.couponId, couponIds));
-    return new Map(rows.map((r) => [r.couponId, r.couponCode]));
-  }
-
   private async resolveUserNames(userIds: string[]): Promise<Map<string, string>> {
     if (userIds.length === 0) return new Map();
     const unique = [...new Set(userIds)];
@@ -303,7 +289,6 @@ export class OrdersService {
     item: OrderItem | undefined,
     userEmail: string,
     userName: string,
-    couponCode: string | null,
     adminNameMap: Map<string, string>,
   ): OrderDto {
     const reviewedBy = p.reviewedBy ?? null;
@@ -314,7 +299,6 @@ export class OrdersService {
       items: item ? [item] : [],
       subtotal: parseFloat(p.originalAmount ?? p.amount),
       discount: parseFloat(p.discountAmount ?? '0'),
-      couponCode,
       tax: parseFloat(p.taxAmount ?? '0'),
       total: parseFloat(p.amount),
       currency: p.currency,
@@ -375,7 +359,6 @@ export class OrdersService {
           originalAmount: schema.payments.originalAmount,
           discountAmount: schema.payments.discountAmount,
           taxAmount: schema.payments.taxAmount,
-          couponId: schema.payments.couponId,
           currency: schema.payments.currency,
           gateway: schema.payments.gateway,
           status: schema.payments.status,
@@ -428,15 +411,8 @@ export class OrdersService {
       userEmail,
     );
 
-    const [itemMap, couponCodeMap, adminNameMap] = await Promise.all([
+    const [itemMap, adminNameMap] = await Promise.all([
       this.resolveItemMap(paymentRows),
-      this.resolveCouponCodes(
-        [
-          ...new Set(
-            paymentRows.map((p) => p.couponId).filter((id): id is string => id !== null),
-          ),
-        ],
-      ),
       this.resolveUserNames(this.collectAdminIds(paymentRows)),
     ]);
 
@@ -446,7 +422,6 @@ export class OrdersService {
         itemMap.get(p.paymentId),
         userEmail,
         userName,
-        p.couponId ? (couponCodeMap.get(p.couponId) ?? null) : null,
         adminNameMap,
       ),
     );
@@ -482,11 +457,8 @@ export class OrdersService {
       userEmail,
     );
 
-    const [itemMap, couponCodeMap, adminNameMap] = await Promise.all([
+    const [itemMap, adminNameMap] = await Promise.all([
       this.resolveItemMap([payment]),
-      payment.couponId
-        ? this.resolveCouponCodes([payment.couponId])
-        : Promise.resolve(new Map<string, string>()),
       this.resolveUserNames(this.collectAdminIds([payment])),
     ]);
 
@@ -495,7 +467,6 @@ export class OrdersService {
       itemMap.get(payment.paymentId),
       userEmail,
       userName,
-      payment.couponId ? (couponCodeMap.get(payment.couponId) ?? null) : null,
       adminNameMap,
     );
   }
@@ -546,19 +517,13 @@ export class OrdersService {
       userEmail,
     );
 
-    const [itemMap, couponCodeMap] = await Promise.all([
-      this.resolveItemMap([updated]),
-      updated.couponId
-        ? this.resolveCouponCodes([updated.couponId])
-        : Promise.resolve(new Map<string, string>()),
-    ]);
+    const itemMap = await this.resolveItemMap([updated]);
 
     return this.toOrderDto(
       updated,
       itemMap.get(updated.paymentId),
       userEmail,
       userName,
-      updated.couponId ? (couponCodeMap.get(updated.couponId) ?? null) : null,
       new Map(),
     );
   }
@@ -598,7 +563,6 @@ export class OrdersService {
           originalAmount: schema.payments.originalAmount,
           discountAmount: schema.payments.discountAmount,
           taxAmount: schema.payments.taxAmount,
-          couponId: schema.payments.couponId,
           currency: schema.payments.currency,
           gateway: schema.payments.gateway,
           status: schema.payments.status,
@@ -631,15 +595,8 @@ export class OrdersService {
 
     const totalCount = countRows[0]?.total ?? 0;
 
-    const [itemMap, couponCodeMap, adminNameMap] = await Promise.all([
+    const [itemMap, adminNameMap] = await Promise.all([
       this.resolveItemMap(paymentRows),
-      this.resolveCouponCodes(
-        [
-          ...new Set(
-            paymentRows.map((p) => p.couponId).filter((id): id is string => id !== null),
-          ),
-        ],
-      ),
       this.resolveUserNames(this.collectAdminIds(paymentRows)),
     ]);
 
@@ -650,7 +607,6 @@ export class OrdersService {
         itemMap.get(p.paymentId),
         p.userEmail,
         userName,
-        p.couponId ? (couponCodeMap.get(p.couponId) ?? null) : null,
         adminNameMap,
       );
     });
@@ -673,7 +629,6 @@ export class OrdersService {
         originalAmount: schema.payments.originalAmount,
         discountAmount: schema.payments.discountAmount,
         taxAmount: schema.payments.taxAmount,
-        couponId: schema.payments.couponId,
         currency: schema.payments.currency,
         gateway: schema.payments.gateway,
         status: schema.payments.status,
@@ -697,11 +652,8 @@ export class OrdersService {
 
     if (!row) throw new NotFoundException('Order not found.');
 
-    const [itemMap, couponCodeMap, adminNameMap] = await Promise.all([
+    const [itemMap, adminNameMap] = await Promise.all([
       this.resolveItemMap([row]),
-      row.couponId
-        ? this.resolveCouponCodes([row.couponId])
-        : Promise.resolve(new Map<string, string>()),
       this.resolveUserNames(this.collectAdminIds([row])),
     ]);
 
@@ -711,7 +663,6 @@ export class OrdersService {
       itemMap.get(row.paymentId),
       row.userEmail,
       userName,
-      row.couponId ? (couponCodeMap.get(row.couponId) ?? null) : null,
       adminNameMap,
     );
   }

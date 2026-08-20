@@ -57,7 +57,6 @@ export interface OrderDto {
   items: never[]; // [Q] no line-item breakdown table; defaults to []
   subtotal: number;
   discount: number;
-  couponCode: string | null; // [Q] would need join to couponUsages; defaults to null
   tax: number; // [Q] no tax field in payments schema; defaults to 0
   total: number;
   currency: string;
@@ -501,7 +500,6 @@ export class DashboardService {
         items: [], // [Q] no per-item breakdown table; would need course/section join per payment
         subtotal: Number(row.originalAmount ?? row.amount),
         discount: Number(row.discountAmount ?? '0'),
-        couponCode: null, // [Q] requires join to couponUsages then coupons
         tax: 0, // [Q] no tax column in payments schema
         total: Number(row.amount),
         currency: row.currency,

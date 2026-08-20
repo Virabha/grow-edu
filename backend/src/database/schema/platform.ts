@@ -8,39 +8,6 @@ import {
 } from "drizzle-orm/pg-core";
 import { badgeCriteriaEnum } from "./enums";
 
-export const locations = pgTable(
-  "locations",
-  {
-    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
-    name: text("name").notNull(),
-    code: text("code").notNull().unique(),
-    dialCode: text("dial_code"),
-    currency: text("currency"),
-    isActive: boolean("is_active").notNull().default(true),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
-  },
-  (table) => ({
-    codeIdx: index("locations_code_idx").on(table.code),
-  }),
-);
-
-/** UI languages offered to visitors (the /languages screen). */
-export const siteLanguages = pgTable(
-  "site_languages",
-  {
-    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
-    name: text("name").notNull(),
-    code: text("code").notNull().unique(),
-    isActive: boolean("is_active").notNull().default(true),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
-  },
-  (table) => ({
-    codeIdx: index("site_languages_code_idx").on(table.code),
-  }),
-);
-
 export const instructorBadges = pgTable(
   "instructor_badges",
   {

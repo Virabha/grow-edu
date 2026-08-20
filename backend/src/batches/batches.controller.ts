@@ -116,12 +116,9 @@ export class BatchesController {
   @Post(":batchId/checkout")
   async startCheckout(
     @Param("batchId") batchId: string,
-    @Body() body: { couponCode?: string } | undefined,
     @CurrentUser() user: AuthedUser
   ) {
-    return this.batchesService.startBatchCheckout(batchId, user.userId, {
-      couponCode: body?.couponCode,
-    });
+    return this.batchesService.startBatchCheckout(batchId, user.userId);
   }
 
   @ApiOperation({ summary: "Batch analytics (admin or batch teacher)" })

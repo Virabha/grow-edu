@@ -13,7 +13,6 @@ import {
   BookOpen,
   Receipt,
   Settings,
-  Star,
   Target,
   ChevronDown,
 } from "lucide-react";
@@ -107,7 +106,6 @@ export function Header() {
   // which is already at its limit, and are appended to the mobile sheet.
   const ACCOUNT_LINKS = [
     { href: "/orders", label: "Order history", icon: Receipt },
-    { href: "/reviews", label: "Reviews", icon: Star },
     { href: "/quizzes", label: "Quiz attempts", icon: Target },
   ];
 

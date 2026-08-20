@@ -64,7 +64,6 @@ export class PaymentController {
       itemType: dto.itemType,
       courseId: dto.courseId,
       sectionId: dto.sectionId,
-      couponCode: dto.couponCode,
       idempotencyKey: idempotencyKey || undefined,
     });
   }

@@ -7,19 +7,14 @@ import { JwtAuthGuard } from "./auth/guards/jwt-auth.guard";
 import { InstructorModule } from "./instructor/instructor.module";
 import { DashboardModule } from "./dashboard/dashboard.module";
 import { AdminResourcesModule } from "./admin-resources/admin-resources.module";
-import { LookupsModule } from "./lookups/lookups.module";
 import { CertificateTemplateModule } from "./certificate-template/certificate-template.module";
 import { BlogModule } from "./blog/blog.module";
-import { ReviewsModule } from "./reviews/reviews.module";
 import { QuizAttemptsModule } from "./quiz-attempts/quiz-attempts.module";
 import { OrdersModule } from "./orders/orders.module";
 import { DeviceRevocationModule } from "./auth/device-revocation.module";
 import { AssignmentsModule } from "./assignments/assignments.module";
 import { LiveSessionsModule } from "./live-sessions/live-sessions.module";
 import { SettingsModule } from "./settings/settings.module";
-import { WithdrawMethodsModule } from "./withdraw-methods/withdraw-methods.module";
-import { SubscribersModule } from "./subscribers/subscribers.module";
-import { PayoutsModule } from "./payouts/payouts.module";
 import { AnnouncementsModule } from "./announcements/announcements.module";
 import { AppConfigModule } from "./config/config.module";
 import { DatabaseModule } from "./database/database.module";
@@ -39,13 +34,8 @@ import { FilesModule } from "./files/files.module";
 import { VideoEncodingModule } from "./video-encoding/video-encoding.module";
 import { CdnModule } from "./cdn/cdn.module";
 import { EmailModule } from "./email/email.module";
-import { CouponsModule } from "./coupons/coupons.module";
 import { CmsModule } from "./cms/cms.module";
-import { TeacherApplicationsModule } from "./teacher-applications/teacher-applications.module";
-import { ContactModule } from "./contact/contact.module";
-import { SubscribeModule } from "./subscribe/subscribe.module";
 import { AppCacheModule } from "./cache/cache.module";
-import { BooksModule } from "./books/books.module";
 import { BatchesModule } from "./batches/batches.module";
 import { NotificationsModule } from "./notifications/notifications.module";
 
@@ -72,40 +62,18 @@ import { NotificationsModule } from "./notifications/notifications.module";
     LessonsModule,
     SectionsModule,
     InstructorModule,
-
     DashboardModule,
-
-
     AdminResourcesModule,
-
-
-    LookupsModule,
-
-
-    WithdrawMethodsModule,
-
-
-    SubscribersModule,
-
-
-    PayoutsModule,
-
     AnnouncementsModule,
     FilesModule,
     VideoEncodingModule,
     CdnModule,
     EmailModule,
-    CouponsModule,
     CmsModule,
-    TeacherApplicationsModule,
-    ContactModule,
-    SubscribeModule,
-    BooksModule,
     BatchesModule,
     NotificationsModule,
     CertificateTemplateModule,
     BlogModule,
-    ReviewsModule,
     QuizAttemptsModule,
     OrdersModule,
     DeviceRevocationModule,

@@ -15,9 +15,4 @@ export class CreatePaymentDto {
   @IsOptional()
   @IsString()
   sectionId?: string;
-
-  @ApiProperty({ required: false, description: 'Coupon code to apply (optional)' })
-  @IsOptional()
-  @IsString()
-  couponCode?: string;
 }

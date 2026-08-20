@@ -16,11 +16,6 @@ import {
   useMyPayment,
   type CreateManualQRResponse,
 } from "@/lib/hooks/use-payments";
-import { useDebounce } from "@/hooks/use-debounce";
-import {
-  useValidateCoupon,
-  type CouponValidationResult,
-} from "@/lib/hooks/use-coupons";
 import { getApiError } from "@/lib/api/errors";
 
 import { PaymentPanel } from "@/components/checkout/payment-panel";
@@ -39,7 +34,6 @@ function CheckoutContent() {
   const { data: course, isLoading } = useCourseById(courseId);
   const createPayment = useCreatePayment();
   const freeEnroll = useFreeEnroll();
-  const validateCoupon = useValidateCoupon();
 
   const targetSection = useMemo(
     () => course?.sections?.find((s) => s.sectionId === sectionId),
@@ -54,14 +48,6 @@ function CheckoutContent() {
     return parseFloat(course.price);
   }, [course, itemType, targetSection?.sectionPrice]);
 
-  // ── Coupon state ─────────────────────────────────────────────────────
-  const [couponInput, setCouponInput] = useState("");
-  const debouncedCoupon = useDebounce(couponInput.trim(), 400);
-  const [couponPreview, setCouponPreview] =
-    useState<CouponValidationResult | null>(null);
-  const [appliedCoupon, setAppliedCoupon] =
-    useState<CouponValidationResult | null>(null);
-
   // ── Payment state ────────────────────────────────────────────────────
   const [pending, setPending] = useState<CreateManualQRResponse | null>(null);
   const [done, setDone] = useState(false);
@@ -72,9 +58,6 @@ function CheckoutContent() {
 
   // Reset everything when the target item changes.
   useEffect(() => {
-    setAppliedCoupon(null);
-    setCouponPreview(null);
-    setCouponInput("");
     setPending(null);
     setPaymentError(null);
     autoAttempted.current = false;
@@ -121,42 +104,7 @@ function CheckoutContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [course, baseAmount, itemType, sectionId, router]);
 
-  // Live-validate coupon as user types.
-  useEffect(() => {
-    if (!course || !debouncedCoupon) {
-      setCouponPreview(null);
-      return;
-    }
-    let cancelled = false;
-    validateCoupon
-      .mutateAsync({
-        couponCode: debouncedCoupon,
-        courseId: course.courseId,
-        sectionId: itemType === "SECTION" ? sectionId || undefined : undefined,
-        itemType,
-      })
-      .then((res) => {
-        if (!cancelled) setCouponPreview(res);
-      })
-      .catch((e) => {
-        if (!cancelled) {
-          setCouponPreview({
-            valid: false,
-            couponCode: debouncedCoupon.toUpperCase(),
-            reason: "ERROR",
-            message: getApiError(e, "Couldn't validate coupon.").message,
-          });
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [course, debouncedCoupon, itemType, sectionId, validateCoupon]);
-
-  const effectiveCoupon = appliedCoupon?.valid ? appliedCoupon : null;
-  const finalAmount = effectiveCoupon
-    ? parseFloat(String(effectiveCoupon.finalAmount))
-    : baseAmount;
+  const finalAmount = baseAmount;
 
   const enrolFree = async () => {
     if (!course) return;
@@ -165,7 +113,6 @@ function CheckoutContent() {
         courseId: course.courseId,
         sectionId: itemType === "SECTION" ? sectionId || undefined : undefined,
         itemType,
-        couponCode: effectiveCoupon?.couponCode,
       });
       toast.success("Enrolled successfully!");
       router.push("/my-courses");
@@ -335,21 +282,6 @@ function CheckoutContent() {
             itemType={itemType}
             baseAmount={baseAmount}
             finalAmount={finalAmount}
-            effectiveCoupon={effectiveCoupon}
-            couponInput={couponInput}
-            couponPreview={couponPreview}
-            isValidating={validateCoupon.isPending}
-            onCouponInputChange={setCouponInput}
-            onApplyCoupon={() => {
-              if (couponPreview?.valid) {
-                setAppliedCoupon(couponPreview);
-                toast.success("Coupon applied");
-              }
-            }}
-            onRemoveCoupon={() => {
-              setAppliedCoupon(null);
-              toast.success("Coupon removed");
-            }}
             freeEnrolButton={
               finalAmount === 0 ? (
                 <Button

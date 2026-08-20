@@ -15,9 +15,4 @@ export class EnrollFreeDto {
   @IsOptional()
   @IsString()
   sectionId?: string;
-
-  @ApiProperty({ required: false, description: 'Coupon code that reduces price to zero' })
-  @IsOptional()
-  @IsString()
-  couponCode?: string;
 }

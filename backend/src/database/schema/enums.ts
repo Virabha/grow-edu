@@ -85,23 +85,6 @@ export const videoEncodingJobStatusEnum = pgEnum("video_encoding_job_status", [
   "FAILED",
 ]);
 
-// Coupon discount type enum
-export const discountTypeEnum = pgEnum("discount_type", [
-  "PERCENTAGE",
-  "FIXED_AMOUNT",
-]);
-
-// Coupon usage status enum (for reservation/consumption lifecycle)
-export const couponUsageStatusEnum = pgEnum("coupon_usage_status", [
-  "RESERVED",
-  "CONSUMED",
-  "CANCELLED",
-]);
-
-export const teacherApplicationStatusEnum = pgEnum(
-  "teacher_application_status",
-  ["PENDING", "APPROVED", "REJECTED"],
-);
 
 export const applicationStatusEnum = pgEnum("application_status", [
   "NEW",
@@ -111,11 +94,6 @@ export const applicationStatusEnum = pgEnum("application_status", [
   "REJECTED",
 ]);
 
-export const bookStatusEnum = pgEnum("book_status", [
-  "DRAFT",
-  "PUBLISHED",
-  "ARCHIVED",
-]);
 
 export const batchStatusEnum = pgEnum("batch_status", [
   "DRAFT",
@@ -188,12 +166,6 @@ export const notificationTypeEnum = pgEnum("notification_type", [
   "GENERIC",
 ]);
 
-export const payoutStatusEnum = pgEnum("payout_status", [
-  "PENDING",
-  "APPROVED",
-  "REJECTED",
-  "PAID",
-]);
 
 export const badgeCriteriaEnum = pgEnum("badge_criteria_type", [
   "RATING",
@@ -202,16 +174,6 @@ export const badgeCriteriaEnum = pgEnum("badge_criteria_type", [
   "MANUAL",
 ]);
 
-export const currencyPositionEnum = pgEnum("currency_symbol_position", [
-  "before",
-  "after",
-]);
-
-export const studentReviewStatusEnum = pgEnum("student_review_status", [
-  "PENDING",
-  "PUBLISHED",
-  "REJECTED",
-]);
 
 export const blogPostStatusEnum = pgEnum("blog_post_status", [
   "DRAFT",

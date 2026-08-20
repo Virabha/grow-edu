@@ -14,7 +14,6 @@ import { Test } from "@nestjs/testing";
 import { DATABASE_CONNECTION } from "../database/database.module";
 import { CacheService } from "../cache/cache.service";
 import { CdnService } from "../cdn/cdn.service";
-import { CouponsService } from "../coupons/coupons.service";
 import { EmailService } from "../email/email.service";
 import { FilesService } from "../files/files.service";
 import { NotificationsService } from "../notifications/notifications.service";
@@ -53,7 +52,6 @@ async function makeService(dbOverrides: Record<string, jest.Mock>) {
       { provide: EmailService, useValue: { send: noop } },
       { provide: NotificationsService, useValue: { create: noop, fanout: noop } },
       { provide: PaymentService, useValue: { registerBatchEnrollHandler: noop } },
-      { provide: CouponsService, useValue: {} },
     ],
   }).compile();
 

@@ -33,8 +33,7 @@ import { EmailService } from "../email/email.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { PaymentService } from "../payment/payment.service";
 import { payments } from "../database/schema";
-import { CouponsService } from "../coupons/coupons.service";
-import { coupons, couponUsages, batchCertificates } from "../database/schema";
+import { batchCertificates } from "../database/schema";
 import { QuizCorrectAnswer } from "../database/schema/batches";
 import { CreateBatchDto } from "./dto/create-batch.dto";
 import { UpdateBatchDto } from "./dto/update-batch.dto";
@@ -85,8 +84,7 @@ export class BatchesService implements OnModuleInit {
     private readonly cacheService: CacheService,
     private readonly emailService: EmailService,
     private readonly notificationsService: NotificationsService,
-    private readonly paymentService: PaymentService,
-    private readonly couponsService: CouponsService
+    private readonly paymentService: PaymentService
   ) {}
 
   onModuleInit(): void {
@@ -97,11 +95,7 @@ export class BatchesService implements OnModuleInit {
     );
   }
 
-  async startBatchCheckout(
-    batchId: string,
-    userId: string,
-    opts: { couponCode?: string } = {}
-  ) {
+  async startBatchCheckout(batchId: string, userId: string) {
     const batch = await this.getBatchOrThrow(batchId);
     if (batch.status !== "UPCOMING" && batch.status !== "ONGOING") {
       throw new BadRequestException("Batch is not open for enrollment");
@@ -133,85 +127,7 @@ export class BatchesService implements OnModuleInit {
     }
 
     const originalAmount = Number(batch.price);
-    let finalAmount = originalAmount;
-    let discountAmount = 0;
-    let couponId: string | null = null;
-
-    if (opts.couponCode && originalAmount > 0) {
-      const code = opts.couponCode.trim().toUpperCase();
-      const [coupon] = await this.db
-        .select()
-        .from(coupons)
-        .where(
-          and(
-            sql`UPPER(${coupons.couponCode}) = ${code}`,
-            eq(coupons.isDeleted, false),
-            eq(coupons.isActive, true)
-          )
-        )
-        .limit(1);
-      if (!coupon) throw new BadRequestException("Coupon not found");
-
-      const now = new Date();
-      if (coupon.validFrom > now) {
-        throw new BadRequestException("Coupon is not yet valid");
-      }
-      if (coupon.validTill < now) {
-        throw new BadRequestException("Coupon has expired");
-      }
-      if (
-        coupon.minPurchaseAmount != null &&
-        originalAmount < Number(coupon.minPurchaseAmount)
-      ) {
-        throw new BadRequestException(
-          `Minimum purchase amount is ${coupon.minPurchaseAmount}`
-        );
-      }
-      if (coupon.usageLimit != null) {
-        const [{ used }] = await this.db
-          .select({ used: sql<number>`count(*)::int` })
-          .from(couponUsages)
-          .where(
-            and(
-              eq(couponUsages.couponId, coupon.couponId),
-              inArray(couponUsages.status, ["RESERVED", "CONSUMED"])
-            )
-          );
-        if (used >= coupon.usageLimit) {
-          throw new BadRequestException("Coupon usage limit reached");
-        }
-      }
-      if (coupon.usageLimitPerUser != null) {
-        const [{ used }] = await this.db
-          .select({ used: sql<number>`count(*)::int` })
-          .from(couponUsages)
-          .where(
-            and(
-              eq(couponUsages.couponId, coupon.couponId),
-              eq(couponUsages.userId, userId),
-              inArray(couponUsages.status, ["RESERVED", "CONSUMED"])
-            )
-          );
-        if (used >= coupon.usageLimitPerUser) {
-          throw new BadRequestException("You have already used this coupon");
-        }
-      }
-
-      if (coupon.discountType === "PERCENTAGE") {
-        discountAmount = (originalAmount * Number(coupon.discountValue)) / 100;
-        if (coupon.maxDiscountAmount != null) {
-          discountAmount = Math.min(
-            discountAmount,
-            Number(coupon.maxDiscountAmount)
-          );
-        }
-      } else {
-        discountAmount = Number(coupon.discountValue);
-      }
-      discountAmount = Math.min(originalAmount, Number(discountAmount.toFixed(2)));
-      finalAmount = Math.max(0, originalAmount - discountAmount);
-      couponId = coupon.couponId;
-    }
+    const finalAmount = originalAmount;
 
     if (finalAmount === 0) {
       const enrollment = await this.enrollSingle(batchId, userId);
@@ -220,7 +136,7 @@ export class BatchesService implements OnModuleInit {
         enrolled: true,
         enrollment,
         originalAmount,
-        discountAmount,
+        discountAmount: 0,
         finalAmount: 0,
       };
     }
@@ -264,8 +180,6 @@ export class BatchesService implements OnModuleInit {
         itemType: "BATCH",
         amount: finalAmount.toString(),
         originalAmount: originalAmount.toString(),
-        discountAmount: discountAmount > 0 ? discountAmount.toString() : undefined,
-        couponId: couponId ?? undefined,
         currency: batch.currency,
         gateway: "MANUAL_QR",
         status: "PENDING",
@@ -273,29 +187,12 @@ export class BatchesService implements OnModuleInit {
       })
       .returning();
 
-    if (couponId) {
-      try {
-        await this.couponsService.reserveUsageForPayment({
-          couponId,
-          userId,
-          paymentId: payment.paymentId,
-          originalAmount,
-          discountAmount,
-          finalAmount,
-        });
-      } catch (err) {
-        // Roll back the payment if reservation fails
-        await this.db.delete(payments).where(eq(payments.paymentId, payment.paymentId));
-        throw err;
-      }
-    }
-
     return {
       paymentId: payment.paymentId as string | null,
       enrolled: false,
       enrollment: undefined,
       originalAmount,
-      discountAmount,
+      discountAmount: 0,
       finalAmount,
     };
   }

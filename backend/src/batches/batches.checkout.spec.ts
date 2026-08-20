@@ -13,7 +13,6 @@ import { CacheService } from '../cache/cache.service';
 import { EmailService } from '../email/email.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PaymentService } from '../payment/payment.service';
-import { CouponsService } from '../coupons/coupons.service';
 
 // ── chain builder ─────────────────────────────────────────────────────────────
 
@@ -138,15 +137,6 @@ async function buildModule(): Promise<{ service: BatchesService; db: MockDb }> {
       {
         provide: PaymentService,
         useValue: { registerBatchEnrollHandler: jest.fn() },
-      },
-      {
-        provide: CouponsService,
-        useValue: {
-          validateCoupon: jest.fn(),
-          reserveUsageForPayment: jest.fn(),
-          cancelReservationByPayment: jest.fn(),
-          consumeReservationByPayment: jest.fn(),
-        },
       },
     ],
   }).compile();

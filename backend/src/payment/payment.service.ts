@@ -23,7 +23,6 @@ import {
 } from '../database/schema';
 import { eq, and, inArray, desc, like, sql } from 'drizzle-orm';
 import { EmailService } from '../email/email.service';
-import { CouponsService } from '../coupons/coupons.service';
 
 const MAX_PAGE_LIMIT = 100;
 const PLATFORM_CURRENCY = 'INR';
@@ -79,7 +78,6 @@ export class PaymentService {
     @Inject(DATABASE_CONNECTION)
     private readonly db: PostgresJsDatabase<typeof schema>,
     private emailService: EmailService,
-    private couponsService: CouponsService,
   ) {
     const razorpayKeyId = this.configService.razorpayKeyId;
     const razorpayKeySecret = this.configService.razorpayKeySecret;
@@ -92,15 +90,13 @@ export class PaymentService {
   }
 
   /**
-   * Shared validation: resolves course/section, validates it exists and is published,
-   * and optionally applies a coupon.
+   * Shared validation: resolves course/section and validates it exists and is published.
    */
-  private async resolveItemAndCoupon(payload: {
+  private async resolveItem(payload: {
     userId: string;
     itemType: 'COURSE' | 'SECTION';
     courseId?: string;
     sectionId?: string;
-    couponCode?: string;
   }) {
     if (!payload.courseId && !payload.sectionId) {
       throw new BadRequestException('courseId or sectionId is required');
@@ -141,32 +137,7 @@ export class PaymentService {
       itemName = `${section.course.title} - ${section.title}`;
     }
 
-    let amount = originalAmount;
-    let couponId: string | null = null;
-    let discountAmount = 0;
-
-    if (payload.couponCode && courseId) {
-      const validation = await this.couponsService.validateCoupon(
-        {
-          couponCode: payload.couponCode,
-          courseId,
-          sectionId: sectionId || undefined,
-          itemType: payload.itemType,
-        },
-        payload.userId,
-      );
-
-      if (!validation.valid) {
-        throw new BadRequestException(validation.message);
-      }
-
-      if (!validation.couponId) throw new BadRequestException('Coupon validation returned no coupon ID');
-      couponId = validation.couponId;
-      discountAmount = Number(validation.discountAmount);
-      amount = Number(validation.finalAmount);
-    }
-
-    return { courseId, sectionId, originalAmount, amount, couponId, discountAmount, itemName };
+    return { courseId, sectionId, originalAmount, amount: originalAmount, itemName };
   }
 
   async enrollFree(payload: {
@@ -174,10 +145,9 @@ export class PaymentService {
     itemType: 'COURSE' | 'SECTION';
     courseId?: string;
     sectionId?: string;
-    couponCode?: string;
   }) {
-    const { courseId, sectionId, originalAmount, amount, couponId, discountAmount, itemName } =
-      await this.resolveItemAndCoupon(payload);
+    const { courseId, sectionId, originalAmount, amount, itemName } =
+      await this.resolveItem(payload);
 
     if (amount > 0) {
       throw new BadRequestException('This item requires payment. Use checkout instead.');
@@ -216,32 +186,16 @@ export class PaymentService {
         itemType: payload.itemType,
         amount: '0',
         originalAmount: String(originalAmount),
-        discountAmount: String(discountAmount),
-        couponId,
+        discountAmount: '0',
         currency: PLATFORM_CURRENCY,
         gateway: PaymentGateway.FREE,
         status: 'COMPLETED',
         metadata: {
           mode: payload.itemType,
-          couponCode: payload.couponCode || null,
           freeEnrollment: true,
         },
       })
       .returning();
-
-    if (couponId && courseId) {
-      try {
-        await this.couponsService.recordConsumedUsageLegacy({
-          couponId,
-          userId: payload.userId,
-          courseId,
-          paymentId: payment.paymentId,
-          originalAmount,
-          discountAmount,
-          finalAmount: 0,
-        });
-      } catch { /* non-critical: swallow */ }
-    }
 
     await this.grantAccessForPayment(
       payment.paymentId,
@@ -282,7 +236,6 @@ export class PaymentService {
     itemType: 'COURSE' | 'SECTION';
     courseId?: string;
     sectionId?: string;
-    couponCode?: string;
     idempotencyKey?: string;
   }) {
     // Idempotency: if client re-sends the same key, return the existing payment.
@@ -304,8 +257,8 @@ export class PaymentService {
       }
     }
 
-    const { courseId, sectionId, originalAmount, amount, couponId, discountAmount } =
-      await this.resolveItemAndCoupon(payload);
+    const { courseId, sectionId, originalAmount, amount } =
+      await this.resolveItem(payload);
 
     if (amount <= 0) {
       throw new BadRequestException('Item is free. Use the free-enroll endpoint instead.');
@@ -365,38 +318,16 @@ export class PaymentService {
         itemType: payload.itemType,
         amount: String(amount),
         originalAmount: String(originalAmount),
-        discountAmount: String(discountAmount),
-        couponId,
+        discountAmount: '0',
         currency: PLATFORM_CURRENCY,
         gateway: PaymentGateway.MANUAL_QR,
         status: 'PENDING',
         idempotencyKey: payload.idempotencyKey ?? null,
         metadata: {
           mode: payload.itemType,
-          couponCode: payload.couponCode || null,
         },
       })
       .returning();
-
-    if (couponId && courseId) {
-      try {
-        await this.couponsService.reserveUsageForPayment({
-          couponId,
-          userId: payload.userId,
-          courseId,
-          paymentId: payment.paymentId,
-          originalAmount,
-          discountAmount,
-          finalAmount: amount,
-        });
-      } catch (e) {
-        await this.db
-          .update(payments)
-          .set({ status: 'FAILED', updatedAt: new Date() })
-          .where(eq(payments.paymentId, payment.paymentId));
-        throw e;
-      }
-    }
 
     return {
       paymentId: payment.paymentId,
@@ -554,13 +485,6 @@ export class PaymentService {
       .where(and(eq(payments.paymentId, paymentId), inArray(payments.status, ['PROOF_UPLOADED', 'PENDING'])))
       .returning({ paymentId: payments.paymentId });
 
-    // Consume coupon reservation if any
-    if (payment.couponId) {
-      try {
-        await this.couponsService.consumeReservationByPayment(paymentId);
-      } catch { /* non-critical: swallow */ }
-    }
-
     // Confirmation email — only if this request won the status-update race
     if (!updated) return { success: true };
     try {
@@ -626,13 +550,6 @@ export class PaymentService {
         updatedAt: now,
       })
       .where(eq(payments.paymentId, paymentId));
-
-    // Cancel coupon reservation
-    if (payment.couponId) {
-      try {
-        await this.couponsService.cancelReservationByPayment(paymentId);
-      } catch { /* non-critical: swallow */ }
-    }
 
     return { success: true, message: 'Payment rejected' };
   }
@@ -724,13 +641,12 @@ export class PaymentService {
     itemType: 'COURSE' | 'SECTION';
     courseId?: string;
     sectionId?: string;
-    couponCode?: string;
   }) {
     if (!this.razorpay) {
       throw new BadRequestException('Razorpay is not configured');
     }
-    const { courseId, sectionId, originalAmount, amount, couponId, discountAmount, itemName } =
-      await this.resolveItemAndCoupon(payload);
+    const { courseId, sectionId, originalAmount, amount, itemName } =
+      await this.resolveItem(payload);
     void itemName;
 
     const [payment] = await this.db
@@ -742,8 +658,7 @@ export class PaymentService {
         itemType: payload.itemType,
         amount: String(amount),
         originalAmount: String(originalAmount),
-        discountAmount: String(discountAmount),
-        couponId,
+        discountAmount: '0',
         currency: PLATFORM_CURRENCY,
         gateway: PaymentGateway.RAZORPAY,
         status: 'PENDING',
@@ -794,23 +709,6 @@ export class PaymentService {
       .set(updateData)
       .where(eq(payments.paymentId, paymentId))
       .returning();
-
-    if (payment && payment.couponId) {
-      try {
-        const consumed = await this.couponsService.consumeReservationByPayment(payment.paymentId);
-        if (!consumed && payment.courseId) {
-          await this.couponsService.recordConsumedUsageLegacy({
-            couponId: payment.couponId,
-            userId: payment.userId,
-            courseId: payment.courseId,
-            paymentId: payment.paymentId,
-            originalAmount: Number(payment.originalAmount || payment.amount),
-            discountAmount: Number(payment.discountAmount || 0),
-            finalAmount: Number(payment.amount),
-          });
-        }
-      } catch { /* non-critical: swallow */ }
-    }
 
     return payment;
   }
@@ -900,7 +798,6 @@ export class PaymentService {
         user: true,
         course: true,
         section: true,
-        coupon: true,
       },
     });
     if (!payment) throw new NotFoundException('Payment not found');

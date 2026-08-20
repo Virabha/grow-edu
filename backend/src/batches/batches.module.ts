@@ -9,7 +9,6 @@ import { CdnModule } from "../cdn/cdn.module";
 import { AppCacheModule } from "../cache/cache.module";
 import { EmailModule } from "../email/email.module";
 import { PaymentModule } from "../payment/payment.module";
-import { CouponsModule } from "../coupons/coupons.module";
 import { CertificateTemplateModule } from "../certificate-template/certificate-template.module";
 
 @Module({
@@ -20,7 +19,6 @@ import { CertificateTemplateModule } from "../certificate-template/certificate-t
     AppCacheModule,
     EmailModule,
     PaymentModule,
-    CouponsModule,
     CertificateTemplateModule,
   ],
   controllers: [BatchesController],

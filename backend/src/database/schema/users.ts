@@ -10,7 +10,6 @@ import {
 import {
   userRoleEnum,
   emailTokenTypeEnum,
-  teacherApplicationStatusEnum,
 } from "./enums";
 
 export const users = pgTable(
@@ -86,31 +85,6 @@ export const instructorProfiles = pgTable(
     userIdIdx: index("instructor_profiles_user_id_idx").on(table.userId),
     displayOrderIdx: index("instructor_profiles_display_order_idx").on(table.displayOrder),
     isActiveIdx: index("instructor_profiles_is_active_idx").on(table.isActive),
-  })
-);
-
-export const teacherApplications = pgTable(
-  "teacher_applications",
-  {
-    applicationId: text("application_id")
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
-    fullName: text("full_name").notNull(),
-    email: text("email").notNull(),
-    phone: text("phone"),
-    experienceYears: integer("experience_years"),
-    skills: jsonb("skills").$type<string[]>(),
-    categories: jsonb("categories").$type<string[]>(),
-    cvUrl: text("cv_url"),
-    whyJoin: text("why_join"),
-    status: teacherApplicationStatusEnum("status").notNull().default("PENDING"),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
-  },
-  (table) => ({
-    statusIdx: index("teacher_applications_status_idx").on(table.status),
-    emailIdx: index("teacher_applications_email_idx").on(table.email),
-    createdAtIdx: index("teacher_applications_created_at_idx").on(table.createdAt),
   })
 );
 

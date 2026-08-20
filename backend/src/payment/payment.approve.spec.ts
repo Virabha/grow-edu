@@ -9,7 +9,6 @@ import { PaymentService } from './payment.service';
 import { DATABASE_CONNECTION } from '../database/database.module';
 import { AppConfigService } from '../config';
 import { EmailService } from '../email/email.service';
-import { CouponsService } from '../coupons/coupons.service';
 
 // ── chain builder ─────────────────────────────────────────────────────────────
 
@@ -62,7 +61,6 @@ const PENDING_BATCH_PAYMENT = {
   sectionId: null,
   status: 'PENDING' as const,
   gateway: 'MANUAL_QR' as const,
-  couponId: null,
   amount: '1500.00',
   currency: 'INR',
   metadata: { batchId: BATCH_ID, batchTitle: 'Test Batch', batchSlug: 'test-batch' },
@@ -105,16 +103,6 @@ async function buildModule(): Promise<{ service: PaymentService; db: MockDb }> {
       {
         provide: EmailService,
         useValue: { sendPaymentConfirmationEmail: jest.fn().mockResolvedValue(undefined) },
-      },
-      {
-        provide: CouponsService,
-        useValue: {
-          consumeReservationByPayment: jest.fn().mockResolvedValue(true),
-          cancelReservationByPayment: jest.fn().mockResolvedValue(undefined),
-          recordConsumedUsageLegacy: jest.fn().mockResolvedValue(undefined),
-          validateCoupon: jest.fn(),
-          reserveUsageForPayment: jest.fn(),
-        },
       },
     ],
   }).compile();

@@ -89,18 +89,6 @@ EXCEPTION
 END $$;
 --> statement-breakpoint
 DO $$ BEGIN
- CREATE TYPE "book_status" AS ENUM('DRAFT', 'PUBLISHED', 'ARCHIVED');
-EXCEPTION
- WHEN duplicate_object THEN null;
-END $$;
---> statement-breakpoint
-DO $$ BEGIN
- CREATE TYPE "coupon_usage_status" AS ENUM('RESERVED', 'CONSUMED', 'CANCELLED');
-EXCEPTION
- WHEN duplicate_object THEN null;
-END $$;
---> statement-breakpoint
-DO $$ BEGIN
  CREATE TYPE "course_level" AS ENUM('BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ALL_LEVELS');
 EXCEPTION
  WHEN duplicate_object THEN null;
@@ -114,18 +102,6 @@ END $$;
 --> statement-breakpoint
 DO $$ BEGIN
  CREATE TYPE "course_status" AS ENUM('DRAFT', 'PUBLISHED', 'ARCHIVED');
-EXCEPTION
- WHEN duplicate_object THEN null;
-END $$;
---> statement-breakpoint
-DO $$ BEGIN
- CREATE TYPE "currency_symbol_position" AS ENUM('before', 'after');
-EXCEPTION
- WHEN duplicate_object THEN null;
-END $$;
---> statement-breakpoint
-DO $$ BEGIN
- CREATE TYPE "discount_type" AS ENUM('PERCENTAGE', 'FIXED_AMOUNT');
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
@@ -185,12 +161,6 @@ EXCEPTION
 END $$;
 --> statement-breakpoint
 DO $$ BEGIN
- CREATE TYPE "payout_status" AS ENUM('PENDING', 'APPROVED', 'REJECTED', 'PAID');
-EXCEPTION
- WHEN duplicate_object THEN null;
-END $$;
---> statement-breakpoint
-DO $$ BEGIN
  CREATE TYPE "refund_status" AS ENUM('NONE', 'REQUESTED', 'APPROVED', 'DECLINED');
 EXCEPTION
  WHEN duplicate_object THEN null;
@@ -198,18 +168,6 @@ END $$;
 --> statement-breakpoint
 DO $$ BEGIN
  CREATE TYPE "section_price_type" AS ENUM('INCLUDED', 'INDIVIDUAL', 'BOTH');
-EXCEPTION
- WHEN duplicate_object THEN null;
-END $$;
---> statement-breakpoint
-DO $$ BEGIN
- CREATE TYPE "student_review_status" AS ENUM('PENDING', 'PUBLISHED', 'REJECTED');
-EXCEPTION
- WHEN duplicate_object THEN null;
-END $$;
---> statement-breakpoint
-DO $$ BEGIN
- CREATE TYPE "teacher_application_status" AS ENUM('PENDING', 'APPROVED', 'REJECTED');
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
@@ -261,21 +219,6 @@ CREATE TABLE IF NOT EXISTS "instructor_profiles" (
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "instructor_profiles_user_id_unique" UNIQUE("user_id")
-);
---> statement-breakpoint
-CREATE TABLE IF NOT EXISTS "teacher_applications" (
-	"application_id" text PRIMARY KEY NOT NULL,
-	"full_name" text NOT NULL,
-	"email" text NOT NULL,
-	"phone" text,
-	"experience_years" integer,
-	"skills" jsonb,
-	"categories" jsonb,
-	"cv_url" text,
-	"why_join" text,
-	"status" "teacher_application_status" DEFAULT 'PENDING' NOT NULL,
-	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "user_devices" (
@@ -344,34 +287,6 @@ CREATE TABLE IF NOT EXISTS "course_announcements" (
 	"instructor_id" text NOT NULL,
 	"title" text NOT NULL,
 	"body" text NOT NULL,
-	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL
-);
---> statement-breakpoint
-CREATE TABLE IF NOT EXISTS "course_languages" (
-	"id" text PRIMARY KEY NOT NULL,
-	"name" text NOT NULL,
-	"code" text NOT NULL,
-	"display_order" integer DEFAULT 0 NOT NULL,
-	"is_active" boolean DEFAULT true NOT NULL,
-	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "course_languages_code_unique" UNIQUE("code")
-);
---> statement-breakpoint
-CREATE TABLE IF NOT EXISTS "course_reviews" (
-	"review_id" text PRIMARY KEY NOT NULL,
-	"course_id" text NOT NULL,
-	"user_id" text NOT NULL,
-	"rating" integer NOT NULL,
-	"title" text,
-	"body" text NOT NULL,
-	"status" "student_review_status" DEFAULT 'PENDING' NOT NULL,
-	"moderated_by" text,
-	"moderated_at" timestamp,
-	"instructor_reply" text,
-	"instructor_replied_at" timestamp,
-	"is_deleted" boolean DEFAULT false NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
@@ -579,68 +494,6 @@ CREATE TABLE IF NOT EXISTS "section_access" (
 	CONSTRAINT "section_access_user_section_unique" UNIQUE("user_id","section_id")
 );
 --> statement-breakpoint
-CREATE TABLE IF NOT EXISTS "coupon_categories" (
-	"coupon_category_id" text PRIMARY KEY NOT NULL,
-	"coupon_id" text NOT NULL,
-	"category_id" text NOT NULL,
-	"created_at" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "coupon_categories_unique" UNIQUE("coupon_id","category_id")
-);
---> statement-breakpoint
-CREATE TABLE IF NOT EXISTS "coupon_courses" (
-	"coupon_course_id" text PRIMARY KEY NOT NULL,
-	"coupon_id" text NOT NULL,
-	"course_id" text NOT NULL,
-	"created_at" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "coupon_courses_unique" UNIQUE("coupon_id","course_id")
-);
---> statement-breakpoint
-CREATE TABLE IF NOT EXISTS "coupon_usages" (
-	"usage_id" text PRIMARY KEY NOT NULL,
-	"coupon_id" text NOT NULL,
-	"user_id" text NOT NULL,
-	"payment_id" text,
-	"course_id" text,
-	"status" "coupon_usage_status" DEFAULT 'CONSUMED' NOT NULL,
-	"reserved_expires_at" timestamp,
-	"consumed_at" timestamp,
-	"cancelled_at" timestamp,
-	"discount_applied" numeric(10, 2) NOT NULL,
-	"original_amount" numeric(10, 2) NOT NULL,
-	"final_amount" numeric(10, 2) NOT NULL,
-	"created_at" timestamp DEFAULT now() NOT NULL
-);
---> statement-breakpoint
-CREATE TABLE IF NOT EXISTS "coupons" (
-	"coupon_id" text PRIMARY KEY NOT NULL,
-	"coupon_code" text NOT NULL,
-	"discount_type" "discount_type" DEFAULT 'PERCENTAGE' NOT NULL,
-	"discount_value" numeric(10, 2) NOT NULL,
-	"max_discount_amount" numeric(10, 2),
-	"min_purchase_amount" numeric(10, 2),
-	"valid_from" timestamp DEFAULT now() NOT NULL,
-	"valid_till" timestamp NOT NULL,
-	"usage_limit" integer,
-	"usage_limit_per_user" integer DEFAULT 1 NOT NULL,
-	"is_active" boolean DEFAULT true NOT NULL,
-	"is_deleted" boolean DEFAULT false NOT NULL,
-	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL
-);
---> statement-breakpoint
-CREATE TABLE IF NOT EXISTS "currencies" (
-	"id" text PRIMARY KEY NOT NULL,
-	"name" text NOT NULL,
-	"code" text NOT NULL,
-	"symbol" text NOT NULL,
-	"rate" numeric(18, 6) DEFAULT '1' NOT NULL,
-	"position" "currency_symbol_position" DEFAULT 'before' NOT NULL,
-	"is_active" boolean DEFAULT true NOT NULL,
-	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "currencies_code_unique" UNIQUE("code")
-);
---> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "payments" (
 	"payment_id" text PRIMARY KEY NOT NULL,
 	"user_id" text NOT NULL,
@@ -652,7 +505,6 @@ CREATE TABLE IF NOT EXISTS "payments" (
 	"amount" numeric(10, 2) NOT NULL,
 	"original_amount" numeric(10, 2),
 	"discount_amount" numeric(10, 2) DEFAULT '0',
-	"coupon_id" text,
 	"currency" text NOT NULL,
 	"gateway" "payment_gateway" NOT NULL,
 	"gateway_id" text,
@@ -677,35 +529,6 @@ CREATE TABLE IF NOT EXISTS "payments" (
 	CONSTRAINT "payments_enrollment_id_unique" UNIQUE("enrollment_id"),
 	CONSTRAINT "payments_idempotency_key_unique" UNIQUE("idempotency_key"),
 	CONSTRAINT "payments_invoice_no_unique" UNIQUE("invoice_no")
-);
---> statement-breakpoint
-CREATE TABLE IF NOT EXISTS "payout_requests" (
-	"payout_id" text PRIMARY KEY NOT NULL,
-	"instructor_id" text NOT NULL,
-	"amount" numeric(10, 2) NOT NULL,
-	"currency" text DEFAULT 'INR' NOT NULL,
-	"method" text NOT NULL,
-	"account_details" text,
-	"status" "payout_status" DEFAULT 'PENDING' NOT NULL,
-	"requested_at" timestamp DEFAULT now() NOT NULL,
-	"processed_at" timestamp,
-	"processed_by" text,
-	"admin_note" text,
-	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL
-);
---> statement-breakpoint
-CREATE TABLE IF NOT EXISTS "withdraw_methods" (
-	"id" text PRIMARY KEY NOT NULL,
-	"name" text NOT NULL,
-	"description" text,
-	"min_amount" numeric(10, 2) DEFAULT '0' NOT NULL,
-	"max_amount" numeric(10, 2),
-	"processing_days" integer,
-	"fee_percent" numeric(5, 2),
-	"is_active" boolean DEFAULT true NOT NULL,
-	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "batch_announcements" (
@@ -920,48 +743,6 @@ CREATE TABLE IF NOT EXISTS "batches" (
 	CONSTRAINT "batches_slug_unique" UNIQUE("slug")
 );
 --> statement-breakpoint
-CREATE TABLE IF NOT EXISTS "book_purchases" (
-	"purchase_id" text PRIMARY KEY NOT NULL,
-	"user_id" text NOT NULL,
-	"book_id" text NOT NULL,
-	"amount" numeric(10, 2) NOT NULL,
-	"currency" text DEFAULT 'INR' NOT NULL,
-	"gateway" "payment_gateway" NOT NULL,
-	"gateway_id" text,
-	"status" "payment_status" DEFAULT 'PENDING' NOT NULL,
-	"metadata" jsonb,
-	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "book_purchases_user_book_unique" UNIQUE("user_id","book_id")
-);
---> statement-breakpoint
-CREATE TABLE IF NOT EXISTS "books" (
-	"book_id" text PRIMARY KEY NOT NULL,
-	"title" text NOT NULL,
-	"slug" text NOT NULL,
-	"author" text NOT NULL,
-	"description" text,
-	"short_description" text,
-	"cover_image" text,
-	"price" numeric(10, 2) DEFAULT '0' NOT NULL,
-	"compare_at_price" numeric(10, 2),
-	"currency" text DEFAULT 'INR' NOT NULL,
-	"category_id" text,
-	"isbn" text,
-	"pages" integer,
-	"language" text DEFAULT 'English',
-	"publisher" text,
-	"published_year" integer,
-	"format" text DEFAULT 'PHYSICAL',
-	"download_url" text,
-	"status" "book_status" DEFAULT 'DRAFT' NOT NULL,
-	"is_active" boolean DEFAULT true NOT NULL,
-	"display_order" integer DEFAULT 0 NOT NULL,
-	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "books_slug_unique" UNIQUE("slug")
-);
---> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "service_applications" (
 	"application_id" text PRIMARY KEY NOT NULL,
 	"service_id" text NOT NULL,
@@ -1140,49 +921,6 @@ CREATE TABLE IF NOT EXISTS "instructor_badges" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE IF NOT EXISTS "locations" (
-	"id" text PRIMARY KEY NOT NULL,
-	"name" text NOT NULL,
-	"code" text NOT NULL,
-	"dial_code" text,
-	"currency" text,
-	"is_active" boolean DEFAULT true NOT NULL,
-	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "locations_code_unique" UNIQUE("code")
-);
---> statement-breakpoint
-CREATE TABLE IF NOT EXISTS "site_languages" (
-	"id" text PRIMARY KEY NOT NULL,
-	"name" text NOT NULL,
-	"code" text NOT NULL,
-	"is_active" boolean DEFAULT true NOT NULL,
-	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "site_languages_code_unique" UNIQUE("code")
-);
---> statement-breakpoint
-CREATE TABLE IF NOT EXISTS "contact_submissions" (
-	"id" text PRIMARY KEY NOT NULL,
-	"name" text NOT NULL,
-	"email" text NOT NULL,
-	"mobile" text,
-	"subject" text NOT NULL,
-	"course_interested" text,
-	"role" text,
-	"message" text NOT NULL,
-	"document_url" text,
-	"created_at" timestamp DEFAULT now() NOT NULL
-);
---> statement-breakpoint
-CREATE TABLE IF NOT EXISTS "newsletter_subscribers" (
-	"id" text PRIMARY KEY NOT NULL,
-	"email" text NOT NULL,
-	"subscribed_at" timestamp DEFAULT now() NOT NULL,
-	"is_active" boolean DEFAULT true NOT NULL,
-	CONSTRAINT "newsletter_subscribers_email_unique" UNIQUE("email")
-);
---> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "notifications" (
 	"notification_id" text PRIMARY KEY NOT NULL,
 	"user_id" text NOT NULL,
@@ -1216,9 +954,6 @@ CREATE INDEX IF NOT EXISTS "instructor_meeting_credentials_user_idx" ON "instruc
 CREATE INDEX IF NOT EXISTS "instructor_profiles_user_id_idx" ON "instructor_profiles" ("user_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "instructor_profiles_display_order_idx" ON "instructor_profiles" ("display_order");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "instructor_profiles_is_active_idx" ON "instructor_profiles" ("is_active");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "teacher_applications_status_idx" ON "teacher_applications" ("status");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "teacher_applications_email_idx" ON "teacher_applications" ("email");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "teacher_applications_created_at_idx" ON "teacher_applications" ("created_at");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "user_devices_user_idx" ON "user_devices" ("user_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "user_devices_user_last_seen_idx" ON "user_devices" ("user_id","last_seen_at");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "users_email_idx" ON "users" ("email");--> statement-breakpoint
@@ -1230,11 +965,6 @@ CREATE INDEX IF NOT EXISTS "categories_parent_idx" ON "categories" ("parent_cate
 CREATE INDEX IF NOT EXISTS "course_announcements_course_idx" ON "course_announcements" ("course_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "course_announcements_instructor_idx" ON "course_announcements" ("instructor_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "course_announcements_course_created_idx" ON "course_announcements" ("course_id","created_at");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "course_languages_code_idx" ON "course_languages" ("code");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "course_reviews_course_status_idx" ON "course_reviews" ("course_id","status","created_at");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "course_reviews_user_idx" ON "course_reviews" ("user_id","created_at");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "course_reviews_status_idx" ON "course_reviews" ("status","created_at");--> statement-breakpoint
-CREATE UNIQUE INDEX IF NOT EXISTS "course_reviews_course_user_key" ON "course_reviews" ("course_id","user_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "course_sections_course_idx" ON "course_sections" ("course_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "courses_slug_idx" ON "courses" ("slug");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "courses_category_idx" ON "courses" ("category_id");--> statement-breakpoint
@@ -1270,34 +1000,15 @@ CREATE INDEX IF NOT EXISTS "section_access_user_idx" ON "section_access" ("user_
 CREATE INDEX IF NOT EXISTS "section_access_course_idx" ON "section_access" ("course_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "section_access_section_idx" ON "section_access" ("section_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "section_access_payment_idx" ON "section_access" ("payment_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "coupon_categories_coupon_idx" ON "coupon_categories" ("coupon_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "coupon_categories_category_idx" ON "coupon_categories" ("category_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "coupon_courses_coupon_idx" ON "coupon_courses" ("coupon_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "coupon_courses_course_idx" ON "coupon_courses" ("course_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "coupon_usages_coupon_idx" ON "coupon_usages" ("coupon_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "coupon_usages_user_idx" ON "coupon_usages" ("user_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "coupon_usages_coupon_user_idx" ON "coupon_usages" ("coupon_id","user_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "coupon_usages_payment_idx" ON "coupon_usages" ("payment_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "coupon_usages_coupon_status_idx" ON "coupon_usages" ("coupon_id","status","reserved_expires_at");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "coupon_usages_coupon_user_status_idx" ON "coupon_usages" ("coupon_id","user_id","status","reserved_expires_at");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "coupons_code_lookup_idx" ON "coupons" ("coupon_code","is_active","is_deleted");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "coupons_is_active_idx" ON "coupons" ("is_active");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "coupons_valid_till_idx" ON "coupons" ("valid_till");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "currencies_code_idx" ON "currencies" ("code");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "payments_user_idx" ON "payments" ("user_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "payments_gateway_idx" ON "payments" ("gateway_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "payments_status_idx" ON "payments" ("status");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "payments_course_idx" ON "payments" ("course_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "payments_section_idx" ON "payments" ("section_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "payments_coupon_idx" ON "payments" ("coupon_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "payments_transaction_id_idx" ON "payments" ("transaction_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "payments_user_status_idx" ON "payments" ("user_id","status");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "payments_user_created_idx" ON "payments" ("user_id","created_at");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "payments_refund_status_idx" ON "payments" ("refund_status");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "payout_requests_instructor_idx" ON "payout_requests" ("instructor_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "payout_requests_status_idx" ON "payout_requests" ("status");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "payout_requests_status_requested_idx" ON "payout_requests" ("status","requested_at");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "withdraw_methods_is_active_idx" ON "withdraw_methods" ("is_active");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "batch_announcements_batch_idx" ON "batch_announcements" ("batch_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "batch_announcements_created_at_idx" ON "batch_announcements" ("created_at");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "batch_attendance_session_idx" ON "batch_attendance" ("session_id");--> statement-breakpoint
@@ -1327,14 +1038,6 @@ CREATE INDEX IF NOT EXISTS "batch_subjects_batch_idx" ON "batch_subjects" ("batc
 CREATE INDEX IF NOT EXISTS "batches_slug_idx" ON "batches" ("slug");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "batches_status_idx" ON "batches" ("status");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "batches_start_date_idx" ON "batches" ("start_date");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "book_purchases_user_idx" ON "book_purchases" ("user_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "book_purchases_book_idx" ON "book_purchases" ("book_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "book_purchases_status_idx" ON "book_purchases" ("status");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "books_slug_idx" ON "books" ("slug");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "books_category_idx" ON "books" ("category_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "books_status_idx" ON "books" ("status");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "books_is_active_idx" ON "books" ("is_active");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "books_display_order_idx" ON "books" ("display_order");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "service_applications_service_idx" ON "service_applications" ("service_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "service_applications_status_idx" ON "service_applications" ("status");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "service_applications_email_idx" ON "service_applications" ("applicant_email");--> statement-breakpoint
@@ -1360,12 +1063,6 @@ CREATE INDEX IF NOT EXISTS "testimonials_is_active_idx" ON "testimonials" ("is_a
 CREATE INDEX IF NOT EXISTS "why_choose_us_display_order_idx" ON "why_choose_us" ("display_order");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "why_choose_us_is_active_idx" ON "why_choose_us" ("is_active");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "instructor_badges_is_active_idx" ON "instructor_badges" ("is_active");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "locations_code_idx" ON "locations" ("code");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "site_languages_code_idx" ON "site_languages" ("code");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "contact_submissions_email_idx" ON "contact_submissions" ("email");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "contact_submissions_created_at_idx" ON "contact_submissions" ("created_at");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "newsletter_subscribers_email_idx" ON "newsletter_subscribers" ("email");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "newsletter_subscribers_is_active_idx" ON "newsletter_subscribers" ("is_active");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "notifications_user_idx" ON "notifications" ("user_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "notifications_user_read_idx" ON "notifications" ("user_id","read");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "notifications_created_at_idx" ON "notifications" ("created_at");--> statement-breakpoint

@@ -6,9 +6,11 @@ import {
   integer,
   jsonb,
   index,
+  unique,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { blogPostStatusEnum } from "./enums";
+import { organizationId } from "./organizations";
 
 // =============================================
 // CMS / LANDING PAGE TABLES
@@ -17,6 +19,7 @@ import { blogPostStatusEnum } from "./enums";
 export const banners = pgTable(
   "banners",
   {
+    organizationId: organizationId(),
     bannerId: text("banner_id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
@@ -49,6 +52,7 @@ export const banners = pgTable(
 export const faqs = pgTable(
   "faqs",
   {
+    organizationId: organizationId(),
     faqId: text("faq_id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
@@ -68,6 +72,7 @@ export const faqs = pgTable(
 export const whyChooseUs = pgTable(
   "why_choose_us",
   {
+    organizationId: organizationId(),
     id: text("id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
@@ -90,6 +95,7 @@ export const whyChooseUs = pgTable(
 export const testimonials = pgTable(
   "testimonials",
   {
+    organizationId: organizationId(),
     testimonialId: text("testimonial_id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
@@ -114,21 +120,27 @@ export const testimonials = pgTable(
 export const siteSettings = pgTable(
   "site_settings",
   {
+    organizationId: organizationId(),
     settingId: text("setting_id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
-    key: text("key").notNull().unique(),
+    key: text("key").notNull(),
     value: jsonb("value").notNull(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (table) => ({
     keyIdx: index("site_settings_key_idx").on(table.key),
+    keyPerOrg: unique("site_settings_organization_key_unique").on(
+      table.organizationId,
+      table.key
+    ),
   })
 );
 
 export const brands = pgTable(
   "brands",
   {
+    organizationId: organizationId(),
     id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
     name: text("name").notNull(),
     logoUrl: text("logo_url"),
@@ -147,6 +159,7 @@ export const brands = pgTable(
 export const socialLinks = pgTable(
   "social_links",
   {
+    organizationId: organizationId(),
     id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
     platform: text("platform").notNull(),
     url: text("url"),
@@ -164,6 +177,7 @@ export const socialLinks = pgTable(
 export const blogCategories = pgTable(
   "blog_categories",
   {
+    organizationId: organizationId(),
     id: text("id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
@@ -176,13 +190,17 @@ export const blogCategories = pgTable(
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (table) => ({
-    slugKey: uniqueIndex("blog_categories_slug_key").on(table.slug),
+    slugKey: uniqueIndex("blog_categories_slug_key").on(
+      table.organizationId,
+      table.slug,
+    ),
   }),
 );
 
 export const blogPosts = pgTable(
   "blog_posts",
   {
+    organizationId: organizationId(),
     id: text("id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
@@ -205,13 +223,17 @@ export const blogPosts = pgTable(
   (table) => ({
     categoryIdx: index("blog_posts_category_idx").on(table.categoryId),
     statusIdx: index("blog_posts_status_idx").on(table.status, table.publishedAt),
-    slugKey: uniqueIndex("blog_posts_slug_key").on(table.slug),
+    slugKey: uniqueIndex("blog_posts_slug_key").on(
+      table.organizationId,
+      table.slug,
+    ),
   }),
 );
 
 export const certificateTemplates = pgTable(
   "certificate_templates",
   {
+    organizationId: organizationId(),
     id: text("id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
@@ -228,6 +250,9 @@ export const certificateTemplates = pgTable(
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (table) => ({
-    scopeKey: uniqueIndex("certificate_templates_scope_key").on(table.scope),
+    scopeKey: uniqueIndex("certificate_templates_scope_key").on(
+      table.organizationId,
+      table.scope,
+    ),
   }),
 );

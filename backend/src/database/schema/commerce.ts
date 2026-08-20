@@ -5,6 +5,7 @@ import {
   decimal,
   jsonb,
   index,
+  unique,
 } from "drizzle-orm/pg-core";
 import {
   itemTypeEnum,
@@ -12,15 +13,17 @@ import {
   refundStatusEnum,
   paymentStatusEnum,
 } from "./enums";
+import { organizationId } from "./organizations";
 
 export const payments = pgTable(
   "payments",
   {
+    organizationId: organizationId(),
     paymentId: text("payment_id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
     userId: text("user_id").notNull(),
-    idempotencyKey: text("idempotency_key").unique(),
+    idempotencyKey: text("idempotency_key"),
     batchId: text("batch_id"),
     corporateContractId: text("corporate_contract_id"),
     itemType: itemTypeEnum("item_type").notNull().default("BATCH"),
@@ -34,7 +37,7 @@ export const payments = pgTable(
     paymentProofUrl: text("payment_proof_url"),
     transactionId: text("transaction_id"),
     payerName: text("payer_name"),
-    invoiceNo: text("invoice_no").unique(),
+    invoiceNo: text("invoice_no"),
     taxAmount: decimal("tax_amount", { precision: 10, scale: 2 }).default("0"),
     refundStatus: refundStatusEnum("refund_status").notNull().default("NONE"),
     refundReason: text("refund_reason"),
@@ -61,5 +64,13 @@ export const payments = pgTable(
     userStatusIdx: index("payments_user_status_idx").on(table.userId, table.status),
     userCreatedIdx: index("payments_user_created_idx").on(table.userId, table.createdAt),
     refundStatusIdx: index("payments_refund_status_idx").on(table.refundStatus),
+    invoicePerOrg: unique("payments_organization_invoice_unique").on(
+      table.organizationId,
+      table.invoiceNo
+    ),
+    idempotencyPerOrg: unique("payments_organization_idempotency_unique").on(
+      table.organizationId,
+      table.idempotencyKey
+    ),
   })
 );

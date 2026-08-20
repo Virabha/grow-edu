@@ -51,7 +51,10 @@ export class MeetingCredentialsService {
         .insert(schema.instructorMeetingCredentials)
         .values({ userId, zoomClientId: dto.clientId, zoomClientSecret: newSecret })
         .onConflictDoUpdate({
-          target: schema.instructorMeetingCredentials.userId,
+          target: [
+            schema.instructorMeetingCredentials.organizationId,
+            schema.instructorMeetingCredentials.userId,
+          ],
           set: { zoomClientId: dto.clientId, zoomClientSecret: newSecret, updatedAt: new Date() },
         });
     } else {
@@ -59,7 +62,10 @@ export class MeetingCredentialsService {
         .insert(schema.instructorMeetingCredentials)
         .values({ userId, zoomClientId: dto.clientId, zoomClientSecret: null })
         .onConflictDoUpdate({
-          target: schema.instructorMeetingCredentials.userId,
+          target: [
+            schema.instructorMeetingCredentials.organizationId,
+            schema.instructorMeetingCredentials.userId,
+          ],
           set: { zoomClientId: dto.clientId, updatedAt: new Date() },
         });
     }
@@ -81,7 +87,10 @@ export class MeetingCredentialsService {
         .insert(schema.instructorMeetingCredentials)
         .values({ userId, jitsiAppId: dto.appId, jitsiSecret: newSecret })
         .onConflictDoUpdate({
-          target: schema.instructorMeetingCredentials.userId,
+          target: [
+            schema.instructorMeetingCredentials.organizationId,
+            schema.instructorMeetingCredentials.userId,
+          ],
           set: { jitsiAppId: dto.appId, jitsiSecret: newSecret, updatedAt: new Date() },
         });
     } else {
@@ -89,7 +98,10 @@ export class MeetingCredentialsService {
         .insert(schema.instructorMeetingCredentials)
         .values({ userId, jitsiAppId: dto.appId, jitsiSecret: null })
         .onConflictDoUpdate({
-          target: schema.instructorMeetingCredentials.userId,
+          target: [
+            schema.instructorMeetingCredentials.organizationId,
+            schema.instructorMeetingCredentials.userId,
+          ],
           set: { jitsiAppId: dto.appId, updatedAt: new Date() },
         });
     }

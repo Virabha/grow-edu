@@ -7,10 +7,12 @@ import {
   unique,
 } from "drizzle-orm/pg-core";
 import { corporateContractStatusEnum } from "./enums";
+import { organizationId } from "./organizations";
 
 export const corporateContracts = pgTable(
   "corporate_contracts",
   {
+    organizationId: organizationId(),
     contractId: text("contract_id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
@@ -39,6 +41,7 @@ export const corporateContracts = pgTable(
 export const corporateContractBatches = pgTable(
   "corporate_contract_batches",
   {
+    organizationId: organizationId(),
     contractBatchId: text("contract_batch_id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
@@ -60,6 +63,7 @@ export const corporateContractBatches = pgTable(
 export const corporateJoinLinks = pgTable(
   "corporate_join_links",
   {
+    organizationId: organizationId(),
     joinLinkId: text("join_link_id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
@@ -83,6 +87,7 @@ export const corporateJoinLinks = pgTable(
 export const corporateSeats = pgTable(
   "corporate_seats",
   {
+    organizationId: organizationId(),
     seatId: text("seat_id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),

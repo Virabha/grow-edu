@@ -343,7 +343,7 @@ export class PaymentService {
               .insert(siteSettings)
               .values({ key, value })
               .onConflictDoUpdate({
-                target: siteSettings.key,
+                target: [siteSettings.organizationId, siteSettings.key],
                 set: { value, updatedAt: new Date() },
               }),
       ),

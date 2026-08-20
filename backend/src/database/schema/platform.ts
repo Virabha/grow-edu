@@ -7,10 +7,12 @@ import {
   index,
 } from "drizzle-orm/pg-core";
 import { badgeCriteriaEnum } from "./enums";
+import { organizationId } from "./organizations";
 
 export const instructorBadges = pgTable(
   "instructor_badges",
   {
+    organizationId: organizationId(),
     id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
     name: text("name").notNull(),
     description: text("description").notNull(),

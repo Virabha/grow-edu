@@ -11,10 +11,12 @@ import {
   assignmentSubmissionTypeEnum,
   assignmentSubmissionStatusEnum,
 } from "./enums";
+import { organizationId } from "./organizations";
 
 export const assignments = pgTable(
   "assignments",
   {
+    organizationId: organizationId(),
     id: text("id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
@@ -44,6 +46,7 @@ export const assignments = pgTable(
 export const assignmentSubmissions = pgTable(
   "assignment_submissions",
   {
+    organizationId: organizationId(),
     id: text("id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),

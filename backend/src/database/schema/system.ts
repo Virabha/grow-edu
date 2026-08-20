@@ -7,12 +7,14 @@ import {
   index,
 } from "drizzle-orm/pg-core";
 import { notificationTypeEnum, videoEncodingJobStatusEnum } from "./enums";
+import { organizationId } from "./organizations";
 
 // ─── Notifications ──────────────────────────────────────────────────────────
 
 export const notifications = pgTable(
   "notifications",
   {
+    organizationId: organizationId(),
     notificationId: text("notification_id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
@@ -35,6 +37,7 @@ export const notifications = pgTable(
 export const videoEncodingJobs = pgTable(
   "video_encoding_jobs",
   {
+    organizationId: organizationId(),
     jobId: text("job_id").primaryKey(),
     lessonId: text("lesson_id").notNull(),
     batchId: text("batch_id").notNull(),

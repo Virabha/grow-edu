@@ -25,17 +25,19 @@ import {
   lessonTypeEnum,
   lessonStatusEnum,
 } from "./enums";
+import { organizationId } from "./organizations";
 
 // ─── Batches (PW-style cohorts) ──────────────────────────────────────────────
 
 export const batches = pgTable(
   "batches",
   {
+    organizationId: organizationId(),
     batchId: text("batch_id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
     title: text("title").notNull(),
-    slug: text("slug").notNull().unique(),
+    slug: text("slug").notNull(),
     description: text("description"),
     shortDescription: text("short_description"),
     targetExam: text("target_exam"),
@@ -61,6 +63,10 @@ export const batches = pgTable(
   },
   (table) => ({
     slugIdx: index("batches_slug_idx").on(table.slug),
+    slugPerOrg: unique("batches_organization_slug_unique").on(
+      table.organizationId,
+      table.slug
+    ),
     statusIdx: index("batches_status_idx").on(table.status),
     startDateIdx: index("batches_start_date_idx").on(table.startDate),
     deliveryModeIdx: index("batches_delivery_mode_idx").on(table.deliveryMode),
@@ -70,6 +76,7 @@ export const batches = pgTable(
 export const batchInstructors = pgTable(
   "batch_instructors",
   {
+    organizationId: organizationId(),
     batchInstructorId: text("batch_instructor_id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
@@ -94,6 +101,7 @@ export const batchInstructors = pgTable(
 export const batchSubjects = pgTable(
   "batch_subjects",
   {
+    organizationId: organizationId(),
     subjectId: text("subject_id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
@@ -113,6 +121,7 @@ export const batchSubjects = pgTable(
 export const lessons = pgTable(
   "lessons",
   {
+    organizationId: organizationId(),
     lessonId: text("lesson_id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
@@ -143,6 +152,7 @@ export const lessons = pgTable(
 export const lessonProgress = pgTable(
   "lesson_progress",
   {
+    organizationId: organizationId(),
     lessonProgressId: text("lesson_progress_id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
@@ -170,6 +180,7 @@ export const lessonProgress = pgTable(
 export const batchEnrollments = pgTable(
   "batch_enrollments",
   {
+    organizationId: organizationId(),
     enrollmentId: text("enrollment_id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
@@ -197,6 +208,7 @@ export const batchEnrollments = pgTable(
 export const batchSessions = pgTable(
   "batch_sessions",
   {
+    organizationId: organizationId(),
     sessionId: text("session_id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
@@ -238,6 +250,7 @@ export const batchSessions = pgTable(
 export const batchAnnouncements = pgTable(
   "batch_announcements",
   {
+    organizationId: organizationId(),
     announcementId: text("announcement_id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
@@ -261,6 +274,7 @@ export const batchAnnouncements = pgTable(
 export const batchResources = pgTable(
   "batch_resources",
   {
+    organizationId: organizationId(),
     resourceId: text("resource_id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
@@ -291,6 +305,7 @@ export const batchResources = pgTable(
 export const batchDoubts = pgTable(
   "batch_doubts",
   {
+    organizationId: organizationId(),
     doubtId: text("doubt_id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
@@ -316,6 +331,7 @@ export const batchDoubts = pgTable(
 export const batchDoubtReplies = pgTable(
   "batch_doubt_replies",
   {
+    organizationId: organizationId(),
     replyId: text("reply_id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
@@ -338,6 +354,7 @@ export const batchDoubtReplies = pgTable(
 export const batchAttendance = pgTable(
   "batch_attendance",
   {
+    organizationId: organizationId(),
     attendanceId: text("attendance_id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
@@ -363,6 +380,7 @@ export const batchAttendance = pgTable(
 export const batchQuizzes = pgTable(
   "batch_quizzes",
   {
+    organizationId: organizationId(),
     quizId: text("quiz_id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
@@ -406,6 +424,7 @@ export type QuizCorrectAnswer =
 export const batchQuizQuestions = pgTable(
   "batch_quiz_questions",
   {
+    organizationId: organizationId(),
     questionId: text("question_id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
@@ -432,6 +451,7 @@ export const batchQuizQuestions = pgTable(
 export const batchQuizAttempts = pgTable(
   "batch_quiz_attempts",
   {
+    organizationId: organizationId(),
     attemptId: text("attempt_id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
@@ -477,12 +497,13 @@ export const batchQuizAttempts = pgTable(
 export const batchCertificates = pgTable(
   "batch_certificates",
   {
+    organizationId: organizationId(),
     certificateId: text("certificate_id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
     batchId: text("batch_id").notNull(),
     userId: text("user_id").notNull(),
-    certificateNumber: text("certificate_number").notNull().unique(),
+    certificateNumber: text("certificate_number").notNull(),
     issuedAt: timestamp("issued_at").notNull().defaultNow(),
     revokedAt: timestamp("revoked_at"),
     metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
@@ -490,6 +511,9 @@ export const batchCertificates = pgTable(
   (table) => ({
     batchIdx: index("batch_certificates_batch_idx").on(table.batchId),
     userIdx: index("batch_certificates_user_idx").on(table.userId),
+    certificateNumberPerOrg: unique(
+      "batch_certificates_organization_number_unique"
+    ).on(table.organizationId, table.certificateNumber),
     uniqueBatchUser: unique("batch_certificates_batch_user_unique").on(
       table.batchId,
       table.userId

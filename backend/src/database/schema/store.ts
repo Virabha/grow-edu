@@ -6,17 +6,20 @@ import {
   integer,
   jsonb,
   index,
+  unique,
 } from "drizzle-orm/pg-core";
 import { applicationStatusEnum } from "./enums";
+import { organizationId } from "./organizations";
 
 export const services = pgTable(
   "services",
   {
+    organizationId: organizationId(),
     serviceId: text("service_id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
     title: text("title").notNull(),
-    slug: text("slug").notNull().unique(),
+    slug: text("slug").notNull(),
     description: text("description"),
     imageUrl: text("image_url"),
     screenshots: jsonb("screenshots").$type<string[]>().default([]),
@@ -29,6 +32,10 @@ export const services = pgTable(
   },
   (table) => ({
     slugIdx: index("services_slug_idx").on(table.slug),
+    slugPerOrg: unique("services_organization_slug_unique").on(
+      table.organizationId,
+      table.slug,
+    ),
     displayOrderIdx: index("services_display_order_idx").on(table.displayOrder),
     isActiveIdx: index("services_is_active_idx").on(table.isActive),
   })
@@ -37,6 +44,7 @@ export const services = pgTable(
 export const serviceApplications = pgTable(
   "service_applications",
   {
+    organizationId: organizationId(),
     applicationId: text("application_id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),

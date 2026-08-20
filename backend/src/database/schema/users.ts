@@ -6,11 +6,13 @@ import {
   integer,
   jsonb,
   index,
+  unique,
 } from "drizzle-orm/pg-core";
 import {
   userRoleEnum,
   emailTokenTypeEnum,
 } from "./enums";
+import { organizationId } from "./organizations";
 
 export const users = pgTable(
   "users",
@@ -71,10 +73,11 @@ export const emailTokens = pgTable(
 export const instructorProfiles = pgTable(
   "instructor_profiles",
   {
+    organizationId: organizationId(),
     profileId: text("profile_id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
-    userId: text("user_id").notNull().unique(),
+    userId: text("user_id").notNull(),
     bio: text("bio"),
     expertise: jsonb("expertise").$type<string[]>(),
     experience: text("experience"),
@@ -89,6 +92,10 @@ export const instructorProfiles = pgTable(
     userIdIdx: index("instructor_profiles_user_id_idx").on(table.userId),
     displayOrderIdx: index("instructor_profiles_display_order_idx").on(table.displayOrder),
     isActiveIdx: index("instructor_profiles_is_active_idx").on(table.isActive),
+    userPerOrg: unique("instructor_profiles_organization_user_unique").on(
+      table.organizationId,
+      table.userId
+    ),
   })
 );
 
@@ -102,10 +109,11 @@ export const instructorProfiles = pgTable(
 export const instructorMeetingCredentials = pgTable(
   "instructor_meeting_credentials",
   {
+    organizationId: organizationId(),
     credentialId: text("credential_id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
-    userId: text("user_id").notNull().unique(),
+    userId: text("user_id").notNull(),
     zoomClientId: text("zoom_client_id"),
     zoomClientSecret: text("zoom_client_secret"),
     jitsiAppId: text("jitsi_app_id"),
@@ -115,6 +123,9 @@ export const instructorMeetingCredentials = pgTable(
   },
   (table) => ({
     userIdx: index("instructor_meeting_credentials_user_idx").on(table.userId),
+    userPerOrg: unique(
+      "instructor_meeting_credentials_organization_user_unique"
+    ).on(table.organizationId, table.userId),
   }),
 );
 

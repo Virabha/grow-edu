@@ -40,6 +40,13 @@ describe('integration test harness', () => {
     expect(names).not.toContain('section_access');
   });
 
+  it('ships the default organization with the schema', async () => {
+    const [row] = await database.client.unsafe(
+      `select slug from organizations where organization_id = '00000000-0000-0000-0000-000000000001'`,
+    );
+    expect(row?.slug).toBe('groedu');
+  });
+
   it('starts empty and truncates cleanly between tests', async () => {
     await truncateAll(database);
     const [{ count }] = await database.client.unsafe(

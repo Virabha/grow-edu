@@ -205,6 +205,31 @@ describe('batch access', () => {
       .expect(403);
   });
 
+  it('refuses a reorder that smuggles in another batch’s lesson', async () => {
+    const teacher = await createUser(database, 'INSTRUCTOR');
+    await assignInstructor(database, batchId, teacher.userId, 'LEAD');
+    const mineSubject = await createSubject(database, batchId);
+    const mineLesson = await createLesson(database, mineSubject, { order: 1 });
+
+    const other = await createBatch(database, admin.userId);
+    const otherSubject = await createSubject(database, other);
+    const otherLesson = await createLesson(database, otherSubject, { order: 1 });
+
+    await request(app.getHttpServer())
+      .put(`/batches/${batchId}/lessons/reorder`)
+      .set(...authHeader(app, teacher))
+      .send({
+        lessons: [
+          { lessonId: mineLesson, order: 2 },
+          { lessonId: otherLesson, order: 9 },
+        ],
+      })
+      .expect(404);
+
+    const { body } = await get(`/batches/${other}/content`, admin).expect(200);
+    expect(body[0].lessons[0].order).toBe(1);
+  });
+
   it('shows an instructor only the batches they are assigned to', async () => {
     const teacher = await createUser(database, 'INSTRUCTOR');
     const mine = await createBatch(database, admin.userId);

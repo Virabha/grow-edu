@@ -19,7 +19,7 @@ import {
 import { QuizCorrectAnswer } from "../../database/schema/batches";
 import { Queryable } from "../../database/transaction";
 import { NotificationsService } from "../../notifications/notifications.service";
-import { BatchAccessService, Viewer } from "../access/batch-access.service";
+import { BatchAccessService, SignedInViewer, Viewer } from "../access/batch-access.service";
 import { BatchMediaService } from "../batch-media.service";
 import {
   CreateBatchQuizDto,
@@ -39,7 +39,7 @@ export class BatchAssessmentService {
     private readonly notifications: NotificationsService,
   ) {}
 
-  async listQuizzes(batchId: string, viewer: Viewer) {
+  async listQuizzes(batchId: string, viewer: SignedInViewer) {
     const { isStaff } = await this.access.require(batchId, viewer, "READ");
 
     const conditions = [
@@ -69,7 +69,7 @@ export class BatchAssessmentService {
       .from(batchQuizAttempts)
       .where(
         and(
-          eq(batchQuizAttempts.userId, viewer.userId as string),
+          eq(batchQuizAttempts.userId, viewer.userId),
           inArray(
             batchQuizAttempts.quizId,
             quizzes.map((q) => q.quizId),
@@ -336,9 +336,9 @@ export class BatchAssessmentService {
     return { success: true };
   }
 
-  async startAttempt(batchId: string, quizId: string, viewer: Viewer) {
+  async startAttempt(batchId: string, quizId: string, viewer: SignedInViewer) {
     await this.access.require(batchId, viewer, "READ");
-    const userId = viewer.userId as string;
+    const userId = viewer.userId;
     const quiz = await this.requireQuiz(batchId, quizId);
 
     if (!quiz.publishedAt) throw new BadRequestException("Quiz not published");
@@ -397,10 +397,10 @@ export class BatchAssessmentService {
     quizId: string,
     attemptId: string,
     dto: SubmitQuizAnswerDto,
-    viewer: Viewer,
+    viewer: SignedInViewer,
   ) {
     await this.access.require(batchId, viewer, "READ");
-    const userId = viewer.userId as string;
+    const userId = viewer.userId;
 
     const [attempt] = await this.db
       .select()
@@ -481,7 +481,7 @@ export class BatchAssessmentService {
     return attempt;
   }
 
-  async listMyAttempts(batchId: string, quizId: string, viewer: Viewer) {
+  async listMyAttempts(batchId: string, quizId: string, viewer: SignedInViewer) {
     await this.access.require(batchId, viewer, "READ");
     return this.db
       .select()
@@ -489,7 +489,7 @@ export class BatchAssessmentService {
       .where(
         and(
           eq(batchQuizAttempts.quizId, quizId),
-          eq(batchQuizAttempts.userId, viewer.userId as string),
+          eq(batchQuizAttempts.userId, viewer.userId),
         ),
       )
       .orderBy(desc(batchQuizAttempts.startedAt));

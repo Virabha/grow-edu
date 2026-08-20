@@ -20,7 +20,10 @@ import {
 import { Queryable } from "../../database/transaction";
 import { NotificationsService } from "../../notifications/notifications.service";
 import { PaymentService } from "../../payment/payment.service";
-import { BatchAccessService, Viewer } from "../access/batch-access.service";
+import {
+  BatchAccessService,
+  SignedInViewer,
+} from "../access/batch-access.service";
 import { BatchMediaService } from "../batch-media.service";
 import { CreateBatchEnrollmentsDto } from "../dto/batch-enrollment.dto";
 import { RecordLessonProgressDto } from "../dto/lesson-progress.dto";
@@ -50,6 +53,26 @@ export class BatchEnrolmentService implements OnModuleInit {
         });
       },
     );
+    this.paymentService.registerBatchEnrolledNotifier((batchId, userId) =>
+      this.announceEnrolment(batchId, userId),
+    );
+  }
+
+  async announceEnrolment(batchId: string, userId: string): Promise<void> {
+    const [batch] = await this.db
+      .select({ title: batches.title, slug: batches.slug })
+      .from(batches)
+      .where(eq(batches.batchId, batchId))
+      .limit(1);
+    if (!batch) return;
+
+    await this.notifications.create({
+      userId,
+      type: "BATCH_ENROLLMENT",
+      title: `You're enrolled in ${batch.title}`,
+      link: `/batches/${batch.slug}`,
+      batchId,
+    });
   }
 
   async findMine(userId: string) {
@@ -97,6 +120,7 @@ export class BatchEnrolmentService implements OnModuleInit {
 
     if (originalAmount === 0) {
       const enrollment = await this.grant(batchId, userId, { source: "FREE" });
+      await this.announceEnrolment(batchId, userId);
       return {
         paymentId: null as string | null,
         enrolled: true,
@@ -284,6 +308,10 @@ export class BatchEnrolmentService implements OnModuleInit {
       })),
     );
 
+    for (const userId of newUserIds) {
+      await this.announceEnrolment(batchId, userId);
+    }
+
     return {
       enrolled: newUserIds.length,
       alreadyEnrolled: existingSet.size,
@@ -365,25 +393,17 @@ export class BatchEnrolmentService implements OnModuleInit {
       })
       .returning();
 
-    await this.notifications.create({
-      userId,
-      type: "BATCH_ENROLLMENT",
-      title: `You're enrolled in ${batch.title}`,
-      link: `/batches/${batch.slug}`,
-      batchId,
-    });
-
     return created;
   }
 
   async recordLessonProgress(
     batchId: string,
     lessonId: string,
-    viewer: Viewer,
+    viewer: SignedInViewer,
     dto: RecordLessonProgressDto,
   ) {
     await this.access.requireForLesson(lessonId, viewer, "READ");
-    const userId = viewer.userId as string;
+    const userId = viewer.userId;
     const now = new Date();
 
     const [row] = await this.db
@@ -415,7 +435,7 @@ export class BatchEnrolmentService implements OnModuleInit {
     return row;
   }
 
-  async lessonProgressFor(batchId: string, viewer: Viewer) {
+  async lessonProgressFor(batchId: string, viewer: SignedInViewer) {
     await this.access.require(batchId, viewer, "READ");
     return this.db
       .select()
@@ -423,7 +443,7 @@ export class BatchEnrolmentService implements OnModuleInit {
       .where(
         and(
           eq(lessonProgress.batchId, batchId),
-          eq(lessonProgress.userId, viewer.userId as string),
+          eq(lessonProgress.userId, viewer.userId),
         ),
       );
   }

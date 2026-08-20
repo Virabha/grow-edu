@@ -19,6 +19,7 @@ import {
 import { BATCH_ACCESS_EXPIRED, BATCH_NOT_FOUND } from "./access.errors";
 
 export type Viewer = { userId?: string; role?: string };
+export type SignedInViewer = Viewer & { userId: string };
 export type AccessLevel = "READ" | "MANAGE";
 
 export type Batch = typeof batches.$inferSelect;
@@ -175,7 +176,7 @@ export class BatchAccessService {
     return batch ?? null;
   }
 
-  private async isStaff(batchId: string, viewer: Viewer): Promise<boolean> {
+  async isStaff(batchId: string, viewer: Viewer): Promise<boolean> {
     if (viewer.role === "PLATFORM_ADMIN") return true;
     if (viewer.role !== "INSTRUCTOR" || !viewer.userId) return false;
     const [row] = await this.db

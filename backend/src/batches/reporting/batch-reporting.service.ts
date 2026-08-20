@@ -19,8 +19,12 @@ import {
   lessonProgress,
   lessons,
 } from "../../database/schema";
-import { BatchAccessService, Viewer } from "../access/batch-access.service";
+import {
+  BatchAccessService,
+  SignedInViewer,
+} from "../access/batch-access.service";
 import { BatchEnrolmentService } from "../enrolment/batch-enrolment.service";
+import { BatchSchedulingService } from "../scheduling/batch-scheduling.service";
 
 @Injectable()
 export class BatchReportingService {
@@ -29,6 +33,7 @@ export class BatchReportingService {
     private readonly db: PostgresJsDatabase<typeof schema>,
     private readonly access: BatchAccessService,
     private readonly enrolments: BatchEnrolmentService,
+    private readonly scheduling: BatchSchedulingService,
   ) {}
 
   async analytics(batchId: string) {
@@ -251,38 +256,19 @@ export class BatchReportingService {
     };
   }
 
-  async myProgress(batchId: string, viewer: Viewer) {
+  async myProgress(batchId: string, viewer: SignedInViewer) {
     await this.access.require(batchId, viewer, "READ");
-    const userId = viewer.userId as string;
+    const userId = viewer.userId;
 
     const [
-      [{ liveTotal }],
-      [{ attended }],
+      attendance,
       [{ recordingTotal }],
       [{ quizTotal }],
       [{ lessonTotal }],
       [{ lessonsDone }],
       myAttempts,
     ] = await Promise.all([
-      this.db
-        .select({ liveTotal: sql<number>`count(*)::int` })
-        .from(batchSessions)
-        .where(
-          and(
-            eq(batchSessions.batchId, batchId),
-            eq(batchSessions.type, "LIVE"),
-            eq(batchSessions.isDeleted, false),
-          ),
-        ),
-      this.db
-        .select({ attended: sql<number>`count(*)::int` })
-        .from(batchAttendance)
-        .where(
-          and(
-            eq(batchAttendance.batchId, batchId),
-            eq(batchAttendance.userId, userId),
-          ),
-        ),
+      this.scheduling.attendanceFor(batchId, userId),
       this.db
         .select({ recordingTotal: sql<number>`count(*)::int` })
         .from(batchSessions)
@@ -357,10 +343,9 @@ export class BatchReportingService {
 
     return {
       sessions: {
-        liveTotal,
-        attended,
-        attendancePercent:
-          liveTotal > 0 ? Number(((attended / liveTotal) * 100).toFixed(1)) : 0,
+        liveTotal: attendance.liveTotal,
+        attended: attendance.attended,
+        attendancePercent: attendance.percent,
         recordings: recordingTotal,
       },
       lessons: {

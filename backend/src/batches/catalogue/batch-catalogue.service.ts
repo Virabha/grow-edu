@@ -192,7 +192,7 @@ export class BatchCatalogueService {
       isEnrolled,
       pendingPaymentId,
       pendingPaymentStatus,
-      canManage: await this.canManage(batch.batchId, viewer),
+      canManage: await this.access.isStaff(batch.batchId, viewer),
     };
   }
 
@@ -661,12 +661,6 @@ export class BatchCatalogueService {
       .limit(1);
     if (!subject) throw new NotFoundException("Subject not found");
     return subject;
-  }
-
-  private async canManage(batchId: string, viewer: Viewer): Promise<boolean> {
-    if (viewer.role === "PLATFORM_ADMIN") return true;
-    if (viewer.role !== "INSTRUCTOR" || !viewer.userId) return false;
-    return (await this.access.taughtBatchIds(viewer.userId)).includes(batchId);
   }
 
   private async assertSlugFree(slug: string, exceptBatchId?: string) {

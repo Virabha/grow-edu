@@ -112,6 +112,34 @@ describe('payment approval', () => {
     expect(await enrolledBatchIds(student)).toEqual([batchId]);
   });
 
+  async function enrolmentNotices(actor: TestActor): Promise<string[]> {
+    const { body } = await request(app.getHttpServer())
+      .get('/notifications')
+      .set(...authHeader(app, actor))
+      .expect(200);
+    return (body.data ?? body)
+      .filter((n: { type: string }) => n.type === 'BATCH_ENROLLMENT')
+      .map((n: { title: string }) => n.title);
+  }
+
+  it('tells the student they are enrolled only once approval sticks', async () => {
+    const { body: started } = await checkout(student).expect(201);
+
+    expect(await enrolmentNotices(student)).toEqual([]);
+
+    await approve(started.paymentId).expect(200);
+
+    expect(await enrolmentNotices(student)).toHaveLength(1);
+  });
+
+  it('never announces an enrolment for a rejected payment', async () => {
+    const { body: started } = await checkout(student).expect(201);
+
+    await reject(started.paymentId).expect(200);
+
+    expect(await enrolmentNotices(student)).toEqual([]);
+  });
+
   it('records which batch a payment was for', async () => {
     const { body: started } = await checkout(student).expect(201);
 

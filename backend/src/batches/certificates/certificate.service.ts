@@ -22,6 +22,7 @@ import {
 } from "../../database/schema";
 import { NotificationsService } from "../../notifications/notifications.service";
 import { CertificateTemplateService } from "../../certificate-template/certificate-template.service";
+import { BatchSchedulingService } from "../scheduling/batch-scheduling.service";
 
 type DbType = PostgresJsDatabase<typeof schema>;
 
@@ -34,12 +35,15 @@ export interface CertificateRow {
   revokedAt: Date | null;
 }
 
+const MINIMUM_ATTENDANCE_PERCENT = 60;
+
 @Injectable()
 export class CertificateService {
   constructor(
     @Inject(DATABASE_CONNECTION) private readonly db: DbType,
     private readonly notificationsService: NotificationsService,
     private readonly certificateTemplateService: CertificateTemplateService,
+    private readonly scheduling: BatchSchedulingService,
   ) {}
 
   private generateCertificateNumber(batchId: string, userId: string): string {
@@ -75,29 +79,10 @@ export class CertificateService {
     if (!enrollment) throw new BadRequestException("Student is not enrolled");
 
     if (opts.requireCompletion) {
-      const [{ liveTotal }] = await this.db
-        .select({ liveTotal: sql<number>`count(*)::int` })
-        .from(batchSessions)
-        .where(
-          and(
-            eq(batchSessions.batchId, batchId),
-            eq(batchSessions.type, "LIVE"),
-            eq(batchSessions.isDeleted, false)
-          )
-        );
-      const [{ attended }] = await this.db
-        .select({ attended: sql<number>`count(*)::int` })
-        .from(batchAttendance)
-        .where(
-          and(
-            eq(batchAttendance.batchId, batchId),
-            eq(batchAttendance.userId, userId)
-          )
-        );
-      const pct = liveTotal > 0 ? (attended / liveTotal) * 100 : 100;
-      if (pct < 60) {
+      const { percent } = await this.scheduling.attendanceFor(batchId, userId);
+      if (percent !== null && percent < MINIMUM_ATTENDANCE_PERCENT) {
         throw new BadRequestException(
-          `Attendance ${pct.toFixed(1)}% below required 60%`
+          `Attendance ${percent}% below required ${MINIMUM_ATTENDANCE_PERCENT}%`
         );
       }
     }

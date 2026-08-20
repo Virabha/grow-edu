@@ -62,13 +62,23 @@ type BatchEnrollHandler = (
   tx: Queryable,
 ) => Promise<void>;
 
+type BatchEnrolledNotifier = (
+  batchId: string,
+  userId: string,
+) => Promise<void>;
+
 @Injectable()
 export class PaymentService {
   private razorpay: InstanceType<typeof Razorpay> | null = null;
   private batchEnrollHandler: BatchEnrollHandler | null = null;
+  private batchEnrolledNotifier: BatchEnrolledNotifier | null = null;
 
   registerBatchEnrollHandler(handler: BatchEnrollHandler): void {
     this.batchEnrollHandler = handler;
+  }
+
+  registerBatchEnrolledNotifier(notifier: BatchEnrolledNotifier): void {
+    this.batchEnrolledNotifier = notifier;
   }
 
   constructor(
@@ -224,6 +234,9 @@ export class PaymentService {
       return { success: true, message: 'Payment approved and contract activated' };
     }
 
+    if (payment.batchId && this.batchEnrolledNotifier) {
+      await this.batchEnrolledNotifier(payment.batchId, payment.userId);
+    }
     await this.sendConfirmation(payment);
     return { success: true, message: 'Payment approved and access granted' };
   }

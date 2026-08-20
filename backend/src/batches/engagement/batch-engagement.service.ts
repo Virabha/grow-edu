@@ -17,7 +17,7 @@ import {
   users,
 } from "../../database/schema";
 import { NotificationsService } from "../../notifications/notifications.service";
-import { BatchAccessService, Viewer } from "../access/batch-access.service";
+import { BatchAccessService, SignedInViewer, Viewer } from "../access/batch-access.service";
 import { BatchMediaService } from "../batch-media.service";
 import {
   CreateBatchAnnouncementDto,
@@ -238,7 +238,7 @@ export class BatchEngagementService {
 
   async listDoubts(
     batchId: string,
-    viewer: Viewer,
+    viewer: SignedInViewer,
     filters: { mine?: boolean; status?: string },
   ) {
     await this.access.require(batchId, viewer, "READ");
@@ -247,7 +247,7 @@ export class BatchEngagementService {
       eq(batchDoubts.isDeleted, false),
     ];
     if (filters.mine) {
-      conditions.push(eq(batchDoubts.askedBy, viewer.userId as string));
+      conditions.push(eq(batchDoubts.askedBy, viewer.userId));
     }
     if (filters.status) {
       conditions.push(
@@ -309,14 +309,14 @@ export class BatchEngagementService {
   async createDoubt(
     batchId: string,
     dto: CreateBatchDoubtDto,
-    viewer: Viewer,
+    viewer: SignedInViewer,
   ) {
     await this.access.require(batchId, viewer, "READ");
     const [created] = await this.db
       .insert(batchDoubts)
       .values({
         batchId,
-        askedBy: viewer.userId as string,
+        askedBy: viewer.userId,
         title: dto.title,
         body: dto.body,
         subjectId: dto.subjectId,
@@ -332,6 +332,7 @@ export class BatchEngagementService {
     dto: UpdateBatchDoubtDto,
     viewer: Viewer,
   ) {
+    await this.access.require(batchId, viewer, "READ");
     const existing = await this.requireDoubt(batchId, doubtId);
     const isAuthor = existing.askedBy === viewer.userId;
     const isAdmin = viewer.role === "PLATFORM_ADMIN";
@@ -355,6 +356,7 @@ export class BatchEngagementService {
   }
 
   async deleteDoubt(batchId: string, doubtId: string, viewer: Viewer) {
+    await this.access.require(batchId, viewer, "READ");
     const existing = await this.requireDoubt(batchId, doubtId);
     if (
       existing.askedBy !== viewer.userId &&
@@ -373,7 +375,7 @@ export class BatchEngagementService {
     batchId: string,
     doubtId: string,
     dto: CreateDoubtReplyDto,
-    viewer: Viewer,
+    viewer: SignedInViewer,
   ) {
     const { batch, isStaff } = await this.access.require(
       batchId,
@@ -386,7 +388,7 @@ export class BatchEngagementService {
       .insert(batchDoubtReplies)
       .values({
         doubtId,
-        authorId: viewer.userId as string,
+        authorId: viewer.userId,
         body: dto.body,
         attachments: dto.attachments ?? [],
         isOfficial: isStaff,
@@ -424,6 +426,7 @@ export class BatchEngagementService {
     replyId: string,
     viewer: Viewer,
   ) {
+    await this.access.require(batchId, viewer, "READ");
     await this.requireDoubt(batchId, doubtId);
     const [reply] = await this.db
       .select()

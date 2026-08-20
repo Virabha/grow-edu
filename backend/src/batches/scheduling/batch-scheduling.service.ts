@@ -16,7 +16,7 @@ import {
 } from "../../database/schema";
 import { CdnService } from "../../cdn/cdn.service";
 import { NotificationsService } from "../../notifications/notifications.service";
-import { BatchAccessService, Viewer } from "../access/batch-access.service";
+import { BatchAccessService, SignedInViewer, Viewer } from "../access/batch-access.service";
 import { BatchMediaService } from "../batch-media.service";
 import { RecordAttendanceDto } from "../dto/batch-attendance.dto";
 import {
@@ -204,7 +204,7 @@ export class BatchSchedulingService {
   async recordAttendance(
     batchId: string,
     sessionId: string,
-    viewer: Viewer,
+    viewer: SignedInViewer,
     dto: RecordAttendanceDto,
   ) {
     await this.access.require(batchId, viewer, "READ");
@@ -213,7 +213,7 @@ export class BatchSchedulingService {
       throw new BadRequestException("Attendance only tracked for live sessions");
     }
 
-    const userId = viewer.userId as string;
+    const userId = viewer.userId;
     const [existing] = await this.db
       .select()
       .from(batchAttendance)
@@ -242,6 +242,40 @@ export class BatchSchedulingService {
       durationSeconds: dto.durationSeconds,
     });
     return { success: true, alreadyRecorded: false };
+  }
+
+  async attendanceFor(
+    batchId: string,
+    userId: string,
+  ): Promise<{ liveTotal: number; attended: number; percent: number | null }> {
+    const [[{ liveTotal }], [{ attended }]] = await Promise.all([
+      this.db
+        .select({ liveTotal: sql<number>`count(*)::int` })
+        .from(batchSessions)
+        .where(
+          and(
+            eq(batchSessions.batchId, batchId),
+            eq(batchSessions.type, "LIVE"),
+            eq(batchSessions.isDeleted, false),
+          ),
+        ),
+      this.db
+        .select({ attended: sql<number>`count(*)::int` })
+        .from(batchAttendance)
+        .where(
+          and(
+            eq(batchAttendance.batchId, batchId),
+            eq(batchAttendance.userId, userId),
+          ),
+        ),
+    ]);
+
+    return {
+      liveTotal,
+      attended,
+      percent:
+        liveTotal > 0 ? Number(((attended / liveTotal) * 100).toFixed(1)) : null,
+    };
   }
 
   async listAttendance(batchId: string, sessionId: string) {

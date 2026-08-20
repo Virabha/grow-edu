@@ -25,6 +25,7 @@ import { GradeSubmissionDto } from "./dto/grade-submission.dto";
 import { FilterSubmissionsDto } from "./dto/filter-submissions.dto";
 import { PaginationDto } from "../common/dto/pagination.dto";
 import { BatchAccessService } from "../batches/access/batch-access.service";
+import { CLOCK, Clock } from "../common/clock";
 
 const MAX_PAGE_LIMIT = 100;
 
@@ -35,6 +36,7 @@ export class AssignmentsService {
   constructor(
     @Inject(DATABASE_CONNECTION) private readonly db: DbType,
     private readonly access: BatchAccessService,
+    @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
   async listAssignments(userId: string, role: string, filters: FilterAssignmentsDto) {
@@ -394,7 +396,7 @@ export class AssignmentsService {
       throw new NotFoundException("Assignment not found");
     }
 
-    if (assignment.dueAt && new Date() > assignment.dueAt) {
+    if (assignment.dueAt && this.clock.now() > assignment.dueAt) {
       throw new UnprocessableEntityException("Assignment is past its due date");
     }
 

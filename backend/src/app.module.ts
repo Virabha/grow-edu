@@ -17,6 +17,7 @@ import { SessionIntegrityModule } from "./auth/session-integrity.module";
 import { AssignmentsModule } from "./assignments/assignments.module";
 import { SettingsModule } from "./settings/settings.module";
 import { AppConfigModule } from "./config/config.module";
+import { ClockModule } from "./common/clock";
 import { DatabaseModule } from "./database/database.module";
 import { AuthModule } from "./auth/auth.module";
 import { CategoriesModule } from "./categories/categories.module";
@@ -38,6 +39,7 @@ import { NotificationsModule } from "./notifications/notifications.module";
 @Module({
   imports: [
     AppConfigModule,
+    ClockModule,
     AppCacheModule,
     DatabaseModule,
     ThrottlerModule.forRoot([

@@ -8,6 +8,7 @@ import * as schema from '../database/schema';
 import { corporateJoinLinks } from '../database/schema';
 import { ContractsService } from './contracts.service';
 import { IssueJoinLinkDto } from './dto/issue-join-link.dto';
+import { CLOCK, Clock } from '../common/clock';
 
 const DEFAULT_VALID_DAYS = 30;
 const TOKEN_BYTES = 32;
@@ -22,6 +23,7 @@ export class JoinLinksService {
     @Inject(DATABASE_CONNECTION)
     private readonly db: PostgresJsDatabase<typeof schema>,
     private readonly contracts: ContractsService,
+    @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
   async issue(contractId: string, dto: IssueJoinLinkDto, actingAdminId: string) {
@@ -29,8 +31,8 @@ export class JoinLinksService {
 
     const expiresAt = dto.expiresAt
       ? new Date(dto.expiresAt)
-      : defaultExpiry(contract.endsAt);
-    if (expiresAt.getTime() <= Date.now()) {
+      : defaultExpiry(contract.endsAt, this.clock.now());
+    if (expiresAt.getTime() <= this.clock.epochMillis()) {
       throw new BadRequestException('expiresAt must be in the future');
     }
 
@@ -94,8 +96,8 @@ export class JoinLinksService {
   }
 }
 
-function defaultExpiry(contractEndsAt: Date): Date {
-  const fallback = new Date();
+function defaultExpiry(contractEndsAt: Date, now: Date): Date {
+  const fallback = new Date(now.getTime());
   fallback.setDate(fallback.getDate() + DEFAULT_VALID_DAYS);
   return contractEndsAt < fallback ? contractEndsAt : fallback;
 }

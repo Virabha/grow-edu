@@ -18,6 +18,7 @@ import {
   payments,
 } from '../database/schema';
 import { Queryable } from '../database/transaction';
+import { CLOCK, Clock } from '../common/clock';
 import { daysUntil, effectiveStatus } from './contract-lifecycle';
 import { CreateContractDto } from './dto/create-contract.dto';
 import { ListContractsDto } from './dto/list-contracts.dto';
@@ -28,6 +29,7 @@ export class ContractsService {
   constructor(
     @Inject(DATABASE_CONNECTION)
     private readonly db: PostgresJsDatabase<typeof schema>,
+    @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
   async create(dto: CreateContractDto, actingAdminId: string) {
@@ -160,7 +162,7 @@ export class ContractsService {
     contract: typeof corporateContracts.$inferSelect,
     seatsClaimed: number,
   ) {
-    const now = Date.now();
+    const now = this.clock.epochMillis();
     return {
       ...contract,
       status: effectiveStatus(contract.status, contract.endsAt, now),

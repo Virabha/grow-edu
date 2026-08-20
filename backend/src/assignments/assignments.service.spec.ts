@@ -7,6 +7,7 @@ import {
 import { Test } from "@nestjs/testing";
 import { DATABASE_CONNECTION } from "../database/database.module";
 import { BatchAccessService } from "../batches/access/batch-access.service";
+import { CLOCK, Clock, SystemClock } from "../common/clock";
 import { AssignmentsService } from "./assignments.service";
 
 type Chain = {
@@ -48,6 +49,7 @@ function makeChain(rows: unknown[]): Chain {
 async function makeService(
   dbOverrides: Record<string, jest.Mock>,
   enrolled = true,
+  clock: Clock = new SystemClock(),
 ) {
   const db = {
     select: jest.fn(),
@@ -65,6 +67,7 @@ async function makeService(
         provide: BatchAccessService,
         useValue: { isEnrolled: jest.fn().mockResolvedValue(enrolled) },
       },
+      { provide: CLOCK, useValue: clock },
     ],
   }).compile();
 
@@ -277,6 +280,46 @@ describe("AssignmentsService › submitAssignment", () => {
     await expect(
       service.submitAssignment(ASSIGNMENT_ID, LEARNER_ID, { textAnswer: "Answer" }),
     ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it("accepts a submission before the deadline and refuses it after", async () => {
+    const DUE = new Date("2026-11-01T00:00:00.000Z");
+    const ASSIGNMENT = {
+      ...FAKE_ASSIGNMENT,
+      submissionType: "TEXT",
+      isPublished: true,
+      dueAt: DUE,
+    };
+
+    let current = new Date("2026-10-31T23:59:00.000Z");
+    const clock: Clock = {
+      now: () => current,
+      epochMillis: () => current.getTime(),
+    };
+
+    let call = 0;
+    const selectChain = jest.fn().mockImplementation(() => {
+      call += 1;
+      return call % 2 === 1 ? makeChain([ASSIGNMENT]) : makeChain([]);
+    });
+    const dbInsert = jest
+      .fn()
+      .mockReturnValue(makeChain([{ id: "sub-1", attemptNo: 1 }]));
+    const { service } = await makeService(
+      { select: selectChain, insert: dbInsert },
+      true,
+      clock,
+    );
+
+    await expect(
+      service.submitAssignment(ASSIGNMENT_ID, LEARNER_ID, { textAnswer: "In time" }),
+    ).resolves.toBeDefined();
+
+    current = new Date("2026-11-01T00:00:01.000Z");
+
+    await expect(
+      service.submitAssignment(ASSIGNMENT_ID, LEARNER_ID, { textAnswer: "Too late" }),
+    ).rejects.toBeInstanceOf(UnprocessableEntityException);
   });
 
   it("rejects TEXT submission without textAnswer", async () => {

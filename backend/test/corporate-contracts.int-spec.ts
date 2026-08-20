@@ -10,6 +10,7 @@ import {
   TestDatabase,
 } from './support/test-database';
 import { createTestApp, authHeader, TestActor } from './support/test-app';
+import { TestClock } from './support/test-clock';
 import {
   createUser,
   createCompany,
@@ -20,12 +21,13 @@ import {
 describe('corporate contracts', () => {
   let database: TestDatabase;
   let app: INestApplication;
+  const clock = new TestClock();
   let admin: TestActor;
   let companyId: string;
 
   beforeAll(async () => {
     database = await createTestDatabase();
-    app = await createTestApp(database);
+    app = await createTestApp(database, clock);
   });
 
   afterAll(async () => {
@@ -34,6 +36,7 @@ describe('corporate contracts', () => {
   });
 
   beforeEach(async () => {
+    clock.reset();
     await truncateAll(database);
     admin = await createUser(database, 'PLATFORM_ADMIN');
     companyId = await createCompany(database);
@@ -269,9 +272,9 @@ describe('corporate contracts', () => {
     expect(unknown.body.code).toBe('JOIN_LINK_NOT_FOUND');
 
     const { body: expired } = await issueJoinLink(admin, contractId, {
-      expiresAt: new Date(Date.now() + 1500).toISOString(),
+      expiresAt: '2027-01-31T00:00:00.000Z',
     });
-    await new Promise((resolve) => setTimeout(resolve, 1800));
+    clock.set('2027-02-01T00:00:00.000Z');
     const stale = await redeem(student, expired.token);
     expect(stale.status).toBe(403);
     expect(stale.body.code).toBe('JOIN_LINK_EXPIRED');
@@ -372,10 +375,13 @@ describe('corporate contracts', () => {
 
   it('stops handing out seats once the contract period has ended', async () => {
     const { contractId } = await activeContract({ seatCount: 5 });
-    const { body: link } = await issueJoinLink(admin, contractId);
+    const { body: link } = await issueJoinLink(admin, contractId, {
+      expiresAt: '2027-06-01T00:00:00.000Z',
+    });
     const latecomer = await createUser(database, 'LEARNER');
 
-    await moveContractEnd(contractId, new Date(Date.now() - 86_400_000));
+    await moveContractEnd(contractId, new Date('2027-01-01T00:00:00.000Z'));
+    clock.set('2027-01-02T00:00:00.000Z');
 
     const refused = await redeem(latecomer, link.token);
 
@@ -385,8 +391,8 @@ describe('corporate contracts', () => {
 
   it('warns the owner before a contract expires', async () => {
     const { contractId } = await activeContract({ seatCount: 5 });
-    const soon = new Date(Date.now() + 10 * 86_400_000);
-    await moveContractEnd(contractId, soon);
+    clock.set('2027-01-01T00:00:00.000Z');
+    await moveContractEnd(contractId, new Date('2027-01-11T00:00:00.000Z'));
 
     const { body: expiring } = await request(app.getHttpServer())
       .get('/corporate/contracts?expiringWithinDays=30')
@@ -505,6 +511,26 @@ describe('corporate contracts', () => {
 
     expect(refused.status).toBe(403);
     expect(refused.body.code).toBe('CONTRACT_NOT_ACTIVE');
+  });
+
+  it('moves a contract through its lifecycle as time passes', async () => {
+    const { contractId } = await activeContract();
+
+    const statusNow = async () => {
+      const { body } = await request(app.getHttpServer())
+        .get(`/corporate/contracts/${contractId}`)
+        .set(...authHeader(app, admin))
+        .expect(200);
+      return body.status;
+    };
+
+    expect(await statusNow()).toBe('ACTIVE');
+
+    clock.set('2027-08-15T00:00:00.000Z');
+    expect(await statusNow()).toBe('EXPIRING');
+
+    clock.set('2027-09-01T00:00:00.000Z');
+    expect(await statusNow()).toBe('EXPIRED');
   });
 
   it('refuses a seat while the college has not paid yet', async () => {

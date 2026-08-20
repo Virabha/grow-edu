@@ -8,6 +8,7 @@ import {
   TestDatabase,
 } from './support/test-database';
 import { createTestApp, authHeader, TestActor } from './support/test-app';
+import { TestClock } from './support/test-clock';
 import {
   createUser,
   createBatch,
@@ -20,6 +21,7 @@ import {
 describe('batch access', () => {
   let database: TestDatabase;
   let app: INestApplication;
+  const clock = new TestClock();
   let admin: TestActor;
   let enrolled: TestActor;
   let stranger: TestActor;
@@ -27,7 +29,7 @@ describe('batch access', () => {
 
   beforeAll(async () => {
     database = await createTestDatabase();
-    app = await createTestApp(database);
+    app = await createTestApp(database, clock);
   });
 
   afterAll(async () => {
@@ -36,6 +38,7 @@ describe('batch access', () => {
   });
 
   beforeEach(async () => {
+    clock.reset();
     await truncateAll(database);
     admin = await createUser(database, 'PLATFORM_ADMIN');
     enrolled = await createUser(database, 'LEARNER');
@@ -128,6 +131,22 @@ describe('batch access', () => {
     });
 
     const { body } = await get(`/batches/${batchId}/sessions`, expired).expect(
+      403,
+    );
+    expect(body.code).toBe('BATCH_ACCESS_EXPIRED');
+  });
+
+  it('closes a student out the moment their access window passes', async () => {
+    const timeboxed = await createUser(database, 'LEARNER');
+    await enrol(database, batchId, timeboxed.userId, {
+      accessEndsAt: new Date('2027-01-31T00:00:00.000Z'),
+    });
+
+    await get(`/batches/${batchId}/sessions`, timeboxed).expect(200);
+
+    clock.set('2027-02-01T00:00:00.000Z');
+
+    const { body } = await get(`/batches/${batchId}/sessions`, timeboxed).expect(
       403,
     );
     expect(body.code).toBe('BATCH_ACCESS_EXPIRED');

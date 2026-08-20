@@ -21,6 +21,7 @@ import {
 } from '../database/schema';
 import { ClaimSeatDto } from './dto/claim-seat.dto';
 import { Transaction } from '../database/transaction';
+import { CLOCK, Clock } from '../common/clock';
 import {
   acceptsSeatClaims,
   ContractStatus,
@@ -51,6 +52,7 @@ export class SeatsService {
   constructor(
     @Inject(DATABASE_CONNECTION)
     private readonly db: PostgresJsDatabase<typeof schema>,
+    @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
   async redeem(token: string, userId: string) {
@@ -104,7 +106,7 @@ export class SeatsService {
     const status = effectiveStatus(
       contract.status,
       contract.endsAt,
-      Date.now(),
+      this.clock.epochMillis(),
     );
     if (!acceptsSeatClaims(status)) {
       throw new ForbiddenException({
@@ -233,7 +235,7 @@ export class SeatsService {
           'This join link has been withdrawn. Ask your college administrator for the current one.',
       });
     }
-    if (link.expiresAt.getTime() <= Date.now()) {
+    if (link.expiresAt.getTime() <= this.clock.epochMillis()) {
       throw new ForbiddenException({
         code: JOIN_LINK_EXPIRED,
         message:

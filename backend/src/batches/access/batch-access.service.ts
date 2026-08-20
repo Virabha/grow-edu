@@ -17,6 +17,7 @@ import {
   lessons,
 } from "../../database/schema";
 import { BATCH_ACCESS_EXPIRED, BATCH_NOT_FOUND } from "./access.errors";
+import { CLOCK, Clock } from "../../common/clock";
 
 export type Viewer = { userId?: string; role?: string };
 export type SignedInViewer = Viewer & { userId: string };
@@ -36,6 +37,7 @@ export class BatchAccessService {
   constructor(
     @Inject(DATABASE_CONNECTION)
     private readonly db: PostgresJsDatabase<typeof schema>,
+    @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
   async require(
@@ -52,7 +54,7 @@ export class BatchAccessService {
 
     const enrollment = await this.activeEnrollment(batchId, viewer.userId);
     if (!enrollment) throw this.absent();
-    if (enrollment.accessEndsAt && enrollment.accessEndsAt < new Date()) {
+    if (enrollment.accessEndsAt && enrollment.accessEndsAt < this.clock.now()) {
       throw new ForbiddenException({
         code: BATCH_ACCESS_EXPIRED,
         message:

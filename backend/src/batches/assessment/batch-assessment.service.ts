@@ -20,6 +20,7 @@ import { QuizCorrectAnswer } from "../../database/schema/batches";
 import { Queryable } from "../../database/transaction";
 import { NotificationsService } from "../../notifications/notifications.service";
 import { BatchAccessService, SignedInViewer, Viewer } from "../access/batch-access.service";
+import { CLOCK, Clock } from "../../common/clock";
 import { BatchMediaService } from "../batch-media.service";
 import {
   CreateBatchQuizDto,
@@ -37,6 +38,7 @@ export class BatchAssessmentService {
     private readonly access: BatchAccessService,
     private readonly media: BatchMediaService,
     private readonly notifications: NotificationsService,
+    @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
   async listQuizzes(batchId: string, viewer: SignedInViewer) {
@@ -342,7 +344,7 @@ export class BatchAssessmentService {
     const quiz = await this.requireQuiz(batchId, quizId);
 
     if (!quiz.publishedAt) throw new BadRequestException("Quiz not published");
-    const now = Date.now();
+    const now = this.clock.epochMillis();
     if (quiz.opensAt && quiz.opensAt.getTime() > now) {
       throw new BadRequestException("Quiz hasn't opened yet");
     }
@@ -385,7 +387,9 @@ export class BatchAssessmentService {
         quizVersion: quiz.version,
         attemptNo: used + 1,
         status: "IN_PROGRESS",
-        expiresAt: new Date(Date.now() + quiz.durationMinutes * 60_000),
+        expiresAt: new Date(
+          this.clock.epochMillis() + quiz.durationMinutes * 60_000,
+        ),
         answers: {},
       })
       .returning();
@@ -434,7 +438,7 @@ export class BatchAssessmentService {
       dto.answers,
       Number(quiz.negativeMarkPercent) / 100,
     );
-    const expired = attempt.expiresAt.getTime() < Date.now();
+    const expired = attempt.expiresAt.getTime() < this.clock.epochMillis();
 
     const [updated] = await this.db
       .update(batchQuizAttempts)

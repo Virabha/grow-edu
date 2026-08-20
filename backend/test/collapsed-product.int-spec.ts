@@ -7,17 +7,19 @@ import {
   TestDatabase,
 } from './support/test-database';
 import { createTestApp, authHeader, TestActor } from './support/test-app';
+import { TestClock } from './support/test-clock';
 import { createUser } from './support/factories';
 
 describe('the collapsed product model', () => {
   let database: TestDatabase;
   let app: INestApplication;
+  const clock = new TestClock();
   let admin: TestActor;
   let student: TestActor;
 
   beforeAll(async () => {
     database = await createTestDatabase();
-    app = await createTestApp(database);
+    app = await createTestApp(database, clock);
   });
 
   afterAll(async () => {
@@ -26,6 +28,7 @@ describe('the collapsed product model', () => {
   });
 
   beforeEach(async () => {
+    clock.reset();
     await truncateAll(database);
     admin = await createUser(database, 'PLATFORM_ADMIN');
     student = await createUser(database, 'LEARNER');
@@ -183,6 +186,61 @@ describe('the collapsed product model', () => {
     expect(Number(submitted.maxScore)).toBe(4);
     expect(Number(submitted.score)).toBe(0);
     expect(submitted.wrongCount).toBe(1);
+  });
+
+  it('holds a test shut until it opens, then lets it be taken', async () => {
+    const batch = await createBatch();
+    await as(student).post(`/batches/${batch.batchId}/checkout`).expect(201);
+
+    const { body: quiz } = await as(admin)
+      .post(`/batches/${batch.batchId}/quizzes`, {
+        title: 'Sunday mock',
+        durationMinutes: 30,
+        maxAttempts: 1,
+        negativeMarkPercent: 0,
+        passingPercent: 40,
+        opensAt: '2026-10-01T09:00:00.000Z',
+        closesAt: '2026-10-01T12:00:00.000Z',
+        publish: true,
+      })
+      .expect(201);
+
+    const tooEarly = await as(student).post(
+      `/batches/${batch.batchId}/quizzes/${quiz.quizId}/attempts`,
+    );
+    expect(tooEarly.status).toBe(400);
+    expect(tooEarly.body.message).toMatch(/hasn't opened/i);
+
+    clock.set('2026-10-01T10:00:00.000Z');
+    await as(student)
+      .post(`/batches/${batch.batchId}/quizzes/${quiz.quizId}/attempts`)
+      .expect(201);
+  });
+
+  it('shuts a test once its window closes', async () => {
+    const batch = await createBatch();
+    await as(student).post(`/batches/${batch.batchId}/checkout`).expect(201);
+
+    const { body: quiz } = await as(admin)
+      .post(`/batches/${batch.batchId}/quizzes`, {
+        title: 'Sunday mock',
+        durationMinutes: 30,
+        maxAttempts: 1,
+        negativeMarkPercent: 0,
+        passingPercent: 40,
+        opensAt: '2026-10-01T09:00:00.000Z',
+        closesAt: '2026-10-01T12:00:00.000Z',
+        publish: true,
+      })
+      .expect(201);
+
+    clock.set('2026-10-01T12:00:01.000Z');
+
+    const tooLate = await as(student).post(
+      `/batches/${batch.batchId}/quizzes/${quiz.quizId}/attempts`,
+    );
+    expect(tooLate.status).toBe(400);
+    expect(tooLate.body.message).toMatch(/closed/i);
   });
 
   it('leaves a historic attempt readable after the test is edited', async () => {

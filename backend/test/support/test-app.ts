@@ -4,6 +4,8 @@ import { JwtService } from '@nestjs/jwt';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from '../../src/app.module';
 import { DATABASE_CONNECTION } from '../../src/database/database.module';
+import { CLOCK } from '../../src/common/clock';
+import { TestClock } from './test-clock';
 import { TestDatabase } from './test-database';
 
 export type TestActor = {
@@ -14,12 +16,15 @@ export type TestActor = {
 
 export async function createTestApp(
   database: TestDatabase,
+  clock: TestClock = new TestClock(),
 ): Promise<INestApplication> {
   const moduleRef = await Test.createTestingModule({
     imports: [AppModule],
   })
     .overrideProvider(DATABASE_CONNECTION)
     .useValue(database.db)
+    .overrideProvider(CLOCK)
+    .useValue(clock)
     .compile();
 
   const app = moduleRef.createNestApplication<NestExpressApplication>();

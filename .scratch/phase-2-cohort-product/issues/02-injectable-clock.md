@@ -6,9 +6,9 @@ Scope is deliberately the reads that gate behaviour, not all 137 date constructi
 
 **Blocked by:** None - can start immediately
 
-**Status:** ready-for-agent
+**Status:** done 2026-08-21
 
-- [ ] A test can set the current time and every behaviour-gating read observes it
-- [ ] Contract expiry, quiz open and close windows, and access-window expiry all read the injected clock
-- [ ] No test anywhere waits on real elapsed time to assert a time-dependent behaviour
-- [ ] Record stamping is untouched and still uses the system clock
+- [x] A test can set the current time and every behaviour-gating read observes it
+- [x] Contract expiry, quiz open and close windows, and access-window expiry all read the injected clock
+- [x] No test anywhere waits on real elapsed time to assert a time-dependent behaviour
+- [x] Record stamping is untouched and still uses the system clock

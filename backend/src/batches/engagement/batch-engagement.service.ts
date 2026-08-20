@@ -19,6 +19,7 @@ import {
 import { NotificationsService } from "../../notifications/notifications.service";
 import { BatchAccessService, SignedInViewer, Viewer } from "../access/batch-access.service";
 import { BatchMediaService } from "../batch-media.service";
+import { CLOCK, Clock } from "../../common/clock";
 import {
   CreateBatchAnnouncementDto,
   UpdateBatchAnnouncementDto,
@@ -49,6 +50,7 @@ export class BatchEngagementService {
     private readonly access: BatchAccessService,
     private readonly media: BatchMediaService,
     private readonly notifications: NotificationsService,
+    @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
   async listAnnouncements(batchId: string, viewer: Viewer) {
@@ -184,7 +186,7 @@ export class BatchEngagementService {
       })
       .returning();
 
-    if (!dto.publishAt || new Date(dto.publishAt) <= new Date()) {
+    if (!dto.publishAt || new Date(dto.publishAt) <= this.clock.now()) {
       const label =
         dto.type === "DPP" ? "DPP" : dto.type === "NOTES" ? "notes" : "resource";
       await this.notifications.fanout(

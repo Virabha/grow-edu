@@ -5,6 +5,7 @@ import { DATABASE_CONNECTION } from '../database/database.module';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../database/schema';
 import { randomUUID, createHash } from 'crypto';
+import { CLOCK, Clock } from '../common/clock';
 
 export type EmailTokenType = 'EMAIL_VERIFICATION' | 'PASSWORD_RESET';
 
@@ -15,6 +16,7 @@ export class TokenService {
   constructor(
     @Inject(DATABASE_CONNECTION)
     private readonly db: PostgresJsDatabase<typeof schema>,
+    @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
   // Tokens are 128-bit random UUIDs — SHA-256 is sufficient for storage;
@@ -50,7 +52,7 @@ export class TokenService {
           eq(emailTokens.tokenHash, tokenHash),
           eq(emailTokens.tokenType, tokenType),
           eq(emailTokens.used, false),
-          gt(emailTokens.expiresAt, new Date()),
+          gt(emailTokens.expiresAt, this.clock.now()),
         ),
       )
       .limit(1);
@@ -68,7 +70,7 @@ export class TokenService {
           eq(emailTokens.tokenHash, tokenHash),
           eq(emailTokens.tokenType, tokenType),
           eq(emailTokens.used, false),
-          gt(emailTokens.expiresAt, new Date()),
+          gt(emailTokens.expiresAt, this.clock.now()),
         ),
       );
   }

@@ -2,7 +2,6 @@ import axios, { AxiosError } from "axios";
 
 import { useAuthStore } from "@/lib/store/auth-store";
 import { env } from "@/lib/env";
-import { MOCKS_ENABLED, installFetchMock, mockAdapter } from "@/lib/mock";
 
 const getBaseUrl = (): string => {
   if (typeof window !== "undefined") {
@@ -21,7 +20,6 @@ const getAuthToken = (): string | null => {
 
 // Feature APIs that use raw fetch (auth, categories, companies, enrollments,
 // analytics) need intercepting too, not just the axios client.
-if (MOCKS_ENABLED) installFetchMock();
 
 export const apiClient = axios.create({
   baseURL: getBaseUrl(),
@@ -29,9 +27,6 @@ export const apiClient = axios.create({
     "Content-Type": "application/json",
   },
   timeout: 30000,
-  // Demo mode answers every request from the in-memory store in lib/mock.
-  // Remove NEXT_PUBLIC_USE_MOCKS from .env.local to use the real API.
-  ...(MOCKS_ENABLED ? { adapter: mockAdapter } : {}),
 });
 
 apiClient.interceptors.request.use(

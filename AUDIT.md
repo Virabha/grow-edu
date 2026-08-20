@@ -97,7 +97,7 @@ There is a `DeviceRevocationModule`, but nothing ties account suspension to toke
 
 The gating is correct. The residual risks are: it is a build-time constant, so a misconfigured build ships an auth-bypassed app; and it is 4,870 LOC of parallel API surface to maintain.
 
-**Fix:** verify it is tree-shaken out of production bundles, add a deploy-time assertion, and decide whether demo mode still earns its keep.
+**Fixed 2026-08-21.** Both mock layers are deleted, along with the fetch monkey-patch and the axios adapter that installed them. There is no longer a build-time flag that can ship an auth-bypassed app.
 
 ### S6 — No audit log
 
@@ -246,7 +246,7 @@ AI code review and hints · AI content generation · AI study plans · AI lectur
 
 1. **Phase 1 shape.** It is structural, not demo-visible. Confirm or ask me to rebalance.
 2. **CMS page-builder depth.** You deferred this to the audit. My finding: `cms` is 1,601 LOC and 44 endpoints with **no tests**. `specs/DECISIONS.md` flags an unresolved conflict — the changelog claims 84 blocks across 17 categories, the reference screenshots show a single rich-text field. **Recommendation:** ship the landing-page *section* builder (reorder/show/hide predefined sections) rather than free-form drag-and-drop. Same user outcome, a fraction of the cost and risk.
-3. **Demo mode (S5).** Keep the 4,870-LOC mock layer, or delete it now that a staging environment is planned?
+3. ~~**Demo mode (S5).** Keep the 4,870-LOC mock layer, or delete it now that a staging environment is planned?~~ **Resolved 2026-08-21: deleted.** The collapse left it faking an API that no longer exists.
 4. **`batches.service.ts` at 2,899 LOC.** I intend to split it during the phase-1 collapse rather than carry a god object into every later phase. Confirm.
 
 ---

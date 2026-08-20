@@ -4,7 +4,6 @@ import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import {
   LayoutDashboard,
   Users,
-  BookOpen,
   Building2,
   CreditCard,
   Shield,
@@ -19,7 +18,6 @@ import {
   Banknote,
   Blocks,
   Languages,
-  Megaphone,
   Menu as MenuIcon,
   Newspaper,
   Palette,
@@ -27,7 +25,6 @@ import {
   Send,
   Sparkles,
   UserPlus,
-  Video as VideoIcon,
 } from "lucide-react";
 import { useAuthStore } from "@/lib/store/auth-store";
 
@@ -58,11 +55,6 @@ const ADMIN_NAV: NavItem[] = [
     icon: <Users className="h-4 w-4" />,
   },
   {
-    label: "Courses",
-    href: "/admin/courses",
-    icon: <BookOpen className="h-4 w-4" />,
-  },
-  {
     label: "Categories",
     href: "/admin/categories",
     icon: <Layers className="h-4 w-4" />,
@@ -71,11 +63,6 @@ const ADMIN_NAV: NavItem[] = [
     label: "Companies",
     href: "/admin/companies",
     icon: <Building2 className="h-4 w-4" />,
-  },
-  {
-    label: "Enrollments",
-    href: "/admin/enrollments",
-    icon: <Users className="h-4 w-4" />,
   },
   {
     label: "Payments",
@@ -181,24 +168,9 @@ const INSTRUCTOR_NAV: NavItem[] = [
     icon: <GraduationCap className="h-4 w-4" />,
   },
   {
-    label: "My Courses",
-    href: "/instructor/courses",
-    icon: <BookOpen className="h-4 w-4" />,
-  },
-  {
     label: "My Videos",
     href: "/instructor/videos",
     icon: <Video className="h-4 w-4" />,
-  },
-  {
-    label: "Live sessions",
-    href: "/instructor/live-sessions",
-    icon: <VideoIcon className="h-4 w-4" />,
-  },
-  {
-    label: "Announcements",
-    href: "/instructor/announcements",
-    icon: <Megaphone className="h-4 w-4" />,
   },
   {
     label: "My sales",
@@ -208,7 +180,7 @@ const INSTRUCTOR_NAV: NavItem[] = [
   {
     label: "Live settings",
     href: "/instructor/settings/live",
-    icon: <VideoIcon className="h-4 w-4" />,
+    icon: <Video className="h-4 w-4" />,
   },
   {
     label: "Profile",

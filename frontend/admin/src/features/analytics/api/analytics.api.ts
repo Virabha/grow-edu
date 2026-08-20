@@ -1,4 +1,4 @@
-import { EnrollmentStats, RevenueStats, CoursePerformance, PlatformStats } from '../types';
+import { BatchPerformance, EnrollmentStats, PlatformStats, RevenueStats } from '../types';
 import { parseJsonResponse, parseErrorResponse } from '@/lib/types/api';
 import { env } from '@/lib/env';
 const API_URL = env.NEXT_PUBLIC_API_URL;
@@ -50,17 +50,17 @@ export const analyticsApi = {
         }
         return parseJsonResponse<RevenueStats>(response);
     },
-    async getCoursePerformance(courseId: string): Promise<CoursePerformance> {
-        const response = await fetch(`${API_URL}/analytics/courses/${courseId}`, {
+    async getBatchPerformance(batchId: string): Promise<BatchPerformance> {
+        const response = await fetch(`${API_URL}/analytics/batches/${batchId}`, {
             method: 'GET',
             headers: getAuthHeaders(),
             credentials: 'include',
         });
         if (!response.ok) {
             const error = await parseErrorResponse(response);
-            throw new Error(error.message || error.error || 'Failed to fetch course performance');
+            throw new Error(error.message || error.error || 'Failed to fetch batch performance');
         }
-        return parseJsonResponse<CoursePerformance>(response);
+        return parseJsonResponse<BatchPerformance>(response);
     },
     async getPlatformStats(): Promise<PlatformStats> {
         const response = await fetch(`${API_URL}/analytics/platform`, {

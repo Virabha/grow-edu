@@ -1,25 +1,13 @@
-/**
- * In-memory store for the admin demo build.
- *
- * Almost every admin screen is a list + create + edit + delete over one
- * collection, so collections are declared once here and the handler table
- * generates their CRUD routes. Anything genuinely bespoke (analytics,
- * dashboards, approvals) gets its own handler.
- */
-
 import {
   COMPANIES,
   COUPONS,
-  COURSES,
   CATEGORIES,
-  ENROLLMENTS,
   PAYMENTS,
   USERS,
 } from "./seed";
 import {
   ADMIN_ROLES,
   ADMIN_USERS,
-  ANNOUNCEMENTS,
   ASSIGNMENTS,
   ASSIGNMENT_SUBMISSIONS,
   BADGES,
@@ -35,7 +23,6 @@ import {
   HOME_SECTIONS,
   INSTRUCTOR_PROFILE,
   INSTRUCTOR_SALES,
-  LIVE_SESSIONS,
   MENU_ITEMS,
   PAGES,
   PAYOUT_REQUESTS,
@@ -74,12 +61,10 @@ export interface ResourceDef {
 }
 
 export const RESOURCES: ResourceDef[] = [
-  { name: "courses", path: "courses", idKey: "courseId", searchFields: ["title", "slug", "instructorName"], seed: () => COURSES },
   { name: "categories", path: "categories", idKey: "categoryId", searchFields: ["name", "slug"], seed: () => CATEGORIES },
   { name: "users", path: "users", idKey: "id", searchFields: ["firstName", "lastName", "email"], seed: () => USERS },
   { name: "companies", path: "companies", idKey: "companyId", searchFields: ["name", "email"], seed: () => COMPANIES },
-  { name: "enrollments", path: "enrollments", idKey: "enrollmentId", searchFields: ["userName", "userEmail", "courseTitle"], seed: () => ENROLLMENTS },
-  { name: "payments", path: "payments", idKey: "paymentId", searchFields: ["invoiceNo", "userName", "userEmail", "courseTitle"], seed: () => PAYMENTS },
+  { name: "payments", path: "payments", idKey: "paymentId", searchFields: ["invoiceNo", "userName", "userEmail", "batchTitle"], seed: () => PAYMENTS },
   { name: "coupons", path: "coupons", idKey: "couponId", searchFields: ["code", "description"], seed: () => COUPONS },
   { name: "blogCategories", path: "blog/categories", idKey: "id", searchFields: ["name", "slug"], seed: () => BLOG_CATEGORIES },
   { name: "blogPosts", path: "blog/posts", idKey: "id", searchFields: ["title", "slug", "authorName"], seed: () => BLOG_POSTS },
@@ -102,15 +87,9 @@ export const RESOURCES: ResourceDef[] = [
   { name: "themes", path: "themes", idKey: "id", searchFields: ["name"], seed: () => THEMES },
   { name: "adminRoles", path: "admin-roles", idKey: "id", searchFields: ["name", "description"], seed: () => ADMIN_ROLES },
   { name: "adminUsers", path: "admins", idKey: "id", searchFields: ["name", "email", "roleName"], seed: () => ADMIN_USERS },
-  { name: "liveSessions", path: "live-sessions", idKey: "id", searchFields: ["title", "courseTitle"], seed: () => LIVE_SESSIONS },
-  { name: "announcements", path: "announcements", idKey: "id", searchFields: ["title", "courseTitle"], seed: () => ANNOUNCEMENTS },
   { name: "assignments", path: "assignments", idKey: "id", searchFields: ["title", "courseTitle"], seed: () => ASSIGNMENTS },
   { name: "assignmentSubmissions", path: "assignment-submissions", idKey: "id", searchFields: ["learnerName", "assignmentTitle"], seed: () => ASSIGNMENT_SUBMISSIONS },
-  // Curriculum built by the course wizard. No REST path — the bespoke
-  // /sections and /lessons handlers own these.
-  { name: "sections", path: "__sections", idKey: "sectionId", searchFields: ["title"], seed: () => [] },
-  { name: "lessons", path: "__lessons", idKey: "lessonId", searchFields: ["title"], seed: () => [] },
-  { name: "instructorSales", path: "instructor/sales", idKey: "id", searchFields: ["courseTitle"], seed: () => INSTRUCTOR_SALES },
+  { name: "instructorSales", path: "instructor/sales", idKey: "id", searchFields: ["batchTitle"], seed: () => INSTRUCTOR_SALES },
 ];
 
 function freshDb(): MockDb {

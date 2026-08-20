@@ -15,18 +15,18 @@ export function useInstructorStats({ enabled }: UseInstructorStatsParams = {}) {
         queryKey: ["instructor", "stats"],
     });
 }
-interface UseInstructorCoursesParams {
+interface UseInstructorBatchesParams {
     enabled?: boolean;
     page?: number;
     limit?: number;
 }
-export function useInstructorCourses({ enabled, page = 1, limit = 10 }: UseInstructorCoursesParams = {}) {
-    const fetchInstructorCourses = async () => {
-        return instructorService.getCourses(page, limit);
+export function useInstructorBatches({ enabled, page = 1, limit = 10 }: UseInstructorBatchesParams = {}) {
+    const fetchInstructorBatches = async () => {
+        return instructorService.getBatches(page, limit);
     };
     return useQuery({
         staleTime: Infinity,
-        queryFn: fetchInstructorCourses,
+        queryFn: fetchInstructorBatches,
         enabled: enabled !== false,
         queryKey: queryKeys.instructor.courses(),
     });

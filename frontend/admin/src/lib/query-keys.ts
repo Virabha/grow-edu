@@ -13,7 +13,7 @@ export const queryKeys = {
             startDate?: string | Date;
             endDate?: string | Date;
         }) => [...queryKeys.analytics.all(), "getInstructorRevenueStats", filters] as const,
-        coursePerformance: (courseId?: string) => [...queryKeys.analytics.all(), "getCoursePerformance", courseId] as const,
+        batchPerformance: (batchId?: string) => [...queryKeys.analytics.all(), "getBatchPerformance", batchId] as const,
         platformStats: () => [...queryKeys.analytics.all(), "getPlatformStats"] as const,
         enrollmentTrend: (filters?: {
             period?: "day" | "week" | "month";
@@ -27,11 +27,11 @@ export const queryKeys = {
             startDate?: string | Date;
             endDate?: string | Date;
         }) => [...queryKeys.analytics.all(), "getRevenueTrend", filters] as const,
-        topCourses: (filters?: {
+        topBatches: (filters?: {
             limit?: number;
             startDate?: string | Date;
             endDate?: string | Date;
-        }) => [...queryKeys.analytics.all(), "getTopCourses", filters] as const,
+        }) => [...queryKeys.analytics.all(), "getTopBatches", filters] as const,
     },
     categories: {
         all: () => ["categories"] as const,

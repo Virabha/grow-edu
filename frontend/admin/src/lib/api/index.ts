@@ -1,12 +1,7 @@
 export { apiClient } from './client';
 export * from './services/auth';
-export * from './services/courses';
-export * from './services/lessons';
-export * from './services/sections';
 export * from './services/categories';
 export * from './services/users';
-export * from './services/enrollments';
-export * from './services/progress';
 export * from './services/analytics';
 export * from './services/storage';
 export * from './services/cart';

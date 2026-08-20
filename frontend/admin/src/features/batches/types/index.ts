@@ -11,6 +11,8 @@ export type BatchLiveProvider =
 
 export type BatchSessionStatus = "SCHEDULED" | "LIVE" | "ENDED" | "CANCELLED";
 
+export type BatchDeliveryMode = "LIVE" | "RECORDED" | "HYBRID";
+
 export interface Batch {
   batchId: string;
   title: string;
@@ -27,8 +29,8 @@ export interface Batch {
   capacity: number | null;
   startDate: string;
   endDate: string;
-  teacherIds: string[];
-  teachers?: BatchTeacher[];
+  deliveryMode: BatchDeliveryMode;
+  teachers: BatchTeacher[];
   categoryId: string | null;
   status: BatchStatus;
   createdBy: string;
@@ -37,12 +39,20 @@ export interface Batch {
   publishedAt: string | null;
 }
 
+export type BatchInstructorRole = "LEAD" | "SUBJECT" | "ASSISTANT";
+
 export interface BatchTeacher {
   userId: string;
   firstName: string | null;
   lastName: string | null;
   email: string;
   profileImage: string | null;
+  role: BatchInstructorRole;
+}
+
+export interface AddBatchInstructorDto {
+  instructorId: string;
+  role?: BatchInstructorRole;
 }
 
 export interface BatchSubject {
@@ -113,7 +123,6 @@ export interface BatchAnnouncement {
 
 export interface BatchDetail extends Batch {
   subjects: BatchSubject[];
-  teachers: BatchTeacher[];
   isEnrolled: boolean;
   canManage: boolean;
 }
@@ -159,7 +168,7 @@ export interface CreateBatchDto {
   capacity?: number;
   startDate: string;
   endDate: string;
-  teacherIds?: string[];
+  deliveryMode?: BatchDeliveryMode;
   categoryId?: string;
   status?: BatchStatus;
 }

@@ -7,7 +7,7 @@ export interface TrendFilters extends DateFilters {
     period?: 'day' | 'week' | 'month';
     days?: number;
 }
-export interface TopCoursesFilters extends DateFilters {
+export interface TopBatchesFilters extends DateFilters {
     limit?: number;
 }
 export interface EnrollmentStats {
@@ -21,17 +21,17 @@ export interface RevenueStats {
 }
 export interface PlatformStats {
     totalUsers: number;
-    totalCourses: number;
+    totalBatches: number;
     totalEnrollments: number;
     activeUsers?: number;
 }
-export interface TopCourse {
-    courseId: string;
-    courseTitle: string;
+export interface TopBatch {
+    batchId: string;
+    batchTitle: string;
     enrollments: number;
     revenue?: number;
 }
-export interface CoursePerformance {
+export interface BatchPerformance {
     enrollments: number;
     completed: number;
     completionRate: number;
@@ -71,8 +71,8 @@ export const analyticsApi = {
         const { data } = await apiClient.get(`/analytics/instructor-revenue?${params.toString()}`);
         return data;
     },
-    getCoursePerformance: async (courseId: string): Promise<CoursePerformance> => {
-        const { data } = await apiClient.get<CoursePerformance>(`/analytics/courses/${courseId}`);
+    getBatchPerformance: async (batchId: string): Promise<BatchPerformance> => {
+        const { data } = await apiClient.get<BatchPerformance>(`/analytics/batches/${batchId}`);
         return data;
     },
     getPlatformStats: async (): Promise<PlatformStats> => {
@@ -105,7 +105,7 @@ export const analyticsApi = {
         const { data } = await apiClient.get(`/analytics/revenue-trend?${params.toString()}`);
         return data;
     },
-    getTopCourses: async (filters?: TopCoursesFilters): Promise<TopCourse[]> => {
+    getTopBatches: async (filters?: TopBatchesFilters): Promise<TopBatch[]> => {
         const params = new URLSearchParams();
         if (filters?.limit)
             params.set('limit', String(filters.limit));
@@ -113,7 +113,7 @@ export const analyticsApi = {
             params.set('startDate', filters.startDate);
         if (filters?.endDate)
             params.set('endDate', filters.endDate);
-        const { data } = await apiClient.get<TopCourse[]>(`/analytics/top-courses?${params.toString()}`);
+        const { data } = await apiClient.get<TopBatch[]>(`/analytics/top-batches?${params.toString()}`);
         return data;
     },
 };

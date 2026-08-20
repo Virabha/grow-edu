@@ -7,7 +7,7 @@ export interface RevenueStats {
     total: number;
     transactions: number;
 }
-export interface CoursePerformance {
+export interface BatchPerformance {
     enrollments: number;
     completed: number;
     completionRate: number;
@@ -15,6 +15,6 @@ export interface CoursePerformance {
 }
 export interface PlatformStats {
     totalUsers: number;
-    totalCourses: number;
+    totalBatches: number;
     totalEnrollments: number;
 }

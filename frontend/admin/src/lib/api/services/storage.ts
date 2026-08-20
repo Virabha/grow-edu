@@ -8,8 +8,8 @@ export interface UploadResponse {
     key: string;
 }
 export const storageApi = {
-    getUploadKey: async (type: 'course' | 'profile' | 'lesson', fileName?: string, courseId?: string): Promise<UploadKeyResponse> => {
-        const { data } = await apiClient.post('/storage/upload-key', { type, fileName, courseId });
+    getUploadKey: async (type: 'batch' | 'profile' | 'lesson', fileName?: string): Promise<UploadKeyResponse> => {
+        const { data } = await apiClient.post('/storage/upload-key', { type, fileName });
         return data;
     },
     upload: async (file: File, key: string): Promise<UploadResponse> => {

@@ -10,9 +10,9 @@ export interface Payment {
     createdAt: string;
     updatedAt?: string;
     userId?: string;
-    courseId?: string;
-    sectionId?: string;
-    itemType?: string;
+    batchId?: string;
+    corporateContractId?: string;
+    itemType?: 'BATCH' | 'CORPORATE_CONTRACT';
     originalAmount?: number;
     discountAmount?: number;
     couponId?: string;
@@ -28,8 +28,7 @@ export interface Payment {
 
 export interface PaymentDetail extends Payment {
     user?: { userId: string; email: string; firstName?: string; lastName?: string };
-    course?: { courseId: string; title: string; slug: string };
-    section?: { sectionId: string; title: string };
+    batch?: { batchId: string; title: string; slug: string };
     coupon?: { couponId: string; couponCode: string; discountType: string; discountValue: string };
 }
 

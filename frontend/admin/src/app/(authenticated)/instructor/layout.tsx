@@ -3,11 +3,9 @@ import { PropsWithChildren } from "react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import {
   Banknote,
-  BookOpen,
   GraduationCap,
   LayoutDashboard,
   ClipboardList,
-  Megaphone,
   User,
   Video,
   Cast,
@@ -20,11 +18,6 @@ const sidebarItems = [
     icon: <LayoutDashboard className="h-4 w-4" />,
   },
   {
-    label: "My Courses",
-    href: "/instructor/courses",
-    icon: <BookOpen className="h-4 w-4" />,
-  },
-  {
     label: "Batches",
     href: "/admin/batches",
     icon: <GraduationCap className="h-4 w-4" />,
@@ -35,19 +28,9 @@ const sidebarItems = [
     icon: <Video className="h-4 w-4" />,
   },
   {
-    label: "Live sessions",
-    href: "/instructor/live-sessions",
-    icon: <Video className="h-4 w-4" />,
-  },
-  {
     label: "Assignments",
     href: "/instructor/assignments",
     icon: <ClipboardList className="h-4 w-4" />,
-  },
-  {
-    label: "Announcements",
-    href: "/instructor/announcements",
-    icon: <Megaphone className="h-4 w-4" />,
   },
   {
     label: "My sales",

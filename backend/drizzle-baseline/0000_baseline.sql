@@ -1,10 +1,4 @@
 DO $$ BEGIN
- CREATE TYPE "access_source" AS ENUM('SECTION_PURCHASE', 'COURSE_PURCHASE', 'ADMIN_GRANT');
-EXCEPTION
- WHEN duplicate_object THEN null;
-END $$;
---> statement-breakpoint
-DO $$ BEGIN
  CREATE TYPE "application_status" AS ENUM('NEW', 'REVIEWED', 'CONTACTED', 'ACCEPTED', 'REJECTED');
 EXCEPTION
  WHEN duplicate_object THEN null;
@@ -29,13 +23,31 @@ EXCEPTION
 END $$;
 --> statement-breakpoint
 DO $$ BEGIN
+ CREATE TYPE "batch_delivery_mode" AS ENUM('LIVE', 'RECORDED', 'HYBRID');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
  CREATE TYPE "batch_doubt_status" AS ENUM('OPEN', 'ANSWERED', 'CLOSED');
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
 --> statement-breakpoint
 DO $$ BEGIN
+ CREATE TYPE "batch_enrollment_source" AS ENUM('SELF_PURCHASE', 'ADMIN_GRANT', 'CORPORATE_SEAT', 'FREE');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
  CREATE TYPE "batch_enrollment_status" AS ENUM('ACTIVE', 'REVOKED', 'COMPLETED');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ CREATE TYPE "batch_instructor_role" AS ENUM('LEAD', 'SUBJECT', 'ASSISTANT');
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
@@ -131,7 +143,7 @@ EXCEPTION
 END $$;
 --> statement-breakpoint
 DO $$ BEGIN
- CREATE TYPE "item_type" AS ENUM('COURSE', 'SECTION', 'BATCH', 'CORPORATE_CONTRACT');
+ CREATE TYPE "item_type" AS ENUM('BATCH', 'CORPORATE_CONTRACT');
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
@@ -339,88 +351,6 @@ CREATE TABLE IF NOT EXISTS "categories" (
 	CONSTRAINT "categories_slug_unique" UNIQUE("slug")
 );
 --> statement-breakpoint
-CREATE TABLE IF NOT EXISTS "course_announcements" (
-	"announcement_id" text PRIMARY KEY NOT NULL,
-	"course_id" text NOT NULL,
-	"instructor_id" text NOT NULL,
-	"title" text NOT NULL,
-	"body" text NOT NULL,
-	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL
-);
---> statement-breakpoint
-CREATE TABLE IF NOT EXISTS "course_sections" (
-	"section_id" text PRIMARY KEY NOT NULL,
-	"course_id" text NOT NULL,
-	"title" text NOT NULL,
-	"description" text,
-	"order" integer NOT NULL,
-	"price_type" "section_price_type" DEFAULT 'INCLUDED' NOT NULL,
-	"section_price" numeric(10, 2),
-	"is_deleted" boolean DEFAULT false NOT NULL,
-	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL
-);
---> statement-breakpoint
-CREATE TABLE IF NOT EXISTS "courses" (
-	"course_id" text PRIMARY KEY NOT NULL,
-	"title" text NOT NULL,
-	"slug" text NOT NULL,
-	"description" text NOT NULL,
-	"short_description" text,
-	"thumbnail" text,
-	"price" numeric(10, 2) DEFAULT '0' NOT NULL,
-	"compare_at_price" numeric(10, 2),
-	"currency" text DEFAULT 'INR' NOT NULL,
-	"status" "course_status" DEFAULT 'DRAFT' NOT NULL,
-	"review_status" "course_review_status" DEFAULT 'DRAFT' NOT NULL,
-	"review_notes" text,
-	"rejection_reason" text,
-	"category_id" text NOT NULL,
-	"instructor_id" text NOT NULL,
-	"level" "course_level" DEFAULT 'BEGINNER',
-	"language" text DEFAULT 'English',
-	"learning_outcomes" jsonb,
-	"requirements" jsonb,
-	"target_audience" jsonb,
-	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL,
-	"submitted_at" timestamp,
-	"reviewed_at" timestamp,
-	"published_at" timestamp,
-	CONSTRAINT "courses_slug_unique" UNIQUE("slug")
-);
---> statement-breakpoint
-CREATE TABLE IF NOT EXISTS "lessons" (
-	"lesson_id" text PRIMARY KEY NOT NULL,
-	"section_id" text NOT NULL,
-	"title" text NOT NULL,
-	"description" text,
-	"type" "lesson_type" DEFAULT 'VIDEO' NOT NULL,
-	"video_url" text,
-	"text_content" text,
-	"resources" jsonb,
-	"quiz_settings" jsonb,
-	"quiz_version" integer DEFAULT 1 NOT NULL,
-	"duration" integer,
-	"is_free_preview" boolean DEFAULT false,
-	"status" "lesson_status" DEFAULT 'DRAFT',
-	"order" integer NOT NULL,
-	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL
-);
---> statement-breakpoint
-CREATE TABLE IF NOT EXISTS "quiz_questions" (
-	"quiz_question_id" text PRIMARY KEY NOT NULL,
-	"lesson_id" text NOT NULL,
-	"question" text NOT NULL,
-	"answers" jsonb,
-	"explanation" text,
-	"order" integer NOT NULL,
-	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL
-);
---> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "assignment_submissions" (
 	"id" text PRIMARY KEY NOT NULL,
 	"assignment_id" text NOT NULL,
@@ -442,7 +372,7 @@ CREATE TABLE IF NOT EXISTS "assignment_submissions" (
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "assignments" (
 	"id" text PRIMARY KEY NOT NULL,
-	"course_id" text NOT NULL,
+	"batch_id" text NOT NULL,
 	"instructor_id" text NOT NULL,
 	"title" text NOT NULL,
 	"instructions" text,
@@ -457,111 +387,13 @@ CREATE TABLE IF NOT EXISTS "assignments" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE IF NOT EXISTS "course_progress" (
-	"course_progress_id" text PRIMARY KEY NOT NULL,
-	"user_id" text NOT NULL,
-	"course_id" text NOT NULL,
-	"progress" numeric(5, 2) DEFAULT '0' NOT NULL,
-	"time_spent" integer DEFAULT 0 NOT NULL,
-	"last_accessed" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "course_progress_user_course_unique" UNIQUE("user_id","course_id")
-);
---> statement-breakpoint
-CREATE TABLE IF NOT EXISTS "enrollments" (
-	"enrollment_id" text PRIMARY KEY NOT NULL,
-	"user_id" text NOT NULL,
-	"course_id" text NOT NULL,
-	"company_id" text,
-	"status" "enrollment_status" DEFAULT 'ACTIVE' NOT NULL,
-	"source" "enrollment_source" DEFAULT 'SELF_PURCHASE' NOT NULL,
-	"granted_by" text,
-	"enrolled_at" timestamp DEFAULT now() NOT NULL,
-	"completed_at" timestamp,
-	CONSTRAINT "enrollments_user_course_unique" UNIQUE("user_id","course_id")
-);
---> statement-breakpoint
-CREATE TABLE IF NOT EXISTS "lesson_progress" (
-	"lesson_progress_id" text PRIMARY KEY NOT NULL,
-	"course_progress_id" text NOT NULL,
-	"lesson_id" text NOT NULL,
-	"completed" boolean DEFAULT false NOT NULL,
-	"time_spent" integer DEFAULT 0 NOT NULL,
-	"last_position" integer,
-	"last_accessed" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "lesson_progress_progress_lesson_unique" UNIQUE("course_progress_id","lesson_id")
-);
---> statement-breakpoint
-CREATE TABLE IF NOT EXISTS "lesson_quiz_attempts" (
-	"attempt_id" text PRIMARY KEY NOT NULL,
-	"user_id" text NOT NULL,
-	"course_id" text NOT NULL,
-	"lesson_id" text NOT NULL,
-	"quiz_version" integer DEFAULT 1 NOT NULL,
-	"attempt_no" integer DEFAULT 1 NOT NULL,
-	"total_questions" integer DEFAULT 0 NOT NULL,
-	"correct_count" integer DEFAULT 0 NOT NULL,
-	"score_percent" numeric(5, 2) DEFAULT '0' NOT NULL,
-	"pass_mark" integer DEFAULT 0 NOT NULL,
-	"passed" boolean DEFAULT false NOT NULL,
-	"duration_seconds" integer DEFAULT 0 NOT NULL,
-	"answers" jsonb DEFAULT '[]'::jsonb NOT NULL,
-	"started_at" timestamp DEFAULT now() NOT NULL,
-	"submitted_at" timestamp,
-	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "lesson_quiz_attempts_user_lesson_no_unique" UNIQUE("user_id","lesson_id","attempt_no")
-);
---> statement-breakpoint
-CREATE TABLE IF NOT EXISTS "live_session_registrations" (
-	"id" text PRIMARY KEY NOT NULL,
-	"session_id" text NOT NULL,
-	"user_id" text NOT NULL,
-	"attended" boolean DEFAULT false NOT NULL,
-	"registered_at" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "live_session_registrations_session_user_unique" UNIQUE("session_id","user_id")
-);
---> statement-breakpoint
-CREATE TABLE IF NOT EXISTS "live_sessions" (
-	"id" text PRIMARY KEY NOT NULL,
-	"course_id" text,
-	"instructor_id" text NOT NULL,
-	"title" text NOT NULL,
-	"description" text,
-	"provider" "batch_live_provider" DEFAULT 'ZOOM' NOT NULL,
-	"join_url" text,
-	"meeting_id" text,
-	"meeting_passcode" text,
-	"starts_at" timestamp NOT NULL,
-	"duration_minutes" integer DEFAULT 60 NOT NULL,
-	"status" "batch_session_status" DEFAULT 'SCHEDULED' NOT NULL,
-	"is_deleted" boolean DEFAULT false NOT NULL,
-	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL
-);
---> statement-breakpoint
-CREATE TABLE IF NOT EXISTS "section_access" (
-	"section_access_id" text PRIMARY KEY NOT NULL,
-	"user_id" text NOT NULL,
-	"course_id" text NOT NULL,
-	"section_id" text NOT NULL,
-	"source" "access_source" DEFAULT 'SECTION_PURCHASE' NOT NULL,
-	"payment_id" text,
-	"created_at" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "section_access_user_section_unique" UNIQUE("user_id","section_id")
-);
---> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "payments" (
 	"payment_id" text PRIMARY KEY NOT NULL,
 	"user_id" text NOT NULL,
-	"enrollment_id" text,
 	"idempotency_key" text,
-	"course_id" text,
-	"section_id" text,
 	"batch_id" text,
 	"corporate_contract_id" text,
-	"item_type" "item_type" DEFAULT 'COURSE' NOT NULL,
+	"item_type" "item_type" DEFAULT 'BATCH' NOT NULL,
 	"amount" numeric(10, 2) NOT NULL,
 	"original_amount" numeric(10, 2),
 	"discount_amount" numeric(10, 2) DEFAULT '0',
@@ -586,7 +418,6 @@ CREATE TABLE IF NOT EXISTS "payments" (
 	"metadata" jsonb,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "payments_enrollment_id_unique" UNIQUE("enrollment_id"),
 	CONSTRAINT "payments_idempotency_key_unique" UNIQUE("idempotency_key"),
 	CONSTRAINT "payments_invoice_no_unique" UNIQUE("invoice_no")
 );
@@ -658,6 +489,7 @@ CREATE TABLE IF NOT EXISTS "batch_enrollments" (
 	"batch_id" text NOT NULL,
 	"user_id" text NOT NULL,
 	"status" "batch_enrollment_status" DEFAULT 'ACTIVE' NOT NULL,
+	"source" "batch_enrollment_source" DEFAULT 'ADMIN_GRANT' NOT NULL,
 	"access_starts_at" timestamp DEFAULT now() NOT NULL,
 	"access_ends_at" timestamp,
 	"granted_by" text,
@@ -667,10 +499,22 @@ CREATE TABLE IF NOT EXISTS "batch_enrollments" (
 	CONSTRAINT "batch_enrollments_batch_user_unique" UNIQUE("batch_id","user_id")
 );
 --> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "batch_instructors" (
+	"batch_instructor_id" text PRIMARY KEY NOT NULL,
+	"batch_id" text NOT NULL,
+	"instructor_id" text NOT NULL,
+	"role" "batch_instructor_role" DEFAULT 'SUBJECT' NOT NULL,
+	"assigned_by" text,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "batch_instructors_batch_instructor_unique" UNIQUE("batch_id","instructor_id")
+);
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "batch_quiz_attempts" (
 	"attempt_id" text PRIMARY KEY NOT NULL,
 	"quiz_id" text NOT NULL,
 	"user_id" text NOT NULL,
+	"quiz_version" integer DEFAULT 1 NOT NULL,
+	"attempt_no" integer DEFAULT 1 NOT NULL,
 	"status" "batch_quiz_attempt_status" DEFAULT 'IN_PROGRESS' NOT NULL,
 	"started_at" timestamp DEFAULT now() NOT NULL,
 	"submitted_at" timestamp,
@@ -682,7 +526,8 @@ CREATE TABLE IF NOT EXISTS "batch_quiz_attempts" (
 	"skipped_count" integer DEFAULT 0,
 	"answers" jsonb DEFAULT '{}'::jsonb NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL
+	"updated_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "batch_quiz_attempts_quiz_user_attempt_unique" UNIQUE("quiz_id","user_id","attempt_no")
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "batch_quiz_questions" (
@@ -712,6 +557,7 @@ CREATE TABLE IF NOT EXISTS "batch_quizzes" (
 	"passing_percent" numeric(5, 2) DEFAULT '40' NOT NULL,
 	"show_leaderboard" boolean DEFAULT true NOT NULL,
 	"show_solutions" boolean DEFAULT true NOT NULL,
+	"version" integer DEFAULT 1 NOT NULL,
 	"opens_at" timestamp,
 	"closes_at" timestamp,
 	"published_at" timestamp,
@@ -792,7 +638,7 @@ CREATE TABLE IF NOT EXISTS "batches" (
 	"capacity" integer,
 	"start_date" timestamp NOT NULL,
 	"end_date" timestamp NOT NULL,
-	"teacher_ids" jsonb DEFAULT '[]'::jsonb NOT NULL,
+	"delivery_mode" "batch_delivery_mode" DEFAULT 'LIVE' NOT NULL,
 	"category_id" text,
 	"status" "batch_status" DEFAULT 'DRAFT' NOT NULL,
 	"is_deleted" boolean DEFAULT false NOT NULL,
@@ -801,6 +647,37 @@ CREATE TABLE IF NOT EXISTS "batches" (
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	"published_at" timestamp,
 	CONSTRAINT "batches_slug_unique" UNIQUE("slug")
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "lesson_progress" (
+	"lesson_progress_id" text PRIMARY KEY NOT NULL,
+	"user_id" text NOT NULL,
+	"lesson_id" text NOT NULL,
+	"batch_id" text NOT NULL,
+	"completed" boolean DEFAULT false NOT NULL,
+	"time_spent" integer DEFAULT 0 NOT NULL,
+	"last_position" integer,
+	"last_accessed" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "lesson_progress_user_lesson_unique" UNIQUE("user_id","lesson_id")
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "lessons" (
+	"lesson_id" text PRIMARY KEY NOT NULL,
+	"subject_id" text NOT NULL,
+	"title" text NOT NULL,
+	"description" text,
+	"type" "lesson_type" DEFAULT 'VIDEO' NOT NULL,
+	"video_url" text,
+	"text_content" text,
+	"resources" jsonb,
+	"duration" integer,
+	"is_free_preview" boolean DEFAULT false NOT NULL,
+	"status" "lesson_status" DEFAULT 'DRAFT' NOT NULL,
+	"order" integer NOT NULL,
+	"is_deleted" boolean DEFAULT false NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "service_applications" (
@@ -996,7 +873,7 @@ CREATE TABLE IF NOT EXISTS "notifications" (
 CREATE TABLE IF NOT EXISTS "video_encoding_jobs" (
 	"job_id" text PRIMARY KEY NOT NULL,
 	"lesson_id" text NOT NULL,
-	"course_id" text NOT NULL,
+	"batch_id" text NOT NULL,
 	"status" "video_encoding_job_status" DEFAULT 'PENDING' NOT NULL,
 	"input_path" text NOT NULL,
 	"output_path" text,
@@ -1034,49 +911,15 @@ CREATE INDEX IF NOT EXISTS "corporate_seats_contract_released_idx" ON "corporate
 CREATE INDEX IF NOT EXISTS "categories_slug_idx" ON "categories" ("slug");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "categories_is_active_idx" ON "categories" ("is_active");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "categories_parent_idx" ON "categories" ("parent_category_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "course_announcements_course_idx" ON "course_announcements" ("course_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "course_announcements_instructor_idx" ON "course_announcements" ("instructor_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "course_announcements_course_created_idx" ON "course_announcements" ("course_id","created_at");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "course_sections_course_idx" ON "course_sections" ("course_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "courses_slug_idx" ON "courses" ("slug");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "courses_category_idx" ON "courses" ("category_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "courses_instructor_idx" ON "courses" ("instructor_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "courses_status_idx" ON "courses" ("status");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "courses_status_review_idx" ON "courses" ("status","review_status");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "lessons_section_idx" ON "lessons" ("section_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "quiz_questions_lesson_idx" ON "quiz_questions" ("lesson_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "assignment_submissions_assignment_idx" ON "assignment_submissions" ("assignment_id","submitted_at");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "assignment_submissions_user_idx" ON "assignment_submissions" ("user_id","submitted_at");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "assignment_submissions_status_idx" ON "assignment_submissions" ("status");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "assignments_course_idx" ON "assignments" ("course_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "assignments_batch_idx" ON "assignments" ("batch_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "assignments_instructor_idx" ON "assignments" ("instructor_id","created_at");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "assignments_published_idx" ON "assignments" ("is_published","due_at");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "course_progress_user_idx" ON "course_progress" ("user_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "course_progress_course_idx" ON "course_progress" ("course_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "enrollments_user_idx" ON "enrollments" ("user_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "enrollments_course_idx" ON "enrollments" ("course_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "enrollments_company_idx" ON "enrollments" ("company_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "enrollments_source_idx" ON "enrollments" ("source","enrolled_at");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "lesson_progress_progress_idx" ON "lesson_progress" ("course_progress_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "lesson_progress_lesson_idx" ON "lesson_progress" ("lesson_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "lesson_quiz_attempts_user_submitted_idx" ON "lesson_quiz_attempts" ("user_id","submitted_at");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "lesson_quiz_attempts_user_lesson_idx" ON "lesson_quiz_attempts" ("user_id","lesson_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "lesson_quiz_attempts_lesson_idx" ON "lesson_quiz_attempts" ("lesson_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "lesson_quiz_attempts_course_idx" ON "lesson_quiz_attempts" ("course_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "live_session_registrations_session_idx" ON "live_session_registrations" ("session_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "live_session_registrations_user_idx" ON "live_session_registrations" ("user_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "live_sessions_course_idx" ON "live_sessions" ("course_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "live_sessions_instructor_idx" ON "live_sessions" ("instructor_id","starts_at");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "live_sessions_starts_at_idx" ON "live_sessions" ("starts_at");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "section_access_user_idx" ON "section_access" ("user_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "section_access_course_idx" ON "section_access" ("course_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "section_access_section_idx" ON "section_access" ("section_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "section_access_payment_idx" ON "section_access" ("payment_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "payments_user_idx" ON "payments" ("user_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "payments_gateway_idx" ON "payments" ("gateway_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "payments_status_idx" ON "payments" ("status");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "payments_course_idx" ON "payments" ("course_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "payments_section_idx" ON "payments" ("section_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "payments_batch_idx" ON "payments" ("batch_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "payments_corporate_contract_idx" ON "payments" ("corporate_contract_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "payments_transaction_id_idx" ON "payments" ("transaction_id");--> statement-breakpoint
@@ -1095,6 +938,8 @@ CREATE INDEX IF NOT EXISTS "batch_doubts_status_idx" ON "batch_doubts" ("status"
 CREATE INDEX IF NOT EXISTS "batch_doubts_asked_by_idx" ON "batch_doubts" ("asked_by");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "batch_enrollments_batch_idx" ON "batch_enrollments" ("batch_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "batch_enrollments_user_idx" ON "batch_enrollments" ("user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "batch_instructors_batch_idx" ON "batch_instructors" ("batch_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "batch_instructors_instructor_idx" ON "batch_instructors" ("instructor_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "batch_quiz_attempts_quiz_idx" ON "batch_quiz_attempts" ("quiz_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "batch_quiz_attempts_user_idx" ON "batch_quiz_attempts" ("user_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "batch_quiz_attempts_quiz_user_idx" ON "batch_quiz_attempts" ("quiz_id","user_id");--> statement-breakpoint
@@ -1112,6 +957,10 @@ CREATE INDEX IF NOT EXISTS "batch_subjects_batch_idx" ON "batch_subjects" ("batc
 CREATE INDEX IF NOT EXISTS "batches_slug_idx" ON "batches" ("slug");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "batches_status_idx" ON "batches" ("status");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "batches_start_date_idx" ON "batches" ("start_date");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "batches_delivery_mode_idx" ON "batches" ("delivery_mode");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "lesson_progress_user_batch_idx" ON "lesson_progress" ("user_id","batch_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "lessons_subject_idx" ON "lessons" ("subject_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "lessons_subject_order_idx" ON "lessons" ("subject_id","order");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "service_applications_service_idx" ON "service_applications" ("service_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "service_applications_status_idx" ON "service_applications" ("status");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "service_applications_email_idx" ON "service_applications" ("applicant_email");--> statement-breakpoint
@@ -1141,5 +990,5 @@ CREATE INDEX IF NOT EXISTS "notifications_user_idx" ON "notifications" ("user_id
 CREATE INDEX IF NOT EXISTS "notifications_user_read_idx" ON "notifications" ("user_id","read");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "notifications_created_at_idx" ON "notifications" ("created_at");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "video_encoding_jobs_lesson_idx" ON "video_encoding_jobs" ("lesson_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "video_encoding_jobs_course_idx" ON "video_encoding_jobs" ("course_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "video_encoding_jobs_batch_idx" ON "video_encoding_jobs" ("batch_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "video_encoding_jobs_status_idx" ON "video_encoding_jobs" ("status");

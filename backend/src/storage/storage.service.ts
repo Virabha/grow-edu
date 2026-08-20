@@ -116,7 +116,7 @@ export class StorageService {
 
   generateImageKey(
     userId: string,
-    type: "course" | "profile" | "lesson",
+    type: "batch" | "profile" | "lesson",
     id?: string,
   ): string {
     const timestamp = Date.now();

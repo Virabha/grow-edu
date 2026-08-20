@@ -6,6 +6,7 @@ import {
 } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { DATABASE_CONNECTION } from "../database/database.module";
+import { BatchAccessService } from "../batches/access/batch-access.service";
 import { AssignmentsService } from "./assignments.service";
 
 type Chain = {
@@ -44,7 +45,10 @@ function makeChain(rows: unknown[]): Chain {
   return c;
 }
 
-async function makeService(dbOverrides: Record<string, jest.Mock>) {
+async function makeService(
+  dbOverrides: Record<string, jest.Mock>,
+  enrolled = true,
+) {
   const db = {
     select: jest.fn(),
     insert: jest.fn(),
@@ -57,6 +61,10 @@ async function makeService(dbOverrides: Record<string, jest.Mock>) {
     providers: [
       AssignmentsService,
       { provide: DATABASE_CONNECTION, useValue: db },
+      {
+        provide: BatchAccessService,
+        useValue: { isEnrolled: jest.fn().mockResolvedValue(enrolled) },
+      },
     ],
   }).compile();
 
@@ -70,7 +78,7 @@ const LEARNER_ID = "learner-001";
 
 const FAKE_ASSIGNMENT = {
   id: ASSIGNMENT_ID,
-  courseId: "course-001",
+  batchId: "batch-001",
   instructorId: INSTRUCTOR_ID,
   title: "Test Assignment",
   submissionType: "TEXT",
@@ -257,14 +265,14 @@ describe("AssignmentsService › submitAssignment", () => {
   it("rejects submission when learner is not enrolled", async () => {
     const PUBLISHED_ASSIGNMENT = { ...FAKE_ASSIGNMENT, isPublished: true };
 
-    let selectCount = 0;
-    const selectChainWithFirst = jest.fn().mockImplementation(() => {
-      selectCount += 1;
-      if (selectCount === 1) return makeChain([PUBLISHED_ASSIGNMENT]);
-      return makeChain([]);
-    });
+    const selectChainWithFirst = jest
+      .fn()
+      .mockReturnValue(makeChain([PUBLISHED_ASSIGNMENT]));
 
-    const { service } = await makeService({ select: selectChainWithFirst });
+    const { service } = await makeService(
+      { select: selectChainWithFirst },
+      false,
+    );
 
     await expect(
       service.submitAssignment(ASSIGNMENT_ID, LEARNER_ID, { textAnswer: "Answer" }),
@@ -278,15 +286,8 @@ describe("AssignmentsService › submitAssignment", () => {
       isPublished: true,
       dueAt: null,
     };
-    const ENROLLMENT = { enrollmentId: "enroll-001" };
 
-    let selectCount = 0;
-    const selectChain = jest.fn().mockImplementation(() => {
-      selectCount += 1;
-      if (selectCount === 1) return makeChain([TEXT_ASSIGNMENT]);
-      if (selectCount === 2) return makeChain([ENROLLMENT]);
-      return makeChain([]);
-    });
+    const selectChain = jest.fn().mockReturnValue(makeChain([TEXT_ASSIGNMENT]));
 
     const { service } = await makeService({ select: selectChain });
 
@@ -300,14 +301,14 @@ describe("AssignmentsService › createAssignment", () => {
   it("throws BadRequestException when passMarks exceeds maxMarks", async () => {
     const selectChain = jest
       .fn()
-      .mockReturnValue(makeChain([{ courseId: "course-001", instructorId: INSTRUCTOR_ID }]));
+      .mockReturnValue(makeChain([{ batchId: "batch-001", instructorId: INSTRUCTOR_ID }]));
 
     const { service } = await makeService({ select: selectChain });
 
     await expect(
       service.createAssignment(INSTRUCTOR_ID, "INSTRUCTOR", {
         title: "Test",
-        courseId: "course-001",
+        batchId: "batch-001",
         submissionType: "TEXT",
         maxMarks: 50,
         passMarks: 60,
@@ -315,17 +316,20 @@ describe("AssignmentsService › createAssignment", () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
-  it("throws ForbiddenException when instructor creates assignment for another course", async () => {
-    const selectChain = jest
-      .fn()
-      .mockReturnValue(makeChain([{ courseId: "course-001", instructorId: "other-instructor" }]));
+  it("throws ForbiddenException when an instructor creates an assignment on a batch they do not teach", async () => {
+    let selectCount = 0;
+    const selectChain = jest.fn().mockImplementation(() => {
+      selectCount += 1;
+      if (selectCount === 1) return makeChain([{ batchId: "batch-001" }]);
+      return makeChain([]);
+    });
 
     const { service } = await makeService({ select: selectChain });
 
     await expect(
       service.createAssignment(INSTRUCTOR_ID, "INSTRUCTOR", {
         title: "Test",
-        courseId: "course-001",
+        batchId: "batch-001",
         submissionType: "TEXT",
         maxMarks: 100,
         passMarks: 40,

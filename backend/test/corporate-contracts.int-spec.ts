@@ -200,6 +200,30 @@ describe('corporate contracts', () => {
     expect(enrolled.sort()).toEqual([...batchIds].sort());
   });
 
+  it('marks a seat holder as having arrived through their college', async () => {
+    const { contractId, batchIds } = await activeContract();
+    const { body: link } = await issueJoinLink(admin, contractId).expect(201);
+    const student = await createUser(database, 'LEARNER');
+
+    await redeem(student, link.token).expect(201);
+
+    const { body } = await request(app.getHttpServer())
+      .get(`/batches/${batchIds[0]}/enrollments`)
+      .set(...authHeader(app, admin))
+      .expect(200);
+
+    const seat = body.data.find(
+      (e: { userId: string }) => e.userId === student.userId,
+    );
+    const { body: contract } = await request(app.getHttpServer())
+      .get(`/corporate/contracts/${contractId}`)
+      .set(...authHeader(app, admin))
+      .expect(200);
+
+    expect(seat.source).toBe('CORPORATE_SEAT');
+    expect(seat.accessEndsAt).toBe(contract.endsAt);
+  });
+
   it('stops working once the purchased seat count is reached', async () => {
     const { contractId } = await activeContract({ seatCount: 2 });
     const { body: link } = await issueJoinLink(admin, contractId);

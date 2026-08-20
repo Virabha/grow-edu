@@ -2,7 +2,7 @@ import { IsEnum, IsOptional, IsString } from "class-validator";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
 export const UPLOAD_TYPES = [
-  "course",
+  "batch",
   "profile",
   "lesson",
   "payment-proofs",
@@ -27,7 +27,7 @@ export class GetUploadKeyDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  courseId?: string;
+  batchId?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

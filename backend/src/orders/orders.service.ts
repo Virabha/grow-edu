@@ -23,10 +23,10 @@ const EXCLUDE_CORPORATE_INVOICES = ne(
 
 export interface OrderItem {
   itemId: string;
-  courseId: string;
+  batchId: string;
   title: string;
   thumbnail: string;
-  itemType: 'COURSE' | 'SECTION' | 'BATCH';
+  itemType: 'BATCH';
   unitPrice: number;
 }
 
@@ -100,10 +100,8 @@ function buildDisplayName(
 type PaymentCore = {
   paymentId: string;
   invoiceNo: string | null | undefined;
-  courseId: string | null;
-  sectionId: string | null;
   batchId: string | null;
-  itemType: 'COURSE' | 'SECTION' | 'BATCH' | 'CORPORATE_CONTRACT';
+  itemType: 'BATCH' | 'CORPORATE_CONTRACT';
   amount: string;
   originalAmount: string | null;
   discountAmount: string | null;
@@ -125,13 +123,7 @@ type PaymentCore = {
 
 type ItemRow = Pick<
   PaymentCore,
-  | 'paymentId'
-  | 'courseId'
-  | 'sectionId'
-  | 'batchId'
-  | 'itemType'
-  | 'amount'
-  | 'metadata'
+  'paymentId' | 'batchId' | 'itemType' | 'amount' | 'metadata'
 >;
 
 @Injectable()
@@ -142,57 +134,17 @@ export class OrdersService {
   ) {}
 
   private async resolveItemMap(rows: readonly ItemRow[]): Promise<Map<string, OrderItem>> {
-    const unique = <T>(arr: T[]): T[] => [...new Set(arr)];
+    const batchIds = [
+      ...new Set(
+        rows
+          .filter((r) => r.batchId !== null)
+          .map((r) => r.batchId as string),
+      ),
+    ];
 
-    const courseIds = unique(
-      rows
-        .filter((r) => r.itemType === 'COURSE' && r.courseId !== null)
-        .map((r) => r.courseId as string),
-    );
-    const sectionIds = unique(
-      rows
-        .filter((r) => r.itemType === 'SECTION' && r.sectionId !== null)
-        .map((r) => r.sectionId as string),
-    );
-    const batchIds = unique(
-      rows
-        .filter((r) => r.itemType === 'BATCH' && r.batchId !== null)
-        .map((r) => r.batchId as string),
-    );
-
-    const [courseRows, sectionRows, batchRows] = await Promise.all([
-      courseIds.length > 0
-        ? this.db
-            .select({
-              courseId: schema.courses.courseId,
-              title: schema.courses.title,
-              thumbnail: schema.courses.thumbnail,
-            })
-            .from(schema.courses)
-            .where(inArray(schema.courses.courseId, courseIds))
-        : ([] as { courseId: string; title: string; thumbnail: string | null }[]),
-      sectionIds.length > 0
-        ? this.db
-            .select({
-              sectionId: schema.courseSections.sectionId,
-              title: schema.courseSections.title,
-              courseId: schema.courseSections.courseId,
-              thumbnail: schema.courses.thumbnail,
-            })
-            .from(schema.courseSections)
-            .innerJoin(
-              schema.courses,
-              eq(schema.courseSections.courseId, schema.courses.courseId),
-            )
-            .where(inArray(schema.courseSections.sectionId, sectionIds))
-        : ([] as {
-            sectionId: string;
-            title: string;
-            courseId: string;
-            thumbnail: string | null;
-          }[]),
+    const batchRows =
       batchIds.length > 0
-        ? this.db
+        ? await this.db
             .select({
               batchId: schema.batches.batchId,
               title: schema.batches.title,
@@ -200,58 +152,30 @@ export class OrdersService {
             })
             .from(schema.batches)
             .where(inArray(schema.batches.batchId, batchIds))
-        : ([] as { batchId: string; title: string; thumbnail: string | null }[]),
-    ]);
+        : [];
 
-    const byCourseId = new Map(courseRows.map((r) => [r.courseId, r]));
-    const bySectionId = new Map(sectionRows.map((r) => [r.sectionId, r]));
     const byBatchId = new Map(batchRows.map((r) => [r.batchId, r]));
 
     const itemMap = new Map<string, OrderItem>();
     for (const row of rows) {
       const unitPrice = parseFloat(row.amount);
+      const batchId = row.batchId ?? row.paymentId;
+      const batch = row.batchId ? byBatchId.get(row.batchId) : undefined;
+      const snapshotTitle =
+        typeof row.metadata === 'object' &&
+        row.metadata !== null &&
+        typeof (row.metadata as { batchTitle?: unknown }).batchTitle === 'string'
+          ? (row.metadata as { batchTitle: string }).batchTitle
+          : null;
 
-      if (row.itemType === 'COURSE' && row.courseId !== null) {
-        const c = byCourseId.get(row.courseId);
-        itemMap.set(row.paymentId, {
-          itemId: row.courseId,
-          courseId: row.courseId,
-          title: c?.title ?? 'Unknown course',
-          thumbnail: c?.thumbnail ?? '',
-          itemType: 'COURSE',
-          unitPrice,
-        });
-      } else if (row.itemType === 'SECTION' && row.sectionId !== null) {
-        const s = bySectionId.get(row.sectionId);
-        itemMap.set(row.paymentId, {
-          itemId: row.sectionId,
-          courseId: s?.courseId ?? row.sectionId,
-          title: s?.title ?? 'Unknown section',
-          thumbnail: s?.thumbnail ?? '',
-          itemType: 'SECTION',
-          unitPrice,
-        });
-      } else if (row.itemType === 'BATCH' && row.batchId !== null) {
-        const batchId = row.batchId;
-        const b = byBatchId.get(batchId);
-        itemMap.set(row.paymentId, {
-          itemId: batchId,
-          courseId: batchId,
-          title: b?.title ?? 'Unknown batch',
-          thumbnail: b?.thumbnail ?? '',
-          itemType: 'BATCH',
-          unitPrice,
-        });
-      } else {
-        itemMap.set(row.paymentId, {
-          itemId: row.courseId ?? row.sectionId ?? row.paymentId,
-          courseId: row.courseId ?? row.paymentId,
-          title: 'Unknown item',
-          thumbnail: '',
-          itemType: 'COURSE',
-          unitPrice,
-        });
-      }
+      itemMap.set(row.paymentId, {
+        itemId: batchId,
+        batchId,
+        title: batch?.title ?? snapshotTitle ?? 'Unknown batch',
+        thumbnail: batch?.thumbnail ?? '',
+        itemType: 'BATCH',
+        unitPrice,
+      });
     }
 
     return itemMap;
@@ -338,8 +262,7 @@ export class OrdersService {
       ? or(
           ilike(schema.payments.paymentId, `%${term}%`),
           ilike(schema.payments.invoiceNo, `%${term}%`),
-          ilike(schema.courses.title, `%${term}%`),
-          ilike(schema.courseSections.title, `%${term}%`),
+          ilike(schema.batches.title, `%${term}%`),
           sql`${schema.payments.metadata}->>'batchTitle' ilike ${'%' + term + '%'}`,
         )
       : undefined;
@@ -356,8 +279,6 @@ export class OrdersService {
         .select({
           paymentId: schema.payments.paymentId,
           invoiceNo: schema.payments.invoiceNo,
-          courseId: schema.payments.courseId,
-          sectionId: schema.payments.sectionId,
           batchId: schema.payments.batchId,
           itemType: schema.payments.itemType,
           amount: schema.payments.amount,
@@ -379,11 +300,7 @@ export class OrdersService {
           metadata: schema.payments.metadata,
         })
         .from(schema.payments)
-        .leftJoin(schema.courses, eq(schema.payments.courseId, schema.courses.courseId))
-        .leftJoin(
-          schema.courseSections,
-          eq(schema.payments.sectionId, schema.courseSections.sectionId),
-        )
+        .leftJoin(schema.batches, eq(schema.payments.batchId, schema.batches.batchId))
         .where(where)
         .orderBy(desc(schema.payments.createdAt))
         .limit(limit)
@@ -391,11 +308,7 @@ export class OrdersService {
       this.db
         .select({ total: count() })
         .from(schema.payments)
-        .leftJoin(schema.courses, eq(schema.payments.courseId, schema.courses.courseId))
-        .leftJoin(
-          schema.courseSections,
-          eq(schema.payments.sectionId, schema.courseSections.sectionId),
-        )
+        .leftJoin(schema.batches, eq(schema.payments.batchId, schema.batches.batchId))
         .where(where),
       this.db
         .select({
@@ -561,8 +474,6 @@ export class OrdersService {
         .select({
           paymentId: schema.payments.paymentId,
           invoiceNo: schema.payments.invoiceNo,
-          courseId: schema.payments.courseId,
-          sectionId: schema.payments.sectionId,
           batchId: schema.payments.batchId,
           itemType: schema.payments.itemType,
           amount: schema.payments.amount,
@@ -628,8 +539,6 @@ export class OrdersService {
       .select({
         paymentId: schema.payments.paymentId,
         invoiceNo: schema.payments.invoiceNo,
-        courseId: schema.payments.courseId,
-        sectionId: schema.payments.sectionId,
         batchId: schema.payments.batchId,
         itemType: schema.payments.itemType,
         amount: schema.payments.amount,
@@ -722,45 +631,16 @@ export class OrdersService {
   }
 
   private async revokeAccess(payment: typeof schema.payments.$inferSelect): Promise<void> {
-    const { userId, itemType, courseId, sectionId } = payment;
-
-    if (itemType === 'COURSE' && courseId) {
-      await this.db
-        .update(schema.enrollments)
-        .set({ status: 'REVOKED' })
-        .where(
-          and(
-            eq(schema.enrollments.userId, userId),
-            eq(schema.enrollments.courseId, courseId),
-            inArray(schema.enrollments.status, ['ACTIVE', 'COMPLETED']),
-          ),
-        );
-      return;
-    }
-
-    if (itemType === 'SECTION' && sectionId) {
-      await this.db
-        .delete(schema.sectionAccess)
-        .where(
-          and(
-            eq(schema.sectionAccess.userId, userId),
-            eq(schema.sectionAccess.sectionId, sectionId),
-          ),
-        );
-      return;
-    }
-
-    if (itemType === 'BATCH' && payment.batchId !== null) {
-      await this.db
-        .update(schema.batchEnrollments)
-        .set({ status: 'REVOKED' })
-        .where(
-          and(
-            eq(schema.batchEnrollments.userId, userId),
-            eq(schema.batchEnrollments.paymentId, payment.paymentId),
-            eq(schema.batchEnrollments.status, 'ACTIVE'),
-          ),
-        );
-    }
+    if (payment.itemType !== 'BATCH' || payment.batchId === null) return;
+    await this.db
+      .update(schema.batchEnrollments)
+      .set({ status: 'REVOKED' })
+      .where(
+        and(
+          eq(schema.batchEnrollments.userId, payment.userId),
+          eq(schema.batchEnrollments.paymentId, payment.paymentId),
+          eq(schema.batchEnrollments.status, 'ACTIVE'),
+        ),
+      );
   }
 }

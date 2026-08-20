@@ -14,6 +14,7 @@ import * as schema from '../database/schema';
 import {
   batchEnrollments,
   corporateContractBatches,
+  corporateContracts,
   corporateJoinLinks,
   corporateSeats,
   users,
@@ -39,10 +40,10 @@ import { hashJoinToken } from './join-links.service';
 const PASSWORD_COST = 10;
 
 type LockedContract = {
-  contract_id: string;
-  seat_count: number;
+  contractId: string;
+  seatCount: number;
   status: ContractStatus;
-  ends_at: Date;
+  endsAt: Date;
 };
 
 @Injectable()
@@ -102,7 +103,7 @@ export class SeatsService {
 
     const status = effectiveStatus(
       contract.status,
-      contract.ends_at,
+      contract.endsAt,
       Date.now(),
     );
     if (!acceptsSeatClaims(status)) {
@@ -133,12 +134,12 @@ export class SeatsService {
     }
 
     const claimed = await this.countClaimed(tx, link.contractId);
-    if (claimed >= contract.seat_count) {
+    if (claimed >= contract.seatCount) {
       throw new ConflictException({
         code: SEAT_POOL_EXHAUSTED,
         message:
           'Every seat your college bought has been claimed. Contact your college administrator.',
-        seatCount: contract.seat_count,
+        seatCount: contract.seatCount,
       });
     }
 
@@ -158,13 +159,14 @@ export class SeatsService {
       tx,
       link.contractId,
       userId,
+      contract.endsAt,
     );
 
     return {
       seatId: seat.seatId,
       contractId: link.contractId,
       claimedAt: seat.claimedAt,
-      seatsRemaining: contract.seat_count - (claimed + 1),
+      seatsRemaining: contract.seatCount - (claimed + 1),
       batchIds: enrolledBatchIds,
     };
   }
@@ -246,13 +248,23 @@ export class SeatsService {
     tx: Transaction,
     contractId: string,
   ): Promise<LockedContract> {
-    const rows = await tx.execute<LockedContract>(
-      sql`select contract_id, seat_count, status::text as status, ends_at
-          from corporate_contracts
+    const locked = await tx.execute<{ contract_id: string }>(
+      sql`select contract_id from corporate_contracts
           where contract_id = ${contractId}
           for update`,
     );
-    const contract = rows[0];
+    if (!locked[0]) throw new NotFoundException('Contract not found');
+
+    const [contract] = await tx
+      .select({
+        contractId: corporateContracts.contractId,
+        seatCount: corporateContracts.seatCount,
+        status: corporateContracts.status,
+        endsAt: corporateContracts.endsAt,
+      })
+      .from(corporateContracts)
+      .where(eq(corporateContracts.contractId, contractId))
+      .limit(1);
     if (!contract) throw new NotFoundException('Contract not found');
     return contract;
   }
@@ -288,6 +300,7 @@ export class SeatsService {
     tx: Transaction,
     contractId: string,
     userId: string,
+    accessEndsAt: Date,
   ): Promise<string[]> {
     const batchIds = await this.contractBatchIds(tx, contractId);
     if (batchIds.length === 0) return [];
@@ -299,11 +312,18 @@ export class SeatsService {
           batchId,
           userId,
           status: 'ACTIVE' as const,
+          source: 'CORPORATE_SEAT' as const,
+          accessEndsAt,
         })),
       )
       .onConflictDoUpdate({
         target: [batchEnrollments.batchId, batchEnrollments.userId],
-        set: { status: 'ACTIVE', updatedAt: new Date() },
+        set: {
+          status: 'ACTIVE',
+          source: 'CORPORATE_SEAT',
+          accessEndsAt,
+          updatedAt: new Date(),
+        },
       });
 
     return batchIds;

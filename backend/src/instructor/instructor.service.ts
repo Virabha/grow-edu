@@ -1,15 +1,17 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { DATABASE_CONNECTION } from '../database/database.module';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../database/schema';
-import { eq, count, sum, desc } from 'drizzle-orm';
+import { and, count, desc, eq, inArray, sql, sum } from 'drizzle-orm';
 import { FilesService } from '../files/files.service';
+
+const MAX_PAGE_LIMIT = 100;
 
 @Injectable()
 export class InstructorService {
   constructor(
     @Inject(DATABASE_CONNECTION)
-    private readonly db: NodePgDatabase<typeof schema>,
+    private readonly db: PostgresJsDatabase<typeof schema>,
     private readonly filesService: FilesService,
   ) {}
 
@@ -19,108 +21,133 @@ export class InstructorService {
     return this.filesService.getDownloadUrl(thumbnail);
   }
 
+  private async assignedBatchIds(instructorId: string): Promise<string[]> {
+    const rows = await this.db
+      .select({ batchId: schema.batchInstructors.batchId })
+      .from(schema.batchInstructors)
+      .where(eq(schema.batchInstructors.instructorId, instructorId));
+    return rows.map((r) => r.batchId);
+  }
+
   async getDashboardStats(instructorId: string) {
-    // 1. Total Courses
-    const [courseCount] = await this.db
-      .select({ count: count() })
-      .from(schema.courses)
-      .where(eq(schema.courses.instructorId, instructorId));
+    const batchIds = await this.assignedBatchIds(instructorId);
 
-    // 2. Total Enrollments (in courses owned by instructor)
-    // We join enrollments -> courses -> filter by instructor
-    const [enrollmentCount] = await this.db
-      .select({ count: count() })
-      .from(schema.enrollments)
-      .innerJoin(
-        schema.courses,
-        eq(schema.enrollments.courseId, schema.courses.courseId)
-      )
-      .where(eq(schema.courses.instructorId, instructorId));
+    if (batchIds.length === 0) {
+      return {
+        totalBatches: 0,
+        totalStudents: 0,
+        totalRevenue: 0,
+        recentBatches: [],
+      };
+    }
 
-    // 3. Total Revenue
-    // payment -> course -> instructor
-    // OR payment -> section -> course -> instructor
-    // For MVP, strict join on course ownership
-    const [revenue] = await this.db
-      .select({ total: sum(schema.payments.amount) })
-      .from(schema.payments)
-      .leftJoin(
-        schema.courses,
-        eq(schema.payments.courseId, schema.courses.courseId)
-      )
-      .leftJoin(
-        schema.courseSections,
-        eq(schema.payments.sectionId, schema.courseSections.sectionId)
-      )
-      // We need to check if course owner is instructor.
-      // If payment has courseId, check course.instructorId
-      // If payment has sectionId, check section.course.instructorId
-      // This is a bit complex in single query without nice ORM helper, 
-      // simplified: assume all payments link to course directly (or we join both)
-      // Better approach:
-      // Join payments with courses on courseId.
-      .where(
-         eq(schema.courses.instructorId, instructorId)
-      );
-      
-    // Note: If payment is SECTION level, it might not have courseId populated in some designs,
-    // but typically it should. If not, we join section first.
-    // Let's rely on `courseId` being present in payments for now as per schema it seems optional but usually populated.
-    
-    // 4. Recent Courses
-    const recentCourses = await this.db.query.courses.findMany({
-        where: eq(schema.courses.instructorId, instructorId),
-        orderBy: [desc(schema.courses.createdAt)],
-        limit: 5,
-        with: {
-            enrollments: true, // simplified count if possible, but Drizzle doesn't support relation count easily yet without grouping
-        }
-    });
+    const [[students], [revenue], recentBatches] = await Promise.all([
+      this.db
+        .select({ count: count() })
+        .from(schema.batchEnrollments)
+        .where(
+          and(
+            inArray(schema.batchEnrollments.batchId, batchIds),
+            eq(schema.batchEnrollments.status, 'ACTIVE'),
+          ),
+        ),
+      this.db
+        .select({ total: sum(schema.payments.amount) })
+        .from(schema.payments)
+        .where(
+          and(
+            inArray(schema.payments.batchId, batchIds),
+            eq(schema.payments.status, 'COMPLETED'),
+          ),
+        ),
+      this.db
+        .select({
+          batch: schema.batches,
+          enrollmentCount: sql<number>`(
+            select count(*)::int from batch_enrollments be
+            where be.batch_id = ${schema.batches.batchId}
+              and be.status = 'ACTIVE'
+          )`,
+        })
+        .from(schema.batches)
+        .where(
+          and(
+            inArray(schema.batches.batchId, batchIds),
+            eq(schema.batches.isDeleted, false),
+          ),
+        )
+        .orderBy(desc(schema.batches.createdAt))
+        .limit(5),
+    ]);
 
     return {
-      totalCourses: courseCount.count,
-      totalStudents: enrollmentCount.count,
+      totalBatches: batchIds.length,
+      totalStudents: students.count,
       totalRevenue: revenue.total ? parseFloat(revenue.total) : 0,
-      recentCourses: recentCourses.map(c => ({
-          ...c,
-          thumbnail: this.ensureThumbnailUrl(c.thumbnail),
-          enrollmentCount: c.enrollments.length
-      }))
+      recentBatches: recentBatches.map((r) => ({
+        ...r.batch,
+        thumbnail: this.ensureThumbnailUrl(r.batch.thumbnail),
+        enrollmentCount: Number(r.enrollmentCount),
+      })),
     };
   }
 
-  async getInstructorCourses(instructorId: string, page = 1, limit = 10) {
-    const effectiveLimit = Math.min(limit, 100);
+  async getInstructorBatches(instructorId: string, page = 1, limit = 10) {
+    const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
     const offset = (page - 1) * effectiveLimit;
-    
-    // Get courses with detailed stats (e.g. revenue per course)
-    const courses = await this.db.query.courses.findMany({
-        where: eq(schema.courses.instructorId, instructorId),
-        limit: effectiveLimit,
-        offset: offset,
-        orderBy: [desc(schema.courses.createdAt)],
-        with: {
-            enrollments: true,
-            sections: true
-        }
-    });
-    
-    const [total] = await this.db
-        .select({ count: count() })
-        .from(schema.courses)
-        .where(eq(schema.courses.instructorId, instructorId));
+    const batchIds = await this.assignedBatchIds(instructorId);
+
+    if (batchIds.length === 0) {
+      return {
+        data: [],
+        meta: { total: 0, page, limit: effectiveLimit, totalPages: 0 },
+      };
+    }
+
+    const where = and(
+      inArray(schema.batches.batchId, batchIds),
+      eq(schema.batches.isDeleted, false),
+    );
+
+    const [rows, [total]] = await Promise.all([
+      this.db
+        .select({
+          batch: schema.batches,
+          role: schema.batchInstructors.role,
+          enrollmentCount: sql<number>`(
+            select count(*)::int from batch_enrollments be
+            where be.batch_id = ${schema.batches.batchId}
+              and be.status = 'ACTIVE'
+          )`,
+        })
+        .from(schema.batches)
+        .innerJoin(
+          schema.batchInstructors,
+          and(
+            eq(schema.batchInstructors.batchId, schema.batches.batchId),
+            eq(schema.batchInstructors.instructorId, instructorId),
+          ),
+        )
+        .where(where)
+        .orderBy(desc(schema.batches.createdAt))
+        .limit(effectiveLimit)
+        .offset(offset),
+      this.db.select({ count: count() }).from(schema.batches).where(where),
+    ]);
 
     return {
-        data: courses.map(c => ({
-            ...c,
-            thumbnail: this.ensureThumbnailUrl(c.thumbnail),
-        })),
-        meta: {
-            total: total.count,
-            page,
-            limit: effectiveLimit,
-            totalPages: Math.ceil(total.count / effectiveLimit)
-        }
+      data: rows.map((r) => ({
+        ...r.batch,
+        thumbnail: this.ensureThumbnailUrl(r.batch.thumbnail),
+        myRole: r.role,
+        enrollmentCount: Number(r.enrollmentCount),
+      })),
+      meta: {
+        total: total.count,
+        page,
+        limit: effectiveLimit,
+        totalPages: Math.ceil(total.count / effectiveLimit),
+      },
     };
   }
 }

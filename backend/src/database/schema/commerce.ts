@@ -20,13 +20,10 @@ export const payments = pgTable(
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
     userId: text("user_id").notNull(),
-    enrollmentId: text("enrollment_id").unique(),
     idempotencyKey: text("idempotency_key").unique(),
-    courseId: text("course_id"),
-    sectionId: text("section_id"),
     batchId: text("batch_id"),
     corporateContractId: text("corporate_contract_id"),
-    itemType: itemTypeEnum("item_type").notNull().default("COURSE"),
+    itemType: itemTypeEnum("item_type").notNull().default("BATCH"),
     amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
     originalAmount: decimal("original_amount", { precision: 10, scale: 2 }),
     discountAmount: decimal("discount_amount", { precision: 10, scale: 2 }).default("0"),
@@ -56,8 +53,6 @@ export const payments = pgTable(
     userIdx: index("payments_user_idx").on(table.userId),
     gatewayIdx: index("payments_gateway_idx").on(table.gatewayId),
     statusIdx: index("payments_status_idx").on(table.status),
-    courseIdx: index("payments_course_idx").on(table.courseId),
-    sectionIdx: index("payments_section_idx").on(table.sectionId),
     batchIdx: index("payments_batch_idx").on(table.batchId),
     corporateContractIdx: index("payments_corporate_contract_idx").on(
       table.corporateContractId

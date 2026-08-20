@@ -37,7 +37,7 @@ export const videoEncodingJobs = pgTable(
   {
     jobId: text("job_id").primaryKey(),
     lessonId: text("lesson_id").notNull(),
-    courseId: text("course_id").notNull(),
+    batchId: text("batch_id").notNull(),
     status: videoEncodingJobStatusEnum("status").notNull().default("PENDING"),
     inputPath: text("input_path").notNull(),
     outputPath: text("output_path"),
@@ -49,7 +49,7 @@ export const videoEncodingJobs = pgTable(
   },
   (table) => ({
     lessonIdx: index("video_encoding_jobs_lesson_idx").on(table.lessonId),
-    courseIdx: index("video_encoding_jobs_course_idx").on(table.courseId),
+    batchIdx: index("video_encoding_jobs_batch_idx").on(table.batchId),
     statusIdx: index("video_encoding_jobs_status_idx").on(table.status),
   })
 );

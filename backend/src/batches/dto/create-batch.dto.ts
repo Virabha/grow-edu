@@ -1,4 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
+import { Type } from "class-transformer";
 import {
   IsArray,
   IsDateString,
@@ -9,7 +10,9 @@ import {
   IsString,
   Min,
   MinLength,
+  ValidateNested,
 } from "class-validator";
+import { AssignInstructorDto } from "./batch-content.dto";
 
 export class CreateBatchDto {
   @ApiProperty()
@@ -82,11 +85,21 @@ export class CreateBatchDto {
   @IsDateString()
   endDate: string;
 
-  @ApiProperty({ type: [String], required: false, description: "User IDs of instructors" })
-  @IsArray()
-  @IsString({ each: true })
+  @ApiProperty({
+    enum: ["LIVE", "RECORDED", "HYBRID"],
+    default: "LIVE",
+    required: false,
+  })
+  @IsEnum(["LIVE", "RECORDED", "HYBRID"])
   @IsOptional()
-  teacherIds?: string[];
+  deliveryMode?: "LIVE" | "RECORDED" | "HYBRID";
+
+  @ApiProperty({ type: [AssignInstructorDto], required: false })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => AssignInstructorDto)
+  @IsOptional()
+  instructors?: AssignInstructorDto[];
 
   @ApiProperty({ required: false })
   @IsString()

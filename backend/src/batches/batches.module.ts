@@ -1,15 +1,29 @@
 import { Module } from "@nestjs/common";
-import { BatchesController } from "./batches.controller";
-import { BatchesService } from "./batches.service";
-import { CertificateService } from "./certificate.service";
-import { BatchManagerGuard } from "./guards/batch-manager.guard";
-import { DatabaseModule } from "../database/database.module";
-import { FilesModule } from "../files/files.module";
-import { CdnModule } from "../cdn/cdn.module";
+
 import { AppCacheModule } from "../cache/cache.module";
-import { EmailModule } from "../email/email.module";
-import { PaymentModule } from "../payment/payment.module";
+import { CdnModule } from "../cdn/cdn.module";
 import { CertificateTemplateModule } from "../certificate-template/certificate-template.module";
+import { DatabaseModule } from "../database/database.module";
+import { EmailModule } from "../email/email.module";
+import { FilesModule } from "../files/files.module";
+import { PaymentModule } from "../payment/payment.module";
+import { BatchAccessService } from "./access/batch-access.service";
+import { BatchManagerGuard } from "./access/batch-manager.guard";
+import { BatchAssessmentController } from "./assessment/batch-assessment.controller";
+import { BatchAssessmentService } from "./assessment/batch-assessment.service";
+import { BatchMediaService } from "./batch-media.service";
+import { BatchCatalogueController } from "./catalogue/batch-catalogue.controller";
+import { BatchCatalogueService } from "./catalogue/batch-catalogue.service";
+import { CertificateController } from "./certificates/certificate.controller";
+import { CertificateService } from "./certificates/certificate.service";
+import { BatchEngagementController } from "./engagement/batch-engagement.controller";
+import { BatchEngagementService } from "./engagement/batch-engagement.service";
+import { BatchEnrolmentController } from "./enrolment/batch-enrolment.controller";
+import { BatchEnrolmentService } from "./enrolment/batch-enrolment.service";
+import { BatchReportingController } from "./reporting/batch-reporting.controller";
+import { BatchReportingService } from "./reporting/batch-reporting.service";
+import { BatchSchedulingController } from "./scheduling/batch-scheduling.controller";
+import { BatchSchedulingService } from "./scheduling/batch-scheduling.service";
 
 @Module({
   imports: [
@@ -21,8 +35,27 @@ import { CertificateTemplateModule } from "../certificate-template/certificate-t
     PaymentModule,
     CertificateTemplateModule,
   ],
-  controllers: [BatchesController],
-  providers: [BatchesService, CertificateService, BatchManagerGuard],
-  exports: [BatchesService, CertificateService],
+  controllers: [
+    BatchEnrolmentController,
+    BatchReportingController,
+    BatchSchedulingController,
+    BatchAssessmentController,
+    BatchEngagementController,
+    CertificateController,
+    BatchCatalogueController,
+  ],
+  providers: [
+    BatchAccessService,
+    BatchManagerGuard,
+    BatchMediaService,
+    BatchCatalogueService,
+    BatchEnrolmentService,
+    BatchSchedulingService,
+    BatchAssessmentService,
+    BatchEngagementService,
+    BatchReportingService,
+    CertificateService,
+  ],
+  exports: [BatchAccessService, BatchEnrolmentService, CertificateService],
 })
 export class BatchesModule {}

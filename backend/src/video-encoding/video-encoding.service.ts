@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { Inject } from "@nestjs/common";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { DATABASE_CONNECTION } from "../database/database.module";
 import * as schema from "../database/schema";
@@ -38,7 +38,7 @@ export class VideoEncodingService {
 
   async createVideo(
     lessonId: string,
-    courseId: string,
+    batchId: string,
     title: string,
   ): Promise<{
     videoId: string;
@@ -94,7 +94,7 @@ export class VideoEncodingService {
     await this.db.insert(schema.videoEncodingJobs).values({
       jobId: videoId,
       lessonId,
-      courseId,
+      batchId,
       status: "PROCESSING",
       inputPath: `tus://${videoId}`,
       outputPath: videoId,
@@ -177,16 +177,82 @@ export class VideoEncodingService {
 
   // ── Data-access helpers (used by the controller via delegation) ──────────
 
-  async getLessonWithCourse(lessonId: string) {
+  async getLessonWithBatch(lessonId: string) {
     const lesson = await this.db.query.lessons.findFirst({
       where: eq(schema.lessons.lessonId, lessonId),
       with: {
-        section: {
-          with: { course: true },
+        subject: {
+          with: { batch: true },
         },
       },
     });
     return lesson ?? null;
+  }
+
+  async isBatchInstructor(batchId: string, userId: string): Promise<boolean> {
+    const [row] = await this.db
+      .select({ batchId: schema.batchInstructors.batchId })
+      .from(schema.batchInstructors)
+      .where(
+        and(
+          eq(schema.batchInstructors.batchId, batchId),
+          eq(schema.batchInstructors.instructorId, userId),
+        ),
+      )
+      .limit(1);
+    return row !== undefined;
+  }
+
+  private async notifyOwner(
+    batchId: string,
+    lesson: { lessonId: string; title: string },
+    outcome: "COMPLETED" | "FAILED",
+  ): Promise<void> {
+    const [batch] = await this.db
+      .select()
+      .from(schema.batches)
+      .where(eq(schema.batches.batchId, batchId))
+      .limit(1);
+    if (!batch) return;
+
+    const [lead] = await this.db
+      .select({ instructorId: schema.batchInstructors.instructorId })
+      .from(schema.batchInstructors)
+      .where(eq(schema.batchInstructors.batchId, batchId))
+      .orderBy(schema.batchInstructors.role)
+      .limit(1);
+
+    const [recipient] = await this.db
+      .select()
+      .from(schema.users)
+      .where(eq(schema.users.userId, lead?.instructorId ?? batch.createdBy))
+      .limit(1);
+    if (!recipient) return;
+
+    try {
+      if (outcome === "COMPLETED") {
+        await this.emailService.sendVideoEncodingCompleteEmail({
+          firstName: recipient.firstName,
+          email: recipient.email,
+          lessonTitle: lesson.title,
+          courseTitle: batch.title,
+          courseSlug: batch.slug,
+          lessonId: lesson.lessonId,
+        });
+      } else {
+        await this.emailService.sendVideoEncodingFailedEmail({
+          firstName: recipient.firstName,
+          email: recipient.email,
+          lessonTitle: lesson.title,
+          courseTitle: batch.title,
+          courseSlug: batch.slug,
+          lessonId: lesson.lessonId,
+          errorMessage: "Encoding failed",
+        });
+      }
+    } catch (error) {
+      this.logger.error(`Failed to send encoding ${outcome} email: ${error}`);
+    }
   }
 
   async getEncodingJobByJobId(jobId: string) {
@@ -202,8 +268,8 @@ export class VideoEncodingService {
     const allLessons = await this.db.query.lessons.findMany({
       where: eq(schema.lessons.type, "VIDEO"),
       with: {
-        section: {
-          with: { course: true },
+        subject: {
+          with: { batch: true },
         },
       },
     });
@@ -230,7 +296,7 @@ export class VideoEncodingService {
       return {
         lessonId: lesson.lessonId,
         lessonTitle: lesson.title,
-        courseTitle: lesson.section.course.title,
+        batchTitle: lesson.subject.batch.title,
         lessonStatus: lesson.status,
         encodingStatus: status,
         videoId: encodingJob?.outputPath ?? null,
@@ -359,36 +425,7 @@ export class VideoEncodingService {
           })
           .where(eq(schema.lessons.lessonId, job.lessonId));
 
-        const [course] = await this.db
-          .select()
-          .from(schema.courses)
-          .where(eq(schema.courses.courseId, job.courseId))
-          .limit(1);
-
-        if (course) {
-          const [instructor] = await this.db
-            .select()
-            .from(schema.users)
-            .where(eq(schema.users.userId, course.instructorId))
-            .limit(1);
-
-          if (instructor) {
-            try {
-              await this.emailService.sendVideoEncodingCompleteEmail({
-                firstName: instructor.firstName,
-                email: instructor.email,
-                lessonTitle: lesson.title,
-                courseTitle: course.title,
-                courseSlug: course.slug,
-                lessonId: lesson.lessonId,
-              });
-            } catch (error) {
-              this.logger.error(
-                `Failed to send encoding complete email: ${error}`,
-              );
-            }
-          }
-        }
+        await this.notifyOwner(job.batchId, lesson, "COMPLETED");
       }
     } else if (status === "FAILED") {
       updateData.errorMessage = errorMessage || "Encoding failed";
@@ -405,37 +442,7 @@ export class VideoEncodingService {
           .set({ status: "DRAFT", updatedAt: new Date() })
           .where(eq(schema.lessons.lessonId, job.lessonId));
 
-        const [course] = await this.db
-          .select()
-          .from(schema.courses)
-          .where(eq(schema.courses.courseId, job.courseId))
-          .limit(1);
-
-        if (course) {
-          const [instructor] = await this.db
-            .select()
-            .from(schema.users)
-            .where(eq(schema.users.userId, course.instructorId))
-            .limit(1);
-
-          if (instructor) {
-            try {
-              await this.emailService.sendVideoEncodingFailedEmail({
-                firstName: instructor.firstName,
-                email: instructor.email,
-                lessonTitle: lesson.title,
-                courseTitle: course.title,
-                courseSlug: course.slug,
-                lessonId: lesson.lessonId,
-                errorMessage: updateData.errorMessage || "Unknown error",
-              });
-            } catch (error) {
-              this.logger.error(
-                `Failed to send encoding failed email: ${error}`,
-              );
-            }
-          }
-        }
+        await this.notifyOwner(job.batchId, lesson, "FAILED");
       }
     }
 

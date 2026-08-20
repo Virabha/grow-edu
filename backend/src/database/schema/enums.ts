@@ -7,18 +7,6 @@ export const userRoleEnum = pgEnum("user_role", [
   "PLATFORM_ADMIN",
 ]);
 
-export const courseStatusEnum = pgEnum("course_status", [
-  "DRAFT",
-  "PUBLISHED",
-  "ARCHIVED",
-]);
-
-export const enrollmentStatusEnum = pgEnum("enrollment_status", [
-  "ACTIVE",
-  "COMPLETED",
-  "REVOKED",
-]);
-
 export const paymentStatusEnum = pgEnum("payment_status", [
   "PENDING",
   "PROOF_UPLOADED",
@@ -35,13 +23,6 @@ export const paymentGatewayEnum = pgEnum("payment_gateway", [
   "FREE",
 ]);
 
-export const courseLevelEnum = pgEnum("course_level", [
-  "BEGINNER",
-  "INTERMEDIATE",
-  "ADVANCED",
-  "ALL_LEVELS",
-]);
-
 export const lessonTypeEnum = pgEnum("lesson_type", ["VIDEO", "TEXT", "QUIZ"]);
 
 export const lessonStatusEnum = pgEnum("lesson_status", [
@@ -51,31 +32,9 @@ export const lessonStatusEnum = pgEnum("lesson_status", [
   "READY",
 ]);
 
-export const sectionPriceTypeEnum = pgEnum("section_price_type", [
-  "INCLUDED",
-  "INDIVIDUAL",
-  "BOTH",
-]);
-
-export const courseReviewStatusEnum = pgEnum("course_review_status", [
-  "DRAFT",
-  "PENDING_REVIEW",
-  "CHANGES_REQUESTED",
-  "APPROVED",
-  "REJECTED",
-]);
-
 export const itemTypeEnum = pgEnum("item_type", [
-  "COURSE",
-  "SECTION",
   "BATCH",
   "CORPORATE_CONTRACT",
-]);
-
-export const accessSourceEnum = pgEnum("access_source", [
-  "SECTION_PURCHASE",
-  "COURSE_PURCHASE",
-  "ADMIN_GRANT",
 ]);
 
 export const emailTokenTypeEnum = pgEnum("email_token_type", [
@@ -106,6 +65,25 @@ export const batchStatusEnum = pgEnum("batch_status", [
   "ONGOING",
   "COMPLETED",
   "ARCHIVED",
+]);
+
+export const batchDeliveryModeEnum = pgEnum("batch_delivery_mode", [
+  "LIVE",
+  "RECORDED",
+  "HYBRID",
+]);
+
+export const batchInstructorRoleEnum = pgEnum("batch_instructor_role", [
+  "LEAD",
+  "SUBJECT",
+  "ASSISTANT",
+]);
+
+export const batchEnrollmentSourceEnum = pgEnum("batch_enrollment_source", [
+  "SELF_PURCHASE",
+  "ADMIN_GRANT",
+  "CORPORATE_SEAT",
+  "FREE",
 ]);
 
 export const batchEnrollmentStatusEnum = pgEnum("batch_enrollment_status", [
@@ -191,13 +169,6 @@ export const refundStatusEnum = pgEnum("refund_status", [
   "REQUESTED",
   "APPROVED",
   "DECLINED",
-]);
-
-export const enrollmentSourceEnum = pgEnum("enrollment_source", [
-  "SELF_PURCHASE",
-  "ADMIN_GRANT",
-  "COMPANY_ASSIGNMENT",
-  "FREE_COURSE",
 ]);
 
 export const corporateContractStatusEnum = pgEnum("corporate_contract_status", [

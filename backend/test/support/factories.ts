@@ -5,9 +5,11 @@ import {
   users,
   categories,
   companies,
-  courses,
-  courseSections,
   batches,
+  batchEnrollments,
+  batchInstructors,
+  batchSubjects,
+  lessons,
 } from '../../src/database/schema';
 import { TestDatabase } from './test-database';
 import { TestActor } from './test-app';
@@ -76,6 +78,7 @@ export async function createBatch(
   database: TestDatabase,
   createdBy: string,
   price = '0',
+  overrides: Partial<typeof batches.$inferInsert> = {},
 ): Promise<string> {
   const batchId = randomUUID();
   await database.db.insert(batches).values({
@@ -87,8 +90,20 @@ export async function createBatch(
     endDate: new Date('2027-06-30T00:00:00.000Z'),
     status: 'ONGOING' as never,
     createdBy,
+    ...overrides,
   });
   return batchId;
+}
+
+export async function enrol(
+  database: TestDatabase,
+  batchId: string,
+  userId: string,
+  overrides: Partial<typeof batchEnrollments.$inferInsert> = {},
+): Promise<void> {
+  await database.db
+    .insert(batchEnrollments)
+    .values({ batchId, userId, ...overrides });
 }
 
 export async function createCategory(database: TestDatabase): Promise<string> {
@@ -101,34 +116,42 @@ export async function createCategory(database: TestDatabase): Promise<string> {
   return categoryId;
 }
 
-export async function createCourse(
+export async function assignInstructor(
   database: TestDatabase,
+  batchId: string,
   instructorId: string,
-  categoryId: string,
-): Promise<string> {
-  const courseId = randomUUID();
-  await database.db.insert(courses).values({
-    courseId,
-    title: unique('course'),
-    slug: unique('course'),
-    description: 'A course created by the integration test factory.',
-    categoryId,
-    instructorId,
-  });
-  return courseId;
+  role: 'LEAD' | 'SUBJECT' | 'ASSISTANT' = 'SUBJECT',
+): Promise<void> {
+  await database.db
+    .insert(batchInstructors)
+    .values({ batchId, instructorId, role });
 }
 
-export async function createSection(
+export async function createSubject(
   database: TestDatabase,
-  courseId: string,
-  order: number,
-  sectionId: string = randomUUID(),
+  batchId: string,
 ): Promise<string> {
-  await database.db.insert(courseSections).values({
-    sectionId,
-    courseId,
-    title: unique('section'),
-    order,
+  const subjectId = randomUUID();
+  await database.db
+    .insert(batchSubjects)
+    .values({ subjectId, batchId, name: unique('subject') });
+  return subjectId;
+}
+
+export async function createLesson(
+  database: TestDatabase,
+  subjectId: string,
+  overrides: Partial<typeof lessons.$inferInsert> = {},
+): Promise<string> {
+  const lessonId = randomUUID();
+  await database.db.insert(lessons).values({
+    lessonId,
+    subjectId,
+    title: unique('lesson'),
+    type: 'VIDEO',
+    status: 'READY',
+    order: 1,
+    ...overrides,
   });
-  return sectionId;
+  return lessonId;
 }

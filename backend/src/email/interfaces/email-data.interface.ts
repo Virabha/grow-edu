@@ -34,7 +34,7 @@ export interface PaymentConfirmationEmailData {
   currency: string;
   items: Array<{
     name: string;
-    type: 'COURSE' | 'SECTION';
+    type: 'BATCH';
   }>;
   receiptUrl?: string;
 }

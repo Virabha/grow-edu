@@ -1,0 +1,732 @@
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
+import { and, asc, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
+import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+
+import { DATABASE_CONNECTION } from "../../database/database.module";
+import * as schema from "../../database/schema";
+import {
+  batchInstructors,
+  batchSubjects,
+  batches,
+  lessons,
+  payments,
+  users,
+} from "../../database/schema";
+import { CacheService } from "../../cache/cache.service";
+import { BatchAccessService, Viewer } from "../access/batch-access.service";
+import { BatchMediaService } from "../batch-media.service";
+import { CreateBatchDto } from "../dto/create-batch.dto";
+import { UpdateBatchDto } from "../dto/update-batch.dto";
+import { FilterBatchesDto } from "../dto/filter-batches.dto";
+import {
+  CreateBatchSubjectDto,
+  UpdateBatchSubjectDto,
+} from "../dto/batch-subject.dto";
+import {
+  AssignInstructorDto,
+  CreateLessonDto,
+  ReorderLessonsDto,
+  UpdateLessonDto,
+} from "../dto/batch-content.dto";
+
+const MAX_PAGE_LIMIT = 100;
+const CACHE_PREFIX = "batches:";
+const PUBLIC_LIST_TTL = 300;
+
+type Instructor = {
+  userId: string;
+  firstName: string | null;
+  lastName: string | null;
+  email: string;
+  profileImage: string | null;
+  role: "LEAD" | "SUBJECT" | "ASSISTANT";
+};
+
+@Injectable()
+export class BatchCatalogueService {
+  constructor(
+    @Inject(DATABASE_CONNECTION)
+    private readonly db: PostgresJsDatabase<typeof schema>,
+    private readonly access: BatchAccessService,
+    private readonly media: BatchMediaService,
+    private readonly cache: CacheService,
+  ) {}
+
+  async findAll(filters: FilterBatchesDto, viewer: Viewer) {
+    const page = filters.page ?? 1;
+    const limit = Math.min(filters.limit ?? 20, MAX_PAGE_LIMIT);
+    const offset = (page - 1) * limit;
+
+    const isOwnerView = viewer.role === "PLATFORM_ADMIN";
+    const teachingScope =
+      viewer.role === "INSTRUCTOR" && viewer.userId
+        ? await this.access.taughtBatchIds(viewer.userId)
+        : null;
+    const isPublic = !isOwnerView && teachingScope === null;
+
+    const cacheKey = `${CACHE_PREFIX}list:public:${JSON.stringify(filters)}`;
+    if (isPublic) {
+      const cached = await this.cache.get(cacheKey);
+      if (cached) return cached;
+    }
+
+    if (teachingScope !== null && teachingScope.length === 0) {
+      return { data: [], pagination: { page, limit, total: 0, totalPages: 0 } };
+    }
+
+    const conditions = [eq(batches.isDeleted, false)];
+    if (filters.targetExam)
+      conditions.push(eq(batches.targetExam, filters.targetExam));
+    if (filters.categoryId)
+      conditions.push(eq(batches.categoryId, filters.categoryId));
+    if (filters.deliveryMode)
+      conditions.push(eq(batches.deliveryMode, filters.deliveryMode));
+    if (filters.status) {
+      conditions.push(eq(batches.status, filters.status));
+    } else if (isPublic) {
+      conditions.push(inArray(batches.status, ["UPCOMING", "ONGOING"]));
+    }
+    if (filters.search) {
+      const pattern = `%${filters.search}%`;
+      const searchCondition = or(
+        ilike(batches.title, pattern),
+        ilike(batches.shortDescription, pattern),
+        ilike(batches.targetExam, pattern),
+      );
+      if (searchCondition) conditions.push(searchCondition);
+    }
+    if (teachingScope !== null) {
+      conditions.push(inArray(batches.batchId, teachingScope));
+    }
+
+    const where = and(...conditions);
+
+    const [rows, [{ count }]] = await Promise.all([
+      this.db
+        .select()
+        .from(batches)
+        .where(where)
+        .orderBy(desc(batches.startDate))
+        .limit(limit)
+        .offset(offset),
+      this.db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(batches)
+        .where(where),
+    ]);
+
+    const teachers = await this.instructorsFor(rows.map((b) => b.batchId));
+
+    const response = {
+      data: rows.map((b) => ({
+        ...this.present(b),
+        teachers: teachers.get(b.batchId) ?? [],
+      })),
+      pagination: {
+        page,
+        limit,
+        total: count,
+        totalPages: Math.ceil(count / limit),
+      },
+    };
+
+    if (isPublic) await this.cache.set(cacheKey, response, PUBLIC_LIST_TTL);
+    return response;
+  }
+
+  async findOne(idOrSlug: string, viewer: Viewer) {
+    const [batch] = await this.db
+      .select()
+      .from(batches)
+      .where(
+        and(
+          or(eq(batches.batchId, idOrSlug), eq(batches.slug, idOrSlug)),
+          eq(batches.isDeleted, false),
+        ),
+      )
+      .limit(1);
+    if (!batch) throw new NotFoundException("Batch not found");
+
+    let isEnrolled = false;
+    let pendingPaymentId: string | null = null;
+    let pendingPaymentStatus: "PENDING" | "PROOF_UPLOADED" | null = null;
+
+    if (viewer.userId) {
+      isEnrolled = await this.access.isEnrolled(batch.batchId, viewer.userId);
+      if (!isEnrolled) {
+        const [match] = await this.db
+          .select({ paymentId: payments.paymentId, status: payments.status })
+          .from(payments)
+          .where(
+            and(
+              eq(payments.userId, viewer.userId),
+              eq(payments.batchId, batch.batchId),
+              inArray(payments.status, ["PENDING", "PROOF_UPLOADED"]),
+            ),
+          )
+          .limit(1);
+        if (match) {
+          pendingPaymentId = match.paymentId;
+          pendingPaymentStatus =
+            match.status === "PROOF_UPLOADED" ? "PROOF_UPLOADED" : "PENDING";
+        }
+      }
+    }
+
+    const [subjects, teachers] = await Promise.all([
+      this.listSubjects(batch.batchId),
+      this.instructorsFor([batch.batchId]),
+    ]);
+
+    return {
+      ...this.present(batch),
+      subjects,
+      teachers: teachers.get(batch.batchId) ?? [],
+      isEnrolled,
+      pendingPaymentId,
+      pendingPaymentStatus,
+      canManage: await this.canManage(batch.batchId, viewer),
+    };
+  }
+
+  async create(dto: CreateBatchDto, createdBy: string) {
+    if (new Date(dto.endDate) <= new Date(dto.startDate)) {
+      throw new BadRequestException("endDate must be after startDate");
+    }
+    await this.assertSlugFree(dto.slug);
+
+    const created = await this.db.transaction(async (tx) => {
+      const [batch] = await tx
+        .insert(batches)
+        .values({
+          title: dto.title,
+          slug: dto.slug,
+          description: dto.description,
+          shortDescription: dto.shortDescription,
+          targetExam: dto.targetExam,
+          language: dto.language ?? "English",
+          thumbnail: dto.thumbnail,
+          bannerImage: dto.bannerImage,
+          price: dto.price.toString(),
+          compareAtPrice:
+            dto.compareAtPrice != null
+              ? dto.compareAtPrice.toString()
+              : undefined,
+          currency: dto.currency ?? "INR",
+          capacity: dto.capacity,
+          startDate: new Date(dto.startDate),
+          endDate: new Date(dto.endDate),
+          deliveryMode: dto.deliveryMode ?? "LIVE",
+          categoryId: dto.categoryId,
+          status: dto.status ?? "DRAFT",
+          createdBy,
+          publishedAt:
+            dto.status === "UPCOMING" || dto.status === "ONGOING"
+              ? new Date()
+              : undefined,
+        })
+        .returning();
+
+      if (dto.instructors && dto.instructors.length > 0) {
+        await tx.insert(batchInstructors).values(
+          dto.instructors.map((i) => ({
+            batchId: batch.batchId,
+            instructorId: i.instructorId,
+            role: i.role ?? ("SUBJECT" as const),
+            assignedBy: createdBy,
+          })),
+        );
+      }
+
+      return batch;
+    });
+
+    await this.invalidate();
+    return created;
+  }
+
+  async update(batchId: string, dto: UpdateBatchDto) {
+    await this.access.requireBatch(batchId);
+    if (
+      dto.startDate &&
+      dto.endDate &&
+      new Date(dto.endDate) <= new Date(dto.startDate)
+    ) {
+      throw new BadRequestException("endDate must be after startDate");
+    }
+    if (dto.slug) await this.assertSlugFree(dto.slug, batchId);
+
+    const [updated] = await this.db
+      .update(batches)
+      .set({
+        ...(dto.title !== undefined && { title: dto.title }),
+        ...(dto.slug !== undefined && { slug: dto.slug }),
+        ...(dto.description !== undefined && { description: dto.description }),
+        ...(dto.shortDescription !== undefined && {
+          shortDescription: dto.shortDescription,
+        }),
+        ...(dto.targetExam !== undefined && { targetExam: dto.targetExam }),
+        ...(dto.language !== undefined && { language: dto.language }),
+        ...(dto.thumbnail !== undefined && { thumbnail: dto.thumbnail }),
+        ...(dto.bannerImage !== undefined && { bannerImage: dto.bannerImage }),
+        ...(dto.price !== undefined && { price: dto.price.toString() }),
+        ...(dto.compareAtPrice !== undefined && {
+          compareAtPrice:
+            dto.compareAtPrice === null ? null : dto.compareAtPrice.toString(),
+        }),
+        ...(dto.currency !== undefined && { currency: dto.currency }),
+        ...(dto.capacity !== undefined && { capacity: dto.capacity }),
+        ...(dto.startDate !== undefined && {
+          startDate: new Date(dto.startDate),
+        }),
+        ...(dto.endDate !== undefined && { endDate: new Date(dto.endDate) }),
+        ...(dto.deliveryMode !== undefined && {
+          deliveryMode: dto.deliveryMode,
+        }),
+        ...(dto.categoryId !== undefined && { categoryId: dto.categoryId }),
+        ...(dto.status !== undefined && {
+          status: dto.status,
+          ...(dto.status === "UPCOMING" || dto.status === "ONGOING"
+            ? { publishedAt: new Date() }
+            : {}),
+        }),
+        updatedAt: new Date(),
+      })
+      .where(eq(batches.batchId, batchId))
+      .returning();
+
+    await this.invalidate();
+    return updated;
+  }
+
+  async remove(batchId: string) {
+    await this.access.requireBatch(batchId);
+    await this.db
+      .update(batches)
+      .set({ isDeleted: true, updatedAt: new Date() })
+      .where(eq(batches.batchId, batchId));
+    await this.invalidate();
+    return { success: true };
+  }
+
+  async listInstructors(batchId: string) {
+    await this.access.requireBatch(batchId);
+    return (await this.instructorsFor([batchId])).get(batchId) ?? [];
+  }
+
+  async assignInstructor(
+    batchId: string,
+    dto: AssignInstructorDto,
+    assignedBy: string,
+  ) {
+    await this.access.requireBatch(batchId);
+    const [instructor] = await this.db
+      .select({ role: users.role })
+      .from(users)
+      .where(eq(users.userId, dto.instructorId))
+      .limit(1);
+    if (!instructor) throw new NotFoundException("Instructor not found");
+    if (instructor.role !== "INSTRUCTOR") {
+      throw new BadRequestException("That account is not an instructor");
+    }
+
+    const [assignment] = await this.db
+      .insert(batchInstructors)
+      .values({
+        batchId,
+        instructorId: dto.instructorId,
+        role: dto.role ?? "SUBJECT",
+        assignedBy,
+      })
+      .onConflictDoUpdate({
+        target: [batchInstructors.batchId, batchInstructors.instructorId],
+        set: { role: dto.role ?? "SUBJECT" },
+      })
+      .returning();
+    return assignment;
+  }
+
+  async removeInstructor(batchId: string, instructorId: string) {
+    await this.access.requireBatch(batchId);
+    const deleted = await this.db
+      .delete(batchInstructors)
+      .where(
+        and(
+          eq(batchInstructors.batchId, batchId),
+          eq(batchInstructors.instructorId, instructorId),
+        ),
+      )
+      .returning({ id: batchInstructors.batchInstructorId });
+    if (deleted.length === 0) {
+      throw new NotFoundException("Instructor is not assigned to this batch");
+    }
+    return { success: true };
+  }
+
+  async listSubjects(batchId: string) {
+    return this.db
+      .select()
+      .from(batchSubjects)
+      .where(
+        and(
+          eq(batchSubjects.batchId, batchId),
+          eq(batchSubjects.isDeleted, false),
+        ),
+      )
+      .orderBy(asc(batchSubjects.displayOrder), asc(batchSubjects.name));
+  }
+
+  async createSubject(batchId: string, dto: CreateBatchSubjectDto) {
+    await this.access.requireBatch(batchId);
+    const [created] = await this.db
+      .insert(batchSubjects)
+      .values({
+        batchId,
+        name: dto.name,
+        color: dto.color,
+        displayOrder: dto.displayOrder ?? 0,
+      })
+      .returning();
+    return created;
+  }
+
+  async updateSubject(
+    batchId: string,
+    subjectId: string,
+    dto: UpdateBatchSubjectDto,
+  ) {
+    await this.requireSubject(batchId, subjectId);
+    const [updated] = await this.db
+      .update(batchSubjects)
+      .set({
+        ...(dto.name !== undefined && { name: dto.name }),
+        ...(dto.color !== undefined && { color: dto.color }),
+        ...(dto.displayOrder !== undefined && {
+          displayOrder: dto.displayOrder,
+        }),
+        updatedAt: new Date(),
+      })
+      .where(eq(batchSubjects.subjectId, subjectId))
+      .returning();
+    return updated;
+  }
+
+  async deleteSubject(batchId: string, subjectId: string) {
+    await this.requireSubject(batchId, subjectId);
+    await this.db
+      .update(batchSubjects)
+      .set({ isDeleted: true, updatedAt: new Date() })
+      .where(eq(batchSubjects.subjectId, subjectId));
+    return { success: true };
+  }
+
+  async listContent(batchId: string, viewer: Viewer) {
+    const { isStaff } = await this.access.require(batchId, viewer, "READ");
+    const subjects = await this.listSubjects(batchId);
+    if (subjects.length === 0) return [];
+
+    const rows = await this.db
+      .select()
+      .from(lessons)
+      .where(
+        and(
+          inArray(
+            lessons.subjectId,
+            subjects.map((s) => s.subjectId),
+          ),
+          eq(lessons.isDeleted, false),
+        ),
+      )
+      .orderBy(asc(lessons.subjectId), asc(lessons.order));
+
+    const visible = isStaff
+      ? rows
+      : rows.filter((l) => l.status === "READY" || l.isFreePreview);
+
+    return subjects.map((subject) => ({
+      ...subject,
+      lessons: visible.filter((l) => l.subjectId === subject.subjectId),
+    }));
+  }
+
+  async previewContent(batchId: string) {
+    const subjects = await this.listSubjects(batchId);
+    if (subjects.length === 0) return [];
+    const rows = await this.db
+      .select({
+        lessonId: lessons.lessonId,
+        subjectId: lessons.subjectId,
+        title: lessons.title,
+        type: lessons.type,
+        duration: lessons.duration,
+        isFreePreview: lessons.isFreePreview,
+        order: lessons.order,
+      })
+      .from(lessons)
+      .where(
+        and(
+          inArray(
+            lessons.subjectId,
+            subjects.map((s) => s.subjectId),
+          ),
+          eq(lessons.isDeleted, false),
+          eq(lessons.status, "READY"),
+        ),
+      )
+      .orderBy(asc(lessons.order));
+
+    return subjects.map((subject) => ({
+      subjectId: subject.subjectId,
+      name: subject.name,
+      lessons: rows.filter((l) => l.subjectId === subject.subjectId),
+    }));
+  }
+
+  async getLesson(lessonId: string, viewer: Viewer) {
+    const { lesson } = await this.access.requireForLesson(
+      lessonId,
+      viewer,
+      "READ",
+    );
+    return lesson;
+  }
+
+  async createLesson(batchId: string, dto: CreateLessonDto, viewer: Viewer) {
+    await this.requireSubject(batchId, dto.subjectId);
+    const [created] = await this.db
+      .insert(lessons)
+      .values({
+        subjectId: dto.subjectId,
+        title: dto.title,
+        description: dto.description,
+        type: dto.type,
+        videoUrl: dto.videoUrl,
+        textContent: dto.textContent,
+        resources: dto.resources,
+        duration: dto.duration,
+        isFreePreview: dto.isFreePreview ?? false,
+        status: this.settableStatus(dto.status ?? "DRAFT", viewer),
+        order: dto.order,
+      })
+      .returning();
+    return created;
+  }
+
+  async approveLesson(batchId: string, lessonId: string, viewer: Viewer) {
+    if (viewer.role !== "PLATFORM_ADMIN") {
+      throw new ForbiddenException(
+        "Only the platform owner can publish a lesson to students",
+      );
+    }
+    await this.requireLesson(batchId, lessonId);
+    const [approved] = await this.db
+      .update(lessons)
+      .set({ status: "READY", updatedAt: new Date() })
+      .where(eq(lessons.lessonId, lessonId))
+      .returning();
+    return approved;
+  }
+
+  private settableStatus(
+    requested: NonNullable<CreateLessonDto["status"]>,
+    viewer: Viewer,
+  ): NonNullable<CreateLessonDto["status"]> {
+    if (viewer.role === "PLATFORM_ADMIN") return requested;
+    return requested === "READY" ? "PENDING_APPROVAL" : requested;
+  }
+
+  async updateLesson(
+    batchId: string,
+    lessonId: string,
+    dto: UpdateLessonDto,
+    viewer: Viewer,
+  ) {
+    const existing = await this.requireLesson(batchId, lessonId);
+    if (dto.subjectId && dto.subjectId !== existing.subjectId) {
+      await this.requireSubject(batchId, dto.subjectId);
+    }
+
+    const [updated] = await this.db
+      .update(lessons)
+      .set({
+        ...(dto.subjectId !== undefined && { subjectId: dto.subjectId }),
+        ...(dto.title !== undefined && { title: dto.title }),
+        ...(dto.description !== undefined && { description: dto.description }),
+        ...(dto.type !== undefined && { type: dto.type }),
+        ...(dto.videoUrl !== undefined && { videoUrl: dto.videoUrl }),
+        ...(dto.textContent !== undefined && { textContent: dto.textContent }),
+        ...(dto.resources !== undefined && { resources: dto.resources }),
+        ...(dto.duration !== undefined && { duration: dto.duration }),
+        ...(dto.isFreePreview !== undefined && {
+          isFreePreview: dto.isFreePreview,
+        }),
+        ...(dto.status !== undefined && {
+          status: this.settableStatus(dto.status, viewer),
+        }),
+        ...(dto.order !== undefined && { order: dto.order }),
+        updatedAt: new Date(),
+      })
+      .where(eq(lessons.lessonId, lessonId))
+      .returning();
+    return updated;
+  }
+
+  async deleteLesson(batchId: string, lessonId: string) {
+    await this.requireLesson(batchId, lessonId);
+    await this.db
+      .update(lessons)
+      .set({ isDeleted: true, updatedAt: new Date() })
+      .where(eq(lessons.lessonId, lessonId));
+    return { success: true };
+  }
+
+  async reorderLessons(batchId: string, dto: ReorderLessonsDto) {
+    const subjectIds = await this.subjectIdsFor(batchId);
+    const owned = await this.db
+      .select({ lessonId: lessons.lessonId })
+      .from(lessons)
+      .where(
+        and(
+          inArray(
+            lessons.lessonId,
+            dto.lessons.map((l) => l.lessonId),
+          ),
+          inArray(lessons.subjectId, subjectIds),
+        ),
+      );
+    if (owned.length !== dto.lessons.length) {
+      throw new NotFoundException("Lesson not found in this batch");
+    }
+
+    await this.db.transaction(async (tx) => {
+      for (const { lessonId, order } of dto.lessons) {
+        await tx
+          .update(lessons)
+          .set({ order, updatedAt: new Date() })
+          .where(eq(lessons.lessonId, lessonId));
+      }
+    });
+    return { success: true };
+  }
+
+  private async subjectIdsFor(batchId: string): Promise<string[]> {
+    await this.access.requireBatch(batchId);
+    const rows = await this.db
+      .select({ subjectId: batchSubjects.subjectId })
+      .from(batchSubjects)
+      .where(
+        and(
+          eq(batchSubjects.batchId, batchId),
+          eq(batchSubjects.isDeleted, false),
+        ),
+      );
+    return rows.map((r) => r.subjectId);
+  }
+
+  private async requireLesson(batchId: string, lessonId: string) {
+    const [row] = await this.db
+      .select({ lesson: lessons })
+      .from(lessons)
+      .innerJoin(batchSubjects, eq(batchSubjects.subjectId, lessons.subjectId))
+      .where(
+        and(
+          eq(lessons.lessonId, lessonId),
+          eq(lessons.isDeleted, false),
+          eq(batchSubjects.batchId, batchId),
+        ),
+      )
+      .limit(1);
+    if (!row) throw new NotFoundException("Lesson not found");
+    return row.lesson;
+  }
+
+  private async requireSubject(batchId: string, subjectId: string) {
+    const [subject] = await this.db
+      .select()
+      .from(batchSubjects)
+      .where(
+        and(
+          eq(batchSubjects.subjectId, subjectId),
+          eq(batchSubjects.batchId, batchId),
+          eq(batchSubjects.isDeleted, false),
+        ),
+      )
+      .limit(1);
+    if (!subject) throw new NotFoundException("Subject not found");
+    return subject;
+  }
+
+  private async canManage(batchId: string, viewer: Viewer): Promise<boolean> {
+    if (viewer.role === "PLATFORM_ADMIN") return true;
+    if (viewer.role !== "INSTRUCTOR" || !viewer.userId) return false;
+    return (await this.access.taughtBatchIds(viewer.userId)).includes(batchId);
+  }
+
+  private async assertSlugFree(slug: string, exceptBatchId?: string) {
+    const [conflict] = await this.db
+      .select({ batchId: batches.batchId })
+      .from(batches)
+      .where(eq(batches.slug, slug))
+      .limit(1);
+    if (conflict && conflict.batchId !== exceptBatchId) {
+      throw new ConflictException("Slug already in use");
+    }
+  }
+
+  private async instructorsFor(
+    batchIds: string[],
+  ): Promise<Map<string, Instructor[]>> {
+    const byBatch = new Map<string, Instructor[]>();
+    if (batchIds.length === 0) return byBatch;
+
+    const rows = await this.db
+      .select({
+        batchId: batchInstructors.batchId,
+        role: batchInstructors.role,
+        userId: users.userId,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        email: users.email,
+        profileImage: users.profileImage,
+      })
+      .from(batchInstructors)
+      .innerJoin(users, eq(users.userId, batchInstructors.instructorId))
+      .where(inArray(batchInstructors.batchId, batchIds));
+
+    for (const row of rows) {
+      const list = byBatch.get(row.batchId) ?? [];
+      list.push({
+        userId: row.userId,
+        firstName: row.firstName,
+        lastName: row.lastName,
+        email: row.email,
+        profileImage: this.media.url(row.profileImage),
+        role: row.role,
+      });
+      byBatch.set(row.batchId, list);
+    }
+    return byBatch;
+  }
+
+  private present(batch: typeof batches.$inferSelect) {
+    return {
+      ...batch,
+      thumbnail: this.media.url(batch.thumbnail),
+      bannerImage: this.media.url(batch.bannerImage),
+      price: Number(batch.price),
+      compareAtPrice:
+        batch.compareAtPrice == null ? null : Number(batch.compareAtPrice),
+    };
+  }
+
+  private async invalidate(): Promise<void> {
+    await this.cache.delByPrefix(CACHE_PREFIX);
+  }
+}

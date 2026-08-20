@@ -38,7 +38,7 @@ export class VideoEncodingController {
     user: { userId: string; role: string },
   ) {
     const lesson =
-      await this.videoEncodingService.getLessonWithCourse(lessonId);
+      await this.videoEncodingService.getLessonWithBatch(lessonId);
 
     if (!lesson) {
       throw new NotFoundException(`Lesson ${lessonId} not found`);
@@ -46,10 +46,13 @@ export class VideoEncodingController {
 
     if (
       user.role !== UserRole.PLATFORM_ADMIN &&
-      lesson.section.course.instructorId !== user.userId
+      !(await this.videoEncodingService.isBatchInstructor(
+        lesson.subject.batchId,
+        user.userId,
+      ))
     ) {
       throw new ForbiddenException(
-        "You can only access encoding data for your own courses",
+        "You can only access encoding data for batches you teach",
       );
     }
 
@@ -62,22 +65,22 @@ export class VideoEncodingController {
   @UseGuards(RolesGuard)
   @Roles(UserRole.INSTRUCTOR, UserRole.PLATFORM_ADMIN)
   async createUpload(
-    @Body() body: { courseId: string; lessonId: string; title?: string },
+    @Body() body: { batchId: string; lessonId: string; title?: string },
     @CurrentUser() user: { userId: string; role: string },
   ) {
-    const { courseId, lessonId, title } = body;
+    const { batchId, lessonId, title } = body;
 
     const lesson = await this.loadLessonForUser(lessonId, user);
 
-    if (lesson.section.course.courseId !== courseId) {
+    if (lesson.subject.batchId !== batchId) {
       throw new BadRequestException(
-        "Course ID does not match the lesson's course",
+        "Batch ID does not match the lesson's batch",
       );
     }
 
     const result = await this.videoEncodingService.createVideo(
       lessonId,
-      courseId,
+      batchId,
       title || lesson.title,
     );
 
@@ -121,7 +124,7 @@ export class VideoEncodingController {
       progress: status.progress,
       errorMessage: status.errorMessage,
       lessonId: job.lessonId,
-      courseId: job.courseId,
+      batchId: job.batchId,
     };
   }
 
@@ -176,7 +179,7 @@ export class VideoEncodingController {
 
     return {
       lessonId,
-      courseId: lesson.section.course.courseId,
+      batchId: lesson.subject.batchId,
       lessonStatus: lesson.status,
       lessonType: lesson.type,
       ...encodingInfo,

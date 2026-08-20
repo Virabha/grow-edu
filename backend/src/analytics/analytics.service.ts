@@ -1,10 +1,19 @@
 import { Injectable, ForbiddenException } from '@nestjs/common';
 import { Inject } from '@nestjs/common';
-import { eq, sql, and, gte, lte, inArray, isNull, isNotNull } from 'drizzle-orm';
-import { enrollments, courses, payments, courseProgress, users } from '../database/schema';
+import { eq, sql, and, gte, lte, inArray } from 'drizzle-orm';
+import {
+  batchEnrollments,
+  batchInstructors,
+  batches,
+  payments,
+  users,
+} from '../database/schema';
 import { DATABASE_CONNECTION } from '../database/database.module';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../database/schema';
+
+type DateFilters = { startDate?: Date; endDate?: Date };
+type TrendFilters = DateFilters & { period?: string; days?: number };
 
 @Injectable()
 export class AnalyticsService {
@@ -13,57 +22,59 @@ export class AnalyticsService {
     private readonly db: PostgresJsDatabase<typeof schema>,
   ) {}
 
-  async getEnrollmentStats(userRole: string, filters?: { startDate?: Date; endDate?: Date }) {
+  private assertStaff(userRole: string, what: string) {
     if (userRole !== 'PLATFORM_ADMIN' && userRole !== 'INSTRUCTOR') {
-      throw new ForbiddenException('Only admins and instructors can view enrollment stats');
+      throw new ForbiddenException(`Only admins and instructors can view ${what}`);
     }
-
-    const conditions = [];
-    if (filters?.startDate) {
-      conditions.push(gte(enrollments.enrolledAt, filters.startDate));
-    }
-    if (filters?.endDate) {
-      conditions.push(lte(enrollments.enrolledAt, filters.endDate));
-    }
-
-    const totalEnrollments = await this.db
-      .select({ count: sql<number>`count(*)` })
-      .from(enrollments)
-      .where(conditions.length > 0 ? and(...conditions) : undefined);
-
-    const b2cEnrollments = await this.db
-      .select({ count: sql<number>`count(*)` })
-      .from(enrollments)
-      .where(
-        and(
-          // Was `eq(companyId, null)`, which compiles to `= NULL` and is never
-          // true — so the B2C figure was always 0. SQL null needs IS NULL.
-          isNull(enrollments.companyId),
-          conditions.length > 0 ? and(...conditions) : undefined,
-        ),
-      );
-
-    const b2bEnrollments = await this.db
-      .select({ count: sql<number>`count(*)` })
-      .from(enrollments)
-      .where(
-        and(
-          isNotNull(enrollments.companyId),
-          conditions.length > 0 ? and(...conditions) : undefined,
-        ),
-      );
-
-    return {
-      total: Number(totalEnrollments[0]?.count || 0),
-      b2c: Number(b2cEnrollments[0]?.count || 0),
-      b2b: Number(b2bEnrollments[0]?.count || 0),
-    };
   }
 
-  async getRevenueStats(userRole: string, filters?: { startDate?: Date; endDate?: Date }) {
+  private assertAdmin(userRole: string, what: string) {
     if (userRole !== 'PLATFORM_ADMIN') {
-      throw new ForbiddenException('Only platform admins can view revenue stats');
+      throw new ForbiddenException(`Only platform admins can view ${what}`);
     }
+  }
+
+  private enrolledBetween(filters?: DateFilters) {
+    const conditions = [];
+    if (filters?.startDate) {
+      conditions.push(gte(batchEnrollments.createdAt, filters.startDate));
+    }
+    if (filters?.endDate) {
+      conditions.push(lte(batchEnrollments.createdAt, filters.endDate));
+    }
+    return conditions;
+  }
+
+  private async assignedBatchIds(instructorId: string): Promise<string[]> {
+    const rows = await this.db
+      .select({ batchId: batchInstructors.batchId })
+      .from(batchInstructors)
+      .where(eq(batchInstructors.instructorId, instructorId));
+    return rows.map((r) => r.batchId);
+  }
+
+  async getEnrollmentStats(userRole: string, filters?: DateFilters) {
+    this.assertStaff(userRole, 'enrollment stats');
+    const conditions = this.enrolledBetween(filters);
+
+    const bySource = await this.db
+      .select({
+        source: batchEnrollments.source,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(batchEnrollments)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .groupBy(batchEnrollments.source);
+
+    const counts = new Map(bySource.map((r) => [r.source, Number(r.count)]));
+    const corporate = counts.get('CORPORATE_SEAT') ?? 0;
+    const total = [...counts.values()].reduce((sum, n) => sum + n, 0);
+
+    return { total, b2c: total - corporate, b2b: corporate };
+  }
+
+  async getRevenueStats(userRole: string, filters?: DateFilters) {
+    this.assertAdmin(userRole, 'revenue stats');
 
     const conditions = [eq(payments.status, 'COMPLETED')];
     if (filters?.startDate) {
@@ -87,98 +98,84 @@ export class AnalyticsService {
     };
   }
 
-  async getCoursePerformance(courseId: string, instructorId: string, userRole: string) {
-    if (userRole !== 'PLATFORM_ADMIN' && userRole !== 'INSTRUCTOR') {
-      throw new ForbiddenException('Only admins and instructors can view course performance');
-    }
+  async getBatchPerformance(
+    batchId: string,
+    instructorId: string,
+    userRole: string,
+  ) {
+    this.assertStaff(userRole, 'batch performance');
 
-    // Verify course ownership if instructor
     if (userRole === 'INSTRUCTOR') {
-      const [course] = await this.db
-        .select()
-        .from(courses)
-        .where(and(eq(courses.courseId, courseId), eq(courses.instructorId, instructorId)))
+      const [assignment] = await this.db
+        .select({ batchId: batchInstructors.batchId })
+        .from(batchInstructors)
+        .where(
+          and(
+            eq(batchInstructors.batchId, batchId),
+            eq(batchInstructors.instructorId, instructorId),
+          ),
+        )
         .limit(1);
-
-      if (!course) {
-        throw new ForbiddenException('Course not found or you do not have access');
+      if (!assignment) {
+        throw new ForbiddenException('Batch not found or you do not have access');
       }
     }
 
-    const enrollmentCount = await this.db
-      .select({ count: sql<number>`count(*)` })
-      .from(enrollments)
-      .where(eq(enrollments.courseId, courseId));
+    const [byStatus] = await this.db
+      .select({
+        total: sql<number>`count(*)::int`,
+        completed: sql<number>`count(*) filter (where ${batchEnrollments.status} = 'COMPLETED')::int`,
+      })
+      .from(batchEnrollments)
+      .where(eq(batchEnrollments.batchId, batchId));
 
-    const completedCount = await this.db
-      .select({ count: sql<number>`count(*)` })
-      .from(enrollments)
-      .where(and(eq(enrollments.courseId, courseId), eq(enrollments.status, 'COMPLETED')));
-
-    const avgProgress = await this.db
-      .select({ avg: sql<number>`avg(${courseProgress.progress})` })
-      .from(courseProgress)
-      .where(eq(courseProgress.courseId, courseId));
+    const total = Number(byStatus?.total ?? 0);
+    const completed = Number(byStatus?.completed ?? 0);
 
     return {
-      enrollments: Number(enrollmentCount[0]?.count || 0),
-      completed: Number(completedCount[0]?.count || 0),
-      completionRate: Number(enrollmentCount[0]?.count || 0) > 0
-        ? (Number(completedCount[0]?.count || 0) / Number(enrollmentCount[0]?.count || 0)) * 100
-        : 0,
-      averageProgress: Number(avgProgress[0]?.avg || 0),
+      enrollments: total,
+      completed,
+      completionRate: total > 0 ? (completed / total) * 100 : 0,
     };
   }
 
   async getPlatformStats(userRole: string) {
-    if (userRole !== 'PLATFORM_ADMIN') {
-      throw new ForbiddenException('Only platform admins can view platform stats');
-    }
+    this.assertAdmin(userRole, 'platform stats');
 
-    const totalUsers = await this.db
-      .select({ count: sql<number>`count(*)` })
-      .from(users);
-
-    const totalCourses = await this.db
-      .select({ count: sql<number>`count(*)` })
-      .from(courses)
-      .where(eq(courses.status, 'PUBLISHED'));
-
-    const totalEnrollments = await this.db
-      .select({ count: sql<number>`count(*)` })
-      .from(enrollments);
+    const [totalUsers, totalBatches, totalEnrollments] = await Promise.all([
+      this.db.select({ count: sql<number>`count(*)` }).from(users),
+      this.db
+        .select({ count: sql<number>`count(*)` })
+        .from(batches)
+        .where(
+          and(
+            eq(batches.isDeleted, false),
+            inArray(batches.status, ['UPCOMING', 'ONGOING', 'COMPLETED']),
+          ),
+        ),
+      this.db.select({ count: sql<number>`count(*)` }).from(batchEnrollments),
+    ]);
 
     return {
       totalUsers: Number(totalUsers[0]?.count || 0),
-      totalCourses: Number(totalCourses[0]?.count || 0),
+      totalBatches: Number(totalBatches[0]?.count || 0),
       totalEnrollments: Number(totalEnrollments[0]?.count || 0),
     };
   }
 
-  async getInstructorRevenueStats(userId: string, userRole: string, filters?: { startDate?: Date; endDate?: Date }) {
-    if (userRole !== 'PLATFORM_ADMIN' && userRole !== 'INSTRUCTOR') {
-        throw new ForbiddenException('Unauthorized');
-    }
+  async getInstructorRevenueStats(
+    userId: string,
+    userRole: string,
+    filters?: DateFilters,
+  ) {
+    this.assertStaff(userRole, 'revenue');
 
     const conditions = [eq(payments.status, 'COMPLETED')];
-    
-    // Filter by instructor's courses if user is an instructor (admins see all revenue)
+
     if (userRole === 'INSTRUCTOR') {
-      const instructorCourses = await this.db
-        .select({ courseId: courses.courseId })
-        .from(courses)
-        .where(eq(courses.instructorId, userId));
-
-      const courseIds = instructorCourses.map((c) => c.courseId);
-      
-      if (courseIds.length === 0) {
-        return {
-          total: 0,
-          transactions: 0,
-        };
-      }
-
-      conditions.push(inArray(payments.courseId, courseIds));
+      const batchIds = await this.assignedBatchIds(userId);
+      if (batchIds.length === 0) return { total: 0, transactions: 0 };
+      conditions.push(inArray(payments.batchId, batchIds));
     }
 
     if (filters?.startDate) {
@@ -202,40 +199,27 @@ export class AnalyticsService {
     };
   }
 
-  async getEnrollmentTrend(userRole: string, filters?: { period?: string; days?: number; startDate?: Date; endDate?: Date }) {
-    if (userRole !== 'PLATFORM_ADMIN' && userRole !== 'INSTRUCTOR') {
-        throw new ForbiddenException('Unauthorized');
-    }
+  async getEnrollmentTrend(userRole: string, filters?: TrendFilters) {
+    this.assertStaff(userRole, 'the enrollment trend');
 
-    const period = filters?.period || 'day';
-    const days = Math.max(1, Math.min(365, filters?.days || 30));
-    const endDate = filters?.endDate || new Date();
-    const startDate = filters?.startDate || new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-
-    let dateFormat: string;
-    switch (period) {
-      case 'week':
-        dateFormat = "to_char(enrollments.enrolled_at::timestamp, 'YYYY-WW')";
-        break;
-      case 'month':
-        dateFormat = "to_char(enrollments.enrolled_at::timestamp, 'YYYY-MM')";
-        break;
-      default:
-        dateFormat = "to_char(enrollments.enrolled_at::timestamp, 'YYYY-MM-DD')";
-    }
-
-    const conditions = [
-      gte(enrollments.enrolledAt, startDate),
-      lte(enrollments.enrolledAt, endDate),
-    ];
+    const { startDate, endDate } = this.trendWindow(filters);
+    const dateFormat = this.bucket(
+      'batch_enrollments.created_at',
+      filters?.period,
+    );
 
     const results = await this.db
       .select({
         period: sql<string>`${sql.raw(dateFormat)}`,
         count: sql<number>`count(*)::int`,
       })
-      .from(enrollments)
-      .where(and(...conditions))
+      .from(batchEnrollments)
+      .where(
+        and(
+          gte(batchEnrollments.createdAt, startDate),
+          lte(batchEnrollments.createdAt, endDate),
+        ),
+      )
       .groupBy(sql`${sql.raw(dateFormat)}`)
       .orderBy(sql`${sql.raw(dateFormat)}`);
 
@@ -245,33 +229,11 @@ export class AnalyticsService {
     }));
   }
 
-  async getRevenueTrend(userRole: string, filters?: { period?: string; days?: number; startDate?: Date; endDate?: Date }) {
-    if (userRole !== 'PLATFORM_ADMIN') {
-        throw new ForbiddenException('Only platform admins can view revenue trend');
-    }
+  async getRevenueTrend(userRole: string, filters?: TrendFilters) {
+    this.assertAdmin(userRole, 'the revenue trend');
 
-    const period = filters?.period || 'day';
-    const days = Math.max(1, Math.min(365, filters?.days || 30));
-    const endDate = filters?.endDate || new Date();
-    const startDate = filters?.startDate || new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-
-    let dateFormat: string;
-    switch (period) {
-      case 'week':
-        dateFormat = "to_char(payments.created_at::timestamp, 'YYYY-WW')";
-        break;
-      case 'month':
-        dateFormat = "to_char(payments.created_at::timestamp, 'YYYY-MM')";
-        break;
-      default:
-        dateFormat = "to_char(payments.created_at::timestamp, 'YYYY-MM-DD')";
-    }
-
-    const conditions = [
-      eq(payments.status, 'COMPLETED'),
-      gte(payments.createdAt, startDate),
-      lte(payments.createdAt, endDate),
-    ];
+    const { startDate, endDate } = this.trendWindow(filters);
+    const dateFormat = this.bucket('payments.created_at', filters?.period);
 
     const results = await this.db
       .select({
@@ -280,7 +242,13 @@ export class AnalyticsService {
         transactions: sql<number>`count(*)::int`,
       })
       .from(payments)
-      .where(and(...conditions))
+      .where(
+        and(
+          eq(payments.status, 'COMPLETED'),
+          gte(payments.createdAt, startDate),
+          lte(payments.createdAt, endDate),
+        ),
+      )
       .groupBy(sql`${sql.raw(dateFormat)}`)
       .orderBy(sql`${sql.raw(dateFormat)}`);
 
@@ -291,38 +259,46 @@ export class AnalyticsService {
     }));
   }
 
-  async getTopCourses(userRole: string, filters?: { limit?: number; startDate?: Date; endDate?: Date }) {
-    if (userRole !== 'PLATFORM_ADMIN' && userRole !== 'INSTRUCTOR') {
-        throw new ForbiddenException('Unauthorized');
-    }
+  async getTopBatches(
+    userRole: string,
+    filters?: DateFilters & { limit?: number },
+  ) {
+    this.assertStaff(userRole, 'top batches');
     const limit = Math.min(filters?.limit || 10, 100);
-    const conditions = [];
-
-    if (filters?.startDate) {
-      conditions.push(gte(enrollments.enrolledAt, filters.startDate));
-    }
-    if (filters?.endDate) {
-      conditions.push(lte(enrollments.enrolledAt, filters.endDate));
-    }
+    const conditions = this.enrolledBetween(filters);
 
     const results = await this.db
       .select({
-        courseId: enrollments.courseId,
-        courseTitle: courses.title,
-        enrollments: sql<number>`count(${enrollments.enrollmentId})::int`,
+        batchId: batchEnrollments.batchId,
+        batchTitle: batches.title,
+        enrollments: sql<number>`count(${batchEnrollments.enrollmentId})::int`,
       })
-      .from(enrollments)
-      .leftJoin(courses, eq(enrollments.courseId, courses.courseId))
+      .from(batchEnrollments)
+      .leftJoin(batches, eq(batchEnrollments.batchId, batches.batchId))
       .where(conditions.length > 0 ? and(...conditions) : undefined)
-      .groupBy(enrollments.courseId, courses.title)
-      .orderBy(sql`count(${enrollments.enrollmentId}) desc`)
+      .groupBy(batchEnrollments.batchId, batches.title)
+      .orderBy(sql`count(${batchEnrollments.enrollmentId}) desc`)
       .limit(limit);
 
     return results.map((r) => ({
-      courseId: r.courseId,
-      courseTitle: r.courseTitle || 'Unknown Course',
+      batchId: r.batchId,
+      batchTitle: r.batchTitle || 'Unknown Batch',
       enrollments: Number(r.enrollments || 0),
     }));
   }
-}
 
+  private trendWindow(filters?: TrendFilters) {
+    const days = Math.max(1, Math.min(365, filters?.days || 30));
+    return {
+      endDate: filters?.endDate || new Date(),
+      startDate:
+        filters?.startDate || new Date(Date.now() - days * 24 * 60 * 60 * 1000),
+    };
+  }
+
+  private bucket(column: string, period?: string): string {
+    const pattern =
+      period === 'week' ? 'YYYY-WW' : period === 'month' ? 'YYYY-MM' : 'YYYY-MM-DD';
+    return `to_char(${column}::timestamp, '${pattern}')`;
+  }
+}

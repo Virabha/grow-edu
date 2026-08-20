@@ -84,6 +84,34 @@ describe('payment approval', () => {
     expect(await enrolledBatchIds(student)).toEqual([]);
   });
 
+  it('grants access after the student uploads proof and the owner approves', async () => {
+    const { body: started } = await checkout(student).expect(201);
+
+    await request(app.getHttpServer())
+      .post(`/payments/${started.paymentId}/upload-proof`)
+      .set(...authHeader(app, student))
+      .send({
+        proofUrl: 'https://files.example/proof.png',
+        transactionId: 'TXN-90210',
+        payerName: 'A Student',
+      })
+      .expect(201);
+
+    await approve(started.paymentId).expect(200);
+
+    expect(await enrolledBatchIds(student)).toEqual([batchId]);
+  });
+
+  it('refuses to approve a payment twice', async () => {
+    const { body: started } = await checkout(student).expect(201);
+
+    await approve(started.paymentId).expect(200);
+    const { body } = await approve(started.paymentId).expect(200);
+
+    expect(body.message).toMatch(/already completed/i);
+    expect(await enrolledBatchIds(student)).toEqual([batchId]);
+  });
+
   it('records which batch a payment was for', async () => {
     const { body: started } = await checkout(student).expect(201);
 

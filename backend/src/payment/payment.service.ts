@@ -2,7 +2,6 @@ import {
   Injectable,
   BadRequestException,
   NotFoundException,
-  ConflictException,
   Inject,
 } from '@nestjs/common';
 import { AppConfigService } from '../config';
@@ -11,16 +10,14 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { DATABASE_CONNECTION } from '../database/database.module';
 import * as schema from '../database/schema';
 import {
-  courses,
-  courseSections,
+  batches,
   payments,
-  enrollments,
-  sectionAccess,
   users,
   siteSettings,
   paymentStatusEnum,
   paymentGatewayEnum,
 } from '../database/schema';
+import { Queryable } from '../database/transaction';
 import { eq, and, inArray, desc, like, sql } from 'drizzle-orm';
 import { EmailService } from '../email/email.service';
 import { ContractsService } from '../corporate/contracts.service';
@@ -61,15 +58,15 @@ export interface QRPaymentSettings {
 type BatchEnrollHandler = (
   batchId: string,
   userId: string,
-  paymentId: string
-) => Promise<void> | void;
+  paymentId: string,
+  tx: Queryable,
+) => Promise<void>;
 
 @Injectable()
 export class PaymentService {
   private razorpay: InstanceType<typeof Razorpay> | null = null;
   private batchEnrollHandler: BatchEnrollHandler | null = null;
 
-  /** Registered at module init by BatchesService to avoid circular deps. */
   registerBatchEnrollHandler(handler: BatchEnrollHandler): void {
     this.batchEnrollHandler = handler;
   }
@@ -91,261 +88,6 @@ export class PaymentService {
     }
   }
 
-  /**
-   * Shared validation: resolves course/section and validates it exists and is published.
-   */
-  private async resolveItem(payload: {
-    itemType: 'COURSE' | 'SECTION';
-    courseId?: string;
-    sectionId?: string;
-  }) {
-    if (!payload.courseId && !payload.sectionId) {
-      throw new BadRequestException('courseId or sectionId is required');
-    }
-
-    let originalAmount = 0;
-    let sectionId: string | null = null;
-    let courseId: string | null = payload.courseId || null;
-    let itemName = 'Course purchase';
-
-    if (payload.itemType === 'COURSE') {
-      if (!payload.courseId) throw new BadRequestException('courseId is required for COURSE items');
-      const course = await this.db.query.courses.findFirst({
-        where: eq(courses.courseId, payload.courseId),
-      });
-      if (!course) throw new NotFoundException('Course not found');
-      if (course.status !== 'PUBLISHED') {
-        throw new BadRequestException('Course is not published');
-      }
-      originalAmount = Number(course.price || 0);
-      itemName = course.title;
-    } else {
-      if (!payload.sectionId) throw new BadRequestException('sectionId is required for SECTION items');
-      const section = await this.db.query.courseSections.findFirst({
-        where: eq(courseSections.sectionId, payload.sectionId),
-        with: { course: true },
-      });
-      if (!section) throw new NotFoundException('Section not found');
-      if (section.isDeleted) {
-        throw new BadRequestException('Section is not available');
-      }
-      if (!section.sectionPrice) {
-        throw new BadRequestException('Section is not individually purchasable');
-      }
-      originalAmount = Number(section.sectionPrice);
-      courseId = section.courseId;
-      sectionId = section.sectionId;
-      itemName = `${section.course.title} - ${section.title}`;
-    }
-
-    return { courseId, sectionId, originalAmount, amount: originalAmount, itemName };
-  }
-
-  async enrollFree(payload: {
-    userId: string;
-    itemType: 'COURSE' | 'SECTION';
-    courseId?: string;
-    sectionId?: string;
-  }) {
-    const { courseId, sectionId, originalAmount, amount, itemName } =
-      await this.resolveItem(payload);
-
-    if (amount > 0) {
-      throw new BadRequestException('This item requires payment. Use checkout instead.');
-    }
-
-    if (payload.itemType === 'COURSE' && courseId) {
-      const [existingEnrollment] = await this.db
-        .select({ id: enrollments.enrollmentId })
-        .from(enrollments)
-        .where(and(
-          eq(enrollments.courseId, courseId),
-          eq(enrollments.userId, payload.userId),
-          inArray(enrollments.status, ['ACTIVE', 'COMPLETED']),
-        ))
-        .limit(1);
-      if (existingEnrollment) {
-        throw new ConflictException('Already enrolled');
-      }
-    } else if (payload.itemType === 'SECTION' && sectionId) {
-      const [existingAccess] = await this.db
-        .select({ id: sectionAccess.sectionAccessId })
-        .from(sectionAccess)
-        .where(and(eq(sectionAccess.userId, payload.userId), eq(sectionAccess.sectionId, sectionId)))
-        .limit(1);
-      if (existingAccess) {
-        throw new ConflictException('Already enrolled');
-      }
-    }
-
-    const [payment] = await this.db
-      .insert(payments)
-      .values({
-        userId: payload.userId,
-        courseId,
-        sectionId,
-        itemType: payload.itemType,
-        amount: '0',
-        originalAmount: String(originalAmount),
-        currency: PLATFORM_CURRENCY,
-        gateway: PaymentGateway.FREE,
-        status: 'COMPLETED',
-        metadata: {
-          mode: payload.itemType,
-          freeEnrollment: true,
-        },
-      })
-      .returning();
-
-    await this.grantAccessForPayment(
-      payment.paymentId,
-      payload.itemType,
-      payload.userId,
-      courseId || undefined,
-      sectionId || undefined,
-    );
-
-    try {
-      const [user] = await this.db
-        .select()
-        .from(users)
-        .where(eq(users.userId, payload.userId))
-        .limit(1);
-
-      if (user) {
-        await this.emailService.sendPaymentConfirmationEmail({
-          firstName: user.firstName,
-          email: user.email,
-          paymentId: payment.paymentId,
-          amount: '0',
-          currency: PLATFORM_CURRENCY,
-          items: [{ name: itemName, type: payload.itemType }],
-        });
-      }
-    } catch { /* non-critical: swallow */ }
-
-    return { success: true, paymentId: payment.paymentId, message: 'Enrolled successfully' };
-  }
-
-  /**
-   * Create a manual-QR pending payment.
-   * Learner is shown QR code/bank details, then uploads proof. Admin reviews and approves.
-   */
-  async createManualQRPayment(payload: {
-    userId: string;
-    itemType: 'COURSE' | 'SECTION';
-    courseId?: string;
-    sectionId?: string;
-    idempotencyKey?: string;
-  }) {
-    // Idempotency: if client re-sends the same key, return the existing payment.
-    if (payload.idempotencyKey) {
-      const [existing] = await this.db
-        .select()
-        .from(payments)
-        .where(eq(payments.idempotencyKey, payload.idempotencyKey))
-        .limit(1);
-      if (existing) {
-        return {
-          paymentId: existing.paymentId,
-          amount: Number(existing.amount),
-          currency: PLATFORM_CURRENCY,
-          status: existing.status,
-          qrSettings: await this.getQRSettings(),
-          reused: true,
-        };
-      }
-    }
-
-    const { courseId, sectionId, originalAmount, amount } =
-      await this.resolveItem(payload);
-
-    if (amount <= 0) {
-      throw new BadRequestException('Item is free. Use the free-enroll endpoint instead.');
-    }
-
-    // Already-paid guard — block creating a new pending order when the user
-    // already has a completed payment for this exact item.
-    const itemCondition = courseId
-      ? eq(payments.courseId, courseId)
-      : sectionId
-      ? eq(payments.sectionId, sectionId)
-      : null;
-    if (itemCondition) {
-      const completed = await this.db.query.payments.findFirst({
-        where: and(
-          eq(payments.userId, payload.userId),
-          itemCondition,
-          eq(payments.status, 'COMPLETED'),
-        ),
-      });
-      if (completed) {
-        throw new BadRequestException(
-          'You have already paid for this item. Check My Courses for access.',
-        );
-      }
-      // If there's an existing PENDING or PROOF_UPLOADED payment for this
-      // user+item, reuse it instead of creating a duplicate order.
-      const existing = await this.db.query.payments.findFirst({
-        where: and(
-          eq(payments.userId, payload.userId),
-          itemCondition,
-          eq(payments.gateway, PaymentGateway.MANUAL_QR),
-        ),
-        orderBy: (p, { desc }) => [desc(p.createdAt)],
-      });
-      if (
-        existing &&
-        (existing.status === 'PENDING' || existing.status === 'PROOF_UPLOADED')
-      ) {
-        return {
-          paymentId: existing.paymentId,
-          amount: Number(existing.amount),
-          currency: PLATFORM_CURRENCY,
-          status: existing.status,
-          qrSettings: await this.getQRSettings(),
-          reused: true,
-        };
-      }
-    }
-
-    const [payment] = await this.db
-      .insert(payments)
-      .values({
-        userId: payload.userId,
-        courseId,
-        sectionId,
-        itemType: payload.itemType,
-        amount: String(amount),
-        originalAmount: String(originalAmount),
-        currency: PLATFORM_CURRENCY,
-        gateway: PaymentGateway.MANUAL_QR,
-        status: 'PENDING',
-        idempotencyKey: payload.idempotencyKey ?? null,
-        metadata: {
-          mode: payload.itemType,
-        },
-      })
-      .returning();
-
-    return {
-      paymentId: payment.paymentId,
-      amount,
-      currency: PLATFORM_CURRENCY,
-      status: payment.status,
-      qrSettings: await this.getQRSettings(),
-    };
-  }
-
-  /**
-   * Learner uploads proof of QR payment (screenshot URL + transaction id).
-   * Enforces:
-   *  - payment belongs to user, is MANUAL_QR, and is in a state that accepts proof
-   *  - transactionId is unique across all payments (prevents one screenshot/txn
-   *    being reused on a second checkout)
-   *  - same (courseId|sectionId, user) doesn't already have a COMPLETED payment
-   *    — covers the "already paid" case before bothering an admin
-   */
   async uploadPaymentProof(payload: {
     paymentId: string;
     userId: string;
@@ -372,18 +114,11 @@ export class PaymentService {
       throw new BadRequestException(`Cannot upload proof for ${payment.status} payment`);
     }
 
-    // Already-paid guard: same user + same item with a completed payment.
-    const itemCondition = payment.courseId
-      ? eq(payments.courseId, payment.courseId)
-      : payment.sectionId
-      ? eq(payments.sectionId, payment.sectionId)
-      : null;
-
-    if (itemCondition) {
+    if (payment.batchId) {
       const alreadyPaid = await this.db.query.payments.findFirst({
         where: and(
           eq(payments.userId, payload.userId),
-          itemCondition,
+          eq(payments.batchId, payment.batchId),
           eq(payments.status, 'COMPLETED'),
         ),
       });
@@ -394,16 +129,12 @@ export class PaymentService {
       }
     }
 
-    // Transaction ID uniqueness — case-insensitive trim.
     const normalisedTxn = payload.transactionId.trim();
     if (normalisedTxn.length < 4) {
       throw new BadRequestException('Transaction ID is too short');
     }
     const duplicate = await this.db.query.payments.findFirst({
-      where: and(
-        eq(payments.transactionId, normalisedTxn),
-        // ignore the current payment row itself (re-upload after correction)
-      ),
+      where: eq(payments.transactionId, normalisedTxn),
     });
     if (duplicate && duplicate.paymentId !== payment.paymentId) {
       throw new BadRequestException(
@@ -428,9 +159,6 @@ export class PaymentService {
     return updated;
   }
 
-  /**
-   * Admin approves a manual-QR payment after reviewing proof.
-   */
   async approvePayment(paymentId: string, reviewerId: string, notes?: string) {
     const payment = await this.db.query.payments.findFirst({
       where: eq(payments.paymentId, paymentId),
@@ -444,105 +172,8 @@ export class PaymentService {
       throw new BadRequestException(`Cannot approve a ${payment.status} payment`);
     }
 
-    if (payment.itemType === 'CORPORATE_CONTRACT') {
-      return this.approveCorporatePayment(payment, reviewerId, notes);
-    }
-
-    // Grant access before marking COMPLETED: if access grant throws, the payment stays
-    // in PROOF_UPLOADED so the admin can retry without double-granting.
-    await this.grantAccessForPayment(
-      paymentId,
-      payment.itemType,
-      payment.userId,
-      payment.courseId || undefined,
-      payment.sectionId || undefined,
-    );
-
-    // Link the resulting enrollment back to this payment row.
-    let linkedEnrollmentId: string | undefined;
-    if (payment.itemType === 'COURSE' && payment.courseId) {
-      const [enrollment] = await this.db
-        .select({ enrollmentId: enrollments.enrollmentId })
-        .from(enrollments)
-        .where(
-          and(
-            eq(enrollments.userId, payment.userId),
-            eq(enrollments.courseId, payment.courseId),
-          ),
-        )
-        .limit(1);
-      linkedEnrollmentId = enrollment?.enrollmentId;
-    }
-
     const now = new Date();
-    const [updated] = await this.db
-      .update(payments)
-      .set({
-        status: 'COMPLETED',
-        reviewedAt: now,
-        reviewedBy: reviewerId,
-        reviewNotes: notes || null,
-        updatedAt: now,
-        ...(linkedEnrollmentId ? { enrollmentId: linkedEnrollmentId } : {}),
-      })
-      .where(and(eq(payments.paymentId, paymentId), inArray(payments.status, ['PROOF_UPLOADED', 'PENDING'])))
-      .returning({ paymentId: payments.paymentId });
-
-    // Confirmation email — only if this request won the status-update race
-    if (!updated) return { success: true };
-    try {
-      const [user] = await this.db
-        .select()
-        .from(users)
-        .where(eq(users.userId, payment.userId))
-        .limit(1);
-
-      if (user) {
-        const items: Array<{ name: string; type: 'COURSE' | 'SECTION' }> = [];
-        if (payment.itemType === 'COURSE' && payment.courseId) {
-          const [course] = await this.db
-            .select()
-            .from(courses)
-            .where(eq(courses.courseId, payment.courseId))
-            .limit(1);
-          if (course) items.push({ name: course.title, type: 'COURSE' });
-        } else if (payment.itemType === 'SECTION' && payment.sectionId) {
-          const [section] = await this.db
-            .select()
-            .from(courseSections)
-            .where(eq(courseSections.sectionId, payment.sectionId))
-            .limit(1);
-          if (section) items.push({ name: section.title, type: 'SECTION' });
-        }
-        if (items.length > 0) {
-          await this.emailService.sendPaymentConfirmationEmail({
-            firstName: user.firstName,
-            email: user.email,
-            paymentId: payment.paymentId,
-            amount: payment.amount,
-            currency: payment.currency,
-            items,
-          });
-        }
-      }
-    } catch { /* non-critical: swallow */ }
-
-    return { success: true, message: 'Payment approved and access granted' };
-  }
-
-  private async approveCorporatePayment(
-    payment: { paymentId: string; corporateContractId: string | null },
-    reviewerId: string,
-    notes?: string,
-  ) {
-    if (!payment.corporateContractId) {
-      throw new BadRequestException(
-        'Corporate payment is not linked to a contract',
-      );
-    }
-
-    const now = new Date();
-    await this.db.transaction(async (tx) => {
+    const approved = await this.db.transaction(async (tx) => {
       const [updated] = await tx
         .update(payments)
         .set({
@@ -554,25 +185,76 @@ export class PaymentService {
         })
         .where(
           and(
-            eq(payments.paymentId, payment.paymentId),
+            eq(payments.paymentId, paymentId),
             inArray(payments.status, ['PROOF_UPLOADED', 'PENDING']),
           ),
         )
         .returning({ paymentId: payments.paymentId });
 
-      if (!updated) return;
-      await this.contracts.activateForPayment(
-        payment.corporateContractId as string,
+      if (!updated) return false;
+
+      if (payment.itemType === 'CORPORATE_CONTRACT') {
+        if (!payment.corporateContractId) {
+          throw new BadRequestException(
+            'Corporate payment is not linked to a contract',
+          );
+        }
+        await this.contracts.activateForPayment(payment.corporateContractId, tx);
+        return true;
+      }
+
+      if (!payment.batchId) {
+        throw new BadRequestException('Payment is not linked to a batch');
+      }
+      if (!this.batchEnrollHandler) {
+        throw new BadRequestException('Enrolment is not available right now');
+      }
+      await this.batchEnrollHandler(
+        payment.batchId,
+        payment.userId,
+        paymentId,
         tx,
       );
+      return true;
     });
 
-    return { success: true, message: 'Payment approved and contract activated' };
+    if (!approved) return { success: true };
+
+    if (payment.itemType === 'CORPORATE_CONTRACT') {
+      return { success: true, message: 'Payment approved and contract activated' };
+    }
+
+    await this.sendConfirmation(payment);
+    return { success: true, message: 'Payment approved and access granted' };
   }
 
-  /**
-   * Admin rejects a manual-QR payment.
-   */
+  private async sendConfirmation(payment: typeof payments.$inferSelect) {
+    try {
+      const [user] = await this.db
+        .select()
+        .from(users)
+        .where(eq(users.userId, payment.userId))
+        .limit(1);
+      if (!user || !payment.batchId) return;
+
+      const [batch] = await this.db
+        .select({ title: batches.title })
+        .from(batches)
+        .where(eq(batches.batchId, payment.batchId))
+        .limit(1);
+      if (!batch) return;
+
+      await this.emailService.sendPaymentConfirmationEmail({
+        firstName: user.firstName,
+        email: user.email,
+        paymentId: payment.paymentId,
+        amount: payment.amount,
+        currency: payment.currency,
+        items: [{ name: batch.title, type: 'BATCH' }],
+      });
+    } catch { /* non-critical: swallow */ }
+  }
+
   async rejectPayment(paymentId: string, reviewerId: string, notes: string) {
     const payment = await this.db.query.payments.findFirst({
       where: eq(payments.paymentId, paymentId),
@@ -597,9 +279,6 @@ export class PaymentService {
     return { success: true, message: 'Payment rejected' };
   }
 
-  /**
-   * Admin lists payments awaiting review (status = PROOF_UPLOADED).
-   */
   async getPendingReviewPayments(filters?: { page?: number; limit?: number }) {
     const limit = Math.min(filters?.limit ?? 50, MAX_PAGE_LIMIT);
     const page = filters?.page ?? 1;
@@ -608,7 +287,7 @@ export class PaymentService {
     const [rows, countRes] = await Promise.all([
       this.db.query.payments.findMany({
         where: eq(payments.status, 'PROOF_UPLOADED'),
-        with: { user: true, course: true, section: true },
+        with: { user: true, batch: true },
         orderBy: [desc(payments.proofUploadedAt)],
         limit,
         offset,
@@ -626,9 +305,6 @@ export class PaymentService {
     };
   }
 
-  /**
-   * QR/Bank settings stored in site_settings table (key-value).
-   */
   async getQRSettings(): Promise<QRPaymentSettings> {
     const keys = Object.values(QR_SETTING_KEYS);
     const rows = await this.db
@@ -676,31 +352,26 @@ export class PaymentService {
     return this.getQRSettings();
   }
 
-  /**
-   * Razorpay (kept for future re-enable; not used by checkout currently).
-   */
-  async createRazorpayOrder(payload: {
-    userId: string;
-    itemType: 'COURSE' | 'SECTION';
-    courseId?: string;
-    sectionId?: string;
-  }) {
+  async createRazorpayOrder(payload: { userId: string; batchId: string }) {
     if (!this.razorpay) {
       throw new BadRequestException('Razorpay is not configured');
     }
-    const { courseId, sectionId, originalAmount, amount, itemName } =
-      await this.resolveItem(payload);
-    void itemName;
+    const [batch] = await this.db
+      .select({ price: batches.price, currency: batches.currency })
+      .from(batches)
+      .where(and(eq(batches.batchId, payload.batchId), eq(batches.isDeleted, false)))
+      .limit(1);
+    if (!batch) throw new NotFoundException('Batch not found');
 
+    const amount = Number(batch.price);
     const [payment] = await this.db
       .insert(payments)
       .values({
         userId: payload.userId,
-        courseId,
-        sectionId,
-        itemType: payload.itemType,
+        batchId: payload.batchId,
+        itemType: 'BATCH',
         amount: String(amount),
-        originalAmount: String(originalAmount),
+        originalAmount: String(amount),
         currency: PLATFORM_CURRENCY,
         gateway: PaymentGateway.RAZORPAY,
         status: 'PENDING',
@@ -728,7 +399,11 @@ export class PaymentService {
   }
 
   async markPaymentCompleted(paymentId: string, gatewayPaymentId?: string) {
-    const updateData: { status: 'COMPLETED'; updatedAt: Date; metadata?: Record<string, unknown>; gatewayId?: string } = {
+    const updateData: {
+      status: 'COMPLETED';
+      updatedAt: Date;
+      metadata?: Record<string, unknown>;
+    } = {
       status: 'COMPLETED',
       updatedAt: new Date(),
     };
@@ -755,92 +430,10 @@ export class PaymentService {
     return payment;
   }
 
-  async grantAccessForPayment(
-    paymentId: string,
-    itemType: 'COURSE' | 'SECTION' | 'BATCH',
-    userId: string,
-    courseId?: string,
-    sectionId?: string,
-  ) {
-    if (itemType === 'BATCH') {
-      const [payment] = await this.db
-        .select({ batchId: payments.batchId })
-        .from(payments)
-        .where(eq(payments.paymentId, paymentId))
-        .limit(1);
-      if (payment?.batchId && this.batchEnrollHandler) {
-        await this.batchEnrollHandler(payment.batchId, userId, paymentId);
-      }
-      return;
-    }
-    if (itemType === 'COURSE' && courseId) {
-      const [existingActive] = await this.db
-        .select({ id: enrollments.enrollmentId })
-        .from(enrollments)
-        .where(and(
-          eq(enrollments.courseId, courseId),
-          eq(enrollments.userId, userId),
-          inArray(enrollments.status, ['ACTIVE', 'COMPLETED']),
-        ))
-        .limit(1);
-
-      if (!existingActive) {
-        const [existingRevoked] = await this.db
-          .select({ id: enrollments.enrollmentId })
-          .from(enrollments)
-          .where(and(
-            eq(enrollments.courseId, courseId),
-            eq(enrollments.userId, userId),
-            eq(enrollments.status, 'REVOKED'),
-          ))
-          .limit(1);
-
-        if (existingRevoked) {
-          await this.db
-            .update(enrollments)
-            .set({ status: 'ACTIVE' })
-            .where(eq(enrollments.enrollmentId, existingRevoked.id));
-        } else {
-          await this.db.insert(enrollments).values({
-            userId,
-            courseId,
-            status: 'ACTIVE',
-          }).onConflictDoNothing();
-        }
-      }
-
-      await this.db
-        .delete(sectionAccess)
-        .where(and(eq(sectionAccess.userId, userId), eq(sectionAccess.courseId, courseId)));
-    }
-
-    if (itemType === 'SECTION' && sectionId && courseId) {
-      const [existingAccess] = await this.db
-        .select({ id: sectionAccess.sectionAccessId })
-        .from(sectionAccess)
-        .where(and(eq(sectionAccess.userId, userId), eq(sectionAccess.sectionId, sectionId)))
-        .limit(1);
-
-      if (!existingAccess) {
-        await this.db.insert(sectionAccess).values({
-          userId,
-          courseId,
-          sectionId,
-          source: 'SECTION_PURCHASE',
-          paymentId,
-        });
-      }
-    }
-  }
-
   async getPaymentById(id: string) {
     const payment = await this.db.query.payments.findFirst({
       where: eq(payments.paymentId, id),
-      with: {
-        user: true,
-        course: true,
-        section: true,
-      },
+      with: { user: true, batch: true },
     });
     if (!payment) throw new NotFoundException('Payment not found');
     return payment;
@@ -849,7 +442,7 @@ export class PaymentService {
   async getMyPayment(id: string, userId: string) {
     const payment = await this.db.query.payments.findFirst({
       where: and(eq(payments.paymentId, id), eq(payments.userId, userId)),
-      with: { course: true, section: true },
+      with: { batch: true },
     });
     if (!payment) throw new NotFoundException('Payment not found');
     return payment;
@@ -900,8 +493,8 @@ export class PaymentService {
           gatewayId: payments.gatewayId,
           createdAt: payments.createdAt,
           itemType: payments.itemType,
-          courseId: payments.courseId,
-          sectionId: payments.sectionId,
+          batchId: payments.batchId,
+          corporateContractId: payments.corporateContractId,
           paymentProofUrl: payments.paymentProofUrl,
           proofUploadedAt: payments.proofUploadedAt,
           reviewedAt: payments.reviewedAt,

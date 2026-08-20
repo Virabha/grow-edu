@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { Inject } from '@nestjs/common';
 import { eq, and, sql, asc, ilike } from 'drizzle-orm';
-import { categories, courses } from '../database/schema';
+import { batches, categories } from '../database/schema';
 import { DATABASE_CONNECTION } from '../database/database.module';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../database/schema';
@@ -90,10 +90,11 @@ export class CategoriesService {
         displayOrder: categories.displayOrder,
         createdAt: categories.createdAt,
         updatedAt: categories.updatedAt,
-        coursesCount: sql<number>`(
-          SELECT COUNT(*)::int FROM courses
-          WHERE courses.category_id = ${categories.categoryId}
-          AND courses.status = 'PUBLISHED'
+        batchesCount: sql<number>`(
+          SELECT COUNT(*)::int FROM batches
+          WHERE batches.category_id = ${categories.categoryId}
+          AND batches.is_deleted = false
+          AND batches.status in ('UPCOMING', 'ONGOING')
         )`,
       })
       .from(categories)
@@ -151,20 +152,19 @@ export class CategoriesService {
       throw new NotFoundException(`Category with slug ${slug} not found`);
     }
 
-    // Get courses count
-    const coursesCount = await this.db
+    const batchesCount = await this.db
       .select({ count: sql<number>`count(*)::int` })
-      .from(courses)
+      .from(batches)
       .where(
         and(
-          eq(courses.categoryId, category.categoryId),
-          eq(courses.status, 'PUBLISHED'),
+          eq(batches.categoryId, category.categoryId),
+          eq(batches.isDeleted, false),
         ),
       );
 
     return {
       ...category,
-      coursesCount: Number(coursesCount[0]?.count || 0),
+      batchesCount: Number(batchesCount[0]?.count || 0),
     };
   }
 
@@ -214,9 +214,9 @@ export class CategoriesService {
           displayOrder: categories.displayOrder,
           createdAt: categories.createdAt,
           updatedAt: categories.updatedAt,
-          coursesCount: sql<number>`(
-            SELECT COUNT(*)::int FROM courses
-            WHERE courses.category_id = ${categories.categoryId}
+          batchesCount: sql<number>`(
+            SELECT COUNT(*)::int FROM batches
+            WHERE batches.category_id = ${categories.categoryId}
           )`,
         })
         .from(categories)
@@ -398,13 +398,11 @@ export class CategoriesService {
   async softDelete(categoryId: string) {
     await this.findOne(categoryId);
 
-    // Check if category has courses
-    const [courseCount] = await this.db
+    const [batchCount] = await this.db
       .select({ count: sql<number>`count(*)::int` })
-      .from(courses)
-      .where(eq(courses.categoryId, categoryId));
+      .from(batches)
+      .where(eq(batches.categoryId, categoryId));
 
-    // Soft delete - courses retain the reference but category won't show in listings
     await this.db
       .update(categories)
       .set({ isDeleted: true, isActive: false, updatedAt: new Date() })
@@ -416,8 +414,8 @@ export class CategoriesService {
       isDeleted: true,
       message: 'Category deleted',
       note:
-        Number(courseCount?.count || 0) > 0
-          ? `${courseCount.count} courses still reference this category`
+        Number(batchCount?.count || 0) > 0
+          ? `${batchCount.count} batches still reference this category`
           : undefined,
     };
   }

@@ -13,8 +13,8 @@ import * as schema from "../database/schema";
 import {
   assignments,
   assignmentSubmissions,
-  courses,
-  enrollments,
+  batchInstructors,
+  batches,
   users,
 } from "../database/schema";
 import { CreateAssignmentDto } from "./dto/create-assignment.dto";
@@ -24,6 +24,7 @@ import { SubmitAssignmentDto } from "./dto/submit-assignment.dto";
 import { GradeSubmissionDto } from "./dto/grade-submission.dto";
 import { FilterSubmissionsDto } from "./dto/filter-submissions.dto";
 import { PaginationDto } from "../common/dto/pagination.dto";
+import { BatchAccessService } from "../batches/access/batch-access.service";
 
 const MAX_PAGE_LIMIT = 100;
 
@@ -33,6 +34,7 @@ type DbType = PostgresJsDatabase<typeof schema>;
 export class AssignmentsService {
   constructor(
     @Inject(DATABASE_CONNECTION) private readonly db: DbType,
+    private readonly access: BatchAccessService,
   ) {}
 
   async listAssignments(userId: string, role: string, filters: FilterAssignmentsDto) {
@@ -60,8 +62,8 @@ export class AssignmentsService {
         .select({
           id: assignments.id,
           title: assignments.title,
-          courseId: assignments.courseId,
-          courseTitle: courses.title,
+          batchId: assignments.batchId,
+          batchTitle: batches.title,
           submissionType: assignments.submissionType,
           dueAt: assignments.dueAt,
           isPublished: assignments.isPublished,
@@ -69,13 +71,13 @@ export class AssignmentsService {
           graded: sql<number>`count(case when ${assignmentSubmissions.status} = 'GRADED' then 1 end)::int`,
         })
         .from(assignments)
-        .leftJoin(courses, eq(assignments.courseId, courses.courseId))
+        .leftJoin(batches, eq(assignments.batchId, batches.batchId))
         .leftJoin(
           assignmentSubmissions,
           eq(assignments.id, assignmentSubmissions.assignmentId),
         )
         .where(where)
-        .groupBy(assignments.id, courses.title)
+        .groupBy(assignments.id, batches.title)
         .orderBy(desc(assignments.createdAt))
         .limit(limit)
         .offset(offset),
@@ -102,24 +104,38 @@ export class AssignmentsService {
       throw new BadRequestException("passMarks cannot exceed maxMarks");
     }
 
-    const [course] = await this.db
-      .select({ courseId: courses.courseId, instructorId: courses.instructorId })
-      .from(courses)
-      .where(eq(courses.courseId, dto.courseId))
+    const [batch] = await this.db
+      .select({ batchId: batches.batchId })
+      .from(batches)
+      .where(and(eq(batches.batchId, dto.batchId), eq(batches.isDeleted, false)))
       .limit(1);
 
-    if (!course) {
-      throw new NotFoundException("Course not found");
+    if (!batch) {
+      throw new NotFoundException("Batch not found");
     }
-    if (role !== "PLATFORM_ADMIN" && course.instructorId !== userId) {
-      throw new ForbiddenException("You can only create assignments for your own courses");
+    if (role !== "PLATFORM_ADMIN") {
+      const [assignment] = await this.db
+        .select({ batchId: batchInstructors.batchId })
+        .from(batchInstructors)
+        .where(
+          and(
+            eq(batchInstructors.batchId, dto.batchId),
+            eq(batchInstructors.instructorId, userId),
+          ),
+        )
+        .limit(1);
+      if (!assignment) {
+        throw new ForbiddenException(
+          "You can only create assignments for batches you teach",
+        );
+      }
     }
 
     const [created] = await this.db
       .insert(assignments)
       .values({
-        courseId: dto.courseId,
-        instructorId: course.instructorId,
+        batchId: dto.batchId,
+        instructorId: userId,
         title: dto.title,
         instructions: dto.instructions ?? null,
         submissionType: dto.submissionType,
@@ -138,7 +154,7 @@ export class AssignmentsService {
     const [row] = await this.db
       .select({
         id: assignments.id,
-        courseId: assignments.courseId,
+        batchId: assignments.batchId,
         instructorId: assignments.instructorId,
         title: assignments.title,
         instructions: assignments.instructions,
@@ -150,10 +166,10 @@ export class AssignmentsService {
         isPublished: assignments.isPublished,
         createdAt: assignments.createdAt,
         updatedAt: assignments.updatedAt,
-        courseTitle: courses.title,
+        batchTitle: batches.title,
       })
       .from(assignments)
-      .leftJoin(courses, eq(assignments.courseId, courses.courseId))
+      .leftJoin(batches, eq(assignments.batchId, batches.batchId))
       .where(and(eq(assignments.id, assignmentId), eq(assignments.isDeleted, false)))
       .limit(1);
 
@@ -363,7 +379,7 @@ export class AssignmentsService {
     const [assignment] = await this.db
       .select({
         id: assignments.id,
-        courseId: assignments.courseId,
+        batchId: assignments.batchId,
         submissionType: assignments.submissionType,
         dueAt: assignments.dueAt,
         allowResubmission: assignments.allowResubmission,
@@ -392,20 +408,10 @@ export class AssignmentsService {
       throw new BadRequestException("Link submission requires a linkUrl");
     }
 
-    const [enrollment] = await this.db
-      .select({ enrollmentId: enrollments.enrollmentId })
-      .from(enrollments)
-      .where(
-        and(
-          eq(enrollments.userId, userId),
-          eq(enrollments.courseId, assignment.courseId),
-          eq(enrollments.status, "ACTIVE"),
-        ),
-      )
-      .limit(1);
-
-    if (!enrollment) {
-      throw new ForbiddenException("You must be enrolled in this course to submit assignments");
+    if (!(await this.access.isEnrolled(assignment.batchId, userId))) {
+      throw new ForbiddenException(
+        "You must be enrolled in this batch to submit assignments",
+      );
     }
 
     const [latestSub] = await this.db

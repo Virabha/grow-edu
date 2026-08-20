@@ -11,7 +11,10 @@ import {
 } from "drizzle-orm/pg-core";
 import {
   batchStatusEnum,
+  batchDeliveryModeEnum,
+  batchInstructorRoleEnum,
   batchEnrollmentStatusEnum,
+  batchEnrollmentSourceEnum,
   batchSessionTypeEnum,
   batchLiveProviderEnum,
   batchSessionStatusEnum,
@@ -19,6 +22,8 @@ import {
   batchDoubtStatusEnum,
   batchQuizQuestionTypeEnum,
   batchQuizAttemptStatusEnum,
+  lessonTypeEnum,
+  lessonStatusEnum,
 } from "./enums";
 
 // ─── Batches (PW-style cohorts) ──────────────────────────────────────────────
@@ -43,7 +48,9 @@ export const batches = pgTable(
     capacity: integer("capacity"),
     startDate: timestamp("start_date").notNull(),
     endDate: timestamp("end_date").notNull(),
-    teacherIds: jsonb("teacher_ids").$type<string[]>().notNull().default([]),
+    deliveryMode: batchDeliveryModeEnum("delivery_mode")
+      .notNull()
+      .default("LIVE"),
     categoryId: text("category_id"),
     status: batchStatusEnum("status").notNull().default("DRAFT"),
     isDeleted: boolean("is_deleted").notNull().default(false),
@@ -56,6 +63,31 @@ export const batches = pgTable(
     slugIdx: index("batches_slug_idx").on(table.slug),
     statusIdx: index("batches_status_idx").on(table.status),
     startDateIdx: index("batches_start_date_idx").on(table.startDate),
+    deliveryModeIdx: index("batches_delivery_mode_idx").on(table.deliveryMode),
+  })
+);
+
+export const batchInstructors = pgTable(
+  "batch_instructors",
+  {
+    batchInstructorId: text("batch_instructor_id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    batchId: text("batch_id").notNull(),
+    instructorId: text("instructor_id").notNull(),
+    role: batchInstructorRoleEnum("role").notNull().default("SUBJECT"),
+    assignedBy: text("assigned_by"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    batchIdx: index("batch_instructors_batch_idx").on(table.batchId),
+    instructorIdx: index("batch_instructors_instructor_idx").on(
+      table.instructorId
+    ),
+    uniqueBatchInstructor: unique("batch_instructors_batch_instructor_unique").on(
+      table.batchId,
+      table.instructorId
+    ),
   })
 );
 
@@ -78,6 +110,63 @@ export const batchSubjects = pgTable(
   })
 );
 
+export const lessons = pgTable(
+  "lessons",
+  {
+    lessonId: text("lesson_id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    subjectId: text("subject_id").notNull(),
+    title: text("title").notNull(),
+    description: text("description"),
+    type: lessonTypeEnum("type").notNull().default("VIDEO"),
+    videoUrl: text("video_url"),
+    textContent: text("text_content"),
+    resources: jsonb("resources").$type<{ label: string; url: string }[]>(),
+    duration: integer("duration"),
+    isFreePreview: boolean("is_free_preview").notNull().default(false),
+    status: lessonStatusEnum("status").notNull().default("DRAFT"),
+    order: integer("order").notNull(),
+    isDeleted: boolean("is_deleted").notNull().default(false),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    subjectIdx: index("lessons_subject_idx").on(table.subjectId),
+    subjectOrderIdx: index("lessons_subject_order_idx").on(
+      table.subjectId,
+      table.order
+    ),
+  })
+);
+
+export const lessonProgress = pgTable(
+  "lesson_progress",
+  {
+    lessonProgressId: text("lesson_progress_id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id").notNull(),
+    lessonId: text("lesson_id").notNull(),
+    batchId: text("batch_id").notNull(),
+    completed: boolean("completed").notNull().default(false),
+    timeSpent: integer("time_spent").notNull().default(0),
+    lastPosition: integer("last_position"),
+    lastAccessed: timestamp("last_accessed").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    userLessonUnique: unique("lesson_progress_user_lesson_unique").on(
+      table.userId,
+      table.lessonId
+    ),
+    userBatchIdx: index("lesson_progress_user_batch_idx").on(
+      table.userId,
+      table.batchId
+    ),
+  })
+);
+
 export const batchEnrollments = pgTable(
   "batch_enrollments",
   {
@@ -87,6 +176,7 @@ export const batchEnrollments = pgTable(
     batchId: text("batch_id").notNull(),
     userId: text("user_id").notNull(),
     status: batchEnrollmentStatusEnum("status").notNull().default("ACTIVE"),
+    source: batchEnrollmentSourceEnum("source").notNull().default("ADMIN_GRANT"),
     accessStartsAt: timestamp("access_starts_at").notNull().defaultNow(),
     accessEndsAt: timestamp("access_ends_at"),
     grantedBy: text("granted_by"),
@@ -293,6 +383,7 @@ export const batchQuizzes = pgTable(
       .default("40"),
     showLeaderboard: boolean("show_leaderboard").notNull().default(true),
     showSolutions: boolean("show_solutions").notNull().default(true),
+    version: integer("version").notNull().default(1),
     opensAt: timestamp("opens_at"),
     closesAt: timestamp("closes_at"),
     publishedAt: timestamp("published_at"),
@@ -346,6 +437,8 @@ export const batchQuizAttempts = pgTable(
       .$defaultFn(() => crypto.randomUUID()),
     quizId: text("quiz_id").notNull(),
     userId: text("user_id").notNull(),
+    quizVersion: integer("quiz_version").notNull().default(1),
+    attemptNo: integer("attempt_no").notNull().default(1),
     status: batchQuizAttemptStatusEnum("status")
       .notNull()
       .default("IN_PROGRESS"),
@@ -370,6 +463,11 @@ export const batchQuizAttempts = pgTable(
     quizUserIdx: index("batch_quiz_attempts_quiz_user_idx").on(
       table.quizId,
       table.userId
+    ),
+    attemptNoUnique: unique("batch_quiz_attempts_quiz_user_attempt_unique").on(
+      table.quizId,
+      table.userId,
+      table.attemptNo
     ),
   })
 );

@@ -24,9 +24,20 @@ describe('integration test harness', () => {
   it('creates the application tables inside that schema', async () => {
     const names = await tableNamesIn(database);
     expect(names).toContain('users');
-    expect(names).toContain('courses');
-    expect(names).toContain('course_sections');
+    expect(names).toContain('batches');
+    expect(names).toContain('batch_subjects');
+    expect(names).toContain('lessons');
     expect(names.length).toBeGreaterThan(40);
+  });
+
+  it('carries no second implementation of the product model', async () => {
+    const names = await tableNamesIn(database);
+    expect(names).not.toContain('courses');
+    expect(names).not.toContain('course_sections');
+    expect(names).not.toContain('enrollments');
+    expect(names).not.toContain('lesson_quiz_attempts');
+    expect(names).not.toContain('live_sessions');
+    expect(names).not.toContain('section_access');
   });
 
   it('starts empty and truncates cleanly between tests', async () => {

@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { and, count, desc, eq, ilike, inArray, or, sql } from 'drizzle-orm';
+import { and, count, desc, eq, ilike, inArray, ne, or, sql } from 'drizzle-orm';
 import { DATABASE_CONNECTION } from '../database/database.module';
 import * as schema from '../database/schema';
 import { ListOrdersDto } from './dto/list-orders.dto';
@@ -14,20 +14,12 @@ import { AdminListOrdersDto } from './dto/admin-list-orders.dto';
 import { RequestRefundDto } from './dto/request-refund.dto';
 import { ResolveRefundDto } from './dto/resolve-refund.dto';
 
-interface BatchMeta {
-  batchId: string;
-}
-
-function isBatchMeta(v: unknown): v is BatchMeta {
-  return (
-    typeof v === 'object' &&
-    v !== null &&
-    'batchId' in v &&
-    typeof (v as Record<string, unknown>).batchId === 'string'
-  );
-}
-
 export type RefundStatus = 'NONE' | 'REQUESTED' | 'APPROVED' | 'DECLINED';
+
+const EXCLUDE_CORPORATE_INVOICES = ne(
+  schema.payments.itemType,
+  'CORPORATE_CONTRACT',
+);
 
 export interface OrderItem {
   itemId: string;
@@ -110,7 +102,8 @@ type PaymentCore = {
   invoiceNo: string | null | undefined;
   courseId: string | null;
   sectionId: string | null;
-  itemType: 'COURSE' | 'SECTION' | 'BATCH';
+  batchId: string | null;
+  itemType: 'COURSE' | 'SECTION' | 'BATCH' | 'CORPORATE_CONTRACT';
   amount: string;
   originalAmount: string | null;
   discountAmount: string | null;
@@ -132,7 +125,13 @@ type PaymentCore = {
 
 type ItemRow = Pick<
   PaymentCore,
-  'paymentId' | 'courseId' | 'sectionId' | 'itemType' | 'amount' | 'metadata'
+  | 'paymentId'
+  | 'courseId'
+  | 'sectionId'
+  | 'batchId'
+  | 'itemType'
+  | 'amount'
+  | 'metadata'
 >;
 
 @Injectable()
@@ -157,8 +156,8 @@ export class OrdersService {
     );
     const batchIds = unique(
       rows
-        .filter((r) => r.itemType === 'BATCH')
-        .flatMap((r) => (isBatchMeta(r.metadata) ? [r.metadata.batchId] : [])),
+        .filter((r) => r.itemType === 'BATCH' && r.batchId !== null)
+        .map((r) => r.batchId as string),
     );
 
     const [courseRows, sectionRows, batchRows] = await Promise.all([
@@ -232,8 +231,8 @@ export class OrdersService {
           itemType: 'SECTION',
           unitPrice,
         });
-      } else if (row.itemType === 'BATCH' && isBatchMeta(row.metadata)) {
-        const batchId = row.metadata.batchId;
+      } else if (row.itemType === 'BATCH' && row.batchId !== null) {
+        const batchId = row.batchId;
         const b = byBatchId.get(batchId);
         itemMap.set(row.paymentId, {
           itemId: batchId,
@@ -345,7 +344,12 @@ export class OrdersService {
         )
       : undefined;
 
-    const where = and(eq(schema.payments.userId, userId), statusFilter, searchFilter);
+    const where = and(
+      eq(schema.payments.userId, userId),
+      EXCLUDE_CORPORATE_INVOICES,
+      statusFilter,
+      searchFilter,
+    );
 
     const [paymentRows, countRows, userRows] = await Promise.all([
       this.db
@@ -354,6 +358,7 @@ export class OrdersService {
           invoiceNo: schema.payments.invoiceNo,
           courseId: schema.payments.courseId,
           sectionId: schema.payments.sectionId,
+          batchId: schema.payments.batchId,
           itemType: schema.payments.itemType,
           amount: schema.payments.amount,
           originalAmount: schema.payments.originalAmount,
@@ -549,7 +554,7 @@ export class OrdersService {
         )
       : undefined;
 
-    const where = and(statusFilter, searchFilter);
+    const where = and(EXCLUDE_CORPORATE_INVOICES, statusFilter, searchFilter);
 
     const [paymentRows, countRows] = await Promise.all([
       this.db
@@ -558,6 +563,7 @@ export class OrdersService {
           invoiceNo: schema.payments.invoiceNo,
           courseId: schema.payments.courseId,
           sectionId: schema.payments.sectionId,
+          batchId: schema.payments.batchId,
           itemType: schema.payments.itemType,
           amount: schema.payments.amount,
           originalAmount: schema.payments.originalAmount,
@@ -624,6 +630,7 @@ export class OrdersService {
         invoiceNo: schema.payments.invoiceNo,
         courseId: schema.payments.courseId,
         sectionId: schema.payments.sectionId,
+        batchId: schema.payments.batchId,
         itemType: schema.payments.itemType,
         amount: schema.payments.amount,
         originalAmount: schema.payments.originalAmount,
@@ -715,7 +722,7 @@ export class OrdersService {
   }
 
   private async revokeAccess(payment: typeof schema.payments.$inferSelect): Promise<void> {
-    const { userId, itemType, courseId, sectionId, metadata } = payment;
+    const { userId, itemType, courseId, sectionId } = payment;
 
     if (itemType === 'COURSE' && courseId) {
       await this.db
@@ -743,7 +750,7 @@ export class OrdersService {
       return;
     }
 
-    if (itemType === 'BATCH' && isBatchMeta(metadata)) {
+    if (itemType === 'BATCH' && payment.batchId !== null) {
       await this.db
         .update(schema.batchEnrollments)
         .set({ status: 'REVOKED' })

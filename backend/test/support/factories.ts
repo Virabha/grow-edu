@@ -1,10 +1,13 @@
 import { randomUUID } from 'crypto';
 import * as bcrypt from 'bcrypt';
+import { eq } from 'drizzle-orm';
 import {
   users,
   categories,
+  companies,
   courses,
   courseSections,
+  batches,
 } from '../../src/database/schema';
 import { TestDatabase } from './test-database';
 import { TestActor } from './test-app';
@@ -45,6 +48,47 @@ export async function createSignInUser(
     emailVerified: true,
   });
   return { userId, email, role };
+}
+
+export async function createCorporateAdmin(
+  database: TestDatabase,
+  companyId: string,
+): Promise<TestActor> {
+  const actor = await createUser(database, 'CORPORATE_ADMIN');
+  await database.db
+    .update(users)
+    .set({ companyId })
+    .where(eq(users.userId, actor.userId));
+  return actor;
+}
+
+export async function createCompany(database: TestDatabase): Promise<string> {
+  const companyId = randomUUID();
+  await database.db.insert(companies).values({
+    companyId,
+    name: unique('college'),
+    email: `${unique('college')}@example.test`,
+  });
+  return companyId;
+}
+
+export async function createBatch(
+  database: TestDatabase,
+  createdBy: string,
+  price = '0',
+): Promise<string> {
+  const batchId = randomUUID();
+  await database.db.insert(batches).values({
+    batchId,
+    title: unique('batch'),
+    slug: unique('batch'),
+    price,
+    startDate: new Date('2026-09-01T00:00:00.000Z'),
+    endDate: new Date('2027-06-30T00:00:00.000Z'),
+    status: 'ONGOING' as never,
+    createdBy,
+  });
+  return batchId;
 }
 
 export async function createCategory(database: TestDatabase): Promise<string> {

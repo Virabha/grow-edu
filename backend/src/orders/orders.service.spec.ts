@@ -178,7 +178,8 @@ describe('OrdersService', () => {
         payerName: 'Alice',
         paymentProofUrl: null,
         createdAt: new Date('2026-01-15'),
-        metadata: { batchId: 'bat-1', batchTitle: 'Batch One' },
+        batchId: 'bat-1',
+        metadata: { batchTitle: 'Batch One' },
         userEmail: 'alice@example.com',
         userFirstName: 'Alice',
         userLastName: null,
@@ -246,7 +247,7 @@ describe('OrdersService', () => {
       expect(capturedWhere).not.toBe('NOT_SET');
     });
 
-    it('passes undefined WHERE when status is "all"', async () => {
+    it('still excludes corporate invoices when status is "all"', async () => {
       let capturedWhere: unknown = 'NOT_SET';
 
       const dataChain = chain({
@@ -266,7 +267,8 @@ describe('OrdersService', () => {
       const service = makeService(dbSelect);
       await service.adminListOrders({ status: 'all', page: 1, limit: 10 });
 
-      expect(capturedWhere).toBeUndefined();
+      expect(capturedWhere).not.toBeUndefined();
+      expect(capturedWhere).not.toBe('NOT_SET');
     });
   });
 });

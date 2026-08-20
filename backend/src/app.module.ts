@@ -24,6 +24,7 @@ import { CategoriesModule } from "./categories/categories.module";
 import { EnrollmentsModule } from "./enrollments/enrollments.module";
 import { UsersModule } from "./users/users.module";
 import { CompaniesModule } from "./companies/companies.module";
+import { CorporateModule } from "./corporate/corporate.module";
 import { AnalyticsModule } from "./analytics/analytics.module";
 import { ProgressModule } from "./progress/progress.module";
 import { PaymentModule } from "./payment/payment.module";
@@ -55,6 +56,7 @@ import { NotificationsModule } from "./notifications/notifications.module";
     EnrollmentsModule,
     UsersModule,
     CompaniesModule,
+    CorporateModule,
     AnalyticsModule,
     ProgressModule,
     PaymentModule,

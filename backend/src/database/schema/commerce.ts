@@ -24,6 +24,8 @@ export const payments = pgTable(
     idempotencyKey: text("idempotency_key").unique(),
     courseId: text("course_id"),
     sectionId: text("section_id"),
+    batchId: text("batch_id"),
+    corporateContractId: text("corporate_contract_id"),
     itemType: itemTypeEnum("item_type").notNull().default("COURSE"),
     amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
     originalAmount: decimal("original_amount", { precision: 10, scale: 2 }),
@@ -56,6 +58,10 @@ export const payments = pgTable(
     statusIdx: index("payments_status_idx").on(table.status),
     courseIdx: index("payments_course_idx").on(table.courseId),
     sectionIdx: index("payments_section_idx").on(table.sectionId),
+    batchIdx: index("payments_batch_idx").on(table.batchId),
+    corporateContractIdx: index("payments_corporate_contract_idx").on(
+      table.corporateContractId
+    ),
     txnIdx: index("payments_transaction_id_idx").on(table.transactionId),
     userStatusIdx: index("payments_user_status_idx").on(table.userId, table.status),
     userCreatedIdx: index("payments_user_created_idx").on(table.userId, table.createdAt),

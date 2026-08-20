@@ -9,6 +9,7 @@ import { PaymentService } from './payment.service';
 import { DATABASE_CONNECTION } from '../database/database.module';
 import { AppConfigService } from '../config';
 import { EmailService } from '../email/email.service';
+import { ContractsService } from '../corporate/contracts.service';
 
 // ── chain builder ─────────────────────────────────────────────────────────────
 
@@ -103,6 +104,10 @@ async function buildModule(): Promise<{ service: PaymentService; db: MockDb }> {
       {
         provide: EmailService,
         useValue: { sendPaymentConfirmationEmail: jest.fn().mockResolvedValue(undefined) },
+      },
+      {
+        provide: ContractsService,
+        useValue: { activateForPayment: jest.fn().mockResolvedValue(undefined) },
       },
     ],
   }).compile();

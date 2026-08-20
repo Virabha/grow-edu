@@ -23,6 +23,7 @@ import {
 } from '../database/schema';
 import { eq, and, inArray, desc, like, sql } from 'drizzle-orm';
 import { EmailService } from '../email/email.service';
+import { ContractsService } from '../corporate/contracts.service';
 
 const MAX_PAGE_LIMIT = 100;
 const PLATFORM_CURRENCY = 'INR';
@@ -78,6 +79,7 @@ export class PaymentService {
     @Inject(DATABASE_CONNECTION)
     private readonly db: PostgresJsDatabase<typeof schema>,
     private emailService: EmailService,
+    private readonly contracts: ContractsService,
   ) {
     const razorpayKeyId = this.configService.razorpayKeyId;
     const razorpayKeySecret = this.configService.razorpayKeySecret;
@@ -442,6 +444,10 @@ export class PaymentService {
       throw new BadRequestException(`Cannot approve a ${payment.status} payment`);
     }
 
+    if (payment.itemType === 'CORPORATE_CONTRACT') {
+      return this.approveCorporatePayment(payment, reviewerId, notes);
+    }
+
     // Grant access before marking COMPLETED: if access grant throws, the payment stays
     // in PROOF_UPLOADED so the admin can retry without double-granting.
     await this.grantAccessForPayment(
@@ -522,6 +528,46 @@ export class PaymentService {
     } catch { /* non-critical: swallow */ }
 
     return { success: true, message: 'Payment approved and access granted' };
+  }
+
+  private async approveCorporatePayment(
+    payment: { paymentId: string; corporateContractId: string | null },
+    reviewerId: string,
+    notes?: string,
+  ) {
+    if (!payment.corporateContractId) {
+      throw new BadRequestException(
+        'Corporate payment is not linked to a contract',
+      );
+    }
+
+    const now = new Date();
+    await this.db.transaction(async (tx) => {
+      const [updated] = await tx
+        .update(payments)
+        .set({
+          status: 'COMPLETED',
+          reviewedAt: now,
+          reviewedBy: reviewerId,
+          reviewNotes: notes || null,
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(payments.paymentId, payment.paymentId),
+            inArray(payments.status, ['PROOF_UPLOADED', 'PENDING']),
+          ),
+        )
+        .returning({ paymentId: payments.paymentId });
+
+      if (!updated) return;
+      await this.contracts.activateForPayment(
+        payment.corporateContractId as string,
+        tx,
+      );
+    });
+
+    return { success: true, message: 'Payment approved and contract activated' };
   }
 
   /**
@@ -717,13 +763,13 @@ export class PaymentService {
     sectionId?: string,
   ) {
     if (itemType === 'BATCH') {
-      const payment = await this.db.query.payments.findFirst({
-        where: eq(payments.paymentId, paymentId),
-      });
-      const meta = (payment?.metadata ?? {}) as Record<string, string>;
-      const batchId = meta.batchId;
-      if (batchId && this.batchEnrollHandler) {
-        await this.batchEnrollHandler(batchId, userId, paymentId);
+      const [payment] = await this.db
+        .select({ batchId: payments.batchId })
+        .from(payments)
+        .where(eq(payments.paymentId, paymentId))
+        .limit(1);
+      if (payment?.batchId && this.batchEnrollHandler) {
+        await this.batchEnrollHandler(payment.batchId, userId, paymentId);
       }
       return;
     }

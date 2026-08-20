@@ -8,8 +8,8 @@ const TARGET = '0000_baseline.sql';
 rmSync(DIR, { recursive: true, force: true });
 
 execFileSync(
-  'drizzle-kit',
-  ['generate:pg', '--config', 'drizzle.baseline.config.ts'],
+  'npx',
+  ['drizzle-kit', 'generate:pg', '--config', 'drizzle.baseline.config.ts'],
   { stdio: 'inherit', shell: true },
 );
 

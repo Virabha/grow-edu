@@ -143,23 +143,17 @@ export class BatchesService implements OnModuleInit {
 
     // Idempotency: reuse an existing PENDING or PROOF_UPLOADED payment for the
     // same batch+user rather than accumulating duplicate rows.
-    // We query by userId + itemType + status (indexed), then narrow to this
-    // specific batch by checking the metadata.batchId in JavaScript — safer
-    // than relying on a JSONB operator in the WHERE clause.
-    const candidatePayments = await this.db
+    const [existingPending] = await this.db
       .select()
       .from(payments)
       .where(
         and(
           eq(payments.userId, userId),
-          eq(payments.itemType, "BATCH"),
+          eq(payments.batchId, batchId),
           inArray(payments.status, ["PENDING", "PROOF_UPLOADED"]),
         )
-      );
-
-    const existingPending = candidatePayments.find(
-      (p) => this.metadataBatchId(p.metadata) === batchId
-    );
+      )
+      .limit(1);
 
     if (existingPending) {
       return {
@@ -177,13 +171,14 @@ export class BatchesService implements OnModuleInit {
       .insert(payments)
       .values({
         userId,
+        batchId,
         itemType: "BATCH",
         amount: finalAmount.toString(),
         originalAmount: originalAmount.toString(),
         currency: batch.currency,
         gateway: "MANUAL_QR",
         status: "PENDING",
-        metadata: { batchId, batchTitle: batch.title, batchSlug: batch.slug },
+        metadata: { batchTitle: batch.title, batchSlug: batch.slug },
       })
       .returning();
 
@@ -488,24 +483,21 @@ export class BatchesService implements OnModuleInit {
       isEnrolled = !!e;
 
       if (!isEnrolled) {
-        const candidates = await this.db
+        const [match] = await this.db
           .select({
             paymentId: payments.paymentId,
             status: payments.status,
-            metadata: payments.metadata,
           })
           .from(payments)
           .where(
             and(
               eq(payments.userId, userId),
-              eq(payments.itemType, "BATCH"),
+              eq(payments.batchId, batch.batchId),
               inArray(payments.status, ["PENDING", "PROOF_UPLOADED"])
             )
-          );
+          )
+          .limit(1);
 
-        const match = candidates.find(
-          (p) => this.metadataBatchId(p.metadata) === batch.batchId
-        );
         if (match) {
           pendingPaymentId = match.paymentId;
           pendingPaymentStatus =
@@ -556,12 +548,6 @@ export class BatchesService implements OnModuleInit {
       pendingPaymentStatus,
       canManage: this.isBatchStaff(batch, userId, userRole),
     };
-  }
-
-  private metadataBatchId(metadata: unknown): string | null {
-    if (typeof metadata !== "object" || metadata === null) return null;
-    const value = Reflect.get(metadata, "batchId");
-    return typeof value === "string" ? value : null;
   }
 
   async create(dto: CreateBatchDto, createdBy: string) {

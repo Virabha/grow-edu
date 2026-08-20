@@ -89,6 +89,12 @@ EXCEPTION
 END $$;
 --> statement-breakpoint
 DO $$ BEGIN
+ CREATE TYPE "corporate_contract_status" AS ENUM('DRAFT', 'AWAITING_PAYMENT', 'ACTIVE', 'EXPIRING', 'EXPIRED', 'CANCELLED');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
  CREATE TYPE "course_level" AS ENUM('BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ALL_LEVELS');
 EXCEPTION
  WHEN duplicate_object THEN null;
@@ -125,7 +131,7 @@ EXCEPTION
 END $$;
 --> statement-breakpoint
 DO $$ BEGIN
- CREATE TYPE "item_type" AS ENUM('COURSE', 'SECTION', 'BATCH');
+ CREATE TYPE "item_type" AS ENUM('COURSE', 'SECTION', 'BATCH', 'CORPORATE_CONTRACT');
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
@@ -267,6 +273,55 @@ CREATE TABLE IF NOT EXISTS "companies" (
 	"address" text,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "corporate_contract_batches" (
+	"contract_batch_id" text PRIMARY KEY NOT NULL,
+	"contract_id" text NOT NULL,
+	"batch_id" text NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "corporate_contract_batches_contract_batch_unique" UNIQUE("contract_id","batch_id")
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "corporate_contracts" (
+	"contract_id" text PRIMARY KEY NOT NULL,
+	"company_id" text NOT NULL,
+	"title" text NOT NULL,
+	"seat_count" integer NOT NULL,
+	"starts_at" timestamp NOT NULL,
+	"ends_at" timestamp NOT NULL,
+	"status" "corporate_contract_status" DEFAULT 'DRAFT' NOT NULL,
+	"payment_id" text,
+	"notes" text,
+	"created_by" text NOT NULL,
+	"cancelled_at" timestamp,
+	"activated_at" timestamp,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "corporate_join_links" (
+	"join_link_id" text PRIMARY KEY NOT NULL,
+	"contract_id" text NOT NULL,
+	"token_hash" text NOT NULL,
+	"generation" integer DEFAULT 1 NOT NULL,
+	"expires_at" timestamp NOT NULL,
+	"revoked_at" timestamp,
+	"revoked_by" text,
+	"created_by" text NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "corporate_join_links_token_hash_unique" UNIQUE("token_hash")
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "corporate_seats" (
+	"seat_id" text PRIMARY KEY NOT NULL,
+	"contract_id" text NOT NULL,
+	"user_id" text NOT NULL,
+	"join_link_id" text,
+	"claimed_at" timestamp DEFAULT now() NOT NULL,
+	"released_at" timestamp,
+	"released_by" text,
+	"release_reason" text
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "categories" (
@@ -504,6 +559,8 @@ CREATE TABLE IF NOT EXISTS "payments" (
 	"idempotency_key" text,
 	"course_id" text,
 	"section_id" text,
+	"batch_id" text,
+	"corporate_contract_id" text,
 	"item_type" "item_type" DEFAULT 'COURSE' NOT NULL,
 	"amount" numeric(10, 2) NOT NULL,
 	"original_amount" numeric(10, 2),
@@ -963,6 +1020,17 @@ CREATE INDEX IF NOT EXISTS "users_email_idx" ON "users" ("email");--> statement-
 CREATE INDEX IF NOT EXISTS "users_role_idx" ON "users" ("role");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "users_suspended_at_idx" ON "users" ("suspended_at");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "companies_name_idx" ON "companies" ("name");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "corporate_contract_batches_contract_idx" ON "corporate_contract_batches" ("contract_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "corporate_contract_batches_batch_idx" ON "corporate_contract_batches" ("batch_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "corporate_contracts_company_idx" ON "corporate_contracts" ("company_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "corporate_contracts_status_idx" ON "corporate_contracts" ("status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "corporate_contracts_ends_at_idx" ON "corporate_contracts" ("ends_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "corporate_contracts_payment_idx" ON "corporate_contracts" ("payment_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "corporate_join_links_contract_idx" ON "corporate_join_links" ("contract_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "corporate_join_links_token_hash_idx" ON "corporate_join_links" ("token_hash");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "corporate_seats_contract_idx" ON "corporate_seats" ("contract_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "corporate_seats_user_idx" ON "corporate_seats" ("user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "corporate_seats_contract_released_idx" ON "corporate_seats" ("contract_id","released_at");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "categories_slug_idx" ON "categories" ("slug");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "categories_is_active_idx" ON "categories" ("is_active");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "categories_parent_idx" ON "categories" ("parent_category_id");--> statement-breakpoint
@@ -1009,6 +1077,8 @@ CREATE INDEX IF NOT EXISTS "payments_gateway_idx" ON "payments" ("gateway_id");-
 CREATE INDEX IF NOT EXISTS "payments_status_idx" ON "payments" ("status");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "payments_course_idx" ON "payments" ("course_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "payments_section_idx" ON "payments" ("section_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "payments_batch_idx" ON "payments" ("batch_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "payments_corporate_contract_idx" ON "payments" ("corporate_contract_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "payments_transaction_id_idx" ON "payments" ("transaction_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "payments_user_status_idx" ON "payments" ("user_id","status");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "payments_user_created_idx" ON "payments" ("user_id","created_at");--> statement-breakpoint

@@ -65,7 +65,12 @@ export const courseReviewStatusEnum = pgEnum("course_review_status", [
   "REJECTED",
 ]);
 
-export const itemTypeEnum = pgEnum("item_type", ["COURSE", "SECTION", "BATCH"]);
+export const itemTypeEnum = pgEnum("item_type", [
+  "COURSE",
+  "SECTION",
+  "BATCH",
+  "CORPORATE_CONTRACT",
+]);
 
 export const accessSourceEnum = pgEnum("access_source", [
   "SECTION_PURCHASE",
@@ -193,6 +198,15 @@ export const enrollmentSourceEnum = pgEnum("enrollment_source", [
   "ADMIN_GRANT",
   "COMPANY_ASSIGNMENT",
   "FREE_COURSE",
+]);
+
+export const corporateContractStatusEnum = pgEnum("corporate_contract_status", [
+  "DRAFT",
+  "AWAITING_PAYMENT",
+  "ACTIVE",
+  "EXPIRING",
+  "EXPIRED",
+  "CANCELLED",
 ]);
 
 export const assignmentSubmissionTypeEnum = pgEnum(

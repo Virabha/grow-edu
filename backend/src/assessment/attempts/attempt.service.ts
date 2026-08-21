@@ -28,7 +28,12 @@ import {
   ErrorNotebookService,
   NotebookDraft,
 } from "../notebook/error-notebook.service";
-import { clampToFloor, isBlank, scoreAnswer } from "./scoring";
+import {
+  clampToFloor,
+  isBlank,
+  scoreAnswer,
+  toleranceFrom,
+} from "./scoring";
 
 type AttemptRow = typeof assessmentAttempts.$inferSelect;
 type AnswerRow = typeof assessmentAttemptAnswers.$inferSelect;
@@ -287,12 +292,10 @@ export class AttemptService {
 
       const scored = scoreAnswer(
         {
-          type: question.type,
           options: version.options,
           answerKey: version.answerKey ?? null,
           partialCreditRule: version.partialCreditRule,
-          toleranceKind: version.toleranceKind,
-          tolerance: version.tolerance,
+          tolerance: toleranceFrom(version.toleranceKind, version.tolerance),
         },
         { marks, negativeMarkPercent: negative },
         answer.response,

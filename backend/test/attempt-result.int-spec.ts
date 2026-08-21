@@ -9,6 +9,9 @@ import {
   createQuestion,
   createTaxonomy,
   createTest,
+  openAttempt,
+  answerQuestion,
+  submitAttempt,
   placeQuestion,
   seedDifficultyScale,
   text,
@@ -56,35 +59,6 @@ describe("attempt result", () => {
     });
   }
 
-  async function start(testId: string, actor: TestActor = student) {
-    const { body } = await request(app.getHttpServer())
-      .post(`/assessment/tests/${testId}/attempts`)
-      .set(...authHeader(app, actor))
-      .expect(201);
-    return body as { attemptId: string };
-  }
-
-  async function answer(
-    attemptId: string,
-    placementId: string,
-    response: unknown,
-    actor: TestActor = student,
-  ) {
-    return request(app.getHttpServer())
-      .patch(`/assessment/attempts/${attemptId}/answers/${placementId}`)
-      .set(...authHeader(app, actor))
-      .send({ response })
-      .expect(200);
-  }
-
-  async function submit(attemptId: string, actor: TestActor = student) {
-    const { body } = await request(app.getHttpServer())
-      .post(`/assessment/attempts/${attemptId}/submit`)
-      .set(...authHeader(app, actor))
-      .expect(201);
-    return body as { status: string };
-  }
-
   async function getResult(
     attemptId: string,
     actor: TestActor = student,
@@ -120,9 +94,9 @@ describe("attempt result", () => {
       );
       const placementId = await placeQuestion(database, testId, questionId);
 
-      const { attemptId } = await start(testId);
-      await answer(attemptId, placementId, "a");
-      await submit(attemptId);
+      const { attemptId } = await openAttempt(app, testId, student);
+      await answerQuestion(app, attemptId, placementId, "a", student);
+      await submitAttempt(app, attemptId, student);
 
       const result = await getResult(attemptId);
 
@@ -137,7 +111,7 @@ describe("attempt result", () => {
       const questionId = await createQuestion(database, taxonomy, admin.userId);
       await placeQuestion(database, testId, questionId);
 
-      const { attemptId } = await start(testId);
+      const { attemptId } = await openAttempt(app, testId, student);
 
       await getResult(attemptId, student, 409);
     });
@@ -147,7 +121,7 @@ describe("attempt result", () => {
       const questionId = await createQuestion(database, taxonomy, admin.userId);
       const placementId = await placeQuestion(database, testId, questionId);
 
-      const { attemptId } = await start(testId);
+      const { attemptId } = await openAttempt(app, testId, student);
 
       const { body } = await request(app.getHttpServer())
         .get(`/assessment/attempts/${attemptId}`)
@@ -167,9 +141,9 @@ describe("attempt result", () => {
       const questionId = await createQuestion(database, taxonomy, admin.userId);
       const placementId = await placeQuestion(database, testId, questionId);
 
-      const { attemptId } = await start(testId);
-      await answer(attemptId, placementId, "a");
-      await submit(attemptId);
+      const { attemptId } = await openAttempt(app, testId, student);
+      await answerQuestion(app, attemptId, placementId, "a", student);
+      await submitAttempt(app, attemptId, student);
 
       const result = await getResult(attemptId);
 
@@ -195,10 +169,10 @@ describe("attempt result", () => {
         order: 2,
       });
 
-      const { attemptId } = await start(testId);
-      await answer(attemptId, writtenPlacement, "My written answer.");
-      await answer(attemptId, autoPlacement, "a");
-      await submit(attemptId);
+      const { attemptId } = await openAttempt(app, testId, student);
+      await answerQuestion(app, attemptId, writtenPlacement, "My written answer.", student);
+      await answerQuestion(app, attemptId, autoPlacement, "a", student);
+      await submitAttempt(app, attemptId, student);
 
       const result = await getResult(attemptId);
 
@@ -221,9 +195,9 @@ describe("attempt result", () => {
       });
       const placementId = await placeQuestion(database, testId, questionId);
 
-      const { attemptId } = await start(testId);
-      await answer(attemptId, placementId, "a");
-      await submit(attemptId);
+      const { attemptId } = await openAttempt(app, testId, student);
+      await answerQuestion(app, attemptId, placementId, "a", student);
+      await submitAttempt(app, attemptId, student);
 
       await database.db
         .insert(
@@ -254,15 +228,15 @@ describe("attempt result", () => {
       const questionId = await createQuestion(database, taxonomy, admin.userId);
       const placementId = await placeQuestion(database, testId, questionId);
 
-      const { attemptId } = await start(testId);
+      const { attemptId } = await openAttempt(app, testId, student);
       await request(app.getHttpServer())
         .post(`/assessment/attempts/${attemptId}/focus`)
         .set(...authHeader(app, student))
         .send({ placementId })
         .expect(201);
       clock.advance(30_000);
-      await answer(attemptId, placementId, "a");
-      await submit(attemptId);
+      await answerQuestion(app, attemptId, placementId, "a", student);
+      await submitAttempt(app, attemptId, student);
 
       const result = await getResult(attemptId);
       const q = result.questions.find((x) => x.placementId === placementId);
@@ -278,17 +252,17 @@ describe("attempt result", () => {
 
       const student2 = await createUser(database, "LEARNER");
 
-      const { attemptId: a1 } = await start(testId, student);
+      const { attemptId: a1 } = await openAttempt(app, testId, student);
       await request(app.getHttpServer())
         .post(`/assessment/attempts/${a1}/focus`)
         .set(...authHeader(app, student))
         .send({ placementId })
         .expect(201);
       clock.advance(60_000);
-      await answer(a1, placementId, "a");
-      await submit(a1, student);
+      await answerQuestion(app, a1, placementId, "a", student);
+      await submitAttempt(app, a1, student);
 
-      const inProgressAttempt = await start(testId, student2);
+      const inProgressAttempt = await openAttempt(app, testId, student2);
       await request(app.getHttpServer())
         .post(`/assessment/attempts/${inProgressAttempt.attemptId}/focus`)
         .set(...authHeader(app, student2))
@@ -308,15 +282,15 @@ describe("attempt result", () => {
       const questionId = await createQuestion(database, taxonomy, admin.userId);
       const placementId = await placeQuestion(database, testId, questionId);
 
-      const { attemptId } = await start(testId);
+      const { attemptId } = await openAttempt(app, testId, student);
       await request(app.getHttpServer())
         .post(`/assessment/attempts/${attemptId}/focus`)
         .set(...authHeader(app, student))
         .send({ placementId })
         .expect(201);
       clock.advance(45_000);
-      await answer(attemptId, placementId, "a");
-      await submit(attemptId);
+      await answerQuestion(app, attemptId, placementId, "a", student);
+      await submitAttempt(app, attemptId, student);
 
       const result = await getResult(attemptId);
       const q = result.questions.find((x) => x.placementId === placementId);
@@ -332,18 +306,18 @@ describe("attempt result", () => {
 
       const student2 = await createUser(database, "LEARNER");
 
-      const { attemptId: a1 } = await start(testId, student);
+      const { attemptId: a1 } = await openAttempt(app, testId, student);
       await request(app.getHttpServer())
         .post(`/assessment/attempts/${a1}/focus`)
         .set(...authHeader(app, student))
         .send({ placementId })
         .expect(201);
       clock.advance(40_000);
-      await answer(a1, placementId, "a");
-      await submit(a1, student);
+      await answerQuestion(app, a1, placementId, "a", student);
+      await submitAttempt(app, a1, student);
 
-      const { attemptId: a2 } = await start(testId, student2);
-      await submit(a2, student2);
+      const { attemptId: a2 } = await openAttempt(app, testId, student2);
+      await submitAttempt(app, a2, student2);
 
       const result = await getResult(a1);
       const q = result.questions.find((x) => x.placementId === placementId);
@@ -368,10 +342,10 @@ describe("attempt result", () => {
         sectionName: "Section B",
       });
 
-      const { attemptId } = await start(testId);
-      await answer(attemptId, p1, "a");
-      await answer(attemptId, p2, "b");
-      await submit(attemptId);
+      const { attemptId } = await openAttempt(app, testId, student);
+      await answerQuestion(app, attemptId, p1, "a", student);
+      await answerQuestion(app, attemptId, p2, "b", student);
+      await submitAttempt(app, attemptId, student);
 
       const result = await getResult(attemptId);
 
@@ -396,10 +370,10 @@ describe("attempt result", () => {
       const p1 = await placeQuestion(database, testId, q1, { order: 1 });
       const p2 = await placeQuestion(database, testId, q2, { order: 2 });
 
-      const { attemptId } = await start(testId);
-      await answer(attemptId, p1, "a");
-      await answer(attemptId, p2, "a");
-      await submit(attemptId);
+      const { attemptId } = await openAttempt(app, testId, student);
+      await answerQuestion(app, attemptId, p1, "a", student);
+      await answerQuestion(app, attemptId, p2, "a", student);
+      await submitAttempt(app, attemptId, student);
 
       const result = await getResult(attemptId);
 
@@ -419,9 +393,9 @@ describe("attempt result", () => {
         marks: "4",
       });
 
-      const { attemptId } = await start(testId);
-      await answer(attemptId, pSub, "a");
-      await submit(attemptId);
+      const { attemptId } = await openAttempt(app, testId, student);
+      await answerQuestion(app, attemptId, pSub, "a", student);
+      await submitAttempt(app, attemptId, student);
 
       const result = await getResult(attemptId);
 
@@ -435,9 +409,9 @@ describe("attempt result", () => {
       const questionId = await createQuestion(database, taxonomy, admin.userId);
       const placementId = await placeQuestion(database, testId, questionId);
 
-      const { attemptId } = await start(testId);
-      await answer(attemptId, placementId, "a");
-      await submit(attemptId);
+      const { attemptId } = await openAttempt(app, testId, student);
+      await answerQuestion(app, attemptId, placementId, "a", student);
+      await submitAttempt(app, attemptId, student);
 
       const result = await getResult(attemptId);
 
@@ -462,10 +436,10 @@ describe("attempt result", () => {
         marks: "4",
       });
 
-      const { attemptId } = await start(testId);
-      await answer(attemptId, wPlacement, "My essay.");
-      await answer(attemptId, aPlacement, "a");
-      await submit(attemptId);
+      const { attemptId } = await openAttempt(app, testId, student);
+      await answerQuestion(app, attemptId, wPlacement, "My essay.", student);
+      await answerQuestion(app, attemptId, aPlacement, "a", student);
+      await submitAttempt(app, attemptId, student);
 
       const result = await getResult(attemptId);
 
@@ -494,14 +468,14 @@ describe("attempt result", () => {
         marks: "4",
       });
 
-      const { attemptId: a1 } = await start(testId, student);
-      await answer(a1, p1, "a");
-      await submit(a1, student);
+      const { attemptId: a1 } = await openAttempt(app, testId, student);
+      await answerQuestion(app, a1, p1, "a", student);
+      await submitAttempt(app, a1, student);
 
-      const { attemptId: a2 } = await start(testId, student2);
-      await answer(a2, p1, "a", student2);
-      await answer(a2, p2, "a", student2);
-      await submit(a2, student2);
+      const { attemptId: a2 } = await openAttempt(app, testId, student2);
+      await answerQuestion(app, a2, p1, "a", student2);
+      await answerQuestion(app, a2, p2, "a", student2);
+      await submitAttempt(app, a2, student2);
 
       const comparison = await getComparison(a1, student);
 
@@ -528,9 +502,9 @@ describe("attempt result", () => {
       const q1 = await createQuestion(database, taxonomy, admin.userId);
       const p1 = await placeQuestion(database, testId, q1);
 
-      const { attemptId } = await start(testId, student);
-      await answer(attemptId, p1, "a");
-      await submit(attemptId, student);
+      const { attemptId } = await openAttempt(app, testId, student);
+      await answerQuestion(app, attemptId, p1, "a", student);
+      await submitAttempt(app, attemptId, student);
 
       const comparison = await getComparison(attemptId, student);
 
@@ -545,13 +519,13 @@ describe("attempt result", () => {
       const q1 = await createQuestion(database, taxonomy, admin.userId);
       const p1 = await placeQuestion(database, testId, q1);
 
-      const { attemptId: a1 } = await start(testId, student);
-      await answer(a1, p1, "a");
-      await submit(a1, student);
+      const { attemptId: a1 } = await openAttempt(app, testId, student);
+      await answerQuestion(app, a1, p1, "a", student);
+      await submitAttempt(app, a1, student);
 
-      const { attemptId: a2 } = await start(testId, student2);
-      await answer(a2, p1, "a", student2);
-      await submit(a2, student2);
+      const { attemptId: a2 } = await openAttempt(app, testId, student2);
+      await answerQuestion(app, a2, p1, "a", student2);
+      await submitAttempt(app, a2, student2);
 
       const comparison = await getComparison(a1, student);
       for (const q of comparison.questions) {
@@ -565,9 +539,9 @@ describe("attempt result", () => {
       const q1 = await createQuestion(database, taxonomy, admin.userId);
       const p1 = await placeQuestion(database, testId, q1);
 
-      const { attemptId } = await start(testId, student);
-      await answer(attemptId, p1, "a");
-      await submit(attemptId, student);
+      const { attemptId } = await openAttempt(app, testId, student);
+      await answerQuestion(app, attemptId, p1, "a", student);
+      await submitAttempt(app, attemptId, student);
 
       await getComparison(attemptId, student, 409);
     });
@@ -578,9 +552,9 @@ describe("attempt result", () => {
       const q1 = await createQuestion(database, taxonomy, admin.userId);
       const p1 = await placeQuestion(database, testId, q1);
 
-      const { attemptId } = await start(testId, student);
-      await answer(attemptId, p1, "a");
-      await submit(attemptId, student);
+      const { attemptId } = await openAttempt(app, testId, student);
+      await answerQuestion(app, attemptId, p1, "a", student);
+      await submitAttempt(app, attemptId, student);
 
       clock.advance(61 * 60_000);
       const comparison = await getComparison(attemptId, student, 200);
@@ -594,13 +568,13 @@ describe("attempt result", () => {
       const q1 = await createQuestion(database, taxonomy, admin.userId);
       const p1 = await placeQuestion(database, testId, q1);
 
-      const { attemptId: a1 } = await start(testId, student);
-      await answer(a1, p1, "a");
-      await submit(a1, student);
+      const { attemptId: a1 } = await openAttempt(app, testId, student);
+      await answerQuestion(app, a1, p1, "a", student);
+      await submitAttempt(app, a1, student);
 
-      const { attemptId: a2 } = await start(testId, student2);
-      await answer(a2, p1, "a", student2);
-      await submit(a2, student2);
+      const { attemptId: a2 } = await openAttempt(app, testId, student2);
+      await answerQuestion(app, a2, p1, "a", student2);
+      await submitAttempt(app, a2, student2);
 
       const comparison = await getComparison(a1, student);
       const raw = JSON.stringify(comparison);

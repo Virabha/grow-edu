@@ -19,6 +19,7 @@ import {
   assessmentTests,
   assessmentQuestions,
 } from "../../database/schema";
+import { FilesService } from "../../files/files.service";
 import { AttachFeedbackDto, GradeAnswerDto } from "./dto/grading.dto";
 import { RubricService } from "./rubric.service";
 
@@ -29,6 +30,7 @@ export class GradingService {
     private readonly db: PostgresJsDatabase<typeof schema>,
     @Inject(CLOCK) private readonly clock: Clock,
     private readonly rubrics: RubricService,
+    private readonly files: FilesService,
   ) {}
 
   async getQueue(instructorId: string, role = "INSTRUCTOR") {
@@ -155,7 +157,9 @@ export class GradingService {
       marks: placement ? Number(placement.marks) : null,
       rubric,
       criterionScores: existingScores,
-      feedbackMediaId: answer.feedbackMediaId,
+      feedbackMediaId: answer.feedbackMediaId
+        ? this.files.getDownloadUrl(answer.feedbackMediaId)
+        : null,
     };
   }
 
@@ -279,14 +283,15 @@ export class GradingService {
       );
     }
 
+    const key = this.normalizeToStorageKey(dto.mediaKey);
     const now = this.clock.now();
 
     await this.db
       .update(assessmentAttemptAnswers)
-      .set({ feedbackMediaId: dto.mediaUrl, updatedAt: now })
+      .set({ feedbackMediaId: key, updatedAt: now })
       .where(eq(assessmentAttemptAnswers.answerId, answerId));
 
-    return { answerId, feedbackMediaId: dto.mediaUrl };
+    return { answerId, feedbackMediaId: this.files.getDownloadUrl(key) };
   }
 
   async getFeedback(answerId: string, requesterId: string, requesterRole: string) {
@@ -320,7 +325,22 @@ export class GradingService {
       throw new NotFoundException("No feedback media attached to this answer");
     }
 
-    return { answerId, feedbackMediaId: answer.feedbackMediaId };
+    return {
+      answerId,
+      feedbackMediaId: this.files.getDownloadUrl(answer.feedbackMediaId),
+    };
+  }
+
+  private normalizeToStorageKey(input: string): string {
+    if (!input.startsWith("http")) return input;
+    const key = this.files.extractKey(input);
+    const reconstructed = this.files.getDownloadUrl(key);
+    if (reconstructed !== input) {
+      throw new BadRequestException(
+        "Feedback media must be a storage key or a URL hosted on this platform's CDN",
+      );
+    }
+    return key;
   }
 
   private extractPages(response: unknown): string[] {

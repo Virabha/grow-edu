@@ -756,11 +756,11 @@ describe("grading queue (tickets 25-28)", () => {
       const { body } = await request(app.getHttpServer())
         .post(`/assessment/grading/answers/${answerId}/feedback`)
         .set(...authHeader(app, instructor))
-        .send({ mediaUrl: "https://cdn.example.com/feedback/abc.mp4" })
+        .send({ mediaKey: "feedback/test-feedback.mp4" })
         .expect(201);
 
       expect(body.feedbackMediaId).toBe(
-        "https://cdn.example.com/feedback/abc.mp4",
+        "https://gro-tutor.b-cdn.net/feedback/test-feedback.mp4",
       );
     });
 
@@ -777,7 +777,7 @@ describe("grading queue (tickets 25-28)", () => {
       await request(app.getHttpServer())
         .post(`/assessment/grading/answers/${answerId}/feedback`)
         .set(...authHeader(app, instructor))
-        .send({ mediaUrl: "https://cdn.example.com/feedback/abc.mp4" })
+        .send({ mediaKey: "feedback/test-feedback.mp4" })
         .expect(201);
 
       const { body } = await request(app.getHttpServer())
@@ -786,7 +786,7 @@ describe("grading queue (tickets 25-28)", () => {
         .expect(200);
 
       expect(body.feedbackMediaId).toBe(
-        "https://cdn.example.com/feedback/abc.mp4",
+        "https://gro-tutor.b-cdn.net/feedback/test-feedback.mp4",
       );
     });
 
@@ -803,7 +803,7 @@ describe("grading queue (tickets 25-28)", () => {
       await request(app.getHttpServer())
         .post(`/assessment/grading/answers/${answerId}/feedback`)
         .set(...authHeader(app, instructor))
-        .send({ mediaUrl: "https://cdn.example.com/feedback/abc.mp4" })
+        .send({ mediaKey: "feedback/test-feedback.mp4" })
         .expect(201);
 
       const otherStudent = await createUser(database, "LEARNER");
@@ -846,6 +846,51 @@ describe("grading queue (tickets 25-28)", () => {
         .expect(200);
 
       expect(attemptStill.finalScore).toBe(8);
+    });
+
+    it("rejects a feedback URL that does not belong to this platform's CDN", async () => {
+      const { testId, placementId } = await setupBatchWithWrittenTest();
+      const { answerId } = await startAndSubmit(testId, placementId, "Essay.");
+
+      await request(app.getHttpServer())
+        .post(`/assessment/grading/answers/${answerId}/grade`)
+        .set(...authHeader(app, instructor))
+        .send({ totalMarks: 7 })
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .post(`/assessment/grading/answers/${answerId}/feedback`)
+        .set(...authHeader(app, instructor))
+        .send({ mediaKey: "https://evil.example.com/feedback/stolen.mp4" })
+        .expect(400);
+    });
+
+    it("accepts a full platform CDN URL and resolves retrieval to the same URL", async () => {
+      const { testId, placementId } = await setupBatchWithWrittenTest();
+      const { answerId } = await startAndSubmit(testId, placementId, "Essay.");
+
+      await request(app.getHttpServer())
+        .post(`/assessment/grading/answers/${answerId}/grade`)
+        .set(...authHeader(app, instructor))
+        .send({ totalMarks: 7 })
+        .expect(201);
+
+      const cdnUrl = "https://gro-tutor.b-cdn.net/feedback/normalise-me.mp4";
+
+      const { body: attached } = await request(app.getHttpServer())
+        .post(`/assessment/grading/answers/${answerId}/feedback`)
+        .set(...authHeader(app, instructor))
+        .send({ mediaKey: cdnUrl })
+        .expect(201);
+
+      expect(attached.feedbackMediaId).toBe(cdnUrl);
+
+      const { body: retrieved } = await request(app.getHttpServer())
+        .get(`/assessment/grading/answers/${answerId}/feedback`)
+        .set(...authHeader(app, student))
+        .expect(200);
+
+      expect(retrieved.feedbackMediaId).toBe(cdnUrl);
     });
   });
 });

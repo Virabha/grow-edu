@@ -17,11 +17,11 @@ import {
   assessmentAttemptAnswers,
   assessmentAttempts,
   assessmentQuestions,
-  assessmentTaxonomyNodes,
   assessmentTestQuestions,
   assessmentTests,
   assessmentQuestionVersions,
 } from "../../database/schema";
+import { TaxonomyService } from "../taxonomy/taxonomy.service";
 import { CohortStatsService } from "./cohort-stats.service";
 
 type AttemptRow = typeof assessmentAttempts.$inferSelect;
@@ -103,6 +103,7 @@ export class ResultService {
     private readonly db: PostgresJsDatabase<typeof schema>,
     @Inject(CLOCK) private readonly clock: Clock,
     private readonly cohortStats: CohortStatsService,
+    private readonly taxonomyService: TaxonomyService,
   ) {}
 
   async getResult(attemptId: string, userId: string): Promise<ResultView> {
@@ -117,13 +118,7 @@ export class ResultService {
       answers.map((a) => a.questionId),
     );
 
-    const nodes = await this.db.select().from(assessmentTaxonomyNodes);
-    const parentOf = new Map<string, string | null>();
-    const nameOf = new Map<string, string>();
-    for (const node of nodes) {
-      parentOf.set(node.nodeId, node.parentId);
-      nameOf.set(node.nodeId, node.name);
-    }
+    const { parentOf, nameOf } = await this.taxonomyService.hierarchy();
 
     const cohortFigures = await this.cohortStats.getStats(attempt.testId);
 
@@ -248,13 +243,7 @@ export class ResultService {
       ...topAnswers.map((a) => a.questionId),
     ]);
 
-    const nodes = await this.db.select().from(assessmentTaxonomyNodes);
-    const parentOf = new Map<string, string | null>();
-    const nameOf = new Map<string, string>();
-    for (const node of nodes) {
-      parentOf.set(node.nodeId, node.parentId);
-      nameOf.set(node.nodeId, node.name);
-    }
+    const { parentOf, nameOf } = await this.taxonomyService.hierarchy();
 
     const questionDeltas: QuestionDelta[] = [];
     const topicEarned = new Map<

@@ -20,8 +20,8 @@ import {
   assessmentImports,
   assessmentQuestionVersions,
   assessmentQuestions,
-  assessmentTaxonomyNodes,
 } from '../../database/schema';
+import { TaxonomyService } from '../taxonomy/taxonomy.service';
 import { JOB_QUEUE, JobQueue } from '../../jobs/job-queue';
 import { isRecord } from '../shared/type-guards';
 import { buildScoringShape } from '../bank/answer-key';
@@ -55,6 +55,7 @@ export class QuestionImportService implements OnModuleInit {
     private readonly db: PostgresJsDatabase<typeof schema>,
     @Inject(CLOCK) private readonly clock: Clock,
     @Inject(JOB_QUEUE) private readonly jobs: JobQueue,
+    private readonly taxonomyService: TaxonomyService,
   ) {}
 
   onModuleInit(): void {
@@ -64,34 +65,8 @@ export class QuestionImportService implements OnModuleInit {
   }
 
   async preview(rawRows: unknown[], actorId: string) {
-    const nodes = await this.db
-      .select()
-      .from(assessmentTaxonomyNodes)
-      .where(eq(assessmentTaxonomyNodes.isRetired, false));
-
-    const subjects = new Map<string, string>();
-    const topicsByName = new Map<
-      string,
-      Array<{ nodeId: string; parentId: string | null }>
-    >();
-    const subTopicsByName = new Map<
-      string,
-      Array<{ nodeId: string; parentId: string | null }>
-    >();
-
-    for (const node of nodes) {
-      if (node.kind === 'SUBJECT') {
-        subjects.set(node.name, node.nodeId);
-      } else if (node.kind === 'TOPIC') {
-        const arr = topicsByName.get(node.name) ?? [];
-        arr.push({ nodeId: node.nodeId, parentId: node.parentId });
-        topicsByName.set(node.name, arr);
-      } else if (node.kind === 'SUB_TOPIC') {
-        const arr = subTopicsByName.get(node.name) ?? [];
-        arr.push({ nodeId: node.nodeId, parentId: node.parentId });
-        subTopicsByName.set(node.name, arr);
-      }
-    }
+    const { subjects, topicsByName, subTopicsByName } =
+      await this.taxonomyService.activeNodeNameIndex();
 
     const diffLevels = await this.db
       .select({ ordinal: assessmentDifficultyLevels.ordinal })

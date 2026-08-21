@@ -1,14 +1,31 @@
 import { QuestionAnswerKey, QuestionOption } from "../../database/schema";
+import {
+  PartialCreditRule,
+  ToleranceKind,
+} from "../bank/dto/question.dto";
 
 export type ScoredOutcome = "CORRECT" | "PARTIAL" | "WRONG" | "SKIPPED";
 
+export interface ToleranceSpec {
+  kind: ToleranceKind;
+  value: number;
+}
+
 export interface ScorableQuestion {
-  type: string;
   options: QuestionOption[];
   answerKey: QuestionAnswerKey | null;
-  partialCreditRule: string | null;
-  toleranceKind: string | null;
-  tolerance: string | null;
+  partialCreditRule: PartialCreditRule | null;
+  tolerance: ToleranceSpec | null;
+}
+
+export function toleranceFrom(
+  kind: ToleranceKind | null,
+  value: string | null,
+): ToleranceSpec | null {
+  if (kind === null) return null;
+  const parsed = value === null ? 0 : Math.abs(Number(value));
+  if (!Number.isFinite(parsed)) return null;
+  return { kind, value: parsed };
 }
 
 export interface ScorablePlacement {
@@ -105,14 +122,13 @@ function withinTolerance(
 
   if (!Number.isFinite(given)) return false;
 
-  const tolerance =
-    question.tolerance === null ? 0 : Math.abs(Number(question.tolerance));
-  if (!Number.isFinite(tolerance)) return false;
-
+  const tolerance = question.tolerance;
   const allowed =
-    question.toleranceKind === "RELATIVE"
-      ? tolerance * Math.abs(expected)
-      : tolerance;
+    tolerance === null
+      ? 0
+      : tolerance.kind === "RELATIVE"
+        ? tolerance.value * Math.abs(expected)
+        : tolerance.value;
 
   return Math.abs(given - expected) <= allowed + Number.EPSILON;
 }

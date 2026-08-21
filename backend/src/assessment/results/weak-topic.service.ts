@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger, OnModuleInit } from "@nestjs/common";
-import { and, eq, inArray, isNotNull, ne } from "drizzle-orm";
+import { and, eq, isNotNull, ne } from "drizzle-orm";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 import { CLOCK, Clock } from "../../common/clock";
@@ -9,10 +9,10 @@ import {
   assessmentAttemptAnswers,
   assessmentAttempts,
   assessmentQuestions,
-  assessmentTaxonomyNodes,
   assessmentWeakTopics,
 } from "../../database/schema";
 import { JOB_QUEUE, JobQueue, registerAndRepeat } from "../../jobs/job-queue";
+import { TaxonomyService } from "../taxonomy/taxonomy.service";
 
 export const WEAK_TOPIC_JOB = "assessment.weak-topic-map";
 const REPEAT_INTERVAL_MS = 24 * 60 * 60 * 1_000;
@@ -26,6 +26,7 @@ export class WeakTopicService implements OnModuleInit {
     private readonly db: PostgresJsDatabase<typeof schema>,
     @Inject(CLOCK) private readonly clock: Clock,
     @Inject(JOB_QUEUE) private readonly jobs: JobQueue,
+    private readonly taxonomyService: TaxonomyService,
   ) {}
 
   onModuleInit(): void {
@@ -39,12 +40,7 @@ export class WeakTopicService implements OnModuleInit {
   }
 
   async runJob(): Promise<void> {
-    const nodes = await this.db.select().from(assessmentTaxonomyNodes);
-
-    const parentOf = new Map<string, string | null>();
-    for (const node of nodes) {
-      parentOf.set(node.nodeId, node.parentId);
-    }
+    const { parentOf } = await this.taxonomyService.hierarchy();
 
     const rows = await this.db
       .select({
@@ -145,13 +141,7 @@ export class WeakTopicService implements OnModuleInit {
 
     const topicIds = entries.map((e) => e.topicId);
 
-    const nodes = await this.db
-      .select()
-      .from(assessmentTaxonomyNodes)
-      .where(inArray(assessmentTaxonomyNodes.nodeId, topicIds));
-
-    const nameOf = new Map<string, string>();
-    for (const node of nodes) nameOf.set(node.nodeId, node.name);
+    const nameOf = await this.taxonomyService.namesForIds(topicIds);
 
     return entries.map((entry) => ({
       topicId: entry.topicId,

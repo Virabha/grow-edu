@@ -13,6 +13,10 @@ import {
   createQuestion,
   createTaxonomy,
   createTest,
+  openAttempt,
+  answerQuestion,
+  submitAttempt,
+  readAttempt,
   placeQuestion,
   seedDifficultyScale,
   Taxonomy,
@@ -72,28 +76,12 @@ describe("per-question timing on attempts", () => {
     secondPlacement = await placeQuestion(database, testId, two, { order: 2 });
   });
 
-  async function startAttempt(): Promise<Attempt> {
-    const { body } = await request(app.getHttpServer())
-      .post(`/assessment/tests/${testId}/attempts`)
-      .set(...authHeader(app, student))
-      .expect(201);
-    return body as Attempt;
-  }
-
   async function focus(attemptId: string, placementId: string) {
     return request(app.getHttpServer())
       .post(`/assessment/attempts/${attemptId}/focus`)
       .set(...authHeader(app, student))
       .send({ placementId })
       .expect(201);
-  }
-
-  async function readAttempt(attemptId: string): Promise<Attempt> {
-    const { body } = await request(app.getHttpServer())
-      .get(`/assessment/attempts/${attemptId}`)
-      .set(...authHeader(app, student))
-      .expect(200);
-    return body as Attempt;
   }
 
   function timingOf(attempt: Attempt, placementId: string): number {
@@ -105,23 +93,20 @@ describe("per-question timing on attempts", () => {
   }
 
   it("records a per-question elapsed time that is readable after submission", async () => {
-    const attempt = await startAttempt();
+    const attempt = await openAttempt<Attempt>(app, testId, student);
 
     clock.advance(30_000);
     await focus(attempt.attemptId, firstPlacement);
 
-    await request(app.getHttpServer())
-      .post(`/assessment/attempts/${attempt.attemptId}/submit`)
-      .set(...authHeader(app, student))
-      .expect(201);
+    await submitAttempt(app, attempt.attemptId, student);
 
-    const submitted = await readAttempt(attempt.attemptId);
+    const submitted = await readAttempt<Attempt>(app, attempt.attemptId, student);
     expect(submitted.status).not.toBe("IN_PROGRESS");
     expect(timingOf(submitted, firstPlacement)).toBe(30);
   });
 
   it("accumulates rather than replaces elapsed time when a question is revisited", async () => {
-    const attempt = await startAttempt();
+    const attempt = await openAttempt<Attempt>(app, testId, student);
 
     clock.advance(20_000);
     await focus(attempt.attemptId, firstPlacement);
@@ -132,23 +117,20 @@ describe("per-question timing on attempts", () => {
     clock.advance(10_000);
     await focus(attempt.attemptId, firstPlacement);
 
-    const current = await readAttempt(attempt.attemptId);
+    const current = await readAttempt<Attempt>(app, attempt.attemptId, student);
     expect(timingOf(current, firstPlacement)).toBe(30);
     expect(timingOf(current, secondPlacement)).toBe(45);
   });
 
   it("records zero rather than absent for a question never visited", async () => {
-    const attempt = await startAttempt();
+    const attempt = await openAttempt<Attempt>(app, testId, student);
 
     clock.advance(15_000);
     await focus(attempt.attemptId, firstPlacement);
 
-    await request(app.getHttpServer())
-      .post(`/assessment/attempts/${attempt.attemptId}/submit`)
-      .set(...authHeader(app, student))
-      .expect(201);
+    await submitAttempt(app, attempt.attemptId, student);
 
-    const submitted = await readAttempt(attempt.attemptId);
+    const submitted = await readAttempt<Attempt>(app, attempt.attemptId, student);
     const untouched = submitted.questions.find(
       (q) => q.placementId === secondPlacement,
     );
@@ -159,25 +141,22 @@ describe("per-question timing on attempts", () => {
   });
 
   it("drives timing from the injected clock rather than wall time", async () => {
-    const attempt = await startAttempt();
+    const attempt = await openAttempt<Attempt>(app, testId, student);
 
     clock.advance(3_600_000);
     await focus(attempt.attemptId, firstPlacement);
 
-    const current = await readAttempt(attempt.attemptId);
+    const current = await readAttempt<Attempt>(app, attempt.attemptId, student);
     expect(timingOf(current, firstPlacement)).toBe(3600);
   });
 
   it("leaves timings immutable once the attempt is submitted", async () => {
-    const attempt = await startAttempt();
+    const attempt = await openAttempt<Attempt>(app, testId, student);
 
     clock.advance(25_000);
     await focus(attempt.attemptId, firstPlacement);
 
-    await request(app.getHttpServer())
-      .post(`/assessment/attempts/${attempt.attemptId}/submit`)
-      .set(...authHeader(app, student))
-      .expect(201);
+    await submitAttempt(app, attempt.attemptId, student);
 
     await request(app.getHttpServer())
       .post(`/assessment/attempts/${attempt.attemptId}/focus`)
@@ -185,27 +164,19 @@ describe("per-question timing on attempts", () => {
       .send({ placementId: firstPlacement })
       .expect(409);
 
-    await request(app.getHttpServer())
-      .patch(`/assessment/attempts/${attempt.attemptId}/answers/${firstPlacement}`)
-      .set(...authHeader(app, student))
-      .send({ response: "a" })
-      .expect(409);
+    await answerQuestion(app, attempt.attemptId, firstPlacement, "a", student, 409);
 
-    const submitted = await readAttempt(attempt.attemptId);
+    const submitted = await readAttempt<Attempt>(app, attempt.attemptId, student);
     expect(timingOf(submitted, firstPlacement)).toBe(25);
   });
 
   it("attributes time to the question being answered", async () => {
-    const attempt = await startAttempt();
+    const attempt = await openAttempt<Attempt>(app, testId, student);
 
     clock.advance(12_000);
-    await request(app.getHttpServer())
-      .patch(`/assessment/attempts/${attempt.attemptId}/answers/${secondPlacement}`)
-      .set(...authHeader(app, student))
-      .send({ response: "a" })
-      .expect(200);
+    await answerQuestion(app, attempt.attemptId, secondPlacement, "a", student);
 
-    const current = await readAttempt(attempt.attemptId);
+    const current = await readAttempt<Attempt>(app, attempt.attemptId, student);
     expect(timingOf(current, secondPlacement)).toBe(12);
     expect(timingOf(current, firstPlacement)).toBe(0);
   });

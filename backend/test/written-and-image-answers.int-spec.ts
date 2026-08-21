@@ -13,6 +13,9 @@ import {
   createQuestion,
   createTaxonomy,
   createTest,
+  openAttempt,
+  answerQuestion,
+  submitAttempt,
   placeQuestion,
   seedDifficultyScale,
   text,
@@ -72,35 +75,6 @@ describe("written and image answer types", () => {
       durationMinutes: 120,
       ...overrides,
     });
-  }
-
-  async function start(testId: string): Promise<Attempt> {
-    const { body } = await request(app.getHttpServer())
-      .post(`/assessment/tests/${testId}/attempts`)
-      .set(...authHeader(app, student))
-      .expect(201);
-    return body as Attempt;
-  }
-
-  async function answer(
-    attemptId: string,
-    placementId: string,
-    response: unknown,
-    expected = 200,
-  ) {
-    return request(app.getHttpServer())
-      .patch(`/assessment/attempts/${attemptId}/answers/${placementId}`)
-      .set(...authHeader(app, student))
-      .send({ response })
-      .expect(expected);
-  }
-
-  async function submit(attemptId: string): Promise<Attempt> {
-    const { body } = await request(app.getHttpServer())
-      .post(`/assessment/attempts/${attemptId}/submit`)
-      .set(...authHeader(app, student))
-      .expect(201);
-    return body as Attempt;
   }
 
   function questionAt(attempt: Attempt, placementId: string): AttemptQuestion {
@@ -177,9 +151,9 @@ describe("written and image answer types", () => {
       const essay =
         "Momentum is conserved because no external force acts on the system.";
 
-      const attempt = await start(testId);
-      await answer(attempt.attemptId, placementId, essay);
-      const submitted = await submit(attempt.attemptId);
+      const attempt = await openAttempt<Attempt>(app, testId, student);
+      await answerQuestion(app, attempt.attemptId, placementId, essay, student);
+      const submitted = await submitAttempt<Attempt>(app, attempt.attemptId, student);
 
       expect(questionAt(submitted, placementId).response).toBe(essay);
     });
@@ -195,9 +169,9 @@ describe("written and image answer types", () => {
 
       const pages = ["page-one", "page-two", "page-three"];
 
-      const attempt = await start(testId);
-      await answer(attempt.attemptId, placementId, pages);
-      const submitted = await submit(attempt.attemptId);
+      const attempt = await openAttempt<Attempt>(app, testId, student);
+      await answerQuestion(app, attempt.attemptId, placementId, pages, student);
+      const submitted = await submitAttempt<Attempt>(app, attempt.attemptId, student);
 
       expect(questionAt(submitted, placementId).response).toEqual(pages);
     });
@@ -209,8 +183,8 @@ describe("written and image answer types", () => {
       });
       const placementId = await placeQuestion(database, testId, questionId);
 
-      const attempt = await start(testId);
-      await answer(attempt.attemptId, placementId, 42, 400);
+      const attempt = await openAttempt<Attempt>(app, testId, student);
+      await answerQuestion(app, attempt.attemptId, placementId, 42, student, 400);
     });
   });
 
@@ -224,9 +198,9 @@ describe("written and image answer types", () => {
         marks: "6",
       });
 
-      const attempt = await start(testId);
-      await answer(attempt.attemptId, placementId, "An answer.");
-      const submitted = await submit(attempt.attemptId);
+      const attempt = await openAttempt<Attempt>(app, testId, student);
+      await answerQuestion(app, attempt.attemptId, placementId, "An answer.", student);
+      const submitted = await submitAttempt<Attempt>(app, attempt.attemptId, student);
 
       expect(submitted.status).toBe("AWAITING_GRADING");
       expect(submitted.finalScore).toBeNull();
@@ -251,10 +225,10 @@ describe("written and image answer types", () => {
         marks: "6",
       });
 
-      const attempt = await start(testId);
-      await answer(attempt.attemptId, objectivePlacement, "a");
-      await answer(attempt.attemptId, writtenPlacement, "An answer.");
-      const submitted = await submit(attempt.attemptId);
+      const attempt = await openAttempt<Attempt>(app, testId, student);
+      await answerQuestion(app, attempt.attemptId, objectivePlacement, "a", student);
+      await answerQuestion(app, attempt.attemptId, writtenPlacement, "An answer.", student);
+      const submitted = await submitAttempt<Attempt>(app, attempt.attemptId, student);
 
       expect(questionAt(submitted, objectivePlacement).awardedMarks).toBe(4);
       expect(questionAt(submitted, objectivePlacement).outcome).toBe("CORRECT");
@@ -279,10 +253,10 @@ describe("written and image answer types", () => {
         marks: "4",
       });
 
-      const attempt = await start(testId);
-      await answer(attempt.attemptId, writtenPlacement, "An answer.");
-      await answer(attempt.attemptId, imagePlacement, ["page-one"]);
-      const submitted = await submit(attempt.attemptId);
+      const attempt = await openAttempt<Attempt>(app, testId, student);
+      await answerQuestion(app, attempt.attemptId, writtenPlacement, "An answer.", student);
+      await answerQuestion(app, attempt.attemptId, imagePlacement, ["page-one"], student);
+      const submitted = await submitAttempt<Attempt>(app, attempt.attemptId, student);
 
       for (const placementId of [writtenPlacement, imagePlacement]) {
         const question = questionAt(submitted, placementId);

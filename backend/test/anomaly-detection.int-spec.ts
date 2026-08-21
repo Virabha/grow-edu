@@ -13,6 +13,9 @@ import {
   createQuestion,
   createTaxonomy,
   createTest,
+  openAttempt,
+  answerQuestion,
+  submitAttempt,
   placeQuestion,
   seedDifficultyScale,
   Taxonomy,
@@ -61,14 +64,6 @@ describe("anomaly detection", () => {
     });
   }
 
-  async function startAttempt(testId: string, actor: TestActor): Promise<string> {
-    const { body } = await request(app.getHttpServer())
-      .post(`/assessment/tests/${testId}/attempts`)
-      .set(...authHeader(app, actor))
-      .expect(201);
-    return (body as { attemptId: string }).attemptId;
-  }
-
   async function focusQuestion(
     attemptId: string,
     placementId: string,
@@ -78,26 +73,6 @@ describe("anomaly detection", () => {
       .post(`/assessment/attempts/${attemptId}/focus`)
       .set(...authHeader(app, actor))
       .send({ placementId })
-      .expect(201);
-  }
-
-  async function answerQuestion(
-    attemptId: string,
-    placementId: string,
-    response: unknown,
-    actor: TestActor,
-  ): Promise<void> {
-    await request(app.getHttpServer())
-      .patch(`/assessment/attempts/${attemptId}/answers/${placementId}`)
-      .set(...authHeader(app, actor))
-      .send({ response })
-      .expect(200);
-  }
-
-  async function submitAttempt(attemptId: string, actor: TestActor): Promise<void> {
-    await request(app.getHttpServer())
-      .post(`/assessment/attempts/${attemptId}/submit`)
-      .set(...authHeader(app, actor))
       .expect(201);
   }
 
@@ -130,13 +105,13 @@ describe("anomaly detection", () => {
     responses: unknown[],
     totalSeconds: number,
   ): Promise<string> {
-    const attemptId = await startAttempt(testId, actor);
+    const { attemptId } = await openAttempt(app, testId, actor);
     const perQuestion = Math.floor(totalSeconds / placements.length);
     for (let i = 0; i < placements.length; i++) {
       clock.advance(perQuestion * 1000);
-      await answerQuestion(attemptId, placements[i], responses[i], actor);
+      await answerQuestion(app, attemptId, placements[i], responses[i], actor);
     }
-    await submitAttempt(attemptId, actor);
+    await submitAttempt(app, attemptId, actor);
     return attemptId;
   }
 
@@ -147,9 +122,9 @@ describe("anomaly detection", () => {
       const q = await createQuestion(database, taxonomy, admin.userId);
       await placeQuestion(database, testId, q, { order: 1 });
 
-      const attemptId = await startAttempt(testId, student);
+      const { attemptId } = await openAttempt(app, testId, student);
       const submitStart = clock.now().getTime();
-      await submitAttempt(attemptId, student);
+      await submitAttempt(app, attemptId, student);
       const submitEnd = clock.now().getTime();
 
       expect(submitEnd - submitStart).toBe(0);
@@ -180,23 +155,23 @@ describe("anomaly detection", () => {
       await submitNormalAttempt(testId, normal2, [p1, p2, p3], ["b", "a", "b"], 650);
       await submitNormalAttempt(testId, normal3, [p1, p2, p3], ["a", "a", "b"], 700);
 
-      const cheatAttempt1 = await startAttempt(testId, cheat1);
+      const { attemptId: cheatAttempt1 } = await openAttempt(app, testId, cheat1);
       clock.advance(100_000);
-      await answerQuestion(cheatAttempt1, p1, "a", cheat1);
+      await answerQuestion(app, cheatAttempt1, p1, "a", cheat1);
       clock.advance(120_000);
-      await answerQuestion(cheatAttempt1, p2, "a", cheat1);
+      await answerQuestion(app, cheatAttempt1, p2, "a", cheat1);
       clock.advance(110_000);
-      await answerQuestion(cheatAttempt1, p3, "a", cheat1);
-      await submitAttempt(cheatAttempt1, cheat1);
+      await answerQuestion(app, cheatAttempt1, p3, "a", cheat1);
+      await submitAttempt(app, cheatAttempt1, cheat1);
 
-      const cheatAttempt2 = await startAttempt(testId, cheat2);
+      const { attemptId: cheatAttempt2 } = await openAttempt(app, testId, cheat2);
       clock.advance(105_000);
-      await answerQuestion(cheatAttempt2, p1, "a", cheat2);
+      await answerQuestion(app, cheatAttempt2, p1, "a", cheat2);
       clock.advance(115_000);
-      await answerQuestion(cheatAttempt2, p2, "a", cheat2);
+      await answerQuestion(app, cheatAttempt2, p2, "a", cheat2);
       clock.advance(108_000);
-      await answerQuestion(cheatAttempt2, p3, "a", cheat2);
-      await submitAttempt(cheatAttempt2, cheat2);
+      await answerQuestion(app, cheatAttempt2, p3, "a", cheat2);
+      await submitAttempt(app, cheatAttempt2, cheat2);
 
       const result = await scan(testId);
       expect(result.flagged).toBeGreaterThan(0);
@@ -229,12 +204,12 @@ describe("anomaly detection", () => {
       await submitNormalAttempt(testId, s1, [p1, p2], ["b", "c"], 500);
       await submitNormalAttempt(testId, s2, [p1, p2], ["b", "c"], 600);
 
-      const fast = await startAttempt(testId, s3);
+      const { attemptId: fast } = await openAttempt(app, testId, s3);
       clock.advance(10_000);
-      await answerQuestion(fast, p1, "b", s3);
+      await answerQuestion(app, fast, p1, "b", s3);
       clock.advance(10_000);
-      await answerQuestion(fast, p2, "c", s3);
-      await submitAttempt(fast, s3);
+      await answerQuestion(app, fast, p2, "c", s3);
+      await submitAttempt(app, fast, s3);
 
       const result = await scan(testId);
 
@@ -270,19 +245,19 @@ describe("anomaly detection", () => {
       await submitNormalAttempt(testId, normal3, [p1, p2], ["a", "a"], 700);
       await submitNormalAttempt(testId, normal4, [p1, p2], ["a", "a"], 750);
 
-      const plausibleAttempt = await startAttempt(testId, plausibleFast);
+      const { attemptId: plausibleAttempt } = await openAttempt(app, testId, plausibleFast);
       clock.advance(220_000);
-      await answerQuestion(plausibleAttempt, p1, "a", plausibleFast);
+      await answerQuestion(app, plausibleAttempt, p1, "a", plausibleFast);
       clock.advance(220_000);
-      await answerQuestion(plausibleAttempt, p2, "a", plausibleFast);
-      await submitAttempt(plausibleAttempt, plausibleFast);
+      await answerQuestion(app, plausibleAttempt, p2, "a", plausibleFast);
+      await submitAttempt(app, plausibleAttempt, plausibleFast);
 
-      const suspiciousAttempt = await startAttempt(testId, suspicious);
+      const { attemptId: suspiciousAttempt } = await openAttempt(app, testId, suspicious);
       clock.advance(30_000);
-      await answerQuestion(suspiciousAttempt, p1, "a", suspicious);
+      await answerQuestion(app, suspiciousAttempt, p1, "a", suspicious);
       clock.advance(30_000);
-      await answerQuestion(suspiciousAttempt, p2, "a", suspicious);
-      await submitAttempt(suspiciousAttempt, suspicious);
+      await answerQuestion(app, suspiciousAttempt, p2, "a", suspicious);
+      await submitAttempt(app, suspiciousAttempt, suspicious);
 
       await scan(testId);
 
@@ -336,8 +311,8 @@ describe("anomaly detection", () => {
       const q = await createQuestion(database, taxonomy, admin.userId);
       await placeQuestion(database, testId, q, { order: 1 });
 
-      const attemptId = await startAttempt(testId, student);
-      await submitAttempt(attemptId, student);
+      const { attemptId } = await openAttempt(app, testId, student);
+      await submitAttempt(app, attemptId, student);
 
       const { body } = await request(app.getHttpServer())
         .get(`/assessment/attempts/${attemptId}`)
@@ -388,12 +363,12 @@ describe("anomaly detection", () => {
       await submitNormalAttempt(testId, s2, [p1, p2], ["b", "b"], 640);
       await submitNormalAttempt(testId, s3, [p1, p2], ["a", "b"], 650);
 
-      const suspiciousAttempt = await startAttempt(testId, s4);
+      const { attemptId: suspiciousAttempt } = await openAttempt(app, testId, s4);
       clock.advance(20_000);
-      await answerQuestion(suspiciousAttempt, p1, "a", s4);
+      await answerQuestion(app, suspiciousAttempt, p1, "a", s4);
       clock.advance(20_000);
-      await answerQuestion(suspiciousAttempt, p2, "a", s4);
-      await submitAttempt(suspiciousAttempt, s4);
+      await answerQuestion(app, suspiciousAttempt, p2, "a", s4);
+      await submitAttempt(app, suspiciousAttempt, s4);
 
       await scan(testId);
 
@@ -424,10 +399,10 @@ describe("anomaly detection", () => {
       await submitNormalAttempt(testId, s2, [p], ["a"], 650);
       await submitNormalAttempt(testId, s3, [p], ["a"], 700);
 
-      const outlierAttempt = await startAttempt(testId, outlier);
+      const { attemptId: outlierAttempt } = await openAttempt(app, testId, outlier);
       clock.advance(30_000);
-      await answerQuestion(outlierAttempt, p, "a", outlier);
-      await submitAttempt(outlierAttempt, outlier);
+      await answerQuestion(app, outlierAttempt, p, "a", outlier);
+      await submitAttempt(app, outlierAttempt, outlier);
 
       await scan(testId);
 
@@ -461,19 +436,19 @@ describe("anomaly detection", () => {
       await submitNormalAttempt(testId, normal2, [p1, p2], ["a", "b"], 640);
       await submitNormalAttempt(testId, normal3, [p1, p2], ["b", "a"], 650);
 
-      const ca1 = await startAttempt(testId, cheat1);
+      const { attemptId: ca1 } = await openAttempt(app, testId, cheat1);
       clock.advance(100_000);
-      await answerQuestion(ca1, p1, "a", cheat1);
+      await answerQuestion(app, ca1, p1, "a", cheat1);
       clock.advance(100_000);
-      await answerQuestion(ca1, p2, "a", cheat1);
-      await submitAttempt(ca1, cheat1);
+      await answerQuestion(app, ca1, p2, "a", cheat1);
+      await submitAttempt(app, ca1, cheat1);
 
-      const ca2 = await startAttempt(testId, cheat2);
+      const { attemptId: ca2 } = await openAttempt(app, testId, cheat2);
       clock.advance(98_000);
-      await answerQuestion(ca2, p1, "a", cheat2);
+      await answerQuestion(app, ca2, p1, "a", cheat2);
       clock.advance(102_000);
-      await answerQuestion(ca2, p2, "a", cheat2);
-      await submitAttempt(ca2, cheat2);
+      await answerQuestion(app, ca2, p2, "a", cheat2);
+      await submitAttempt(app, ca2, cheat2);
 
       await scan(testId);
 
@@ -506,10 +481,10 @@ describe("anomaly detection", () => {
       await submitNormalAttempt(testId, s2, [p], ["a"], 650);
       await submitNormalAttempt(testId, s3, [p], ["a"], 700);
 
-      const outlierAttempt = await startAttempt(testId, outlier);
+      const { attemptId: outlierAttempt } = await openAttempt(app, testId, outlier);
       clock.advance(25_000);
-      await answerQuestion(outlierAttempt, p, "a", outlier);
-      await submitAttempt(outlierAttempt, outlier);
+      await answerQuestion(app, outlierAttempt, p, "a", outlier);
+      await submitAttempt(app, outlierAttempt, outlier);
 
       const first = await scan(testId);
       const second = await scan(testId);

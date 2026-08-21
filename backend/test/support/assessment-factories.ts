@@ -1,4 +1,6 @@
 import { randomUUID } from 'crypto';
+import { INestApplication } from '@nestjs/common';
+import * as request from 'supertest';
 import {
   ContentBlock,
   QuestionAnswerKey,
@@ -12,6 +14,7 @@ import {
   assessmentTests,
 } from '../../src/database/schema';
 import { TestDatabase } from './test-database';
+import { authHeader, TestActor } from './test-app';
 
 let counter = 0;
 function unique(prefix: string): string {
@@ -245,4 +248,49 @@ export async function placeQuestion(
     ...overrides,
   });
   return placementId;
+}
+
+export async function openAttempt<
+  T extends { attemptId: string } = { attemptId: string },
+>(app: INestApplication, testId: string, actor: TestActor): Promise<T> {
+  const { body } = await request(app.getHttpServer())
+    .post(`/assessment/tests/${testId}/attempts`)
+    .set(...authHeader(app, actor))
+    .expect(201);
+  return body as T;
+}
+
+export async function answerQuestion(
+  app: INestApplication,
+  attemptId: string,
+  placementId: string,
+  response: unknown,
+  actor: TestActor,
+  expectedStatus = 200,
+): Promise<void> {
+  await request(app.getHttpServer())
+    .patch(`/assessment/attempts/${attemptId}/answers/${placementId}`)
+    .set(...authHeader(app, actor))
+    .send({ response })
+    .expect(expectedStatus);
+}
+
+export async function submitAttempt<
+  T extends { status: string } = { status: string },
+>(app: INestApplication, attemptId: string, actor: TestActor): Promise<T> {
+  const { body } = await request(app.getHttpServer())
+    .post(`/assessment/attempts/${attemptId}/submit`)
+    .set(...authHeader(app, actor))
+    .expect(201);
+  return body as T;
+}
+
+export async function readAttempt<
+  T extends { attemptId: string } = { attemptId: string },
+>(app: INestApplication, attemptId: string, actor: TestActor): Promise<T> {
+  const { body } = await request(app.getHttpServer())
+    .get(`/assessment/attempts/${attemptId}`)
+    .set(...authHeader(app, actor))
+    .expect(200);
+  return body as T;
 }

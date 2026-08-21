@@ -37,5 +37,5 @@ export class GradeAnswerDto {
 
 export class AttachFeedbackDto {
   @IsString()
-  mediaUrl: string;
+  mediaKey: string;
 }

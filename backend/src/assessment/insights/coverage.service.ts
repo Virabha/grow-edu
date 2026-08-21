@@ -7,8 +7,8 @@ import * as schema from "../../database/schema";
 import {
   assessmentDifficultyLevels,
   assessmentQuestions,
-  assessmentTaxonomyNodes,
 } from "../../database/schema";
+import { TaxonomyService } from "../taxonomy/taxonomy.service";
 
 export const PRACTICE_SET_MINIMUM = 10;
 
@@ -42,6 +42,7 @@ export class CoverageService {
   constructor(
     @Inject(DATABASE_CONNECTION)
     private readonly db: PostgresJsDatabase<typeof schema>,
+    private readonly taxonomy: TaxonomyService,
   ) {}
 
   async report(): Promise<CoverageReport> {
@@ -50,10 +51,7 @@ export class CoverageService {
       .from(assessmentDifficultyLevels)
       .orderBy(asc(assessmentDifficultyLevels.ordinal));
 
-    const nodes = await this.db
-      .select()
-      .from(assessmentTaxonomyNodes)
-      .orderBy(asc(assessmentTaxonomyNodes.name));
+    const nodes = await this.taxonomy.list({ includeRetired: true });
 
     const questions = await this.db
       .select({

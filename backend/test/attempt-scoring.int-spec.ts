@@ -19,6 +19,10 @@ import {
   createQuestionGroup,
   createTaxonomy,
   createTest,
+  openAttempt,
+  answerQuestion,
+  submitAttempt,
+  readAttempt,
   placeQuestion,
   seedDifficultyScale,
   text,
@@ -92,44 +96,6 @@ describe("attempt scoring", () => {
     });
   }
 
-  async function start(testId: string, actor: TestActor = student) {
-    const { body } = await request(app.getHttpServer())
-      .post(`/assessment/tests/${testId}/attempts`)
-      .set(...authHeader(app, actor))
-      .expect(201);
-    return body as Attempt;
-  }
-
-  async function answer(
-    attemptId: string,
-    placementId: string,
-    response: unknown,
-    expected = 200,
-    actor: TestActor = student,
-  ) {
-    return request(app.getHttpServer())
-      .patch(`/assessment/attempts/${attemptId}/answers/${placementId}`)
-      .set(...authHeader(app, actor))
-      .send({ response })
-      .expect(expected);
-  }
-
-  async function submit(attemptId: string, actor: TestActor = student) {
-    const { body } = await request(app.getHttpServer())
-      .post(`/assessment/attempts/${attemptId}/submit`)
-      .set(...authHeader(app, actor))
-      .expect(201);
-    return body as Attempt;
-  }
-
-  async function read(attemptId: string, actor: TestActor = student) {
-    const { body } = await request(app.getHttpServer())
-      .get(`/assessment/attempts/${attemptId}`)
-      .set(...authHeader(app, actor))
-      .expect(200);
-    return body as Attempt;
-  }
-
   function questionAt(attempt: Attempt, placementId: string): AttemptQuestion {
     const found = attempt.questions.find((q) => q.placementId === placementId);
     if (!found) throw new Error(`no question at placement ${placementId}`);
@@ -152,9 +118,9 @@ describe("attempt scoring", () => {
     it("awards full marks under all-or-nothing only for the exact correct set", async () => {
       const { testId, placementId } = await multiTest("ALL_OR_NOTHING");
 
-      const attempt = await start(testId);
-      await answer(attempt.attemptId, placementId, ["a", "b"]);
-      const exact = await submit(attempt.attemptId);
+      const attempt = await openAttempt<Attempt>(app, testId, student);
+      await answerQuestion(app, attempt.attemptId, placementId, ["a", "b"], student);
+      const exact = await submitAttempt<Attempt>(app, attempt.attemptId, student);
 
       expect(questionAt(exact, placementId).awardedMarks).toBe(4);
       expect(questionAt(exact, placementId).outcome).toBe("CORRECT");
@@ -163,9 +129,9 @@ describe("attempt scoring", () => {
     it("scores a strict subset as wrong under all-or-nothing", async () => {
       const { testId, placementId } = await multiTest("ALL_OR_NOTHING");
 
-      const attempt = await start(testId);
-      await answer(attempt.attemptId, placementId, ["a"]);
-      const partial = await submit(attempt.attemptId);
+      const attempt = await openAttempt<Attempt>(app, testId, student);
+      await answerQuestion(app, attempt.attemptId, placementId, ["a"], student);
+      const partial = await submitAttempt<Attempt>(app, attempt.attemptId, student);
 
       expect(questionAt(partial, placementId).outcome).toBe("WRONG");
       expect(questionAt(partial, placementId).awardedMarks).toBe(0);
@@ -174,9 +140,9 @@ describe("attempt scoring", () => {
     it("awards a fraction under the proportional rule for a clean subset", async () => {
       const { testId, placementId } = await multiTest("PROPORTIONAL");
 
-      const attempt = await start(testId);
-      await answer(attempt.attemptId, placementId, ["a"]);
-      const scored = await submit(attempt.attemptId);
+      const attempt = await openAttempt<Attempt>(app, testId, student);
+      await answerQuestion(app, attempt.attemptId, placementId, ["a"], student);
+      const scored = await submitAttempt<Attempt>(app, attempt.attemptId, student);
 
       expect(questionAt(scored, placementId).awardedMarks).toBe(2);
       expect(questionAt(scored, placementId).outcome).toBe("PARTIAL");
@@ -185,9 +151,9 @@ describe("attempt scoring", () => {
     it("scores any wrong selection under the proportional rule as wrong", async () => {
       const { testId, placementId } = await multiTest("PROPORTIONAL");
 
-      const attempt = await start(testId);
-      await answer(attempt.attemptId, placementId, ["a", "c"]);
-      const scored = await submit(attempt.attemptId);
+      const attempt = await openAttempt<Attempt>(app, testId, student);
+      await answerQuestion(app, attempt.attemptId, placementId, ["a", "c"], student);
+      const scored = await submitAttempt<Attempt>(app, attempt.attemptId, student);
 
       expect(questionAt(scored, placementId).outcome).toBe("WRONG");
     });
@@ -213,10 +179,10 @@ describe("attempt scoring", () => {
         marks: "4",
       });
 
-      const attempt = await start(testId);
-      await answer(attempt.attemptId, strictPlacement, ["a"]);
-      await answer(attempt.attemptId, lenientPlacement, ["a"]);
-      const scored = await submit(attempt.attemptId);
+      const attempt = await openAttempt<Attempt>(app, testId, student);
+      await answerQuestion(app, attempt.attemptId, strictPlacement, ["a"], student);
+      await answerQuestion(app, attempt.attemptId, lenientPlacement, ["a"], student);
+      const scored = await submitAttempt<Attempt>(app, attempt.attemptId, student);
 
       expect(questionAt(scored, strictPlacement).awardedMarks).toBe(0);
       expect(questionAt(scored, lenientPlacement).awardedMarks).toBe(2);
@@ -225,9 +191,9 @@ describe("attempt scoring", () => {
     it("never awards more than the question's marks", async () => {
       const { testId, placementId } = await multiTest("PROPORTIONAL");
 
-      const attempt = await start(testId);
-      await answer(attempt.attemptId, placementId, ["a", "b"]);
-      const scored = await submit(attempt.attemptId);
+      const attempt = await openAttempt<Attempt>(app, testId, student);
+      await answerQuestion(app, attempt.attemptId, placementId, ["a", "b"], student);
+      const scored = await submitAttempt<Attempt>(app, attempt.attemptId, student);
 
       expect(questionAt(scored, placementId).awardedMarks).toBe(4);
       expect(scored.provisionalScore).toBeLessThanOrEqual(scored.maxScore);
@@ -254,9 +220,9 @@ describe("attempt scoring", () => {
     it("treats an answer exactly at the tolerance boundary as correct", async () => {
       const { testId, placementId } = await numericTest("0.5", "ABSOLUTE");
 
-      const attempt = await start(testId);
-      await answer(attempt.attemptId, placementId, 42.5);
-      const scored = await submit(attempt.attemptId);
+      const attempt = await openAttempt<Attempt>(app, testId, student);
+      await answerQuestion(app, attempt.attemptId, placementId, 42.5, student);
+      const scored = await submitAttempt<Attempt>(app, attempt.attemptId, student);
 
       expect(questionAt(scored, placementId).outcome).toBe("CORRECT");
     });
@@ -264,18 +230,18 @@ describe("attempt scoring", () => {
     it("treats an answer just beyond the tolerance as wrong", async () => {
       const { testId, placementId } = await numericTest("0.5", "ABSOLUTE");
 
-      const attempt = await start(testId);
-      await answer(attempt.attemptId, placementId, 42.6);
-      const scored = await submit(attempt.attemptId);
+      const attempt = await openAttempt<Attempt>(app, testId, student);
+      await answerQuestion(app, attempt.attemptId, placementId, 42.6, student);
+      const scored = await submitAttempt<Attempt>(app, attempt.attemptId, student);
 
       expect(questionAt(scored, placementId).outcome).toBe("WRONG");
     });
 
     it("scales a relative tolerance with the expected magnitude", async () => {
       const relative = await numericTest("0.1", "RELATIVE");
-      const relativeAttempt = await start(relative.testId);
-      await answer(relativeAttempt.attemptId, relative.placementId, 46);
-      const relativeScored = await submit(relativeAttempt.attemptId);
+      const relativeAttempt = await openAttempt<Attempt>(app, relative.testId, student);
+      await answerQuestion(app, relativeAttempt.attemptId, relative.placementId, 46, student);
+      const relativeScored = await submitAttempt<Attempt>(app, relativeAttempt.attemptId, student);
       expect(questionAt(relativeScored, relative.placementId).outcome).toBe(
         "CORRECT",
       );
@@ -287,9 +253,9 @@ describe("attempt scoring", () => {
       taxonomy = await createTaxonomy(database, admin.userId);
 
       const absolute = await numericTest("0.1", "ABSOLUTE");
-      const absoluteAttempt = await start(absolute.testId);
-      await answer(absoluteAttempt.attemptId, absolute.placementId, 46);
-      const absoluteScored = await submit(absoluteAttempt.attemptId);
+      const absoluteAttempt = await openAttempt<Attempt>(app, absolute.testId, student);
+      await answerQuestion(app, absoluteAttempt.attemptId, absolute.placementId, 46, student);
+      const absoluteScored = await submitAttempt<Attempt>(app, absoluteAttempt.attemptId, student);
       expect(questionAt(absoluteScored, absolute.placementId).outcome).toBe(
         "WRONG",
       );
@@ -298,19 +264,19 @@ describe("attempt scoring", () => {
     it("refuses a non-numeric submission rather than erroring on it", async () => {
       const { testId, placementId } = await numericTest("0", "ABSOLUTE");
 
-      const attempt = await start(testId);
-      await answer(attempt.attemptId, placementId, "not a number", 400);
+      const attempt = await openAttempt<Attempt>(app, testId, student);
+      await answerQuestion(app, attempt.attemptId, placementId, "not a number", student, 400);
 
-      const scored = await submit(attempt.attemptId);
+      const scored = await submitAttempt<Attempt>(app, attempt.attemptId, student);
       expect(questionAt(scored, placementId).outcome).toBe("SKIPPED");
     });
 
     it("requires an exact match at zero tolerance", async () => {
       const { testId, placementId } = await numericTest("0", "ABSOLUTE");
 
-      const attempt = await start(testId);
-      await answer(attempt.attemptId, placementId, 42);
-      const exact = await submit(attempt.attemptId);
+      const attempt = await openAttempt<Attempt>(app, testId, student);
+      await answerQuestion(app, attempt.attemptId, placementId, 42, student);
+      const exact = await submitAttempt<Attempt>(app, attempt.attemptId, student);
       expect(questionAt(exact, placementId).outcome).toBe("CORRECT");
     });
   });
@@ -336,15 +302,15 @@ describe("attempt scoring", () => {
         order: 3,
       });
 
-      const attempt = await start(testId);
+      const attempt = await openAttempt<Attempt>(app, testId, student);
 
-      await answer(attempt.attemptId, singlePlacement, ["a", "b"], 400);
-      await answer(attempt.attemptId, numericPlacement, "banana", 400);
-      await answer(attempt.attemptId, writtenPlacement, 42, 400);
+      await answerQuestion(app, attempt.attemptId, singlePlacement, ["a", "b"], student, 400);
+      await answerQuestion(app, attempt.attemptId, numericPlacement, "banana", student, 400);
+      await answerQuestion(app, attempt.attemptId, writtenPlacement, 42, student, 400);
 
-      await answer(attempt.attemptId, singlePlacement, "a");
-      await answer(attempt.attemptId, numericPlacement, 42);
-      await answer(attempt.attemptId, writtenPlacement, "My working.");
+      await answerQuestion(app, attempt.attemptId, singlePlacement, "a", student);
+      await answerQuestion(app, attempt.attemptId, numericPlacement, 42, student);
+      await answerQuestion(app, attempt.attemptId, writtenPlacement, "My working.", student);
     });
 
     it("presents a passage group's stimulus with its members in order", async () => {
@@ -373,7 +339,7 @@ describe("attempt scoring", () => {
         groupId,
       });
 
-      const attempt = await start(testId);
+      const attempt = await openAttempt<Attempt>(app, testId, student);
 
       expect(attempt.questions.map((q) => q.placementId)).toEqual([
         firstPlacement,
@@ -424,12 +390,12 @@ describe("attempt scoring", () => {
         marks: "5",
       });
 
-      const attempt = await start(testId);
-      await answer(attempt.attemptId, firstPlacement, "a");
-      await answer(attempt.attemptId, secondPlacement, "a");
-      await answer(attempt.attemptId, thirdPlacement, "b");
+      const attempt = await openAttempt<Attempt>(app, testId, student);
+      await answerQuestion(app, attempt.attemptId, firstPlacement, "a", student);
+      await answerQuestion(app, attempt.attemptId, secondPlacement, "a", student);
+      await answerQuestion(app, attempt.attemptId, thirdPlacement, "b", student);
 
-      const scored = await submit(attempt.attemptId);
+      const scored = await submitAttempt<Attempt>(app, attempt.attemptId, student);
 
       expect(questionAt(scored, firstPlacement).awardedMarks).toBe(3);
       expect(questionAt(scored, secondPlacement).awardedMarks).toBe(4);
@@ -443,11 +409,11 @@ describe("attempt scoring", () => {
       const questionId = await createQuestion(database, taxonomy, admin.userId);
       const placementId = await placeQuestion(database, testId, questionId);
 
-      const attempt = await start(testId);
-      await answer(attempt.attemptId, placementId, "b");
-      await answer(attempt.attemptId, placementId, "a");
+      const attempt = await openAttempt<Attempt>(app, testId, student);
+      await answerQuestion(app, attempt.attemptId, placementId, "b", student);
+      await answerQuestion(app, attempt.attemptId, placementId, "a", student);
 
-      const scored = await submit(attempt.attemptId);
+      const scored = await submitAttempt<Attempt>(app, attempt.attemptId, student);
       expect(questionAt(scored, placementId).outcome).toBe("CORRECT");
     });
 
@@ -456,8 +422,8 @@ describe("attempt scoring", () => {
       const questionId = await createQuestion(database, taxonomy, admin.userId);
       await placeQuestion(database, testId, questionId);
 
-      const attempt = await start(testId);
-      await submit(attempt.attemptId);
+      const attempt = await openAttempt<Attempt>(app, testId, student);
+      await submitAttempt(app, attempt.attemptId, student);
 
       await request(app.getHttpServer())
         .post(`/assessment/attempts/${attempt.attemptId}/submit`)
@@ -470,10 +436,10 @@ describe("attempt scoring", () => {
       const questionId = await createQuestion(database, taxonomy, admin.userId);
       const placementId = await placeQuestion(database, testId, questionId);
 
-      const attempt = await start(testId);
+      const attempt = await openAttempt<Attempt>(app, testId, student);
       clock.advance(11 * 60_000);
 
-      await answer(attempt.attemptId, placementId, "a", 409);
+      await answerQuestion(app, attempt.attemptId, placementId, "a", student, 409);
     });
   });
 
@@ -504,12 +470,12 @@ describe("attempt scoring", () => {
         marks: "4",
       });
 
-      const attempt = await start(testId);
-      await answer(attempt.attemptId, singlePlacement, "a");
-      await answer(attempt.attemptId, multiPlacement, ["a"]);
-      await answer(attempt.attemptId, numericPlacement, 42.5);
+      const attempt = await openAttempt<Attempt>(app, testId, student);
+      await answerQuestion(app, attempt.attemptId, singlePlacement, "a", student);
+      await answerQuestion(app, attempt.attemptId, multiPlacement, ["a"], student);
+      await answerQuestion(app, attempt.attemptId, numericPlacement, 42.5, student);
 
-      const scored = await submit(attempt.attemptId);
+      const scored = await submitAttempt<Attempt>(app, attempt.attemptId, student);
 
       expect(questionAt(scored, singlePlacement).awardedMarks).toBe(4);
       expect(questionAt(scored, multiPlacement).awardedMarks).toBe(2);
@@ -535,11 +501,11 @@ describe("attempt scoring", () => {
         marks: "6",
       });
 
-      const attempt = await start(testId);
-      await answer(attempt.attemptId, singlePlacement, "a");
-      await answer(attempt.attemptId, writtenPlacement, "An essay.");
+      const attempt = await openAttempt<Attempt>(app, testId, student);
+      await answerQuestion(app, attempt.attemptId, singlePlacement, "a", student);
+      await answerQuestion(app, attempt.attemptId, writtenPlacement, "An essay.", student);
 
-      const scored = await submit(attempt.attemptId);
+      const scored = await submitAttempt<Attempt>(app, attempt.attemptId, student);
 
       expect(scored.provisionalScore).toBe(4);
       expect(scored.pendingMarks).toBe(6);
@@ -560,8 +526,8 @@ describe("attempt scoring", () => {
       await placeQuestion(database, testId, single, { order: 1, marks: "4" });
       await placeQuestion(database, testId, image, { order: 2, marks: "6" });
 
-      const attempt = await start(testId);
-      const scored = await submit(attempt.attemptId);
+      const attempt = await openAttempt<Attempt>(app, testId, student);
+      const scored = await submitAttempt<Attempt>(app, attempt.attemptId, student);
 
       expect(scored.maxScore).toBe(10);
       expect(scored.autoScoredMaxMarks + scored.pendingMarks).toBe(
@@ -576,16 +542,16 @@ describe("attempt scoring", () => {
         marks: "4",
       });
 
-      const attempt = await start(testId);
-      await answer(attempt.attemptId, placementId, "a");
-      const scored = await submit(attempt.attemptId);
+      const attempt = await openAttempt<Attempt>(app, testId, student);
+      await answerQuestion(app, attempt.attemptId, placementId, "a", student);
+      const scored = await submitAttempt<Attempt>(app, attempt.attemptId, student);
 
       await database.db
         .update(assessmentQuestionVersions)
         .set({ answerKey: { kind: "SINGLE", optionId: "c" } })
         .where(eq(assessmentQuestionVersions.questionId, questionId));
 
-      const reread = await read(attempt.attemptId);
+      const reread = await readAttempt<Attempt>(app, attempt.attemptId, student);
       expect(reread.provisionalScore).toBe(scored.provisionalScore);
       expect(questionAt(reread, placementId).awardedMarks).toBe(4);
     });
@@ -597,8 +563,8 @@ describe("attempt scoring", () => {
       });
       await placeQuestion(database, testId, written, { marks: "6" });
 
-      const attempt = await start(testId);
-      const scored = await submit(attempt.attemptId);
+      const attempt = await openAttempt<Attempt>(app, testId, student);
+      const scored = await submitAttempt<Attempt>(app, attempt.attemptId, student);
 
       expect(scored.provisionalScore).toBe(0);
       expect(scored.pendingMarks).toBe(6);
@@ -628,9 +594,9 @@ describe("attempt scoring", () => {
     it("does not penalise a skipped question", async () => {
       const { testId, firstPlacement } = await penalisedTest();
 
-      const attempt = await start(testId);
-      await answer(attempt.attemptId, firstPlacement, "a");
-      const scored = await submit(attempt.attemptId);
+      const attempt = await openAttempt<Attempt>(app, testId, student);
+      await answerQuestion(app, attempt.attemptId, firstPlacement, "a", student);
+      const scored = await submitAttempt<Attempt>(app, attempt.attemptId, student);
 
       expect(scored.provisionalScore).toBe(4);
       expect(scored.skippedCount).toBe(1);
@@ -639,10 +605,10 @@ describe("attempt scoring", () => {
     it("penalises a wrong answer by the placement's negative rule", async () => {
       const { testId, firstPlacement, secondPlacement } = await penalisedTest();
 
-      const attempt = await start(testId);
-      await answer(attempt.attemptId, firstPlacement, "a");
-      await answer(attempt.attemptId, secondPlacement, "b");
-      const scored = await submit(attempt.attemptId);
+      const attempt = await openAttempt<Attempt>(app, testId, student);
+      await answerQuestion(app, attempt.attemptId, firstPlacement, "a", student);
+      await answerQuestion(app, attempt.attemptId, secondPlacement, "b", student);
+      const scored = await submitAttempt<Attempt>(app, attempt.attemptId, student);
 
       expect(scored.provisionalScore).toBe(3);
       expect(scored.wrongCount).toBe(1);
@@ -654,10 +620,10 @@ describe("attempt scoring", () => {
         scoreFloor: "-2",
       });
 
-      const attempt = await start(testId);
-      await answer(attempt.attemptId, firstPlacement, "b");
-      await answer(attempt.attemptId, secondPlacement, "b");
-      const scored = await submit(attempt.attemptId);
+      const attempt = await openAttempt<Attempt>(app, testId, student);
+      await answerQuestion(app, attempt.attemptId, firstPlacement, "b", student);
+      await answerQuestion(app, attempt.attemptId, secondPlacement, "b", student);
+      const scored = await submitAttempt<Attempt>(app, attempt.attemptId, student);
 
       expect(scored.provisionalScore).toBe(-2);
     });
@@ -667,10 +633,10 @@ describe("attempt scoring", () => {
         negativeMarkPercent: "100",
       });
 
-      const attempt = await start(testId);
-      await answer(attempt.attemptId, firstPlacement, "b");
-      await answer(attempt.attemptId, secondPlacement, "b");
-      const scored = await submit(attempt.attemptId);
+      const attempt = await openAttempt<Attempt>(app, testId, student);
+      await answerQuestion(app, attempt.attemptId, firstPlacement, "b", student);
+      await answerQuestion(app, attempt.attemptId, secondPlacement, "b", student);
+      const scored = await submitAttempt<Attempt>(app, attempt.attemptId, student);
 
       expect(scored.provisionalScore).toBe(0);
     });
@@ -678,8 +644,8 @@ describe("attempt scoring", () => {
     it("scores an all-skipped attempt as exactly zero", async () => {
       const { testId } = await penalisedTest();
 
-      const attempt = await start(testId);
-      const scored = await submit(attempt.attemptId);
+      const attempt = await openAttempt<Attempt>(app, testId, student);
+      const scored = await submitAttempt<Attempt>(app, attempt.attemptId, student);
 
       expect(scored.provisionalScore).toBe(0);
       expect(scored.skippedCount).toBe(2);
@@ -725,14 +691,14 @@ describe("attempt scoring", () => {
         marks: "4",
       });
 
-      const attempt = await start(testId);
-      await answer(attempt.attemptId, placementId, "a");
-      const scored = await submit(attempt.attemptId);
+      const attempt = await openAttempt<Attempt>(app, testId, student);
+      await answerQuestion(app, attempt.attemptId, placementId, "a", student);
+      const scored = await submitAttempt<Attempt>(app, attempt.attemptId, student);
       expect(scored.provisionalScore).toBe(4);
 
       await editAnswerKey(questionId, "c");
 
-      const reread = await read(attempt.attemptId);
+      const reread = await readAttempt<Attempt>(app, attempt.attemptId, student);
       expect(reread.provisionalScore).toBe(4);
       expect(questionAt(reread, placementId).outcome).toBe("CORRECT");
     });
@@ -744,12 +710,12 @@ describe("attempt scoring", () => {
       });
       const placementId = await placeQuestion(database, testId, questionId);
 
-      const attempt = await start(testId);
-      await submit(attempt.attemptId);
+      const attempt = await openAttempt<Attempt>(app, testId, student);
+      await submitAttempt(app, attempt.attemptId, student);
 
       await editAnswerKey(questionId, "b");
 
-      const reread = await read(attempt.attemptId);
+      const reread = await readAttempt<Attempt>(app, attempt.attemptId, student);
       expect(questionAt(reread, placementId).prompt).toEqual(
         text("Original prompt"),
       );
@@ -763,11 +729,11 @@ describe("attempt scoring", () => {
         marks: "4",
       });
 
-      const attempt = await start(testId);
+      const attempt = await openAttempt<Attempt>(app, testId, student);
       await editAnswerKey(questionId, "c");
 
-      await answer(attempt.attemptId, placementId, "a");
-      const scored = await submit(attempt.attemptId);
+      await answerQuestion(app, attempt.attemptId, placementId, "a", student);
+      const scored = await submitAttempt<Attempt>(app, attempt.attemptId, student);
 
       expect(questionAt(scored, placementId).questionVersion).toBe(1);
       expect(scored.provisionalScore).toBe(4);
@@ -780,16 +746,16 @@ describe("attempt scoring", () => {
         marks: "4",
       });
 
-      const first = await start(testId);
-      await submit(first.attemptId);
+      const first = await openAttempt<Attempt>(app, testId, student);
+      await submitAttempt(app, first.attemptId, student);
 
       await editAnswerKey(questionId, "c");
 
-      const second = await start(testId);
+      const second = await openAttempt<Attempt>(app, testId, student);
       expect(questionAt(second, placementId).questionVersion).toBe(2);
 
-      await answer(second.attemptId, placementId, "c");
-      const scored = await submit(second.attemptId);
+      await answerQuestion(app, second.attemptId, placementId, "c", student);
+      const scored = await submitAttempt<Attempt>(app, second.attemptId, student);
       expect(scored.provisionalScore).toBe(4);
     });
 
@@ -807,7 +773,7 @@ describe("attempt scoring", () => {
         order: 2,
       });
 
-      const attempt = await start(testId);
+      const attempt = await openAttempt<Attempt>(app, testId, student);
 
       expect(questionAt(attempt, stablePlacement).questionVersion).toBe(1);
       expect(questionAt(attempt, editedPlacement).questionVersion).toBe(2);

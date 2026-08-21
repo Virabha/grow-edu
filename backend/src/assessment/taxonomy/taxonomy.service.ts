@@ -46,6 +46,17 @@ export interface TaxonomyTreeNode extends TaxonomyNodeView {
   children: TaxonomyTreeNode[];
 }
 
+export interface NodeNameEntry {
+  nodeId: string;
+  parentId: string | null;
+}
+
+export interface ActiveNodeNameIndex {
+  subjects: Map<string, string>;
+  topicsByName: Map<string, NodeNameEntry[]>;
+  subTopicsByName: Map<string, NodeNameEntry[]>;
+}
+
 @Injectable()
 export class TaxonomyService {
   constructor(
@@ -315,6 +326,58 @@ export class TaxonomyService {
 
   async descendantsOf(topicId: string): Promise<string[]> {
     return this.subtreeIds(topicId);
+  }
+
+  async hierarchy(): Promise<{
+    parentOf: Map<string, string | null>;
+    nameOf: Map<string, string>;
+  }> {
+    const rows = await this.db.select().from(assessmentTaxonomyNodes);
+    const parentOf = new Map<string, string | null>();
+    const nameOf = new Map<string, string>();
+    for (const row of rows) {
+      parentOf.set(row.nodeId, row.parentId);
+      nameOf.set(row.nodeId, row.name);
+    }
+    return { parentOf, nameOf };
+  }
+
+  async namesForIds(nodeIds: string[]): Promise<Map<string, string>> {
+    if (nodeIds.length === 0) return new Map();
+    const rows = await this.db
+      .select()
+      .from(assessmentTaxonomyNodes)
+      .where(inArray(assessmentTaxonomyNodes.nodeId, nodeIds));
+    const nameOf = new Map<string, string>();
+    for (const row of rows) nameOf.set(row.nodeId, row.name);
+    return nameOf;
+  }
+
+  async activeNodeNameIndex(): Promise<ActiveNodeNameIndex> {
+    const rows = await this.db
+      .select()
+      .from(assessmentTaxonomyNodes)
+      .where(eq(assessmentTaxonomyNodes.isRetired, false));
+
+    const subjects = new Map<string, string>();
+    const topicsByName = new Map<string, NodeNameEntry[]>();
+    const subTopicsByName = new Map<string, NodeNameEntry[]>();
+
+    for (const row of rows) {
+      if (row.kind === "SUBJECT") {
+        subjects.set(row.name, row.nodeId);
+      } else if (row.kind === "TOPIC") {
+        const arr = topicsByName.get(row.name) ?? [];
+        arr.push({ nodeId: row.nodeId, parentId: row.parentId });
+        topicsByName.set(row.name, arr);
+      } else if (row.kind === "SUB_TOPIC") {
+        const arr = subTopicsByName.get(row.name) ?? [];
+        arr.push({ nodeId: row.nodeId, parentId: row.parentId });
+        subTopicsByName.set(row.name, arr);
+      }
+    }
+
+    return { subjects, topicsByName, subTopicsByName };
   }
 
   private async difficultyOrdinalsInUse(): Promise<number[]> {

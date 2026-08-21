@@ -60,6 +60,11 @@ describe("study habits (tickets 17-20)", () => {
     await enrol(database, batchId, student.userId);
     subjectId = await createSubject(database, batchId);
     lessonId = await createLesson(database, subjectId);
+    await request(app.getHttpServer())
+      .put("/settings/studyHabits")
+      .set(...authHeader(app, admin))
+      .send({ inactivityCutoffSeconds: 300, defaultDailyGoalMinutes: 30 })
+      .expect(200);
   });
 
   function postEvent(

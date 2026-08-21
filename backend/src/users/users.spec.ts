@@ -162,6 +162,9 @@ describe('UsersService › revokeOtherDevices — returns correct count', () => 
           where: jest.fn().mockResolvedValue([]),
         }),
       }),
+      delete: jest.fn().mockReturnValue({
+        where: jest.fn().mockResolvedValue([]),
+      }),
     };
 
     const service = await buildService(dbMock);
@@ -169,6 +172,7 @@ describe('UsersService › revokeOtherDevices — returns correct count', () => 
     const result = await service.revokeOtherDevices('user-1', 'dev-current');
 
     expect(result.removed).toBe(3);
+    expect(dbMock.delete).toHaveBeenCalled();
     expect(result.message).toMatch(/signed out/i);
   });
 

@@ -17,13 +17,18 @@ import { BatchCatalogueService } from "./catalogue/batch-catalogue.service";
 import { CurriculumService } from "./catalogue/curriculum.service";
 import { RichLessonService } from "./catalogue/rich-lesson.service";
 import { CertificateController } from "./certificates/certificate.controller";
+import { CertificateIssuanceService } from "./certificates/certificate-issuance.service";
 import { CertificateService } from "./certificates/certificate.service";
+import { CertificateVerificationController } from "./certificates/certificate-verification.controller";
+import { CompletionCriteriaController } from "./certificates/completion-criteria.controller";
+import { CompletionCriteriaService } from "./certificates/completion-criteria.service";
 import { BatchEngagementController } from "./engagement/batch-engagement.controller";
 import { BatchEngagementService } from "./engagement/batch-engagement.service";
 import { DoubtInboxController } from "./engagement/doubt-inbox.controller";
 import { DoubtInboxService } from "./engagement/doubt-inbox.service";
 import { BatchEnrolmentController } from "./enrolment/batch-enrolment.controller";
 import { BatchEnrolmentService } from "./enrolment/batch-enrolment.service";
+import { ContinueLearningService } from "./enrolment/continue-learning.service";
 import { LessonProgressService } from "./enrolment/lesson-progress.service";
 import { TransferService } from "./enrolment/transfer.service";
 import { WaitlistController } from "./enrolment/waitlist.controller";
@@ -76,6 +81,8 @@ import { TimetableService } from "./scheduling/timetable.service";
     BatchEngagementController,
     DoubtInboxController,
     CertificateController,
+    CertificateVerificationController,
+    CompletionCriteriaController,
     BatchCatalogueController,
     CloneBatchController,
     CorporateReportController,
@@ -89,6 +96,7 @@ import { TimetableService } from "./scheduling/timetable.service";
     CurriculumService,
     BatchEnrolmentService,
     LessonProgressService,
+    ContinueLearningService,
     WaitlistService,
     TransferService,
     BatchLifecycleService,
@@ -107,6 +115,8 @@ import { TimetableService } from "./scheduling/timetable.service";
     StudentFeedbackService,
     ReportScheduleService,
     CertificateService,
+    CertificateIssuanceService,
+    CompletionCriteriaService,
     CloneBatchService,
     CorporateReportService,
     ExportJobService,

@@ -173,67 +173,28 @@ export class StudyTimeService {
   ): Promise<void> {
     const now = this.clock.now();
 
-    if (batchId !== null && subjectId !== null) {
-      await this.db
-        .insert(studyTimeDailyTotals)
-        .values({
-          userId,
-          day,
-          batchId,
-          subjectId,
-          seconds,
-          updatedAt: now,
-        })
-        .onConflictDoUpdate({
-          target: [
-            studyTimeDailyTotals.userId,
-            studyTimeDailyTotals.day,
-            studyTimeDailyTotals.batchId,
-            studyTimeDailyTotals.subjectId,
-          ],
-          set: {
-            seconds: sql`${studyTimeDailyTotals.seconds} + ${seconds}`,
-            updatedAt: now,
-          },
-        });
-      return;
-    }
-
-    const existing = await this.db
-      .select()
-      .from(studyTimeDailyTotals)
-      .where(
-        and(
-          eq(studyTimeDailyTotals.userId, userId),
-          eq(studyTimeDailyTotals.day, day),
-          batchId === null
-            ? isNull(studyTimeDailyTotals.batchId)
-            : eq(studyTimeDailyTotals.batchId, batchId),
-          subjectId === null
-            ? isNull(studyTimeDailyTotals.subjectId)
-            : eq(studyTimeDailyTotals.subjectId, subjectId),
-        ),
-      )
-      .limit(1);
-
-    if (existing.length > 0) {
-      await this.db
-        .update(studyTimeDailyTotals)
-        .set({
-          seconds: existing[0].seconds + seconds,
-          updatedAt: now,
-        })
-        .where(eq(studyTimeDailyTotals.totalId, existing[0].totalId));
-    } else {
-      await this.db.insert(studyTimeDailyTotals).values({
+    await this.db
+      .insert(studyTimeDailyTotals)
+      .values({
         userId,
         day,
         batchId,
         subjectId,
         seconds,
         updatedAt: now,
+      })
+      .onConflictDoUpdate({
+        target: [
+          studyTimeDailyTotals.userId,
+          studyTimeDailyTotals.day,
+          studyTimeDailyTotals.batchId,
+          studyTimeDailyTotals.subjectId,
+        ],
+        set: {
+          seconds: sql`${studyTimeDailyTotals.seconds} + ${seconds}`,
+          updatedAt: now,
+        },
       });
-    }
   }
 
   private async cutoff(): Promise<number> {

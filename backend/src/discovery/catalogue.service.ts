@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { LISTED_STATUSES, PUBLIC_BATCH_COLUMNS } from './public-batch';
 import { and, asc, count, eq, gte, inArray } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { DATABASE_CONNECTION } from '../database/database.module';
@@ -9,24 +10,6 @@ import { SettingsService } from '../settings/settings.service';
 import type { CatalogueBatch, CatalogueResponse } from './dto/catalogue-batch.dto';
 import type { CatalogueFilterDto } from './dto/catalogue-filter.dto';
 
-const LISTED_STATUSES = ['UPCOMING', 'ONGOING', 'COMPLETED'] as const;
-
-const PUBLIC_COLUMNS = {
-  batchId: batches.batchId,
-  title: batches.title,
-  slug: batches.slug,
-  shortDescription: batches.shortDescription,
-  thumbnail: batches.thumbnail,
-  price: batches.price,
-  currency: batches.currency,
-  language: batches.language,
-  goalKey: batches.goalKey,
-  deliveryMode: batches.deliveryMode,
-  startDate: batches.startDate,
-  endDate: batches.endDate,
-  status: batches.status,
-  categoryId: batches.categoryId,
-} as const;
 
 @Injectable()
 export class CatalogueService {
@@ -82,7 +65,7 @@ export class CatalogueService {
     const total = totalRow?.total ?? 0;
 
     const data = await this.db
-      .select(PUBLIC_COLUMNS)
+      .select(PUBLIC_BATCH_COLUMNS)
       .from(batches)
       .where(where)
       .orderBy(asc(batches.startDate), asc(batches.batchId))

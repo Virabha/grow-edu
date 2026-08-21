@@ -101,10 +101,11 @@ describe('live sessions (09 + 10 + 11)', () => {
 
   async function unreadCount(actor: TestActor): Promise<number> {
     const { body } = await request(app.getHttpServer())
-      .get('/notifications/unread-count')
+      .get('/notifications?limit=100')
       .set(...authHeader(app, actor))
       .expect(200);
-    return (body as { count: number }).count;
+    const rows = (body as { data?: { title: string }[] }).data ?? [];
+    return rows.filter((n) => n.title.startsWith('Class starting soon')).length;
   }
 
   async function auditEntries(action: string) {

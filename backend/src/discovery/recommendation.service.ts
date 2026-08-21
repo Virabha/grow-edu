@@ -1,29 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, asc, eq, inArray, notInArray } from 'drizzle-orm';
+import { LISTED_STATUSES, PUBLIC_BATCH_COLUMNS } from './public-batch';
+import { and, asc, eq, inArray, notInArray, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { DATABASE_CONNECTION } from '../database/database.module';
 import * as schema from '../database/schema';
 import { batches, batchEnrollments, studentProfiles } from '../database/schema';
 import type { CatalogueBatch } from './dto/catalogue-batch.dto';
 
-const LISTED_STATUSES = ['UPCOMING', 'ONGOING', 'COMPLETED'] as const;
-
-const PUBLIC_COLUMNS = {
-  batchId: batches.batchId,
-  title: batches.title,
-  slug: batches.slug,
-  shortDescription: batches.shortDescription,
-  thumbnail: batches.thumbnail,
-  price: batches.price,
-  currency: batches.currency,
-  language: batches.language,
-  goalKey: batches.goalKey,
-  deliveryMode: batches.deliveryMode,
-  startDate: batches.startDate,
-  endDate: batches.endDate,
-  status: batches.status,
-  categoryId: batches.categoryId,
-} as const;
 
 @Injectable()
 export class RecommendationService {
@@ -62,7 +45,7 @@ export class RecommendationService {
 
     if (!profile?.goalKey) {
       const rows = await this.db
-        .select(PUBLIC_COLUMNS)
+        .select(PUBLIC_BATCH_COLUMNS)
         .from(batches)
         .where(and(...baseConditions))
         .orderBy(asc(batches.startDate), asc(batches.batchId))
@@ -74,13 +57,28 @@ export class RecommendationService {
       ...baseConditions,
       eq(batches.goalKey, profile.goalKey),
     ];
-    const rows = await this.db
-      .select(PUBLIC_COLUMNS)
+
+    if (!profile.level) {
+      const rows = await this.db
+        .select(PUBLIC_BATCH_COLUMNS)
+        .from(batches)
+        .where(and(...goalConditions))
+        .orderBy(asc(batches.startDate), asc(batches.batchId))
+        .limit(10);
+      return rows as CatalogueBatch[];
+    }
+
+    const levelRank = sql<number>`case when ${batches.levelKey} = ${profile.level} then 0 else 1 end`;
+
+    const ranked = await this.db
+      .select({ ...PUBLIC_BATCH_COLUMNS, levelRank })
       .from(batches)
       .where(and(...goalConditions))
-      .orderBy(asc(batches.startDate), asc(batches.batchId))
+      .orderBy(levelRank, asc(batches.startDate), asc(batches.batchId))
       .limit(10);
 
-    return rows as CatalogueBatch[];
+    return ranked.map(
+      ({ levelRank: _rank, ...batch }) => batch,
+    ) as CatalogueBatch[];
   }
 }

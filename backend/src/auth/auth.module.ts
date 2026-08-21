@@ -16,6 +16,7 @@ import { ThrottlerExceptionFilter } from '../common/throttling/throttler-excepti
 import { PerEmailThrottlerGuard } from './guards/per-email-throttler.guard';
 import { PerPhoneThrottlerGuard } from './guards/per-phone-throttler.guard';
 import { IdentityService } from './identity.service';
+import { DiscoveryModule } from '../discovery/discovery.module';
 import { PhoneSignInService } from './phone-sign-in.service';
 import { PhoneSignInController } from './phone-sign-in.controller';
 import { GoogleSignInService } from './google-sign-in.service';
@@ -32,6 +33,7 @@ import { HttpGoogleTokenVerifier } from './ports/http-google-token-verifier';
     DatabaseModule,
     PassportModule,
     EmailModule,
+    DiscoveryModule,
     JwtModule.registerAsync({
       useFactory: async (configService: AppConfigService) => ({
         secret: configService.jwtSecret,

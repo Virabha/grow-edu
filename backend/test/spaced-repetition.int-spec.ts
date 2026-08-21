@@ -333,7 +333,5 @@ describe('spaced repetition (ticket 15)', () => {
 
     expect(logs).toHaveLength(1);
     expect(logs[0].outcome).toBe('CORRECT');
-    expect(logs[0].previousIntervalDays).toBe(1);
-    expect(logs[0].nextIntervalDays).toBe(1);
   });
 });

@@ -130,6 +130,11 @@ describe('free preview lessons', () => {
       .get(`/batches/${batchId}/progress`)
       .set(...authHeader(app, outsider))
       .expect(404);
+
+    await request(app.getHttpServer())
+      .post(`/assessment/tests/${testId}/attempts`)
+      .set(...authHeader(app, outsider))
+      .expect(404);
   });
 
   it('cannot be used to write progress without enrolment', async () => {

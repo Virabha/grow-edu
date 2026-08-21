@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { and, asc, eq, isNull, sql } from 'drizzle-orm';
+import { deriveAuthorKind } from './community.util';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 
 import { CLOCK, Clock } from '../common/clock';
@@ -16,14 +17,6 @@ import { SettingsService } from '../settings/settings.service';
 import { BatchAccessService, Viewer } from '../batches/access/batch-access.service';
 import { CreateFeedPostDto } from './dto/create-feed-post.dto';
 import { RemoveFeedPostDto } from './dto/remove-feed-post.dto';
-
-type AuthorKind = 'STUDENT' | 'INSTRUCTOR' | 'ADMIN';
-
-function deriveAuthorKind(role: string): AuthorKind {
-  if (role === 'PLATFORM_ADMIN') return 'ADMIN';
-  if (role === 'INSTRUCTOR') return 'INSTRUCTOR';
-  return 'STUDENT';
-}
 
 type Post = typeof batchFeedPosts.$inferSelect;
 

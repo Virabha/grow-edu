@@ -8,10 +8,12 @@ import {
 import { and, eq } from "drizzle-orm";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import * as PDFDocument from "pdfkit";
+import { CLOCK, Clock } from "../../common/clock";
 import { DATABASE_CONNECTION } from "../../database/database.module";
 import * as schema from "../../database/schema";
 import {
   batchCertificates,
+  batchCompletionCriteria,
   batchQuizAttempts,
   batchQuizzes,
   batches,
@@ -33,12 +35,11 @@ export interface CertificateRow {
   revokedAt: Date | null;
 }
 
-const MINIMUM_ATTENDANCE_PERCENT = 60;
-
 @Injectable()
 export class CertificateService {
   constructor(
     @Inject(DATABASE_CONNECTION) private readonly db: DbType,
+    @Inject(CLOCK) private readonly clock: Clock,
     private readonly notificationsService: NotificationsService,
     private readonly certificateTemplateService: CertificateTemplateService,
     private readonly scheduling: BatchSchedulingService,
@@ -46,7 +47,7 @@ export class CertificateService {
   ) {}
 
   private generateCertificateNumber(batchId: string, userId: string): string {
-    const year = new Date().getFullYear();
+    const year = this.clock.now().getFullYear();
     const b = batchId.slice(0, 6).toUpperCase();
     const u = userId.slice(0, 6).toUpperCase();
     return `GRO-${b}-${u}-${year}`;
@@ -64,11 +65,19 @@ export class CertificateService {
     }
 
     if (opts.requireCompletion) {
-      const { percent } = await this.scheduling.attendanceFor(batchId, userId);
-      if (percent !== null && percent < MINIMUM_ATTENDANCE_PERCENT) {
-        throw new BadRequestException(
-          `Attendance ${percent}% below required ${MINIMUM_ATTENDANCE_PERCENT}%`
-        );
+      const [criteria] = await this.db
+        .select()
+        .from(batchCompletionCriteria)
+        .where(eq(batchCompletionCriteria.batchId, batchId))
+        .limit(1);
+
+      if (criteria && criteria.minAttendancePercent > 0) {
+        const { percent } = await this.scheduling.attendanceFor(batchId, userId);
+        if (percent !== null && percent < criteria.minAttendancePercent) {
+          throw new BadRequestException(
+            `Attendance ${percent}% below required ${criteria.minAttendancePercent}%`
+          );
+        }
       }
     }
 
@@ -105,10 +114,19 @@ export class CertificateService {
     return created as CertificateRow;
   }
 
-  async revoke(batchId: string, userId: string) {
+  async revoke(
+    batchId: string,
+    userId: string,
+    revokedBy: string,
+    revocationReason?: string,
+  ) {
     await this.db
       .update(batchCertificates)
-      .set({ revokedAt: new Date() })
+      .set({
+        revokedAt: this.clock.now(),
+        revokedBy,
+        revocationReason: revocationReason ?? null,
+      })
       .where(
         and(
           eq(batchCertificates.batchId, batchId),
@@ -161,6 +179,43 @@ export class CertificateService {
       .from(batchCertificates)
       .innerJoin(batches, eq(batchCertificates.batchId, batches.batchId))
       .where(eq(batchCertificates.userId, userId));
+  }
+
+  async verify(verificationCode: string) {
+    const [row] = await this.db
+      .select({
+        cert: {
+          issuedAt: batchCertificates.issuedAt,
+          revokedAt: batchCertificates.revokedAt,
+        },
+        batch: { title: batches.title },
+        user: {
+          firstName: users.firstName,
+          lastName: users.lastName,
+        },
+      })
+      .from(batchCertificates)
+      .innerJoin(batches, eq(batchCertificates.batchId, batches.batchId))
+      .innerJoin(users, eq(batchCertificates.userId, users.userId))
+      .where(eq(batchCertificates.verificationCode, verificationCode))
+      .limit(1);
+
+    if (!row) return null;
+
+    const template = await this.certificateTemplateService.get();
+    const issuerName = template.signatoryName || "groEdu";
+    const holderName =
+      [row.user.firstName, row.user.lastName].filter(Boolean).join(" ") ||
+      "Certificate Holder";
+
+    return {
+      holderName,
+      batchTitle: row.batch.title,
+      issuedAt: row.cert.issuedAt.toISOString(),
+      issuerName,
+      revoked: row.cert.revokedAt !== null,
+      revokedAt: row.cert.revokedAt ? row.cert.revokedAt.toISOString() : null,
+    };
   }
 
   async renderPdf(batchId: string, userId: string): Promise<Buffer> {

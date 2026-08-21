@@ -288,8 +288,9 @@ export class BatchCatalogueController {
     @Param("batchId") batchId: string,
     @Param("lessonId") lessonId: string,
     @Body("content") content: unknown,
+    @CurrentUser() user: AuthedUser,
   ) {
-    return this.rich.put(batchId, lessonId, content);
+    return this.rich.put(batchId, lessonId, content, user);
   }
 
   @BatchAccess("READ")

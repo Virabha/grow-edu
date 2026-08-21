@@ -1,5 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
+import { eq } from 'drizzle-orm';
+import { assessmentAttempts } from '../src/database/schema';
 
 import { createTestApp, authHeader, TestActor } from './support/test-app';
 import { createTestDatabase, truncateAll, TestDatabase } from './support/test-database';
@@ -168,12 +170,11 @@ describe('rich content lessons', () => {
     expect(mine.body).toHaveLength(1);
     expect(mine.body[0]).toMatchObject({ questionId, outcome: 'CORRECT' });
 
-    const attempts = await request(app.getHttpServer())
-      .get('/assessment/attempts/mine')
-      .set(...authHeader(app, student));
-    if (attempts.status === 200) {
-      expect(attempts.body).toEqual([]);
-    }
+    const attemptRows = await database.db
+      .select()
+      .from(assessmentAttempts)
+      .where(eq(assessmentAttempts.userId, student.userId));
+    expect(attemptRows).toHaveLength(0);
   });
 
   it('refuses an inline answer to a question that is not in the lesson', async () => {

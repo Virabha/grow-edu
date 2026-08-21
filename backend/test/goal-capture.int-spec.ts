@@ -4,6 +4,8 @@ import { createTestDatabase, truncateAll, TestDatabase } from './support/test-da
 import { createTestApp, authHeader, TestActor } from './support/test-app';
 import { TestClock } from './support/test-clock';
 import { createBatch, createUser } from './support/factories';
+import { eq } from 'drizzle-orm';
+import { studentProfiles, users } from '../src/database/schema';
 
 describe('Goal Capture (Ticket 28)', () => {
   let database: TestDatabase;
@@ -131,5 +133,38 @@ describe('Goal Capture (Ticket 28)', () => {
       .expect(200);
 
     expect(res.body.data.length).toBe(2);
+  });
+  it('captures a goal at sign-up and stores it against the account', async () => {
+    const email = `signup-goal-${Date.now()}@example.test`;
+    await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({ email, password: 'Str0ng!Pass', firstName: 'Ada', goalKey: 'NEET' })
+      .expect(201);
+
+    const [created] = await database.db
+      .select({ userId: users.userId })
+      .from(users)
+      .where(eq(users.email, email));
+
+    const [profile] = await database.db
+      .select()
+      .from(studentProfiles)
+      .where(eq(studentProfiles.userId, created.userId));
+
+    expect(profile.goalKey).toBe('NEET');
+  });
+
+  it('refuses a sign-up goal that is not in the owner-managed set', async () => {
+    const email = `signup-bad-goal-${Date.now()}@example.test`;
+    await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({ email, password: 'Str0ng!Pass', goalKey: 'ASTROPHYSICS' })
+      .expect(400);
+
+    const rows = await database.db
+      .select({ userId: users.userId })
+      .from(users)
+      .where(eq(users.email, email));
+    expect(rows).toEqual([]);
   });
 });

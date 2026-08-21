@@ -1,4 +1,6 @@
 import { INestApplication } from "@nestjs/common";
+import { eq } from "drizzle-orm";
+import { assessmentTests, batchEnrollments } from "../src/database/schema";
 import * as request from "supertest";
 
 import {
@@ -81,6 +83,21 @@ describe("question performance and cohort failure", () => {
     });
   }
 
+  async function enrolIfScoped(
+    testId: string,
+    student: TestActor,
+  ): Promise<void> {
+    const [scoped] = await database.db
+      .select({ batchId: assessmentTests.batchId })
+      .from(assessmentTests)
+      .where(eq(assessmentTests.testId, testId));
+    if (!scoped?.batchId) return;
+    await database.db
+      .insert(batchEnrollments)
+      .values({ batchId: scoped.batchId, userId: student.userId })
+      .onConflictDoNothing();
+  }
+
   async function sit(
     testId: string,
     placementId: string,
@@ -88,6 +105,8 @@ describe("question performance and cohort failure", () => {
     response: unknown,
     seconds = 0,
   ): Promise<void> {
+    await enrolIfScoped(testId, student);
+
     const { body } = await request(app.getHttpServer())
       .post(`/assessment/tests/${testId}/attempts`)
       .set(...authHeader(app, student))
@@ -244,6 +263,7 @@ describe("question performance and cohort failure", () => {
 
       for (let i = 0; i < 3; i += 1) {
         const student = await createUser(database, "LEARNER");
+        await enrolIfScoped(testId, student);
         const { body } = await request(app.getHttpServer())
           .post(`/assessment/tests/${testId}/attempts`)
           .set(...authHeader(app, student))
@@ -401,6 +421,7 @@ describe("question performance and cohort failure", () => {
     firstResponse: string,
     secondResponse: string,
   ): Promise<void> {
+    await enrolIfScoped(testId, student);
     const { body } = await request(app.getHttpServer())
       .post(`/assessment/tests/${testId}/attempts`)
       .set(...authHeader(app, student))

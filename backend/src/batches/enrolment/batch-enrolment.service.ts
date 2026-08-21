@@ -13,17 +13,13 @@ import * as schema from "../../database/schema";
 import {
   batchEnrollments,
   batches,
-  lessonProgress,
   payments,
   users,
 } from "../../database/schema";
 import { Queryable } from "../../database/transaction";
 import { NotificationsService } from "../../notifications/notifications.service";
 import { PaymentService } from "../../payment/payment.service";
-import {
-  BatchAccessService,
-  SignedInViewer,
-} from "../access/batch-access.service";
+import { BatchAccessService } from "../access/batch-access.service";
 import { BatchMediaService } from "../batch-media.service";
 import { CreateBatchEnrollmentsDto } from "../dto/batch-enrollment.dto";
 import { WaitlistService } from "./waitlist.service";

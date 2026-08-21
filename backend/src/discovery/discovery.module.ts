@@ -30,5 +30,6 @@ import { RecommendationService } from './recommendation.service';
     GoalService,
     RecommendationService,
   ],
+  exports: [GoalService],
 })
 export class DiscoveryModule {}

@@ -86,8 +86,10 @@ export class CertificateController {
   revoke(
     @Param("batchId") batchId: string,
     @Param("userId") userId: string,
+    @CurrentUser() actor: AuthedUser,
+    @Body() body: { reason?: string },
   ) {
-    return this.certificates.revoke(batchId, userId);
+    return this.certificates.revoke(batchId, userId, actor.userId, body?.reason);
   }
 
   @ApiOperation({ summary: "Download a student's certificate (admin)" })

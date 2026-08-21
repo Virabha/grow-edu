@@ -588,12 +588,17 @@ export const GROUPS: Record<string, GroupDefinition> = {
       { key: 'cataloguePageSize', label: 'Catalogue Page Size', type: 'number' },
       { key: 'lowBandwidthImageKilobytes', label: 'Low-Bandwidth Image Threshold (KB)', type: 'number', help: 'Images larger than this are suppressed when a student turns low-bandwidth mode on.' },
       { key: 'diagnosticQuestionCount', label: 'Diagnostic Test Questions', type: 'number' },
+      { key: 'diagnosticTests', label: 'Diagnostic Test Per Goal', type: 'textarea', help: 'One per line, written as goalKey|testId. Generate the test itself from the question bank by criteria first.' },
+      { key: 'diagnosticLevels', label: 'Diagnostic Level Bands', type: 'textarea', help: 'One per line, written as levelKey|minimumPercent|what it means. Lowest band first.' },
     ],
     defaults: {
       goalOptions: 'JEE|JEE\nNEET|NEET\nUPSC|UPSC\nCAT|CAT\nFOUNDATION|School Foundation',
       cataloguePageSize: 20,
       lowBandwidthImageKilobytes: 100,
       diagnosticQuestionCount: 15,
+      diagnosticTests: '',
+      diagnosticLevels:
+        'FOUNDATION|0|Start with the fundamentals before attempting exam-level questions.\nINTERMEDIATE|40|You have the basics. Focus on problem-solving speed and accuracy.\nADVANCED|70|You are exam-ready. Concentrate on the hardest questions and mock tests.',
     },
   },
 

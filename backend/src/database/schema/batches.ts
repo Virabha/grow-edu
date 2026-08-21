@@ -60,6 +60,7 @@ export const batches = pgTable(
     status: batchStatusEnum("status").notNull().default("DRAFT"),
     visibility: batchVisibilityEnum("visibility").notNull().default("PUBLIC"),
     goalKey: text("goal_key"),
+    levelKey: text("level_key"),
     isDeleted: boolean("is_deleted").notNull().default(false),
     createdBy: text("created_by").notNull(),
     createdAt: timestamp("created_at").notNull().defaultNow(),

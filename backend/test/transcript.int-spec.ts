@@ -29,6 +29,12 @@ const BOUNDARY_SEGMENTS = [
   { ordinal: 3, startSeconds: 60, endSeconds: 90, body: 'the lazy dog' },
 ];
 
+const ORDERING_SEGMENTS = [
+  { ordinal: 1, startSeconds: 10, endSeconds: 40, body: 'momentum acts on all objects' },
+  { ordinal: 2, startSeconds: 50, endSeconds: 80, body: 'momentum momentum transfers between bodies' },
+  { ordinal: 3, startSeconds: 100, endSeconds: 130, body: 'momentum momentum momentum momentum in elastic collisions' },
+];
+
 describe('transcript (tickets 05 and 06)', () => {
   let database: TestDatabase;
   let app: INestApplication;
@@ -212,15 +218,35 @@ describe('transcript (tickets 05 and 06)', () => {
     });
 
     it('orders matches by position in the lecture, not by relevance score', async () => {
+      const orderBatch = await createBatch(database, admin.userId);
+      const orderSubject = await createSubject(database, orderBatch);
+      const orderLesson = await createLesson(database, orderSubject, {
+        type: 'VIDEO',
+        videoUrl: 'https://cdn.test/ordering.m3u8',
+        duration: 140,
+        order: 1,
+        status: 'READY',
+      });
+      await enrol(database, orderBatch, student.userId);
+
+      (fakeProvider.transcribe as jest.Mock).mockResolvedValueOnce(ORDERING_SEGMENTS);
+
+      await request(app.getHttpServer())
+        .post(`/batches/${orderBatch}/lessons/${orderLesson}/transcript`)
+        .set(...authHeader(app, admin))
+        .expect(201);
+
+      await queue.enqueue(TRANSCRIPT_JOB, undefined);
+
       const res = await request(app.getHttpServer())
-        .get(`/batches/${batchId}/lessons/${lessonId}/transcript/search?q=apple`)
+        .get(`/batches/${orderBatch}/lessons/${orderLesson}/transcript/search?q=momentum`)
         .set(...authHeader(app, student))
         .expect(200);
 
-      const matches = res.body.matches;
-      expect(matches.length).toBeGreaterThan(0);
+      const matches = res.body.matches as Array<{ startSeconds: number }>;
+      expect(matches.length).toBeGreaterThanOrEqual(3);
       for (let i = 1; i < matches.length; i++) {
-        expect(matches[i].startSeconds).toBeGreaterThanOrEqual(matches[i - 1].startSeconds);
+        expect(matches[i].startSeconds).toBeGreaterThan(matches[i - 1].startSeconds);
       }
     });
 

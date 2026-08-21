@@ -1,4 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
+import { toDayString } from "../common/day";
 import { eq } from "drizzle-orm";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { CLOCK, Clock } from "../common/clock";
@@ -72,7 +73,10 @@ export class StreakService {
     return {
       currentStreak: row.currentStreak,
       longestStreak: row.longestStreak,
-      lastQualifyingDay: row.lastQualifyingDay,
+      lastQualifyingDay:
+        row.lastQualifyingDay === null
+          ? null
+          : toDayString(row.lastQualifyingDay),
     };
   }
 
@@ -105,16 +109,22 @@ export class StreakService {
       return;
     }
 
-    if (existing.lastQualifyingDay === today) {
+    const lqd = existing.lastQualifyingDay;
+    const lastDayStr: string | null = lqd === null ? null : toDayString(lqd);
+
+    if (lastDayStr === today) {
       return;
     }
 
-    const lastDay = existing.lastQualifyingDay
-      ? new Date(existing.lastQualifyingDay + "T00:00:00.000Z")
+    const lastDay = lastDayStr
+      ? new Date(lastDayStr + "T00:00:00.000Z")
       : null;
 
     const daysSinceLast = lastDay
-      ? Math.round((now.getTime() - lastDay.getTime()) / MS_PER_DAY)
+      ? Math.round(
+          (new Date(today + "T00:00:00.000Z").getTime() - lastDay.getTime()) /
+            MS_PER_DAY,
+        )
       : null;
 
     let currentStreak: number;

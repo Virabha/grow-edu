@@ -13,7 +13,6 @@ import {
   assessmentQuestionVersions,
   assessmentQuestions,
   lessonInlineAnswers,
-  lessons,
   richLessonContent,
   RichLessonBlock,
 } from "../../database/schema";
@@ -38,8 +37,13 @@ export class RichLessonService {
     @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
-  async put(batchId: string, lessonId: string, body: unknown) {
-    const lesson = await this.requireRichLesson(batchId, lessonId);
+  async put(
+    batchId: string,
+    lessonId: string,
+    body: unknown,
+    viewer: Viewer,
+  ) {
+    const lesson = await this.requireRichLesson(batchId, lessonId, viewer);
     const blocks = parseRichBlocks(body, "content");
     const questionIds = inlineQuestionIds(blocks);
     await this.assertQuestionsExist(questionIds);
@@ -252,14 +256,17 @@ export class RichLessonService {
     }
   }
 
-  private async requireRichLesson(batchId: string, lessonId: string) {
-    const [lesson] = await this.db
-      .select()
-      .from(lessons)
-      .where(and(eq(lessons.lessonId, lessonId), eq(lessons.isDeleted, false)));
-    if (!lesson) {
-      throw new NotFoundException("No such lesson on this batch");
-    }
+  private async requireRichLesson(
+    batchId: string,
+    lessonId: string,
+    viewer: Viewer,
+  ) {
+    const { lesson } = await this.access.requireForLesson(
+      lessonId,
+      viewer,
+      "MANAGE",
+      batchId,
+    );
     if (lesson.type !== "RICH") {
       throw new BadRequestException(
         "Only a rich lesson can carry structured content",

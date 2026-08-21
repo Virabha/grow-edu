@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { and, eq } from 'drizzle-orm';
+import { CLOCK, Clock } from '../common/clock';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as crypto from 'crypto';
 import { DATABASE_CONNECTION } from '../database/database.module';
@@ -26,6 +27,7 @@ export class VideoEncodingService {
     @Inject(BUNNY_CLIENT) private readonly bunny: BunnyClient,
     private readonly config: AppConfigService,
     private readonly emailService: EmailService,
+    @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
   private get libraryId(): string {
@@ -81,7 +83,7 @@ export class VideoEncodingService {
     const videoData = await this.bunny.createVideo(this.libraryId, title);
     const videoId = videoData.guid;
 
-    const expirationTime = Math.floor(Date.now() / 1000) + 3600;
+    const expirationTime = Math.floor(this.clock.now().getTime() / 1000) + 3600;
     const signaturePayload = this.libraryId + this.apiKey + expirationTime + videoId;
     const signature = crypto
       .createHash('sha256')
@@ -101,7 +103,7 @@ export class VideoEncodingService {
     if (renditionKind === 'VIDEO') {
       await this.db
         .update(schema.lessons)
-        .set({ status: 'PROCESSING', updatedAt: new Date() })
+        .set({ status: 'PROCESSING', updatedAt: this.clock.now() })
         .where(eq(schema.lessons.lessonId, lessonId));
     }
 
@@ -365,8 +367,8 @@ export class VideoEncodingService {
 
     const updateData: Partial<typeof schema.videoEncodingJobs.$inferInsert> = {
       status,
-      updatedAt: new Date(),
-      completedAt: new Date(),
+      updatedAt: this.clock.now(),
+      completedAt: this.clock.now(),
     };
 
     if (status === 'COMPLETED') {
@@ -397,7 +399,7 @@ export class VideoEncodingService {
             .set({
               audioUrl,
               audioDuration: duration ?? null,
-              updatedAt: new Date(),
+              updatedAt: this.clock.now(),
             })
             .where(eq(schema.lessons.lessonId, job.lessonId));
         } else {
@@ -406,7 +408,7 @@ export class VideoEncodingService {
             .set({
               status: 'READY',
               duration: duration ?? null,
-              updatedAt: new Date(),
+              updatedAt: this.clock.now(),
             })
             .where(eq(schema.lessons.lessonId, job.lessonId));
           await this.notifyOwner(job.batchId, lesson, 'COMPLETED');
@@ -425,7 +427,7 @@ export class VideoEncodingService {
         if (lesson) {
           await this.db
             .update(schema.lessons)
-            .set({ status: 'DRAFT', updatedAt: new Date() })
+            .set({ status: 'DRAFT', updatedAt: this.clock.now() })
             .where(eq(schema.lessons.lessonId, job.lessonId));
           await this.notifyOwner(job.batchId, lesson, 'FAILED');
         }

@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger, OnModuleInit } from "@nestjs/common";
+import { toDayString } from "../common/day";
 import { and, eq, gte, lt, sum } from "drizzle-orm";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { CLOCK, Clock } from "../common/clock";
@@ -96,7 +97,8 @@ export class ReportCardService implements OnModuleInit {
     const byDay: Record<string, number> = {};
     const bySubject: Record<string, number> = {};
     for (const row of dailyRows) {
-      byDay[row.day] = (byDay[row.day] ?? 0) + (row.seconds ?? 0);
+      const dayKey = toDayString(row.day);
+      byDay[dayKey] = (byDay[dayKey] ?? 0) + (row.seconds ?? 0);
       const key = row.subjectId ?? "unknown";
       bySubject[key] = (bySubject[key] ?? 0) + (row.seconds ?? 0);
     }

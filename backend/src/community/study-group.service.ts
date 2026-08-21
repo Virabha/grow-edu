@@ -7,6 +7,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { and, asc, count, eq, inArray, isNull } from 'drizzle-orm';
+import { deriveAuthorKind } from './community.util';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 
 import { CLOCK, Clock } from '../common/clock';
@@ -23,14 +24,6 @@ import { BatchAccessService, Viewer } from '../batches/access/batch-access.servi
 import { CreateStudyGroupDto } from './dto/create-study-group.dto';
 import { SendGroupMessageDto } from './dto/send-group-message.dto';
 import { RemoveGroupMessageDto } from './dto/remove-group-message.dto';
-
-type AuthorKind = 'STUDENT' | 'INSTRUCTOR' | 'ADMIN';
-
-function deriveAuthorKind(role: string): AuthorKind {
-  if (role === 'PLATFORM_ADMIN') return 'ADMIN';
-  if (role === 'INSTRUCTOR') return 'INSTRUCTOR';
-  return 'STUDENT';
-}
 
 type Message = typeof studyGroupMessages.$inferSelect;
 type StudentMessageView = Omit<Message, 'removedAt' | 'removedBy' | 'removalReason'>;
@@ -105,25 +98,27 @@ export class StudyGroupService {
       );
     }
     const now = this.clock.now();
-    const [group] = await this.db
-      .insert(studyGroups)
-      .values({
+    return this.db.transaction(async (tx) => {
+      const [group] = await tx
+        .insert(studyGroups)
+        .values({
+          batchId,
+          name: dto.name,
+          description: dto.description ?? null,
+          memberCap,
+          createdBy: viewer.userId,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .returning();
+      await tx.insert(studyGroupMembers).values({
+        groupId: group.groupId,
         batchId,
-        name: dto.name,
-        description: dto.description ?? null,
-        memberCap,
-        createdBy: viewer.userId,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .returning();
-    await this.db.insert(studyGroupMembers).values({
-      groupId: group.groupId,
-      batchId,
-      userId: viewer.userId,
-      joinedAt: now,
+        userId: viewer.userId,
+        joinedAt: now,
+      });
+      return group;
     });
-    return group;
   }
 
   async getGroup(batchId: string, groupId: string, viewer: Viewer) {

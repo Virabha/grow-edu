@@ -19,6 +19,7 @@ import { EmailService } from '../email/email.service';
 import { TokenService } from './token.service';
 import { AppConfigService } from '../config';
 import { IdentityService } from './identity.service';
+import { GoalService } from '../discovery/goal.service';
 
 export interface UserPayload {
   id: string;
@@ -66,6 +67,7 @@ export class AuthService {
     private tokenService: TokenService,
     private configService: AppConfigService,
     private readonly identityService: IdentityService,
+    private readonly goalService: GoalService,
   ) {}
 
   async validateUser(email: string, password: string): Promise<UserPayload | null> {
@@ -125,6 +127,13 @@ export class AuthService {
       throw new ConflictException('User with this email already exists');
     }
 
+    if (dto.goalKey) {
+      const options = await this.goalService.getGoalOptions();
+      if (!options.some((option) => option.key === dto.goalKey)) {
+        throw new BadRequestException('That is not a goal you can choose');
+      }
+    }
+
     const hashedPassword = await this.hashPassword(dto.password);
 
     const [newUser] = await this.db
@@ -146,6 +155,10 @@ export class AuthService {
       });
 
     await this.identityService.linkIdentity(newUser.userId, 'PASSWORD', newUser.email);
+
+    if (dto.goalKey) {
+      await this.goalService.setGoal(newUser.userId, dto.goalKey);
+    }
 
     try {
       const verificationToken = await this.tokenService.generateToken(

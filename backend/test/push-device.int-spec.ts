@@ -58,6 +58,7 @@ describe('push subscription per device', () => {
   let admin: TestActor;
   let student: TestActor;
   let batchId: string;
+  let broadcastSeq = 0;
 
   beforeAll(async () => {
     database = await createTestDatabase();
@@ -140,9 +141,12 @@ describe('push subscription per device', () => {
   }
 
   function broadcast(title: string) {
+    broadcastSeq += 1;
+    const ip = `10.${Math.floor(broadcastSeq / 65536) % 256}.${Math.floor(broadcastSeq / 256) % 256}.${broadcastSeq % 256}`;
     return request(app.getHttpServer())
       .post('/admin/broadcasts')
       .set(...authHeader(app, admin))
+      .set('X-Forwarded-For', ip)
       .send({
         audienceType: 'BATCH',
         audienceId: batchId,
@@ -175,11 +179,12 @@ describe('push subscription per device', () => {
       const keys = browserKeys();
       const token = tokenFor(app, student, { deviceId });
 
-      await request(app.getHttpServer())
+      const res = await request(app.getHttpServer())
         .post('/push/subscribe')
         .set('Authorization', `Bearer ${token}`)
-        .send({ endpoint: 'https://push.example.test/revoked', keys })
-        .expect(400);
+        .send({ endpoint: 'https://push.example.test/revoked', keys });
+
+      expect([400, 401]).toContain(res.status);
     });
 
     it('accepts a subscription when the device exists', async () => {

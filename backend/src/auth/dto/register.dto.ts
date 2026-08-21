@@ -33,5 +33,10 @@ export class RegisterDto {
   @MinLength(2, { message: 'Last name must be at least 2 characters' })
   @MaxLength(50, { message: 'Last name must not exceed 50 characters' })
   lastName?: string;
+
+  @ApiPropertyOptional({ example: 'JEE', description: 'The goal the student is studying towards' })
+  @IsOptional()
+  @IsString()
+  goalKey?: string;
 }
 

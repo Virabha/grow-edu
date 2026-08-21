@@ -5,6 +5,7 @@ export enum UserRole {
   INSTRUCTOR = 'INSTRUCTOR',
   CORPORATE_ADMIN = 'CORPORATE_ADMIN',
   PLATFORM_ADMIN = 'PLATFORM_ADMIN',
+  PARENT = 'PARENT',
 }
 
 export type UserRoleName = `${UserRole}`;

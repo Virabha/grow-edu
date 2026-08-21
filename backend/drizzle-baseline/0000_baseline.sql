@@ -976,6 +976,7 @@ CREATE TABLE IF NOT EXISTS "batches" (
 	"status" "batch_status" DEFAULT 'DRAFT' NOT NULL,
 	"visibility" "batch_visibility" DEFAULT 'PUBLIC' NOT NULL,
 	"goal_key" text,
+	"level_key" text,
 	"is_deleted" boolean DEFAULT false NOT NULL,
 	"created_by" text NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
@@ -2358,3 +2359,10 @@ CREATE INDEX IF NOT EXISTS "search_documents_vector_idx"
 CREATE INDEX IF NOT EXISTS "lesson_transcript_segments_body_idx"
   ON "lesson_transcript_segments"
   USING gin (to_tsvector('english', "body"));
+--> statement-breakpoint
+ALTER TABLE "study_time_daily_totals"
+  DROP CONSTRAINT IF EXISTS "study_time_daily_totals_bucket_unique";
+--> statement-breakpoint
+ALTER TABLE "study_time_daily_totals"
+  ADD CONSTRAINT "study_time_daily_totals_bucket_unique"
+  UNIQUE NULLS NOT DISTINCT ("user_id", "day", "batch_id", "subject_id");

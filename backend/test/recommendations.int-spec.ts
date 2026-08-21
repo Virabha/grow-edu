@@ -1,9 +1,11 @@
 import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
+import { eq } from 'drizzle-orm';
 import { createTestDatabase, truncateAll, TestDatabase } from './support/test-database';
 import { createTestApp, authHeader, TestActor } from './support/test-app';
 import { TestClock } from './support/test-clock';
 import { createBatch, createUser, enrol } from './support/factories';
+import { studentProfiles } from '../src/database/schema';
 
 describe('Recommendations (Ticket 30)', () => {
   let database: TestDatabase;
@@ -108,14 +110,59 @@ describe('Recommendations (Ticket 30)', () => {
   it('no language model is called (result is returned immediately without external HTTP)', async () => {
     await createBatch(database, admin.userId, '0', { status: 'ONGOING' as never });
 
-    const before = Date.now();
+    const fetchSpy = jest.spyOn(globalThis, 'fetch');
+    try {
+      const res = await request(app.getHttpServer())
+        .get('/me/recommendations')
+        .set(...authHeader(app, student))
+        .expect(200);
+      expect(Array.isArray(res.body)).toBe(true);
+    } finally {
+      fetchSpy.mockRestore();
+    }
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('level-matched batches rank ahead of other goal-matched batches', async () => {
+    const batchEarliest = await createBatch(database, admin.userId, '0', {
+      status: 'ONGOING' as never,
+      goalKey: 'JEE',
+      levelKey: 'BEGINNER',
+      startDate: new Date('2025-01-01T00:00:00.000Z'),
+    });
+    const batchMiddle = await createBatch(database, admin.userId, '0', {
+      status: 'ONGOING' as never,
+      goalKey: 'JEE',
+      levelKey: 'INTERMEDIATE',
+      startDate: new Date('2025-03-01T00:00:00.000Z'),
+    });
+    const batchLatest = await createBatch(database, admin.userId, '0', {
+      status: 'ONGOING' as never,
+      goalKey: 'JEE',
+      levelKey: 'ADVANCED',
+      startDate: new Date('2025-06-01T00:00:00.000Z'),
+    });
+
+    await request(app.getHttpServer())
+      .put('/me/goal')
+      .set(...authHeader(app, student))
+      .send({ goalKey: 'JEE' })
+      .expect(200);
+
+    await database.db
+      .update(studentProfiles)
+      .set({ level: 'ADVANCED' })
+      .where(eq(studentProfiles.userId, student.userId));
+
     const res = await request(app.getHttpServer())
       .get('/me/recommendations')
       .set(...authHeader(app, student))
       .expect(200);
-    const elapsed = Date.now() - before;
 
-    expect(Array.isArray(res.body)).toBe(true);
-    expect(elapsed).toBeLessThan(5000);
+    const ids = res.body.map((b: { batchId: string }) => b.batchId);
+    expect(ids).toContain(batchLatest);
+    expect(ids).toContain(batchEarliest);
+    expect(ids).toContain(batchMiddle);
+    expect(ids[0]).toBe(batchLatest);
   });
 });

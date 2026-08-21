@@ -22,6 +22,9 @@ import {
   assessmentQuestions,
   assessmentTestQuestions,
   assessmentTests,
+  batchEnrollments,
+  batchInstructors,
+  users,
 } from "../../database/schema";
 import { Queryable } from "../../database/transaction";
 import {
@@ -94,6 +97,7 @@ export class AttemptService {
 
   async start(testId: string, userId: string): Promise<AttemptView> {
     const test = await this.requireOpenTest(testId);
+    await this.requireBatchAccess(test, userId);
     const placements = await this.placementsOf(testId);
 
     if (placements.length === 0) {
@@ -527,6 +531,47 @@ export class AttemptService {
       throw new ConflictException("That test has closed");
     }
     return test;
+  }
+
+  private async requireBatchAccess(
+    test: TestRow,
+    userId: string,
+  ): Promise<void> {
+    if (test.batchId === null) return;
+
+    const [enrolled] = await this.db
+      .select({ enrollmentId: batchEnrollments.enrollmentId })
+      .from(batchEnrollments)
+      .where(
+        and(
+          eq(batchEnrollments.batchId, test.batchId),
+          eq(batchEnrollments.userId, userId),
+          eq(batchEnrollments.status, "ACTIVE"),
+        ),
+      )
+      .limit(1);
+    if (enrolled) return;
+
+    const [teaches] = await this.db
+      .select({ batchInstructorId: batchInstructors.batchInstructorId })
+      .from(batchInstructors)
+      .where(
+        and(
+          eq(batchInstructors.batchId, test.batchId),
+          eq(batchInstructors.instructorId, userId),
+        ),
+      )
+      .limit(1);
+    if (teaches) return;
+
+    const [actor] = await this.db
+      .select({ role: users.role })
+      .from(users)
+      .where(eq(users.userId, userId))
+      .limit(1);
+    if (actor?.role === "PLATFORM_ADMIN") return;
+
+    throw new NotFoundException("No such test");
   }
 
   private async placementsOf(testId: string): Promise<PlacementRow[]> {

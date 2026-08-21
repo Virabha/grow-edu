@@ -238,24 +238,64 @@ describe('parent accounts', () => {
   });
 
   describe('content access', () => {
-    it('parent hitting a lesson endpoint gets same response as for a non-existent lesson', async () => {
+    it('parent reaching for content receives same 404 as non-existent record across all content interfaces', async () => {
       const linkId = await createLink();
       await activateLink(linkId);
 
       const subjectId = await createSubject(database, batchId);
-      await createLesson(database, subjectId);
+      const lessonId = await createLesson(database, subjectId);
+      const fakeBatchId = randomUUID();
+      const fakeLessonId = randomUUID();
 
-      const realBatch = await request(app.getHttpServer())
-        .get(`/batches/${batchId}/content`)
-        .set(...authHeader(app, parent));
+      const batchOnlyRoutes = [
+        '/content',
+        '/curriculum/full',
+        '/resources',
+        '/resources/library',
+        '/bookmarks',
+        '/feed',
+      ];
 
-      const missingBatch = await request(app.getHttpServer())
-        .get(`/batches/${randomUUID()}/content`)
-        .set(...authHeader(app, parent));
+      for (const route of batchOnlyRoutes) {
+        const real = await request(app.getHttpServer())
+          .get(`/batches/${batchId}${route}`)
+          .set(...authHeader(app, parent));
+        const fake = await request(app.getHttpServer())
+          .get(`/batches/${fakeBatchId}${route}`)
+          .set(...authHeader(app, parent));
+        expect(real.status).toBe(404);
+        expect(fake.status).toBe(404);
+        expect(real.body.message).toBe(fake.body.message);
+      }
 
-      expect(realBatch.status).toBe(404);
-      expect(missingBatch.status).toBe(404);
-      expect(realBatch.body.message).toBe(missingBatch.body.message);
+      const lessonGetRoutes: Array<[string, string]> = [
+        [`/batches/${batchId}/lessons/${lessonId}`, `/batches/${fakeBatchId}/lessons/${fakeLessonId}`],
+        [`/batches/${batchId}/lessons/${lessonId}/note`, `/batches/${fakeBatchId}/lessons/${fakeLessonId}/note`],
+      ];
+
+      for (const [realPath, fakePath] of lessonGetRoutes) {
+        const real = await request(app.getHttpServer())
+          .get(realPath)
+          .set(...authHeader(app, parent));
+        const fake = await request(app.getHttpServer())
+          .get(fakePath)
+          .set(...authHeader(app, parent));
+        expect(real.status).toBe(404);
+        expect(fake.status).toBe(404);
+        expect(real.body.message).toBe(fake.body.message);
+      }
+
+      const realProgress = await request(app.getHttpServer())
+        .put(`/batches/${batchId}/lessons/${lessonId}/progress`)
+        .set(...authHeader(app, parent))
+        .send({ completed: true });
+      const fakeProgress = await request(app.getHttpServer())
+        .put(`/batches/${fakeBatchId}/lessons/${fakeLessonId}/progress`)
+        .set(...authHeader(app, parent))
+        .send({ completed: true });
+      expect(realProgress.status).toBe(404);
+      expect(fakeProgress.status).toBe(404);
+      expect(realProgress.body.message).toBe(fakeProgress.body.message);
     });
 
     it('parent hitting batch sessions endpoint gets 404 even for their child\'s batch', async () => {

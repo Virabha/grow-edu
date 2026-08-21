@@ -54,6 +54,7 @@ import { HabitsModule } from "./habits/habits.module";
 import { ParentsModule } from "./parents/parents.module";
 import { MediaModule } from "./media/media.module";
 import { StudyToolsModule } from "./study-tools/study-tools.module";
+import { DiagnosticModule } from "./diagnostic/diagnostic.module";
 
 @Module({
   imports: [
@@ -107,6 +108,7 @@ import { StudyToolsModule } from "./study-tools/study-tools.module";
     StudyToolsModule,
     MediaModule,
     ParentsModule,
+    DiagnosticModule,
   ],
   controllers: [AppController],
   providers: [

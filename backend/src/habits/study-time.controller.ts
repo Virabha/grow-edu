@@ -14,7 +14,7 @@ import { SetGoalDto } from "./dto/set-goal.dto";
 import { StreakService } from "./streak.service";
 import { StudyTimeService } from "./study-time.service";
 
-type JwtUser = { sub: string; email: string; role: string };
+type JwtUser = { userId: string; email: string; role: string };
 
 @Controller("habits")
 export class StudyTimeController {
@@ -30,7 +30,7 @@ export class StudyTimeController {
     @CurrentUser() user: JwtUser,
     @Body() dto: RecordActivityDto,
   ) {
-    const userId = user.sub;
+    const userId = user.userId;
     const result = await this.studyTime.recordActivity(userId, dto);
     await this.streak.evaluateStreak(userId);
     await this.badge.evaluateBadges(userId);
@@ -44,7 +44,7 @@ export class StudyTimeController {
     @Query("days") days?: string,
     @Query("batchId") batchId?: string,
   ) {
-    return this.studyTime.getSummary(user.sub, {
+    return this.studyTime.getSummary(user.userId, {
       days: days !== undefined ? Number(days) : undefined,
       batchId,
     });
@@ -53,24 +53,24 @@ export class StudyTimeController {
   @Get("goal")
   @Authenticated()
   async getGoal(@CurrentUser() user: JwtUser) {
-    return this.streak.getGoal(user.sub);
+    return this.streak.getGoal(user.userId);
   }
 
   @Put("goal")
   @Authenticated()
   async setGoal(@CurrentUser() user: JwtUser, @Body() dto: SetGoalDto) {
-    return this.streak.setGoal(user.sub, dto.dailyGoalMinutes);
+    return this.streak.setGoal(user.userId, dto.dailyGoalMinutes);
   }
 
   @Get("streak")
   @Authenticated()
   async getStreak(@CurrentUser() user: JwtUser) {
-    return this.streak.getStreak(user.sub);
+    return this.streak.getStreak(user.userId);
   }
 
   @Get("badges")
   @Authenticated()
   async listBadges(@CurrentUser() user: JwtUser) {
-    return this.badge.listBadges(user.sub);
+    return this.badge.listBadges(user.userId);
   }
 }

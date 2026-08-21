@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { and, asc, eq, isNull, lte } from 'drizzle-orm';
+import { toDayString } from "../common/day";
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 
 import { CLOCK, Clock } from '../common/clock';
@@ -253,18 +254,13 @@ export class DailyQueueService {
     return this.loadQueue(queue.queueId);
   }
 
-  private toDateString(value: unknown): string {
-    if (value instanceof Date) return value.toISOString().slice(0, 10);
-    return String(value).slice(0, 10);
-  }
-
   private present(
     queue: typeof dailyReviewQueues.$inferSelect,
     entries: (typeof dailyReviewQueueEntries.$inferSelect)[],
   ) {
     return {
       queueId: queue.queueId,
-      queueDate: this.toDateString(queue.queueDate),
+      queueDate: toDayString(queue.queueDate),
       practiceSetId: queue.practiceSetId,
       entries: entries.map((e) => ({
         entryId: e.entryId,

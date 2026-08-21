@@ -24,6 +24,7 @@ import {
   RecordPositionsDto,
 } from "../dto/lesson-progress.dto";
 import { BatchEnrolmentService } from "./batch-enrolment.service";
+import { ContinueLearningService } from "./continue-learning.service";
 import { LessonProgressService } from "./lesson-progress.service";
 
 interface AuthedUser {
@@ -38,7 +39,15 @@ export class BatchEnrolmentController {
   constructor(
     private readonly enrolments: BatchEnrolmentService,
     private readonly lessonProgress: LessonProgressService,
+    private readonly continueLearning: ContinueLearningService,
   ) {}
+
+  @Authenticated()
+  @ApiOperation({ summary: "Resume what I was doing, across every batch" })
+  @Get("continue-learning")
+  resumeLearning(@CurrentUser() user: AuthedUser) {
+    return this.continueLearning.forViewer(user);
+  }
 
   @Authenticated()
   @ApiOperation({ summary: "Everything I have access to" })

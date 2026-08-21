@@ -57,6 +57,15 @@ CREATE INDEX IF NOT EXISTS "lesson_transcript_segments_body_idx"
   USING gin (to_tsvector('english', "body"));
 `;
 
+const STUDY_TIME_BUCKET_NULLS_NOT_DISTINCT = `--> statement-breakpoint
+ALTER TABLE "study_time_daily_totals"
+  DROP CONSTRAINT IF EXISTS "study_time_daily_totals_bucket_unique";
+--> statement-breakpoint
+ALTER TABLE "study_time_daily_totals"
+  ADD CONSTRAINT "study_time_daily_totals_bucket_unique"
+  UNIQUE NULLS NOT DISTINCT ("user_id", "day", "batch_id", "subject_id");
+`;
+
 rmSync(DIR, { recursive: true, force: true });
 
 execFileSync(
@@ -79,5 +88,6 @@ appendFileSync(join(DIR, TARGET), SEED_DEFAULT_ORGANIZATION);
 appendFileSync(join(DIR, TARGET), APPEND_ONLY_AUDIT_LOG);
 appendFileSync(join(DIR, TARGET), IMMUTABLE_INVOICES);
 appendFileSync(join(DIR, TARGET), SEARCH_DOCUMENT_FULL_TEXT);
+appendFileSync(join(DIR, TARGET), STUDY_TIME_BUCKET_NULLS_NOT_DISTINCT);
 
 console.log(`Baseline written to ${join(DIR, TARGET)}`);

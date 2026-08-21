@@ -491,6 +491,31 @@ describe('community — study groups', () => {
     expect(retained.removedAt).toBeTruthy();
   });
 
+  it('study group cap is owner-managed — joining is refused once the cap set by PUT /settings/community is reached', async () => {
+    await request(app.getHttpServer())
+      .put('/settings/community')
+      .set(...authHeader(app, admin))
+      .send({ studyGroupMemberCap: 2, studyGroupsPerBatch: 20, feedPostMaxLength: 2000 })
+      .expect(200);
+
+    const { body: group } = await request(app.getHttpServer())
+      .post(groupsUrl(batchId))
+      .set(...authHeader(app, studentA))
+      .send({ name: 'Cap test group' })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post(`${groupsUrl(batchId)}/${group.groupId}/join`)
+      .set(...authHeader(app, studentB))
+      .expect(201);
+
+    const { status } = await request(app.getHttpServer())
+      .post(`${groupsUrl(batchId)}/${group.groupId}/join`)
+      .set(...authHeader(app, studentC));
+
+    expect(status).toBe(400);
+  });
+
   it('cross-batch scoping: student cannot list groups from another batch', async () => {
     await request(app.getHttpServer())
       .post(groupsUrl(batchId))

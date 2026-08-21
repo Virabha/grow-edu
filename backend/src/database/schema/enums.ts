@@ -238,3 +238,39 @@ export const assessmentToleranceKindEnum = pgEnum(
   "assessment_tolerance_kind",
   ["ABSOLUTE", "RELATIVE"],
 );
+
+export const assessmentAttemptStatusEnum = pgEnum("assessment_attempt_status", [
+  "IN_PROGRESS",
+  "AWAITING_GRADING",
+  "GRADED",
+  "EXPIRED",
+]);
+
+export const assessmentAnswerStatusEnum = pgEnum("assessment_answer_status", [
+  "AUTO_SCORED",
+  "PENDING_GRADING",
+  "GRADED",
+]);
+
+export const assessmentRegradeStatusEnum = pgEnum(
+  "assessment_regrade_status",
+  ["OPEN", "UPHELD", "CHANGED"],
+);
+
+export const assessmentImportStatusEnum = pgEnum("assessment_import_status", [
+  "PARSED",
+  "COMMITTING",
+  "COMMITTED",
+  "FAILED",
+]);
+
+export const assessmentPracticeKindEnum = pgEnum("assessment_practice_kind", [
+  "DAILY",
+  "TOPIC",
+]);
+
+export const assessmentAnomalyKindEnum = pgEnum("assessment_anomaly_kind", [
+  "TIMING_OUTLIER",
+  "IDENTICAL_SEQUENCE",
+  "SUBMISSION_PATTERN",
+]);

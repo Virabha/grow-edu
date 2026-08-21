@@ -37,6 +37,10 @@ import { CdnModule } from "./cdn/cdn.module";
 import { EmailModule } from "./email/email.module";
 import { CmsModule } from "./cms/cms.module";
 import { AppCacheModule } from "./cache/cache.module";
+import { AssessmentModule } from "./assessment/assessment.module";
+import { GroupsModule } from "./assessment/groups/groups.module";
+import { ImportModule } from "./assessment/import/import.module";
+import { TestsModule } from "./assessment/tests/tests.module";
 import { BatchesModule } from "./batches/batches.module";
 import { NotificationsModule } from "./notifications/notifications.module";
 
@@ -70,6 +74,10 @@ import { NotificationsModule } from "./notifications/notifications.module";
     EmailModule,
     CmsModule,
     BatchesModule,
+    AssessmentModule,
+    GroupsModule,
+    ImportModule,
+    TestsModule,
     NotificationsModule,
     CertificateTemplateModule,
     BlogModule,

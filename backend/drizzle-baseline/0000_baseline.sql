@@ -5,13 +5,49 @@ EXCEPTION
 END $$;
 --> statement-breakpoint
 DO $$ BEGIN
+ CREATE TYPE "assessment_anomaly_kind" AS ENUM('TIMING_OUTLIER', 'IDENTICAL_SEQUENCE', 'SUBMISSION_PATTERN');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ CREATE TYPE "assessment_answer_status" AS ENUM('AUTO_SCORED', 'PENDING_GRADING', 'GRADED');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ CREATE TYPE "assessment_attempt_status" AS ENUM('IN_PROGRESS', 'AWAITING_GRADING', 'GRADED', 'EXPIRED');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ CREATE TYPE "assessment_import_status" AS ENUM('PARSED', 'COMMITTING', 'COMMITTED', 'FAILED');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
  CREATE TYPE "assessment_partial_credit_rule" AS ENUM('ALL_OR_NOTHING', 'PROPORTIONAL');
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
 --> statement-breakpoint
 DO $$ BEGIN
+ CREATE TYPE "assessment_practice_kind" AS ENUM('DAILY', 'TOPIC');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
  CREATE TYPE "assessment_question_type" AS ENUM('SINGLE_CORRECT', 'MULTIPLE_CORRECT', 'NUMERIC', 'WRITTEN', 'IMAGE_UPLOAD');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ CREATE TYPE "assessment_regrade_status" AS ENUM('OPEN', 'UPHELD', 'CHANGED');
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
@@ -981,6 +1017,252 @@ CREATE TABLE IF NOT EXISTS "assessment_taxonomy_nodes" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "assessment_anomaly_flags" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"flag_id" text PRIMARY KEY NOT NULL,
+	"attempt_id" text NOT NULL,
+	"test_id" text NOT NULL,
+	"user_id" text NOT NULL,
+	"kind" "assessment_anomaly_kind" NOT NULL,
+	"reason" text NOT NULL,
+	"detail" jsonb DEFAULT '{}'::jsonb NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "assessment_attempt_answers" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"answer_id" text PRIMARY KEY NOT NULL,
+	"attempt_id" text NOT NULL,
+	"placement_id" text NOT NULL,
+	"question_id" text NOT NULL,
+	"question_version" integer NOT NULL,
+	"response" jsonb,
+	"elapsed_seconds" integer DEFAULT 0 NOT NULL,
+	"is_skipped" boolean DEFAULT true NOT NULL,
+	"is_correct" boolean,
+	"awarded_marks" numeric(8, 2),
+	"status" "assessment_answer_status" DEFAULT 'AUTO_SCORED' NOT NULL,
+	"grader_comment" text,
+	"graded_by" text,
+	"graded_at" timestamp,
+	"feedback_media_id" text,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "assessment_attempt_answers_unique" UNIQUE("attempt_id","placement_id")
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "assessment_attempts" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"attempt_id" text PRIMARY KEY NOT NULL,
+	"test_id" text NOT NULL,
+	"user_id" text NOT NULL,
+	"attempt_no" integer DEFAULT 1 NOT NULL,
+	"status" "assessment_attempt_status" DEFAULT 'IN_PROGRESS' NOT NULL,
+	"started_at" timestamp DEFAULT now() NOT NULL,
+	"submitted_at" timestamp,
+	"expires_at" timestamp NOT NULL,
+	"graded_at" timestamp,
+	"provisional_score" numeric(8, 2),
+	"final_score" numeric(8, 2),
+	"pending_marks" numeric(8, 2),
+	"max_score" numeric(8, 2),
+	"correct_count" integer DEFAULT 0 NOT NULL,
+	"wrong_count" integer DEFAULT 0 NOT NULL,
+	"skipped_count" integer DEFAULT 0 NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "assessment_attempts_unique" UNIQUE("test_id","user_id","attempt_no")
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "assessment_criterion_scores" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"score_id" text PRIMARY KEY NOT NULL,
+	"answer_id" text NOT NULL,
+	"criterion_id" text NOT NULL,
+	"value" numeric(6, 2) NOT NULL,
+	"comment" text,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "assessment_criterion_scores_unique" UNIQUE("answer_id","criterion_id")
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "assessment_error_notebook" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"entry_id" text PRIMARY KEY NOT NULL,
+	"user_id" text NOT NULL,
+	"question_id" text NOT NULL,
+	"question_version" integer NOT NULL,
+	"attempt_id" text NOT NULL,
+	"answer_id" text NOT NULL,
+	"topic_id" text NOT NULL,
+	"given_answer" jsonb,
+	"correct_answer" jsonb,
+	"explanation" jsonb DEFAULT '[]'::jsonb NOT NULL,
+	"is_resolved" boolean DEFAULT false NOT NULL,
+	"resolved_at" timestamp,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "assessment_error_notebook_unique" UNIQUE("answer_id")
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "assessment_import_rows" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"row_id" text PRIMARY KEY NOT NULL,
+	"import_id" text NOT NULL,
+	"row_number" integer NOT NULL,
+	"raw" jsonb NOT NULL,
+	"parsed" jsonb,
+	"is_valid" boolean DEFAULT false NOT NULL,
+	"errors" jsonb DEFAULT '[]'::jsonb NOT NULL,
+	"question_id" text,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "assessment_import_rows_unique" UNIQUE("import_id","row_number")
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "assessment_imports" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"import_id" text PRIMARY KEY NOT NULL,
+	"status" "assessment_import_status" DEFAULT 'PARSED' NOT NULL,
+	"row_count" integer DEFAULT 0 NOT NULL,
+	"valid_count" integer DEFAULT 0 NOT NULL,
+	"invalid_count" integer DEFAULT 0 NOT NULL,
+	"processed_count" integer DEFAULT 0 NOT NULL,
+	"failure_reason" text,
+	"committed_at" timestamp,
+	"created_by" text NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "assessment_practice_sets" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"set_id" text PRIMARY KEY NOT NULL,
+	"user_id" text NOT NULL,
+	"kind" "assessment_practice_kind" NOT NULL,
+	"batch_id" text,
+	"topic_id" text,
+	"for_date" text,
+	"test_id" text NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "assessment_practice_sets_daily_unique" UNIQUE("user_id","kind","for_date")
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "assessment_question_stats" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"question_id" text PRIMARY KEY NOT NULL,
+	"attempt_count" integer DEFAULT 0 NOT NULL,
+	"correct_count" integer DEFAULT 0 NOT NULL,
+	"mean_seconds" numeric(10, 2),
+	"option_distribution" jsonb DEFAULT '{}'::jsonb NOT NULL,
+	"computed_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "assessment_questions_served" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"served_id" text PRIMARY KEY NOT NULL,
+	"user_id" text NOT NULL,
+	"question_id" text NOT NULL,
+	"topic_id" text NOT NULL,
+	"difficulty" integer NOT NULL,
+	"was_correct" boolean,
+	"served_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "assessment_regrade_requests" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"request_id" text PRIMARY KEY NOT NULL,
+	"answer_id" text NOT NULL,
+	"attempt_id" text NOT NULL,
+	"student_id" text NOT NULL,
+	"reason" text NOT NULL,
+	"status" "assessment_regrade_status" DEFAULT 'OPEN' NOT NULL,
+	"original_marks" numeric(8, 2),
+	"resolved_marks" numeric(8, 2),
+	"justification" text,
+	"resolved_by" text,
+	"resolved_at" timestamp,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "assessment_rubric_criteria" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"criterion_id" text PRIMARY KEY NOT NULL,
+	"rubric_id" text NOT NULL,
+	"label" text NOT NULL,
+	"weight" numeric(6, 3) DEFAULT '1' NOT NULL,
+	"order" integer DEFAULT 0 NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "assessment_rubrics" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"rubric_id" text PRIMARY KEY NOT NULL,
+	"title" text NOT NULL,
+	"scale_max" integer DEFAULT 5 NOT NULL,
+	"is_retired" boolean DEFAULT false NOT NULL,
+	"created_by" text NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "assessment_test_questions" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"placement_id" text PRIMARY KEY NOT NULL,
+	"test_id" text NOT NULL,
+	"question_id" text NOT NULL,
+	"group_id" text,
+	"order" integer NOT NULL,
+	"section_name" text,
+	"marks" numeric(6, 2) DEFAULT '1' NOT NULL,
+	"negative_mark_percent" numeric(5, 2),
+	"rubric_id" text,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "assessment_test_questions_unique" UNIQUE("test_id","question_id")
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "assessment_test_stats" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"test_id" text PRIMARY KEY NOT NULL,
+	"figures" jsonb NOT NULL,
+	"computed_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "assessment_tests" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"test_id" text PRIMARY KEY NOT NULL,
+	"batch_id" text,
+	"title" text NOT NULL,
+	"description" text,
+	"duration_minutes" integer DEFAULT 30 NOT NULL,
+	"max_attempts" integer DEFAULT 1 NOT NULL,
+	"negative_mark_percent" numeric(5, 2) DEFAULT '0' NOT NULL,
+	"score_floor" numeric(8, 2) DEFAULT '0' NOT NULL,
+	"passing_percent" numeric(5, 2) DEFAULT '40' NOT NULL,
+	"show_leaderboard" boolean DEFAULT true NOT NULL,
+	"show_solutions" boolean DEFAULT true NOT NULL,
+	"exam_label" text,
+	"exam_year" integer,
+	"paper_label" text,
+	"opens_at" timestamp,
+	"closes_at" timestamp,
+	"published_at" timestamp,
+	"is_deleted" boolean DEFAULT false NOT NULL,
+	"created_by" text NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "assessment_weak_topics" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"entry_id" text PRIMARY KEY NOT NULL,
+	"user_id" text NOT NULL,
+	"topic_id" text NOT NULL,
+	"attempted" integer DEFAULT 0 NOT NULL,
+	"correct" integer DEFAULT 0 NOT NULL,
+	"accuracy" numeric(6, 4) NOT NULL,
+	"computed_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "assessment_weak_topics_unique" UNIQUE("user_id","topic_id")
+);
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "service_applications" (
 	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
 	"application_id" text PRIMARY KEY NOT NULL,
@@ -1392,6 +1674,27 @@ CREATE INDEX IF NOT EXISTS "assessment_questions_group_idx" ON "assessment_quest
 CREATE INDEX IF NOT EXISTS "assessment_questions_difficulty_idx" ON "assessment_questions" ("authored_difficulty");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "assessment_taxonomy_nodes_parent_idx" ON "assessment_taxonomy_nodes" ("parent_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "assessment_taxonomy_nodes_kind_idx" ON "assessment_taxonomy_nodes" ("kind");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "assessment_anomaly_flags_attempt_idx" ON "assessment_anomaly_flags" ("attempt_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "assessment_anomaly_flags_test_idx" ON "assessment_anomaly_flags" ("test_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "assessment_attempt_answers_attempt_idx" ON "assessment_attempt_answers" ("attempt_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "assessment_attempt_answers_question_idx" ON "assessment_attempt_answers" ("question_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "assessment_attempt_answers_status_idx" ON "assessment_attempt_answers" ("status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "assessment_attempts_test_idx" ON "assessment_attempts" ("test_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "assessment_attempts_user_idx" ON "assessment_attempts" ("user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "assessment_criterion_scores_answer_idx" ON "assessment_criterion_scores" ("answer_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "assessment_error_notebook_user_idx" ON "assessment_error_notebook" ("user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "assessment_import_rows_import_idx" ON "assessment_import_rows" ("import_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "assessment_practice_sets_user_idx" ON "assessment_practice_sets" ("user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "assessment_questions_served_user_idx" ON "assessment_questions_served" ("user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "assessment_questions_served_user_question_idx" ON "assessment_questions_served" ("user_id","question_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "assessment_regrade_requests_answer_idx" ON "assessment_regrade_requests" ("answer_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "assessment_regrade_requests_status_idx" ON "assessment_regrade_requests" ("status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "assessment_rubric_criteria_rubric_idx" ON "assessment_rubric_criteria" ("rubric_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "assessment_test_questions_test_idx" ON "assessment_test_questions" ("test_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "assessment_test_questions_question_idx" ON "assessment_test_questions" ("question_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "assessment_tests_batch_idx" ON "assessment_tests" ("batch_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "assessment_tests_exam_idx" ON "assessment_tests" ("exam_label","exam_year");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "assessment_weak_topics_user_idx" ON "assessment_weak_topics" ("user_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "service_applications_service_idx" ON "service_applications" ("service_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "service_applications_status_idx" ON "service_applications" ("status");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "service_applications_email_idx" ON "service_applications" ("applicant_email");--> statement-breakpoint

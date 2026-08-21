@@ -10,6 +10,7 @@ export * from "./commerce";
 export * from "./invoices";
 export * from "./batches";
 export * from "./assessment";
+export * from "./assessment-runtime";
 export * from "./store";
 export * from "./cms";
 export * from "./platform";

@@ -472,6 +472,28 @@ export const GROUPS: Record<string, GroupDefinition> = {
       text: '#0f172a',
     },
   },
+  doubts: {
+    meta: {
+      title: 'Doubts',
+      description:
+        'How long a student should wait for an answer before a doubt is flagged as overdue.',
+    },
+    fields: [
+      {
+        key: 'responseTargetHours',
+        label: 'Response Target (hours)',
+        type: 'number',
+        placeholder: '24',
+        help: 'A doubt waiting longer than this appears as overdue in the instructor inbox.',
+      },
+    ],
+    defaults: {
+      responseTargetHours: 24,
+    },
+  },
 };
+
+export const DOUBTS_SETTINGS_GROUP = 'doubts';
+export const DEFAULT_DOUBT_RESPONSE_TARGET_HOURS = 24;
 
 export const KNOWN_GROUPS = new Set(Object.keys(GROUPS));

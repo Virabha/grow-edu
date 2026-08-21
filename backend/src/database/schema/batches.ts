@@ -20,6 +20,7 @@ import {
   batchSessionStatusEnum,
   batchResourceTypeEnum,
   batchDoubtStatusEnum,
+  batchDoubtAnchorTypeEnum,
   batchQuizQuestionTypeEnum,
   batchQuizAttemptStatusEnum,
   lessonTypeEnum,
@@ -146,6 +147,32 @@ export const lessons = pgTable(
       table.subjectId,
       table.order
     ),
+  })
+);
+
+export const subjectLessons = pgTable(
+  "subject_lessons",
+  {
+    organizationId: organizationId(),
+    placementId: text("placement_id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    subjectId: text("subject_id").notNull(),
+    lessonId: text("lesson_id").notNull(),
+    order: integer("order").notNull(),
+    isDeleted: boolean("is_deleted").notNull().default(false),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    lessonPerSubject: unique("subject_lessons_subject_lesson_unique").on(
+      table.subjectId,
+      table.lessonId
+    ),
+    subjectOrderIdx: index("subject_lessons_subject_order_idx").on(
+      table.subjectId,
+      table.order
+    ),
+    lessonIdx: index("subject_lessons_lesson_idx").on(table.lessonId),
   })
 );
 
@@ -286,8 +313,9 @@ export const batchResources = pgTable(
     fileKey: text("file_key").notNull(),
     fileSize: integer("file_size"),
     pageCount: integer("page_count"),
-    dayNumber: integer("day_number"), // For DPP: day 1, 2, 3…
-    publishAt: timestamp("publish_at"), // Optional scheduled publish
+    dayNumber: integer("day_number"),
+    publishAt: timestamp("publish_at"),
+    isDownloadable: boolean("is_downloadable").notNull().default(false),
     uploadedBy: text("uploaded_by").notNull(),
     isDeleted: boolean("is_deleted").notNull().default(false),
     createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -311,12 +339,23 @@ export const batchDoubts = pgTable(
       .$defaultFn(() => crypto.randomUUID()),
     batchId: text("batch_id").notNull(),
     subjectId: text("subject_id"),
+    anchorType: batchDoubtAnchorTypeEnum("anchor_type").notNull().default("BATCH"),
+    anchorId: text("anchor_id"),
     askedBy: text("asked_by").notNull(),
+    assignedTo: text("assigned_to"),
+    assignedAt: timestamp("assigned_at"),
+    assignedBy: text("assigned_by"),
     title: text("title").notNull(),
     body: text("body").notNull(),
     attachments: jsonb("attachments").$type<string[]>().default([]),
     status: batchDoubtStatusEnum("status").notNull().default("OPEN"),
     replyCount: integer("reply_count").notNull().default(0),
+    consentToAttribution: boolean("consent_to_attribution")
+      .notNull()
+      .default(false),
+    promotedReplyId: text("promoted_reply_id"),
+    promotedAt: timestamp("promoted_at"),
+    promotedBy: text("promoted_by"),
     isDeleted: boolean("is_deleted").notNull().default(false),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -325,6 +364,15 @@ export const batchDoubts = pgTable(
     batchIdx: index("batch_doubts_batch_idx").on(table.batchId),
     statusIdx: index("batch_doubts_status_idx").on(table.status),
     askedByIdx: index("batch_doubts_asked_by_idx").on(table.askedBy),
+    assignedIdx: index("batch_doubts_assigned_idx").on(
+      table.assignedTo,
+      table.status,
+    ),
+    promotedIdx: index("batch_doubts_promoted_idx").on(
+      table.batchId,
+      table.promotedAt,
+    ),
+    anchorIdx: index("batch_doubts_anchor_idx").on(table.anchorType, table.anchorId),
   })
 );
 

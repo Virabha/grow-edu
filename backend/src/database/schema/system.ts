@@ -5,6 +5,7 @@ import {
   boolean,
   integer,
   index,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { notificationTypeEnum, videoEncodingJobStatusEnum } from "./enums";
 import { organizationId } from "./organizations";
@@ -25,12 +26,31 @@ export const notifications = pgTable(
     link: text("link"),
     batchId: text("batch_id"),
     read: boolean("read").notNull().default(false),
+    dedupeKey: text("dedupe_key"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => ({
     userIdx: index("notifications_user_idx").on(table.userId),
     userReadIdx: index("notifications_user_read_idx").on(table.userId, table.read),
     createdAtIdx: index("notifications_created_at_idx").on(table.createdAt),
+    dedupeKeyIdx: uniqueIndex("notifications_dedupe_key_idx").on(table.dedupeKey),
+  })
+);
+
+export const notificationTemplates = pgTable(
+  "notification_templates",
+  {
+    organizationId: organizationId(),
+    templateId: text("template_id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    type: notificationTypeEnum("type").notNull().unique(),
+    subject: text("subject").notNull(),
+    body: text("body").notNull(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    typeIdx: index("notification_templates_type_idx").on(table.type),
   })
 );
 

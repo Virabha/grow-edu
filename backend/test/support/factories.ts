@@ -10,6 +10,7 @@ import {
   batchInstructors,
   batchSubjects,
   lessons,
+  subjectLessons,
   corporateSubGroups,
   corporateSubGroupMembers,
 } from '../../src/database/schema';
@@ -155,7 +156,23 @@ export async function createLesson(
     order: 1,
     ...overrides,
   });
+  await database.db.insert(subjectLessons).values({
+    subjectId,
+    lessonId,
+    order: overrides.order ?? 1,
+  });
   return lessonId;
+}
+
+export async function placeLesson(
+  database: TestDatabase,
+  subjectId: string,
+  lessonId: string,
+  order = 1,
+): Promise<void> {
+  await database.db
+    .insert(subjectLessons)
+    .values({ subjectId, lessonId, order });
 }
 
 export async function createSubGroup(

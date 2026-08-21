@@ -402,7 +402,7 @@ export class BatchEnrolmentService implements OnModuleInit {
     viewer: SignedInViewer,
     dto: RecordLessonProgressDto,
   ) {
-    await this.access.requireForLesson(lessonId, viewer, "READ");
+    await this.access.requireForLesson(lessonId, viewer, "READ", batchId);
     const userId = viewer.userId;
     const now = new Date();
 

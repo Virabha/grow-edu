@@ -1,11 +1,12 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Inject,
   Injectable,
   NotFoundException,
   OnModuleInit,
 } from "@nestjs/common";
-import { and, asc, desc, eq, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, lte, or, sql } from "drizzle-orm";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 import { DATABASE_CONNECTION } from "../../database/database.module";
@@ -14,7 +15,12 @@ import {
   batchAnnouncements,
   batchDoubtReplies,
   batchDoubts,
+  batchQuizQuestions,
+  batchQuizzes,
   batchResources,
+  batchSubjects,
+  lessons,
+  subjectLessons,
   users,
 } from "../../database/schema";
 import { NotificationsService } from "../../notifications/notifications.service";
@@ -52,6 +58,11 @@ const AUTHOR_COLUMNS = {
   profileImage: users.profileImage,
   role: users.role,
 } as const;
+
+type AnchorContext =
+  | { type: "LESSON"; lessonId: string; title: string }
+  | { type: "QUESTION"; questionId: string; prompt: string }
+  | null;
 
 @Injectable()
 export class BatchEngagementService implements OnModuleInit {
@@ -169,9 +180,10 @@ export class BatchEngagementService implements OnModuleInit {
       conditions.push(eq(batchResources.subjectId, filters.subjectId));
     }
     if (!isStaff) {
+      const now = this.clock.now();
       const published = or(
-        sql`${batchResources.publishAt} IS NULL`,
-        sql`${batchResources.publishAt} <= now()`,
+        isNull(batchResources.publishAt),
+        lte(batchResources.publishAt, now),
       );
       if (published) conditions.push(published);
     }
@@ -186,7 +198,7 @@ export class BatchEngagementService implements OnModuleInit {
         desc(batchResources.createdAt),
       );
 
-    return rows.map((r) => ({ ...r, fileUrl: this.media.url(r.fileKey) }));
+    return rows.map((r) => this.presentResource(r, isStaff));
   }
 
   async createResource(
@@ -208,6 +220,7 @@ export class BatchEngagementService implements OnModuleInit {
         pageCount: dto.pageCount,
         dayNumber: dto.dayNumber,
         publishAt: dto.publishAt ? new Date(dto.publishAt) : null,
+        isDownloadable: dto.isDownloadable ?? false,
         uploadedBy,
       })
       .returning();
@@ -248,6 +261,9 @@ export class BatchEngagementService implements OnModuleInit {
         ...(dto.publishAt !== undefined && {
           publishAt: dto.publishAt ? new Date(dto.publishAt) : null,
         }),
+        ...(dto.isDownloadable !== undefined && {
+          isDownloadable: dto.isDownloadable,
+        }),
         updatedAt: new Date(),
       })
       .where(eq(batchResources.resourceId, resourceId))
@@ -264,10 +280,63 @@ export class BatchEngagementService implements OnModuleInit {
     return { success: true };
   }
 
+  async listResourceLibrary(batchId: string, viewer: Viewer) {
+    const { isStaff } = await this.access.require(batchId, viewer, "READ");
+    const conditions = [
+      eq(batchResources.batchId, batchId),
+      eq(batchResources.isDeleted, false),
+    ];
+    if (!isStaff) {
+      const now = this.clock.now();
+      const published = or(
+        isNull(batchResources.publishAt),
+        lte(batchResources.publishAt, now),
+      );
+      if (published) conditions.push(published);
+    }
+
+    const rows = await this.db
+      .select()
+      .from(batchResources)
+      .where(and(...conditions))
+      .orderBy(
+        asc(batchResources.subjectId),
+        asc(batchResources.type),
+        asc(batchResources.dayNumber),
+        desc(batchResources.createdAt),
+      );
+
+    type Row = (typeof rows)[number];
+    const grouped = new Map<string | null, Map<string, Row[]>>();
+
+    for (const row of rows) {
+      const subjectKey = row.subjectId;
+      let typeMap = grouped.get(subjectKey);
+      if (!typeMap) {
+        typeMap = new Map<string, Row[]>();
+        grouped.set(subjectKey, typeMap);
+      }
+      let bucket = typeMap.get(row.type);
+      if (!bucket) {
+        bucket = [];
+        typeMap.set(row.type, bucket);
+      }
+      bucket.push(row);
+    }
+
+    return [...grouped.entries()].map(([subjectId, typeMap]) => ({
+      subjectId,
+      groups: [...typeMap.entries()].map(([type, resources]) => ({
+        type,
+        resources: resources.map((r) => this.presentResource(r, isStaff)),
+      })),
+    }));
+  }
+
   async listDoubts(
     batchId: string,
     viewer: SignedInViewer,
-    filters: { mine?: boolean; status?: string },
+    filters: { mine?: boolean; status?: string; anchorId?: string },
   ) {
     await this.access.require(batchId, viewer, "READ");
     const conditions = [
@@ -284,6 +353,9 @@ export class BatchEngagementService implements OnModuleInit {
           filters.status as "OPEN" | "ANSWERED" | "CLOSED",
         ),
       );
+    }
+    if (filters.anchorId) {
+      conditions.push(eq(batchDoubts.anchorId, filters.anchorId));
     }
 
     const rows = await this.db
@@ -324,9 +396,15 @@ export class BatchEngagementService implements OnModuleInit {
       )
       .orderBy(asc(batchDoubtReplies.createdAt));
 
+    const anchorContext = await this.resolveAnchorContext(
+      row.doubt.anchorType,
+      row.doubt.anchorId,
+    );
+
     return {
       ...row.doubt,
       author: this.presentAuthor(row.author),
+      anchorContext,
       replies: replies.map((r) => ({
         ...r.reply,
         author: this.presentAuthor(r.author),
@@ -340,6 +418,21 @@ export class BatchEngagementService implements OnModuleInit {
     viewer: SignedInViewer,
   ) {
     await this.access.require(batchId, viewer, "READ");
+
+    const anchorType = dto.anchorType ?? "BATCH";
+
+    if (anchorType === "LESSON") {
+      if (!dto.anchorId) {
+        throw new BadRequestException("anchorId is required for LESSON anchor");
+      }
+      await this.requireLessonInBatch(batchId, dto.anchorId);
+    } else if (anchorType === "QUESTION") {
+      if (!dto.anchorId) {
+        throw new BadRequestException("anchorId is required for QUESTION anchor");
+      }
+      await this.requireQuestionInBatch(batchId, dto.anchorId);
+    }
+
     const [created] = await this.db
       .insert(batchDoubts)
       .values({
@@ -348,6 +441,11 @@ export class BatchEngagementService implements OnModuleInit {
         title: dto.title,
         body: dto.body,
         subjectId: dto.subjectId,
+        consentToAttribution: dto.consentToAttribution ?? false,
+        createdAt: this.clock.now(),
+        updatedAt: this.clock.now(),
+        anchorType,
+        anchorId: dto.anchorId ?? null,
         attachments: dto.attachments ?? [],
       })
       .returning();
@@ -375,6 +473,8 @@ export class BatchEngagementService implements OnModuleInit {
         ...(dto.body !== undefined && { body: dto.body }),
         ...(dto.subjectId !== undefined && { subjectId: dto.subjectId }),
         ...(dto.attachments !== undefined && { attachments: dto.attachments }),
+        ...(dto.consentToAttribution !== undefined &&
+          isAuthor && { consentToAttribution: dto.consentToAttribution }),
         ...(dto.status !== undefined && isAdmin && { status: dto.status }),
         updatedAt: new Date(),
       })
@@ -475,6 +575,105 @@ export class BatchEngagementService implements OnModuleInit {
       .set({ isDeleted: true, updatedAt: new Date() })
       .where(eq(batchDoubtReplies.replyId, replyId));
     return { success: true };
+  }
+
+  private async resolveAnchorContext(
+    anchorType: "BATCH" | "LESSON" | "QUESTION",
+    anchorId: string | null,
+  ): Promise<AnchorContext> {
+    if (anchorType === "LESSON" && anchorId) {
+      const [lesson] = await this.db
+        .select({ lessonId: lessons.lessonId, title: lessons.title })
+        .from(lessons)
+        .where(eq(lessons.lessonId, anchorId))
+        .limit(1);
+      if (!lesson) return null;
+      return { type: "LESSON", lessonId: lesson.lessonId, title: lesson.title };
+    }
+    if (anchorType === "QUESTION" && anchorId) {
+      const [question] = await this.db
+        .select({
+          questionId: batchQuizQuestions.questionId,
+          prompt: batchQuizQuestions.prompt,
+        })
+        .from(batchQuizQuestions)
+        .where(eq(batchQuizQuestions.questionId, anchorId))
+        .limit(1);
+      if (!question) return null;
+      return {
+        type: "QUESTION",
+        questionId: question.questionId,
+        prompt: question.prompt,
+      };
+    }
+    return null;
+  }
+
+  private async requireLessonInBatch(
+    batchId: string,
+    lessonId: string,
+  ): Promise<void> {
+    const [row] = await this.db
+      .select({ lessonId: lessons.lessonId })
+      .from(subjectLessons)
+      .innerJoin(lessons, eq(lessons.lessonId, subjectLessons.lessonId))
+      .innerJoin(
+        batchSubjects,
+        eq(batchSubjects.subjectId, subjectLessons.subjectId),
+      )
+      .where(
+        and(
+          eq(subjectLessons.lessonId, lessonId),
+          eq(subjectLessons.isDeleted, false),
+          eq(batchSubjects.batchId, batchId),
+          eq(lessons.isDeleted, false),
+        ),
+      )
+      .limit(1);
+    if (!row) {
+      throw new BadRequestException(
+        "Anchor lesson does not belong to this batch",
+      );
+    }
+  }
+
+  private async requireQuestionInBatch(
+    batchId: string,
+    questionId: string,
+  ): Promise<void> {
+    const [row] = await this.db
+      .select({ questionId: batchQuizQuestions.questionId })
+      .from(batchQuizQuestions)
+      .innerJoin(
+        batchQuizzes,
+        eq(batchQuizzes.quizId, batchQuizQuestions.quizId),
+      )
+      .where(
+        and(
+          eq(batchQuizQuestions.questionId, questionId),
+          eq(batchQuizzes.batchId, batchId),
+          eq(batchQuizQuestions.isDeleted, false),
+        ),
+      )
+      .limit(1);
+    if (!row) {
+      throw new BadRequestException(
+        "Anchor question does not belong to this batch",
+      );
+    }
+  }
+
+  private presentResource(
+    row: typeof batchResources.$inferSelect,
+    isStaff: boolean,
+  ) {
+    const url = this.media.url(row.fileKey);
+    return {
+      ...row,
+      fileUrl: url,
+      viewUrl: url,
+      downloadUrl: row.isDownloadable || isStaff ? url : null,
+    };
   }
 
   private presentAuthor(author: {

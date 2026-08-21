@@ -124,6 +124,12 @@ export const batchDoubtStatusEnum = pgEnum("batch_doubt_status", [
   "CLOSED",
 ]);
 
+export const batchDoubtAnchorTypeEnum = pgEnum("batch_doubt_anchor_type", [
+  "BATCH",
+  "LESSON",
+  "QUESTION",
+]);
+
 export const batchQuizQuestionTypeEnum = pgEnum("batch_quiz_question_type", [
   "MCQ_SINGLE",
   "MCQ_MULTI",
@@ -169,6 +175,11 @@ export const refundStatusEnum = pgEnum("refund_status", [
   "REQUESTED",
   "APPROVED",
   "DECLINED",
+]);
+
+export const invoiceKindEnum = pgEnum("invoice_kind", [
+  "INVOICE",
+  "CREDIT_NOTE",
 ]);
 
 export const corporateContractStatusEnum = pgEnum("corporate_contract_status", [

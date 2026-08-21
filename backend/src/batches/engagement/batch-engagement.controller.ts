@@ -85,6 +85,16 @@ export class BatchEngagementController {
     return this.engagement.deleteAnnouncement(batchId, announcementId);
   }
 
+  @BatchAccess("READ")
+  @ApiOperation({ summary: "Browse the resource library grouped by subject and type" })
+  @Get(":batchId/resources/library")
+  listResourceLibrary(
+    @Param("batchId") batchId: string,
+    @CurrentUser() user: AuthedUser,
+  ) {
+    return this.engagement.listResourceLibrary(batchId, user);
+  }
+
   @ApiOperation({ summary: "List PDF resources (enrolled or staff)" })
   @ApiQuery({
     name: "type",
@@ -139,16 +149,19 @@ export class BatchEngagementController {
   @ApiOperation({ summary: "List doubts in a batch" })
   @ApiQuery({ name: "mine", required: false, type: Boolean })
   @ApiQuery({ name: "status", required: false })
+  @ApiQuery({ name: "anchorId", required: false })
   @Get(":batchId/doubts")
   listDoubts(
     @Param("batchId") batchId: string,
     @Query("mine") mine: string | undefined,
     @Query("status") status: string | undefined,
+    @Query("anchorId") anchorId: string | undefined,
     @CurrentUser() user: AuthedUser,
   ) {
     return this.engagement.listDoubts(batchId, user, {
       mine: mine === "true",
       status,
+      anchorId,
     });
   }
 

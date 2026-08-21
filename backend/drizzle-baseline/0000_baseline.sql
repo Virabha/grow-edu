@@ -29,6 +29,12 @@ EXCEPTION
 END $$;
 --> statement-breakpoint
 DO $$ BEGIN
+ CREATE TYPE "batch_doubt_anchor_type" AS ENUM('BATCH', 'LESSON', 'QUESTION');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
  CREATE TYPE "batch_doubt_status" AS ENUM('OPEN', 'ANSWERED', 'CLOSED');
 EXCEPTION
  WHEN duplicate_object THEN null;
@@ -108,6 +114,12 @@ END $$;
 --> statement-breakpoint
 DO $$ BEGIN
  CREATE TYPE "email_token_type" AS ENUM('EMAIL_VERIFICATION', 'PASSWORD_RESET');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ CREATE TYPE "invoice_kind" AS ENUM('INVOICE', 'CREDIT_NOTE');
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
@@ -429,6 +441,7 @@ CREATE TABLE IF NOT EXISTS "payments" (
 	"invoice_no" text,
 	"tax_amount" numeric(10, 2) DEFAULT '0',
 	"refund_status" "refund_status" DEFAULT 'NONE' NOT NULL,
+	"refunded_amount" numeric(10, 2) DEFAULT '0' NOT NULL,
 	"refund_reason" text,
 	"refund_requested_at" timestamp,
 	"refund_resolved_at" timestamp,
@@ -442,6 +455,41 @@ CREATE TABLE IF NOT EXISTS "payments" (
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "payments_organization_invoice_unique" UNIQUE("organization_id","invoice_no"),
 	CONSTRAINT "payments_organization_idempotency_unique" UNIQUE("organization_id","idempotency_key")
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "invoice_sequences" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"series" text NOT NULL,
+	"next_value" integer DEFAULT 1 NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "invoice_sequences_organization_series_unique" UNIQUE("organization_id","series")
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "invoices" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"invoice_id" text PRIMARY KEY NOT NULL,
+	"kind" "invoice_kind" DEFAULT 'INVOICE' NOT NULL,
+	"series" text NOT NULL,
+	"sequence" integer NOT NULL,
+	"invoice_no" text NOT NULL,
+	"payment_id" text,
+	"contract_id" text,
+	"corrects_invoice_id" text,
+	"buyer_user_id" text NOT NULL,
+	"buyer_name" text NOT NULL,
+	"buyer_email" text NOT NULL,
+	"currency" text NOT NULL,
+	"subtotal" numeric(12, 2) NOT NULL,
+	"discount" numeric(12, 2) DEFAULT '0' NOT NULL,
+	"tax" numeric(12, 2) DEFAULT '0' NOT NULL,
+	"total" numeric(12, 2) NOT NULL,
+	"lines" jsonb NOT NULL,
+	"reason" text,
+	"issued_at" timestamp NOT NULL,
+	"issued_by" text,
+	CONSTRAINT "invoices_organization_number_unique" UNIQUE("organization_id","invoice_no"),
+	CONSTRAINT "invoices_organization_series_sequence_unique" UNIQUE("organization_id","series","sequence"),
+	CONSTRAINT "invoices_organization_payment_unique" UNIQUE("organization_id","payment_id")
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "batch_announcements" (
@@ -500,12 +548,21 @@ CREATE TABLE IF NOT EXISTS "batch_doubts" (
 	"doubt_id" text PRIMARY KEY NOT NULL,
 	"batch_id" text NOT NULL,
 	"subject_id" text,
+	"anchor_type" "batch_doubt_anchor_type" DEFAULT 'BATCH' NOT NULL,
+	"anchor_id" text,
 	"asked_by" text NOT NULL,
+	"assigned_to" text,
+	"assigned_at" timestamp,
+	"assigned_by" text,
 	"title" text NOT NULL,
 	"body" text NOT NULL,
 	"attachments" jsonb DEFAULT '[]'::jsonb,
 	"status" "batch_doubt_status" DEFAULT 'OPEN' NOT NULL,
 	"reply_count" integer DEFAULT 0 NOT NULL,
+	"consent_to_attribution" boolean DEFAULT false NOT NULL,
+	"promoted_reply_id" text,
+	"promoted_at" timestamp,
+	"promoted_by" text,
 	"is_deleted" boolean DEFAULT false NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
@@ -612,6 +669,7 @@ CREATE TABLE IF NOT EXISTS "batch_resources" (
 	"page_count" integer,
 	"day_number" integer,
 	"publish_at" timestamp,
+	"is_downloadable" boolean DEFAULT false NOT NULL,
 	"uploaded_by" text NOT NULL,
 	"is_deleted" boolean DEFAULT false NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
@@ -716,6 +774,17 @@ CREATE TABLE IF NOT EXISTS "lessons" (
 	"is_deleted" boolean DEFAULT false NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "subject_lessons" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"placement_id" text PRIMARY KEY NOT NULL,
+	"subject_id" text NOT NULL,
+	"lesson_id" text NOT NULL,
+	"order" integer NOT NULL,
+	"is_deleted" boolean DEFAULT false NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "subject_lessons_subject_lesson_unique" UNIQUE("subject_id","lesson_id")
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "service_applications" (
@@ -909,6 +978,16 @@ CREATE TABLE IF NOT EXISTS "instructor_badges" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "notification_templates" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"template_id" text PRIMARY KEY NOT NULL,
+	"type" "notification_type" NOT NULL,
+	"subject" text NOT NULL,
+	"body" text NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "notification_templates_type_unique" UNIQUE("type")
+);
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "notifications" (
 	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
 	"notification_id" text PRIMARY KEY NOT NULL,
@@ -919,6 +998,7 @@ CREATE TABLE IF NOT EXISTS "notifications" (
 	"link" text,
 	"batch_id" text,
 	"read" boolean DEFAULT false NOT NULL,
+	"dedupe_key" text,
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
@@ -987,6 +1067,10 @@ CREATE INDEX IF NOT EXISTS "payments_transaction_id_idx" ON "payments" ("transac
 CREATE INDEX IF NOT EXISTS "payments_user_status_idx" ON "payments" ("user_id","status");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "payments_user_created_idx" ON "payments" ("user_id","created_at");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "payments_refund_status_idx" ON "payments" ("refund_status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "invoices_buyer_idx" ON "invoices" ("buyer_user_id","issued_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "invoices_contract_idx" ON "invoices" ("contract_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "invoices_corrects_idx" ON "invoices" ("corrects_invoice_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "invoices_issued_at_idx" ON "invoices" ("issued_at");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "batch_announcements_batch_idx" ON "batch_announcements" ("batch_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "batch_announcements_created_at_idx" ON "batch_announcements" ("created_at");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "batch_attendance_session_idx" ON "batch_attendance" ("session_id");--> statement-breakpoint
@@ -997,6 +1081,9 @@ CREATE INDEX IF NOT EXISTS "batch_doubt_replies_doubt_idx" ON "batch_doubt_repli
 CREATE INDEX IF NOT EXISTS "batch_doubts_batch_idx" ON "batch_doubts" ("batch_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "batch_doubts_status_idx" ON "batch_doubts" ("status");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "batch_doubts_asked_by_idx" ON "batch_doubts" ("asked_by");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "batch_doubts_assigned_idx" ON "batch_doubts" ("assigned_to","status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "batch_doubts_promoted_idx" ON "batch_doubts" ("batch_id","promoted_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "batch_doubts_anchor_idx" ON "batch_doubts" ("anchor_type","anchor_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "batch_enrollments_batch_idx" ON "batch_enrollments" ("batch_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "batch_enrollments_user_idx" ON "batch_enrollments" ("user_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "batch_instructors_batch_idx" ON "batch_instructors" ("batch_id");--> statement-breakpoint
@@ -1022,6 +1109,8 @@ CREATE INDEX IF NOT EXISTS "batches_delivery_mode_idx" ON "batches" ("delivery_m
 CREATE INDEX IF NOT EXISTS "lesson_progress_user_batch_idx" ON "lesson_progress" ("user_id","batch_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "lessons_subject_idx" ON "lessons" ("subject_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "lessons_subject_order_idx" ON "lessons" ("subject_id","order");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "subject_lessons_subject_order_idx" ON "subject_lessons" ("subject_id","order");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "subject_lessons_lesson_idx" ON "subject_lessons" ("lesson_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "service_applications_service_idx" ON "service_applications" ("service_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "service_applications_status_idx" ON "service_applications" ("status");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "service_applications_email_idx" ON "service_applications" ("applicant_email");--> statement-breakpoint
@@ -1047,9 +1136,11 @@ CREATE INDEX IF NOT EXISTS "testimonials_is_active_idx" ON "testimonials" ("is_a
 CREATE INDEX IF NOT EXISTS "why_choose_us_display_order_idx" ON "why_choose_us" ("display_order");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "why_choose_us_is_active_idx" ON "why_choose_us" ("is_active");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "instructor_badges_is_active_idx" ON "instructor_badges" ("is_active");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "notification_templates_type_idx" ON "notification_templates" ("type");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "notifications_user_idx" ON "notifications" ("user_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "notifications_user_read_idx" ON "notifications" ("user_id","read");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "notifications_created_at_idx" ON "notifications" ("created_at");--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "notifications_dedupe_key_idx" ON "notifications" ("dedupe_key");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "video_encoding_jobs_lesson_idx" ON "video_encoding_jobs" ("lesson_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "video_encoding_jobs_batch_idx" ON "video_encoding_jobs" ("batch_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "video_encoding_jobs_status_idx" ON "video_encoding_jobs" ("status");--> statement-breakpoint
@@ -1068,3 +1159,15 @@ DROP TRIGGER IF EXISTS audit_log_no_mutation ON "audit_log";
 CREATE TRIGGER audit_log_no_mutation
   BEFORE UPDATE OR DELETE ON "audit_log"
   FOR EACH ROW EXECUTE FUNCTION audit_log_is_append_only();
+--> statement-breakpoint
+CREATE OR REPLACE FUNCTION invoices_are_immutable() RETURNS trigger AS $$
+BEGIN
+  RAISE EXCEPTION 'an issued invoice cannot be changed; issue a credit note instead';
+END;
+$$ LANGUAGE plpgsql;
+--> statement-breakpoint
+DROP TRIGGER IF EXISTS invoices_no_mutation ON "invoices";
+--> statement-breakpoint
+CREATE TRIGGER invoices_no_mutation
+  BEFORE UPDATE OR DELETE ON "invoices"
+  FOR EACH ROW EXECUTE FUNCTION invoices_are_immutable();

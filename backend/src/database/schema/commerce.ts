@@ -40,6 +40,9 @@ export const payments = pgTable(
     invoiceNo: text("invoice_no"),
     taxAmount: decimal("tax_amount", { precision: 10, scale: 2 }).default("0"),
     refundStatus: refundStatusEnum("refund_status").notNull().default("NONE"),
+    refundedAmount: decimal("refunded_amount", { precision: 10, scale: 2 })
+      .notNull()
+      .default("0"),
     refundReason: text("refund_reason"),
     refundRequestedAt: timestamp("refund_requested_at"),
     refundResolvedAt: timestamp("refund_resolved_at"),

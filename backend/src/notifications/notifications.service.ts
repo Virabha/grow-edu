@@ -1,11 +1,15 @@
-import { Inject, Injectable, Logger } from "@nestjs/common";
+import { Inject, Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import { randomUUID } from "crypto";
 import { DATABASE_CONNECTION } from "../database/database.module";
 import * as schema from "../database/schema";
 import { notifications, users } from "../database/schema";
 import { EmailService } from "../email/email.service";
 import { AppConfigService } from "../config";
+import { JOB_QUEUE, JobQueue } from "../jobs/job-queue";
+import { CLOCK, Clock } from "../common/clock";
+import { NotificationTemplateService } from "./notification-templates.service";
 
 type DbType = PostgresJsDatabase<typeof schema>;
 
@@ -30,6 +34,15 @@ export interface CreateNotificationInput {
   batchId?: string;
 }
 
+export interface NotifyInput {
+  userId: string;
+  type: NotificationType;
+  vars: Record<string, string>;
+  link?: string;
+  batchId?: string;
+  dedupeKey?: string;
+}
+
 const EMAIL_TYPES: ReadonlySet<NotificationType> = new Set([
   "BATCH_ENROLLMENT",
   "BATCH_CERTIFICATE",
@@ -37,24 +50,90 @@ const EMAIL_TYPES: ReadonlySet<NotificationType> = new Set([
   "PAYMENT_REJECTED",
 ]);
 
+const NOTIFICATION_FANOUT_JOB = "notifications.fanout";
+
+type FanoutPayload = {
+  fanoutId: string;
+  userIds: string[];
+  type: NotificationType;
+  vars: Record<string, string>;
+  link: string | undefined;
+  batchId: string | undefined;
+};
+
 @Injectable()
-export class NotificationsService {
+export class NotificationsService implements OnModuleInit {
   private readonly logger = new Logger(NotificationsService.name);
 
   constructor(
     @Inject(DATABASE_CONNECTION) private readonly db: DbType,
     private readonly emailService: EmailService,
-    private readonly configService: AppConfigService
+    private readonly configService: AppConfigService,
+    private readonly templateService: NotificationTemplateService,
+    @Inject(JOB_QUEUE) private readonly jobs: JobQueue,
+    @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
-  private async sendEmailFor(
-    userId: string,
+  onModuleInit(): void {
+    this.jobs.register<FanoutPayload>(
+      NOTIFICATION_FANOUT_JOB,
+      async ({ fanoutId, userIds, type, vars, link, batchId }) => {
+        for (const userId of userIds) {
+          const dedupeKey = `${fanoutId}:${userId}`;
+          await this.notify({ userId, type, vars, link, batchId, dedupeKey });
+        }
+      },
+    );
+  }
+
+  async notify(input: NotifyInput): Promise<void> {
+    const { subject, body } = await this.templateService.renderFor(input.type, input.vars);
+
+    const [inserted] = await this.db
+      .insert(notifications)
+      .values({
+        userId: input.userId,
+        type: input.type,
+        title: subject,
+        body,
+        link: input.link,
+        batchId: input.batchId,
+        dedupeKey: input.dedupeKey ?? null,
+      })
+      .onConflictDoNothing()
+      .returning();
+
+    if (inserted) {
+      await this.deliverEmail(input.userId, inserted.title, inserted.body ?? undefined, inserted.link ?? undefined);
+    }
+  }
+
+  async queuedFanout(
+    userIds: string[],
     type: NotificationType,
+    vars: Record<string, string>,
+    link?: string,
+    batchId?: string,
+    fanoutId?: string,
+  ): Promise<void> {
+    if (userIds.length === 0) return;
+    const resolvedFanoutId = fanoutId ?? randomUUID();
+    await this.jobs.enqueue<FanoutPayload>(NOTIFICATION_FANOUT_JOB, {
+      fanoutId: resolvedFanoutId,
+      userIds,
+      type,
+      vars,
+      link,
+      batchId,
+    });
+  }
+
+  private async deliverEmail(
+    userId: string,
     title: string,
     body: string | undefined,
-    link: string | undefined
+    link: string | undefined,
   ): Promise<void> {
-    if (!EMAIL_TYPES.has(type)) return;
     try {
       const [user] = await this.db
         .select({ email: users.email })
@@ -64,19 +143,23 @@ export class NotificationsService {
       if (!user?.email) return;
       const siteUrl = this.configService.frontendUrl ?? "";
       const absoluteLink = link
-        ? link.startsWith("http")
-          ? link
-          : `${siteUrl}${link}`
+        ? link.startsWith("http") ? link : `${siteUrl}${link}`
         : null;
-      await this.emailService.sendNotificationEmail(
-        user.email,
-        title,
-        body ?? null,
-        absoluteLink
-      );
+      await this.emailService.sendNotificationEmail(user.email, title, body ?? null, absoluteLink);
     } catch (err) {
       this.logger.warn(`Email notification failed for ${userId}: ${String(err)}`);
     }
+  }
+
+  private async sendEmailFor(
+    userId: string,
+    type: NotificationType,
+    title: string,
+    body: string | undefined,
+    link: string | undefined,
+  ): Promise<void> {
+    if (!EMAIL_TYPES.has(type)) return;
+    await this.deliverEmail(userId, title, body, link);
   }
 
   async create(input: CreateNotificationInput) {
@@ -107,7 +190,7 @@ export class NotificationsService {
           body: i.body,
           link: i.link,
           batchId: i.batchId,
-        }))
+        })),
       )
       .returning();
   }
@@ -142,7 +225,7 @@ export class NotificationsService {
         .select({ unread: sql<number>`count(*)::int` })
         .from(notifications)
         .where(
-          and(eq(notifications.userId, userId), eq(notifications.read, false))
+          and(eq(notifications.userId, userId), eq(notifications.read, false)),
         ),
     ]);
 
@@ -163,7 +246,7 @@ export class NotificationsService {
       .select({ count: sql<number>`count(*)::int` })
       .from(notifications)
       .where(
-        and(eq(notifications.userId, userId), eq(notifications.read, false))
+        and(eq(notifications.userId, userId), eq(notifications.read, false)),
       );
     return count;
   }
@@ -176,8 +259,8 @@ export class NotificationsService {
       .where(
         and(
           eq(notifications.userId, userId),
-          inArray(notifications.notificationId, notificationIds)
-        )
+          inArray(notifications.notificationId, notificationIds),
+        ),
       )
       .returning({ id: notifications.notificationId });
     return { updated: updated.length };
@@ -188,7 +271,7 @@ export class NotificationsService {
       .update(notifications)
       .set({ read: true })
       .where(
-        and(eq(notifications.userId, userId), eq(notifications.read, false))
+        and(eq(notifications.userId, userId), eq(notifications.read, false)),
       )
       .returning({ id: notifications.notificationId });
     return { updated: updated.length };
@@ -200,8 +283,8 @@ export class NotificationsService {
       .where(
         and(
           eq(notifications.userId, userId),
-          eq(notifications.notificationId, notificationId)
-        )
+          eq(notifications.notificationId, notificationId),
+        ),
       );
     return { success: true };
   }

@@ -12,10 +12,12 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
-import { NotificationsService } from "./notifications.service";
+import { NotificationsService, NotificationType } from "./notifications.service";
 import { IsArray, IsString } from "class-validator";
 import { FilterNotificationsDto } from "./dto/filter-notifications.dto";
-import { Authenticated } from '../auth/decorators/authenticated.decorator';
+import { Authenticated } from "../auth/decorators/authenticated.decorator";
+import { Roles, UserRole } from "../auth/decorators/roles.decorator";
+import { SendBulkNotificationDto } from "./dto/send-bulk-notification.dto";
 
 class MarkReadDto {
   @IsArray()
@@ -75,8 +77,23 @@ export class NotificationsController {
   @Delete(":notificationId")
   async remove(
     @Param("notificationId") notificationId: string,
-    @CurrentUser() user: AuthedUser
+    @CurrentUser() user: AuthedUser,
   ) {
     return this.notificationsService.delete(user.userId, notificationId);
+  }
+
+  @Roles(UserRole.PLATFORM_ADMIN)
+  @ApiOperation({ summary: "Send a notification to multiple users (queued)" })
+  @Post("send-bulk")
+  async sendBulk(@Body() dto: SendBulkNotificationDto) {
+    await this.notificationsService.queuedFanout(
+      dto.userIds,
+      dto.type as NotificationType,
+      dto.vars ?? {},
+      dto.link,
+      undefined,
+      dto.fanoutId,
+    );
+    return { queued: true };
   }
 }

@@ -29,6 +29,7 @@ import { CompaniesModule } from "./companies/companies.module";
 import { CorporateModule } from "./corporate/corporate.module";
 import { AnalyticsModule } from "./analytics/analytics.module";
 import { PaymentModule } from "./payment/payment.module";
+import { InvoicesModule } from "./invoices/invoices.module";
 import { StorageModule } from "./storage/storage.module";
 import { FilesModule } from "./files/files.module";
 import { VideoEncodingModule } from "./video-encoding/video-encoding.module";
@@ -59,6 +60,7 @@ import { NotificationsModule } from "./notifications/notifications.module";
     CorporateModule,
     AnalyticsModule,
     PaymentModule,
+    InvoicesModule,
     StorageModule,
     InstructorModule,
     AdminResourcesModule,

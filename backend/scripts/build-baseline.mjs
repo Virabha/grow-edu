@@ -20,6 +20,20 @@ CREATE TRIGGER audit_log_no_mutation
   FOR EACH ROW EXECUTE FUNCTION audit_log_is_append_only();
 `;
 
+const IMMUTABLE_INVOICES = `--> statement-breakpoint
+CREATE OR REPLACE FUNCTION invoices_are_immutable() RETURNS trigger AS $$
+BEGIN
+  RAISE EXCEPTION 'an issued invoice cannot be changed; issue a credit note instead';
+END;
+$$ LANGUAGE plpgsql;
+--> statement-breakpoint
+DROP TRIGGER IF EXISTS invoices_no_mutation ON "invoices";
+--> statement-breakpoint
+CREATE TRIGGER invoices_no_mutation
+  BEFORE UPDATE OR DELETE ON "invoices"
+  FOR EACH ROW EXECUTE FUNCTION invoices_are_immutable();
+`;
+
 const SEED_DEFAULT_ORGANIZATION = `--> statement-breakpoint
 INSERT INTO "organizations" ("organization_id", "name", "slug")
 VALUES ('${DEFAULT_ORGANIZATION_ID}', 'groEdu', 'groedu')
@@ -46,5 +60,6 @@ renameSync(join(DIR, generated[0]), join(DIR, TARGET));
 rmSync(join(DIR, 'meta'), { recursive: true, force: true });
 appendFileSync(join(DIR, TARGET), SEED_DEFAULT_ORGANIZATION);
 appendFileSync(join(DIR, TARGET), APPEND_ONLY_AUDIT_LOG);
+appendFileSync(join(DIR, TARGET), IMMUTABLE_INVOICES);
 
 console.log(`Baseline written to ${join(DIR, TARGET)}`);

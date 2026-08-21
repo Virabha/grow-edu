@@ -17,6 +17,7 @@ import {
   batches,
   lessons,
   payments,
+  subjectLessons,
   users,
 } from "../../database/schema";
 import { CacheService } from "../../cache/cache.service";
@@ -440,22 +441,33 @@ export class BatchCatalogueService {
     if (subjects.length === 0) return [];
 
     const rows = await this.db
-      .select()
-      .from(lessons)
+      .select({
+        lesson: lessons,
+        subjectId: subjectLessons.subjectId,
+        order: subjectLessons.order,
+      })
+      .from(subjectLessons)
+      .innerJoin(lessons, eq(lessons.lessonId, subjectLessons.lessonId))
       .where(
         and(
           inArray(
-            lessons.subjectId,
+            subjectLessons.subjectId,
             subjects.map((s) => s.subjectId),
           ),
+          eq(subjectLessons.isDeleted, false),
           eq(lessons.isDeleted, false),
         ),
       )
-      .orderBy(asc(lessons.subjectId), asc(lessons.order));
+      .orderBy(asc(subjectLessons.subjectId), asc(subjectLessons.order));
 
+    const placed = rows.map((r) => ({
+      ...r.lesson,
+      subjectId: r.subjectId,
+      order: r.order,
+    }));
     const visible = isStaff
-      ? rows
-      : rows.filter((l) => l.status === "READY" || l.isFreePreview);
+      ? placed
+      : placed.filter((l) => l.status === "READY" || l.isFreePreview);
 
     return subjects.map((subject) => ({
       ...subject,
@@ -469,25 +481,27 @@ export class BatchCatalogueService {
     const rows = await this.db
       .select({
         lessonId: lessons.lessonId,
-        subjectId: lessons.subjectId,
+        subjectId: subjectLessons.subjectId,
         title: lessons.title,
         type: lessons.type,
         duration: lessons.duration,
         isFreePreview: lessons.isFreePreview,
-        order: lessons.order,
+        order: subjectLessons.order,
       })
-      .from(lessons)
+      .from(subjectLessons)
+      .innerJoin(lessons, eq(lessons.lessonId, subjectLessons.lessonId))
       .where(
         and(
           inArray(
-            lessons.subjectId,
+            subjectLessons.subjectId,
             subjects.map((s) => s.subjectId),
           ),
+          eq(subjectLessons.isDeleted, false),
           eq(lessons.isDeleted, false),
           eq(lessons.status, "READY"),
         ),
       )
-      .orderBy(asc(lessons.order));
+      .orderBy(asc(subjectLessons.order));
 
     return subjects.map((subject) => ({
       subjectId: subject.subjectId,
@@ -496,11 +510,12 @@ export class BatchCatalogueService {
     }));
   }
 
-  async getLesson(lessonId: string, viewer: Viewer) {
+  async getLesson(batchId: string, lessonId: string, viewer: Viewer) {
     const { lesson } = await this.access.requireForLesson(
       lessonId,
       viewer,
       "READ",
+      batchId,
     );
     return lesson;
   }
@@ -523,6 +538,13 @@ export class BatchCatalogueService {
         order: dto.order,
       })
       .returning();
+
+    await this.db.insert(subjectLessons).values({
+      subjectId: dto.subjectId,
+      lessonId: created.lessonId,
+      order: dto.order,
+    });
+
     return created;
   }
 
@@ -587,25 +609,54 @@ export class BatchCatalogueService {
 
   async deleteLesson(batchId: string, lessonId: string) {
     await this.requireLesson(batchId, lessonId);
-    await this.db
-      .update(lessons)
-      .set({ isDeleted: true, updatedAt: new Date() })
-      .where(eq(lessons.lessonId, lessonId));
+    const subjectIds = await this.subjectIdsFor(batchId);
+
+    await this.db.transaction(async (tx) => {
+      await tx
+        .update(subjectLessons)
+        .set({ isDeleted: true })
+        .where(
+          and(
+            eq(subjectLessons.lessonId, lessonId),
+            inArray(subjectLessons.subjectId, subjectIds),
+          ),
+        );
+
+      const [remaining] = await tx
+        .select({ placementId: subjectLessons.placementId })
+        .from(subjectLessons)
+        .where(
+          and(
+            eq(subjectLessons.lessonId, lessonId),
+            eq(subjectLessons.isDeleted, false),
+          ),
+        )
+        .limit(1);
+
+      if (!remaining) {
+        await tx
+          .update(lessons)
+          .set({ isDeleted: true, updatedAt: new Date() })
+          .where(eq(lessons.lessonId, lessonId));
+      }
+    });
+
     return { success: true };
   }
 
   async reorderLessons(batchId: string, dto: ReorderLessonsDto) {
     const subjectIds = await this.subjectIdsFor(batchId);
     const owned = await this.db
-      .select({ lessonId: lessons.lessonId })
-      .from(lessons)
+      .select({ lessonId: subjectLessons.lessonId })
+      .from(subjectLessons)
       .where(
         and(
           inArray(
-            lessons.lessonId,
+            subjectLessons.lessonId,
             dto.lessons.map((l) => l.lessonId),
           ),
-          inArray(lessons.subjectId, subjectIds),
+          inArray(subjectLessons.subjectId, subjectIds),
+          eq(subjectLessons.isDeleted, false),
         ),
       );
     if (owned.length !== dto.lessons.length) {
@@ -615,9 +666,14 @@ export class BatchCatalogueService {
     await this.db.transaction(async (tx) => {
       for (const { lessonId, order } of dto.lessons) {
         await tx
-          .update(lessons)
-          .set({ order, updatedAt: new Date() })
-          .where(eq(lessons.lessonId, lessonId));
+          .update(subjectLessons)
+          .set({ order })
+          .where(
+            and(
+              eq(subjectLessons.lessonId, lessonId),
+              inArray(subjectLessons.subjectId, subjectIds),
+            ),
+          );
       }
     });
     return { success: true };
@@ -640,11 +696,16 @@ export class BatchCatalogueService {
   private async requireLesson(batchId: string, lessonId: string) {
     const [row] = await this.db
       .select({ lesson: lessons })
-      .from(lessons)
-      .innerJoin(batchSubjects, eq(batchSubjects.subjectId, lessons.subjectId))
+      .from(subjectLessons)
+      .innerJoin(lessons, eq(lessons.lessonId, subjectLessons.lessonId))
+      .innerJoin(
+        batchSubjects,
+        eq(batchSubjects.subjectId, subjectLessons.subjectId),
+      )
       .where(
         and(
-          eq(lessons.lessonId, lessonId),
+          eq(subjectLessons.lessonId, lessonId),
+          eq(subjectLessons.isDeleted, false),
           eq(lessons.isDeleted, false),
           eq(batchSubjects.batchId, batchId),
         ),

@@ -39,6 +39,7 @@ const completedPayment = {
   status: 'COMPLETED' as const,
   invoiceNo: null,
   refundStatus: 'NONE' as const,
+  refundedAmount: '0.00',
   refundReason: null,
   transactionId: null,
   payerName: null,
@@ -101,8 +102,12 @@ describe('OrdersService', () => {
       ).rejects.toBeInstanceOf(ConflictException);
     });
 
-    it('throws ConflictException when a refund is already APPROVED', async () => {
-      const payment = { ...completedPayment, refundStatus: 'APPROVED' as const };
+    it('throws ConflictException when the order is already refunded in full', async () => {
+      const payment = {
+        ...completedPayment,
+        refundStatus: 'APPROVED' as const,
+        refundedAmount: '1000.00',
+      };
       const c = chain({ where: terminal([payment]) });
       const service = makeService(jest.fn().mockReturnValue(c));
       await expect(

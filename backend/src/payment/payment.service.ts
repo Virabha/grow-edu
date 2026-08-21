@@ -22,6 +22,7 @@ import { eq, and, inArray, desc, like, sql } from 'drizzle-orm';
 import { EmailService } from '../email/email.service';
 import { ContractsService } from '../corporate/contracts.service';
 import { AuditLogService } from '../audit/audit-log.service';
+import { InvoicesService } from '../invoices/invoices.service';
 
 const MAX_PAGE_LIMIT = 100;
 const PLATFORM_CURRENCY = 'INR';
@@ -89,6 +90,7 @@ export class PaymentService {
     private emailService: EmailService,
     private readonly contracts: ContractsService,
     private readonly auditLog: AuditLogService,
+    private readonly invoices: InvoicesService,
   ) {
     const razorpayKeyId = this.configService.razorpayKeyId;
     const razorpayKeySecret = this.configService.razorpayKeySecret;
@@ -212,6 +214,7 @@ export class PaymentService {
           );
         }
         await this.contracts.activateForPayment(payment.corporateContractId, tx);
+        await this.invoices.issueForPayment(paymentId, tx);
         return true;
       }
 
@@ -227,6 +230,7 @@ export class PaymentService {
         paymentId,
         tx,
       );
+      await this.invoices.issueForPayment(paymentId, tx);
       return true;
     });
 
@@ -457,6 +461,10 @@ export class PaymentService {
       .set(updateData)
       .where(eq(payments.paymentId, paymentId))
       .returning();
+
+    if (payment) {
+      await this.invoices.issueForPayment(paymentId);
+    }
 
     return payment;
   }

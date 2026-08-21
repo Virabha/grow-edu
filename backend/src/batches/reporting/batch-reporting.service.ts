@@ -18,6 +18,7 @@ import {
   batches,
   lessonProgress,
   lessons,
+  subjectLessons,
 } from "../../database/schema";
 import {
   BatchAccessService,
@@ -291,11 +292,16 @@ export class BatchReportingService {
         ),
       this.db
         .select({ lessonTotal: sql<number>`count(*)::int` })
-        .from(lessons)
-        .innerJoin(batchSubjects, eq(batchSubjects.subjectId, lessons.subjectId))
+        .from(subjectLessons)
+        .innerJoin(lessons, eq(lessons.lessonId, subjectLessons.lessonId))
+        .innerJoin(
+          batchSubjects,
+          eq(batchSubjects.subjectId, subjectLessons.subjectId),
+        )
         .where(
           and(
             eq(batchSubjects.batchId, batchId),
+            eq(subjectLessons.isDeleted, false),
             eq(lessons.isDeleted, false),
             eq(lessons.status, "READY"),
           ),

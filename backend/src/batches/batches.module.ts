@@ -17,8 +17,12 @@ import { CertificateController } from "./certificates/certificate.controller";
 import { CertificateService } from "./certificates/certificate.service";
 import { BatchEngagementController } from "./engagement/batch-engagement.controller";
 import { BatchEngagementService } from "./engagement/batch-engagement.service";
+import { DoubtInboxController } from "./engagement/doubt-inbox.controller";
+import { DoubtInboxService } from "./engagement/doubt-inbox.service";
 import { BatchEnrolmentController } from "./enrolment/batch-enrolment.controller";
 import { BatchEnrolmentService } from "./enrolment/batch-enrolment.service";
+import { CloneBatchController } from "./lifecycle/clone-batch.controller";
+import { CloneBatchService } from "./lifecycle/clone-batch.service";
 import { BatchReportingController } from "./reporting/batch-reporting.controller";
 import { BatchReportingService } from "./reporting/batch-reporting.service";
 import { BatchSchedulingController } from "./scheduling/batch-scheduling.controller";
@@ -41,8 +45,10 @@ import { TimetableService } from "./scheduling/timetable.service";
     BatchSchedulingController,
     BatchAssessmentController,
     BatchEngagementController,
+    DoubtInboxController,
     CertificateController,
     BatchCatalogueController,
+    CloneBatchController,
   ],
   providers: [
     BatchAccessService,
@@ -53,8 +59,10 @@ import { TimetableService } from "./scheduling/timetable.service";
     TimetableService,
     BatchAssessmentService,
     BatchEngagementService,
+    DoubtInboxService,
     BatchReportingService,
     CertificateService,
+    CloneBatchService,
   ],
   exports: [BatchAccessService, BatchEnrolmentService, CertificateService],
 })

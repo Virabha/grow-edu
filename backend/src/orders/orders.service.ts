@@ -13,6 +13,10 @@ import { ListOrdersDto } from './dto/list-orders.dto';
 import { AdminListOrdersDto } from './dto/admin-list-orders.dto';
 import { RequestRefundDto } from './dto/request-refund.dto';
 import { ResolveRefundDto } from './dto/resolve-refund.dto';
+import { AuditLogService } from '../audit/audit-log.service';
+import { CLOCK, Clock } from '../common/clock';
+import { InvoicesService } from '../invoices/invoices.service';
+import { Transaction } from '../database/transaction';
 
 export type RefundStatus = 'NONE' | 'REQUESTED' | 'APPROVED' | 'DECLINED';
 
@@ -42,6 +46,7 @@ export interface OrderDto {
   gateway: string;
   status: string;
   refundStatus: RefundStatus;
+  refundedAmount: number;
   refundReason: string | null;
   transactionId: string | null;
   placedAt: string;
@@ -61,6 +66,8 @@ export interface PaginationMeta {
   total: number;
   totalPages: number;
 }
+
+const REFUND_EPSILON = 1e-9;
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 20;
@@ -110,6 +117,7 @@ type PaymentCore = {
   gateway: 'RAZORPAY' | 'MANUAL_QR' | 'PHONEPE' | 'FREE';
   status: 'PENDING' | 'PROOF_UPLOADED' | 'COMPLETED' | 'FAILED' | 'REJECTED' | 'REFUNDED';
   refundStatus: 'NONE' | 'REQUESTED' | 'APPROVED' | 'DECLINED';
+  refundedAmount: string | null | undefined;
   refundReason: string | null;
   transactionId: string | null;
   payerName: string | null;
@@ -131,6 +139,9 @@ export class OrdersService {
   constructor(
     @Inject(DATABASE_CONNECTION)
     private readonly db: PostgresJsDatabase<typeof schema>,
+    @Inject(CLOCK) private readonly clock: Clock,
+    private readonly auditLog: AuditLogService,
+    private readonly invoices: InvoicesService,
   ) {}
 
   private async resolveItemMap(rows: readonly ItemRow[]): Promise<Map<string, OrderItem>> {
@@ -228,6 +239,7 @@ export class OrdersService {
       gateway: p.gateway,
       status: p.status,
       refundStatus: p.refundStatus,
+      refundedAmount: parseFloat(p.refundedAmount ?? '0'),
       refundReason: p.refundReason,
       transactionId: p.transactionId,
       placedAt: p.createdAt.toISOString(),
@@ -289,6 +301,7 @@ export class OrdersService {
           gateway: schema.payments.gateway,
           status: schema.payments.status,
           refundStatus: schema.payments.refundStatus,
+          refundedAmount: schema.payments.refundedAmount,
           refundReason: schema.payments.refundReason,
           transactionId: schema.payments.transactionId,
           payerName: schema.payments.payerName,
@@ -402,9 +415,17 @@ export class OrdersService {
       throw new BadRequestException('Only completed orders can be refunded.');
     }
 
-    if (payment.refundStatus === 'REQUESTED' || payment.refundStatus === 'APPROVED') {
+    if (payment.refundStatus === 'REQUESTED') {
       throw new ConflictException(
-        `A refund request is already ${payment.refundStatus.toLowerCase()} for this order.`,
+        'A refund request is already requested for this order.',
+      );
+    }
+
+    const unrefunded =
+      parseFloat(payment.amount) - parseFloat(payment.refundedAmount ?? '0');
+    if (payment.refundStatus === 'APPROVED' && unrefunded <= REFUND_EPSILON) {
+      throw new ConflictException(
+        'This order has already been refunded in full.',
       );
     }
 
@@ -484,6 +505,7 @@ export class OrdersService {
           gateway: schema.payments.gateway,
           status: schema.payments.status,
           refundStatus: schema.payments.refundStatus,
+          refundedAmount: schema.payments.refundedAmount,
           refundReason: schema.payments.refundReason,
           transactionId: schema.payments.transactionId,
           payerName: schema.payments.payerName,
@@ -549,6 +571,7 @@ export class OrdersService {
         gateway: schema.payments.gateway,
         status: schema.payments.status,
         refundStatus: schema.payments.refundStatus,
+        refundedAmount: schema.payments.refundedAmount,
         refundReason: schema.payments.refundReason,
         transactionId: schema.payments.transactionId,
         payerName: schema.payments.payerName,
@@ -601,21 +624,9 @@ export class OrdersService {
       );
     }
 
-    const now = new Date();
+    const now = this.clock.now();
 
-    if (dto.status === 'APPROVED') {
-      await this.revokeAccess(payment);
-      await this.db
-        .update(schema.payments)
-        .set({
-          refundStatus: 'APPROVED',
-          refundResolvedAt: now,
-          refundResolvedBy: adminId,
-          status: 'REFUNDED',
-          updatedAt: now,
-        })
-        .where(eq(schema.payments.paymentId, orderId));
-    } else {
+    if (dto.status === 'DECLINED') {
       await this.db
         .update(schema.payments)
         .set({
@@ -625,22 +636,102 @@ export class OrdersService {
           updatedAt: now,
         })
         .where(eq(schema.payments.paymentId, orderId));
+
+      await this.auditLog.record({
+        action: 'order.refund.decline',
+        targetType: 'payment',
+        targetId: orderId,
+        before: { refundStatus: payment.refundStatus },
+        after: { refundStatus: 'DECLINED', note: dto.note ?? null },
+      });
+
+      return this.adminGetOrder(orderId);
     }
+
+    const alreadyRefunded = parseFloat(payment.refundedAmount ?? '0');
+    const remaining = parseFloat(payment.amount) - alreadyRefunded;
+    const amount = dto.amount ?? remaining;
+
+    if (amount <= 0) {
+      throw new BadRequestException('A refund must be for a positive amount.');
+    }
+    if (amount > remaining + REFUND_EPSILON) {
+      throw new ConflictException(
+        `Only ${remaining.toFixed(2)} is left to refund on this order.`,
+      );
+    }
+
+    const isFull = amount >= remaining - REFUND_EPSILON;
+    const revoke = dto.revokeAccess ?? isFull;
+    const refundedTotal = alreadyRefunded + amount;
+
+    const revokedBatchIds = await this.db.transaction(async (tx) => {
+      await tx
+        .update(schema.payments)
+        .set({
+          refundStatus: 'APPROVED',
+          refundResolvedAt: now,
+          refundResolvedBy: adminId,
+          refundedAmount: refundedTotal.toFixed(2),
+          status: isFull ? 'REFUNDED' : payment.status,
+          updatedAt: now,
+        })
+        .where(eq(schema.payments.paymentId, orderId));
+
+      const revoked = revoke ? await this.revokeAccess(tx, payment) : [];
+
+      await this.invoices.creditForPayment(
+        tx,
+        orderId,
+        {
+          reason: dto.note ?? payment.refundReason ?? 'Refund',
+          amount,
+        },
+        adminId,
+      );
+
+      return revoked;
+    });
+
+    await this.auditLog.record({
+      action: 'order.refund.approve',
+      targetType: 'payment',
+      targetId: orderId,
+      before: {
+        refundStatus: payment.refundStatus,
+        refundedAmount: alreadyRefunded,
+        status: payment.status,
+      },
+      after: {
+        refundStatus: 'APPROVED',
+        amount,
+        refundedAmount: refundedTotal,
+        isFullRefund: isFull,
+        accessRevoked: revoke,
+        revokedBatchIds,
+        status: isFull ? 'REFUNDED' : payment.status,
+      },
+    });
 
     return this.adminGetOrder(orderId);
   }
 
-  private async revokeAccess(payment: typeof schema.payments.$inferSelect): Promise<void> {
-    if (payment.itemType !== 'BATCH' || payment.batchId === null) return;
-    await this.db
+  private async revokeAccess(
+    tx: Transaction,
+    payment: typeof schema.payments.$inferSelect,
+  ): Promise<string[]> {
+    if (payment.itemType !== 'BATCH' || payment.batchId === null) return [];
+    const revoked = await tx
       .update(schema.batchEnrollments)
-      .set({ status: 'REVOKED' })
+      .set({ status: 'REVOKED', updatedAt: this.clock.now() })
       .where(
         and(
           eq(schema.batchEnrollments.userId, payment.userId),
           eq(schema.batchEnrollments.paymentId, payment.paymentId),
           eq(schema.batchEnrollments.status, 'ACTIVE'),
         ),
-      );
+      )
+      .returning({ batchId: schema.batchEnrollments.batchId });
+    return revoked.map((r) => r.batchId);
   }
 }

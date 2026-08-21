@@ -7,8 +7,10 @@ import { DATABASE_CONNECTION } from '../database/database.module';
 import { UsersService } from './users.service';
 import { EmailService } from '../email/email.service';
 import { FilesService } from '../files/files.service';
+import { AuditLogService } from '../audit/audit-log.service';
 
 const emailServiceMock = { sendRoleChangeEmail: jest.fn() };
+const auditLogServiceMock = { record: jest.fn().mockResolvedValue(undefined) };
 const filesServiceMock = {
   getDownloadUrl: jest.fn((k: string) => `https://cdn.example.com/${k}`),
   extractKey: jest.fn((v: string) => v),
@@ -25,6 +27,7 @@ async function buildService(db: object) {
       { provide: DATABASE_CONNECTION, useValue: db },
       { provide: EmailService, useValue: emailServiceMock },
       { provide: FilesService, useValue: filesServiceMock },
+      { provide: AuditLogService, useValue: auditLogServiceMock },
     ],
   }).compile();
 

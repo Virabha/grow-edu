@@ -7,6 +7,7 @@ export * from "./corporate";
 export * from "./catalog";
 export * from "./learning";
 export * from "./commerce";
+export * from "./invoices";
 export * from "./batches";
 export * from "./store";
 export * from "./cms";

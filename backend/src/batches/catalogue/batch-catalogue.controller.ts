@@ -212,10 +212,11 @@ export class BatchCatalogueController {
   @ApiBearerAuth()
   @Get(":batchId/lessons/:lessonId")
   getLesson(
+    @Param("batchId") batchId: string,
     @Param("lessonId") lessonId: string,
     @CurrentUser() user?: AuthedUser,
   ) {
-    return this.catalogue.getLesson(lessonId, user ?? {});
+    return this.catalogue.getLesson(batchId, lessonId, user ?? {});
   }
 
   @BatchAccess("MANAGE")

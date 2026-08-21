@@ -15,6 +15,7 @@ import {
   batchSubjects,
   batches,
   lessons,
+  subjectLessons,
 } from "../../database/schema";
 import { BATCH_ACCESS_EXPIRED, BATCH_NOT_FOUND } from "./access.errors";
 import { CLOCK, Clock } from "../../common/clock";
@@ -88,15 +89,24 @@ export class BatchAccessService {
     lessonId: string,
     viewer: Viewer,
     level: AccessLevel,
+    batchId?: string,
   ): Promise<Access & { lesson: typeof lessons.$inferSelect }> {
+    const placedIn = [
+      eq(subjectLessons.lessonId, lessonId),
+      eq(subjectLessons.isDeleted, false),
+      eq(lessons.isDeleted, false),
+    ];
+    if (batchId) placedIn.push(eq(batchSubjects.batchId, batchId));
+
     const [row] = await this.db
       .select({ lesson: lessons, batchId: batchSubjects.batchId })
-      .from(lessons)
+      .from(subjectLessons)
+      .innerJoin(lessons, eq(lessons.lessonId, subjectLessons.lessonId))
       .innerJoin(
         batchSubjects,
-        eq(batchSubjects.subjectId, lessons.subjectId),
+        eq(batchSubjects.subjectId, subjectLessons.subjectId),
       )
-      .where(and(eq(lessons.lessonId, lessonId), eq(lessons.isDeleted, false)))
+      .where(and(...placedIn))
       .limit(1);
     if (!row) throw this.absent();
 

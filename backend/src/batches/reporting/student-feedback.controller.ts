@@ -1,5 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Post } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { Throttle } from "@nestjs/throttler";
 
 import { Authenticated } from "../../auth/decorators/authenticated.decorator";
 import { CurrentUser } from "../../auth/decorators/current-user.decorator";
@@ -19,6 +20,7 @@ export class StudentFeedbackController {
   constructor(private readonly feedback: StudentFeedbackService) {}
 
   @BatchAccess("MANAGE")
+  @Throttle({ default: { ttl: 60_000, limit: 30 } })
   @ApiOperation({ summary: "Leave written feedback on a student" })
   @Post("batches/:batchId/students/:userId/feedback")
   write(

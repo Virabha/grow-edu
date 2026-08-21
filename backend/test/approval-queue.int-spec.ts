@@ -237,6 +237,46 @@ describe('approval queue and payment rejection', () => {
       );
     });
 
+    it('records a content edit with the actor and what changed', async () => {
+      const lessonId = await submitLesson('Kinematics');
+
+      await request(app.getHttpServer())
+        .patch(`/batches/${batchId}/lessons/${lessonId}`)
+        .set(...authHeader(app, admin))
+        .send({ title: 'Kinematics, revised' })
+        .expect(200);
+
+      const { body } = await request(app.getHttpServer())
+        .get('/audit-log?action=content.edit')
+        .set(...authHeader(app, admin))
+        .expect(200);
+
+      expect(body[0].actorId).toBe(admin.userId);
+      expect(body[0].targetId).toBe(lessonId);
+      expect(body[0].before.title).toBe('Kinematics');
+      expect(body[0].after.title).toBe('Kinematics, revised');
+    });
+
+    it('records a permission change with the actor and both roles', async () => {
+      const target = await createUser(database, 'LEARNER');
+
+      await request(app.getHttpServer())
+        .put(`/users/${target.userId}`)
+        .set(...authHeader(app, admin))
+        .send({ role: 'INSTRUCTOR' })
+        .expect(200);
+
+      const { body } = await request(app.getHttpServer())
+        .get('/audit-log?action=user.role-change')
+        .set(...authHeader(app, admin))
+        .expect(200);
+
+      expect(body[0].actorId).toBe(admin.userId);
+      expect(body[0].targetId).toBe(target.userId);
+      expect(body[0].before.role).toBe('LEARNER');
+      expect(body[0].after.role).toBe('INSTRUCTOR');
+    });
+
     it('keeps an instructor out of the approval queue', async () => {
       await submitLesson('Kinematics');
 

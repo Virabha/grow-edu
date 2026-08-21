@@ -7,7 +7,7 @@ import { CLOCK, Clock } from "../../common/clock";
 import { DATABASE_CONNECTION } from "../../database/database.module";
 import * as schema from "../../database/schema";
 import { batches } from "../../database/schema";
-import { JOB_QUEUE, JobQueue } from "../../jobs/job-queue";
+import { JOB_QUEUE, JobQueue, registerAndRepeat } from "../../jobs/job-queue";
 
 export const BATCH_LIFECYCLE_JOB = "batch.lifecycle.advance";
 
@@ -28,14 +28,15 @@ export class BatchLifecycleService implements OnModuleInit {
   ) {}
 
   onModuleInit(): void {
-    this.jobs.register(BATCH_LIFECYCLE_JOB, async () => {
-      await this.advance();
-    });
-    this.jobs
-      .repeat(BATCH_LIFECYCLE_JOB, EVERY_FIFTEEN_MINUTES)
-      .catch((err) =>
-        this.logger.error("Could not schedule batch lifecycle advance", err),
-      );
+    registerAndRepeat(
+      this.jobs,
+      BATCH_LIFECYCLE_JOB,
+      async () => {
+        await this.advance();
+      },
+      EVERY_FIFTEEN_MINUTES,
+      (err) => this.logger.error("Could not schedule batch lifecycle advance", err),
+    );
   }
 
   async advance(): Promise<{ started: string[]; completed: string[] }> {

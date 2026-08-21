@@ -8,6 +8,7 @@ import { EmailModule } from "../email/email.module";
 import { FilesModule } from "../files/files.module";
 import { PaymentModule } from "../payment/payment.module";
 import { BatchAccessService } from "./access/batch-access.service";
+import { BatchCapacityService } from "./access/batch-capacity.service";
 import { BatchAssessmentController } from "./assessment/batch-assessment.controller";
 import { BatchAssessmentService } from "./assessment/batch-assessment.service";
 import { BatchMediaService } from "./batch-media.service";
@@ -74,6 +75,7 @@ import { TimetableService } from "./scheduling/timetable.service";
   ],
   providers: [
     BatchAccessService,
+    BatchCapacityService,
     BatchMediaService,
     BatchCatalogueService,
     BatchEnrolmentService,

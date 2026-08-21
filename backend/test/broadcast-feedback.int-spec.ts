@@ -44,9 +44,14 @@ describe('broadcast and student feedback', () => {
     if (database) await database.destroy();
   });
 
+  let sourceIp: string;
+  let ipCounter = 0;
+
   beforeEach(async () => {
     await truncateAll(database);
     clock.set('2027-01-05T09:00:00.000Z');
+    ipCounter += 1;
+    sourceIp = `203.0.114.${ipCounter}`;
     admin = await createUser(database, 'PLATFORM_ADMIN');
     teacher = await createUser(database, 'INSTRUCTOR');
     student = await createUser(database, 'LEARNER');
@@ -59,6 +64,7 @@ describe('broadcast and student feedback', () => {
     return request(app.getHttpServer())
       .post('/admin/broadcasts')
       .set(...authHeader(app, admin))
+      .set('X-Forwarded-For', sourceIp)
       .send(body);
   }
 
@@ -273,10 +279,32 @@ describe('broadcast and student feedback', () => {
       expect(body[0].after.recipientCount).toBe(1);
     });
 
+    it('throttles a broadcaster hammering the endpoint', async () => {
+      const attempts = await Promise.all(
+        Array.from({ length: 12 }, (_, i) =>
+          request(app.getHttpServer())
+            .post('/admin/broadcasts')
+            .set(...authHeader(app, admin))
+            .set('X-Forwarded-For', '198.51.100.7')
+            .send({
+              audienceType: 'BATCH',
+              audienceId: batchId,
+              title: `Spam ${i}`,
+              body: 'Repeated send.',
+            }),
+        ),
+      );
+
+      const statuses = attempts.map((r) => r.status);
+      expect(statuses).toContain(429);
+      expect(statuses.filter((s) => s === 201).length).toBeLessThanOrEqual(5);
+    });
+
     it('keeps an instructor from broadcasting', async () => {
       await request(app.getHttpServer())
         .post('/admin/broadcasts')
         .set(...authHeader(app, teacher))
+        .set('X-Forwarded-For', sourceIp)
         .send({
           audienceType: 'BATCH',
           audienceId: batchId,

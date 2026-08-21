@@ -14,6 +14,7 @@ import {
   ApiQuery,
   ApiTags,
 } from "@nestjs/swagger";
+import { Throttle } from "@nestjs/throttler";
 
 import { CurrentUser } from "../../auth/decorators/current-user.decorator";
 import { BatchAccess } from "../access/batch-access.decorator";
@@ -54,6 +55,7 @@ export class BatchEngagementController {
   }
 
   @BatchAccess("MANAGE")
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
   @ApiOperation({ summary: "Post a batch announcement (admin or teacher)" })
   @Post(":batchId/announcements")
   createAnnouncement(

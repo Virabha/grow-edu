@@ -16,6 +16,7 @@ import { batchEnrollments, batchWaitlist, batches } from "../../database/schema"
 import { Transaction } from "../../database/transaction";
 import { NotificationsService } from "../../notifications/notifications.service";
 import { BatchAccessService, SignedInViewer } from "../access/batch-access.service";
+import { BatchCapacityService } from "../access/batch-capacity.service";
 
 export const BATCH_FULL = "BATCH_FULL";
 export const ALREADY_WAITING = "ALREADY_WAITING";
@@ -43,16 +44,17 @@ export class WaitlistService {
     private readonly db: PostgresJsDatabase<typeof schema>,
     @Inject(CLOCK) private readonly clock: Clock,
     private readonly access: BatchAccessService,
+    private readonly capacity: BatchCapacityService,
     private readonly notifications: NotificationsService,
     private readonly auditLog: AuditLogService,
   ) {}
 
   async join(batchId: string, viewer: SignedInViewer): Promise<WaitlistPlace> {
     const place = await this.db.transaction(async (tx) => {
-      await this.lockBatch(tx, batchId);
+      await this.capacity.lock(tx, batchId);
       await this.refuseIfEnrolled(tx, batchId, viewer.userId);
 
-      const room = await this.capacityIn(tx, batchId);
+      const room = await this.capacity.of(batchId, tx);
       if (room.free === null || room.free > 0) {
         throw new BadRequestException({
           code: "BATCH_HAS_ROOM",
@@ -176,7 +178,7 @@ export class WaitlistService {
 
   async capacityOf(batchId: string, viewer: SignedInViewer) {
     await this.access.require(batchId, viewer, "MANAGE");
-    const room = await this.capacityIn(this.db, batchId);
+    const room = await this.capacity.of(batchId);
     const [waiting] = await this.db
       .select({ waiting: sql<number>`count(*)::int` })
       .from(batchWaitlist)
@@ -190,8 +192,7 @@ export class WaitlistService {
   }
 
   async hasRoom(tx: Transaction, batchId: string): Promise<boolean> {
-    const room = await this.capacityIn(tx, batchId);
-    return room.free === null || room.free > 0;
+    return this.capacity.hasRoom(batchId, tx);
   }
 
   async promoteNext(
@@ -199,7 +200,7 @@ export class WaitlistService {
     grant: (tx: Transaction, userId: string) => Promise<void>,
   ): Promise<{ userId: string; waitlistId: string } | null> {
     const promoted = await this.db.transaction(async (tx) => {
-      await this.lockBatch(tx, batchId);
+      await this.capacity.lock(tx, batchId);
 
       if (!(await this.hasRoom(tx, batchId))) return null;
 
@@ -256,14 +257,6 @@ export class WaitlistService {
     return promoted;
   }
 
-  private async lockBatch(tx: Transaction, batchId: string): Promise<void> {
-    const locked = await tx.execute<{ batch_id: string }>(
-      sql`select batch_id from batches
-          where batch_id = ${batchId} and is_deleted = false
-          for update`,
-    );
-    if (!locked[0]) throw new NotFoundException("Batch not found");
-  }
 
   private async refuseIfEnrolled(
     tx: Transaction,
@@ -289,34 +282,6 @@ export class WaitlistService {
     }
   }
 
-  private async capacityIn(
-    tx: Transaction | PostgresJsDatabase<typeof schema>,
-    batchId: string,
-  ): Promise<Capacity> {
-    const [batch] = await tx
-      .select({ capacity: batches.capacity })
-      .from(batches)
-      .where(and(eq(batches.batchId, batchId), eq(batches.isDeleted, false)))
-      .limit(1);
-    if (!batch) throw new NotFoundException("Batch not found");
-
-    const [taken] = await tx
-      .select({ active: sql<number>`count(*)::int` })
-      .from(batchEnrollments)
-      .where(
-        and(
-          eq(batchEnrollments.batchId, batchId),
-          eq(batchEnrollments.status, "ACTIVE"),
-        ),
-      );
-
-    const active = Number(taken?.active ?? 0);
-    return {
-      capacity: batch.capacity,
-      active,
-      free: batch.capacity === null ? null : Math.max(batch.capacity - active, 0),
-    };
-  }
 
   private async positionOf(
     place: typeof batchWaitlist.$inferSelect,

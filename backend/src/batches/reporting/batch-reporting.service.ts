@@ -19,6 +19,7 @@ import {
   lessonProgress,
   lessons,
   subjectLessons,
+  users,
 } from "../../database/schema";
 import {
   BatchAccessService,
@@ -36,6 +37,93 @@ export class BatchReportingService {
     private readonly enrolments: BatchEnrolmentService,
     private readonly scheduling: BatchSchedulingService,
   ) {}
+
+  async studentsAtRisk(batchId: string, viewer: SignedInViewer) {
+    await this.access.require(batchId, viewer, "MANAGE");
+
+    const learners = await this.db
+      .select({
+        userId: users.userId,
+        email: users.email,
+        firstName: users.firstName,
+        lastName: users.lastName,
+      })
+      .from(batchEnrollments)
+      .innerJoin(users, eq(users.userId, batchEnrollments.userId))
+      .where(
+        and(
+          eq(batchEnrollments.batchId, batchId),
+          eq(batchEnrollments.status, "ACTIVE"),
+        ),
+      );
+
+    const rows = await Promise.all(
+      learners.map(async (learner) => {
+        const attendance = await this.scheduling.attendanceFor(
+          batchId,
+          learner.userId,
+        );
+        const scorePercent = await this.averageQuizPercent(
+          batchId,
+          learner.userId,
+        );
+        const name = [learner.firstName, learner.lastName]
+          .filter(Boolean)
+          .join(" ");
+
+        const reasons: string[] = [];
+        if (attendance.percent !== null && attendance.percent < 60) {
+          reasons.push("attendance below 60%");
+        }
+        if (scorePercent !== null && scorePercent < 40) {
+          reasons.push("average score below 40%");
+        }
+
+        return {
+          userId: learner.userId,
+          name: name.length > 0 ? name : learner.email,
+          email: learner.email,
+          attendancePercent: attendance.percent,
+          sessionsAttended: attendance.attended,
+          sessionsHeld: attendance.liveTotal,
+          averageScorePercent: scorePercent,
+          reasons,
+          atRisk: reasons.length > 0,
+        };
+      }),
+    );
+
+    return rows.sort(
+      (a, b) => (a.attendancePercent ?? 101) - (b.attendancePercent ?? 101),
+    );
+  }
+
+  private async averageQuizPercent(
+    batchId: string,
+    userId: string,
+  ): Promise<number | null> {
+    const [row] = await this.db
+      .select({
+        scored: sql<string>`coalesce(sum(${batchQuizAttempts.score}), 0)`,
+        possible: sql<string>`coalesce(sum(${batchQuizAttempts.maxScore}), 0)`,
+      })
+      .from(batchQuizAttempts)
+      .innerJoin(
+        batchQuizzes,
+        eq(batchQuizzes.quizId, batchQuizAttempts.quizId),
+      )
+      .where(
+        and(
+          eq(batchQuizzes.batchId, batchId),
+          eq(batchQuizAttempts.userId, userId),
+          eq(batchQuizAttempts.status, "SUBMITTED"),
+        ),
+      );
+
+    const possible = Number(row?.possible ?? 0);
+    if (possible <= 0) return null;
+    return Math.round((Number(row?.scored ?? 0) / possible) * 100);
+  }
 
   async analytics(batchId: string) {
     await this.access.requireBatch(batchId);

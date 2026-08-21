@@ -28,6 +28,7 @@ import { BatchMediaService } from "../batch-media.service";
 import { CreateBatchEnrollmentsDto } from "../dto/batch-enrollment.dto";
 import { RecordLessonProgressDto } from "../dto/lesson-progress.dto";
 import { WaitlistService } from "./waitlist.service";
+import { BatchCapacityService } from "../access/batch-capacity.service";
 
 const MAX_PAGE_LIMIT = 100;
 
@@ -43,6 +44,7 @@ export class BatchEnrolmentService implements OnModuleInit {
     private readonly notifications: NotificationsService,
     private readonly paymentService: PaymentService,
     private readonly waitlist: WaitlistService,
+    private readonly capacity: BatchCapacityService,
   ) {}
 
   onModuleInit(): void {
@@ -117,7 +119,7 @@ export class BatchEnrolmentService implements OnModuleInit {
       throw new BadRequestException("Already enrolled in this batch");
     }
 
-    if (batch.capacity !== null && (await this.freePlaces(batchId, batch.capacity)) <= 0) {
+    if (!(await this.capacity.hasRoom(batchId))) {
       const place = await this.waitlist.join(batchId, { userId });
       return {
         paymentId: null as string | null,
@@ -497,18 +499,6 @@ export class BatchEnrolmentService implements OnModuleInit {
     });
   }
 
-  private async freePlaces(batchId: string, capacity: number): Promise<number> {
-    const [{ count }] = await this.db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(batchEnrollments)
-      .where(
-        and(
-          eq(batchEnrollments.batchId, batchId),
-          eq(batchEnrollments.status, "ACTIVE"),
-        ),
-      );
-    return capacity - Number(count);
-  }
 
   private async assertRoomFor(
     batchId: string,

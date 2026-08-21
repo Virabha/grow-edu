@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Param, Post } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { Throttle } from "@nestjs/throttler";
 
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { Roles, UserRole } from "../auth/decorators/roles.decorator";
@@ -18,6 +19,7 @@ export class BroadcastController {
   constructor(private readonly broadcasts: BroadcastService) {}
 
   @Roles(UserRole.PLATFORM_ADMIN)
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
   @ApiOperation({ summary: "Send a message to exactly one audience" })
   @Post()
   send(@Body() dto: SendBroadcastDto, @CurrentUser() user: AuthedUser) {

@@ -205,6 +205,16 @@ export class UsersService {
       .where(eq(users.userId, id))
       .returning({ userId: users.userId });
 
+    if (roleChanged && dto.role) {
+      await this.auditLog.record({
+        action: 'user.role-change',
+        targetType: 'user',
+        targetId: id,
+        before: { role: oldRole },
+        after: { role: dto.role },
+      });
+    }
+
     // Send email notification if role changed
     if (roleChanged && dto.role) {
       try {

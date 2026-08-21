@@ -14,7 +14,7 @@ import { CLOCK, Clock } from "../../common/clock";
 import { DATABASE_CONNECTION } from "../../database/database.module";
 import * as schema from "../../database/schema";
 import { batchSubjects, lessons, subjectLessons } from "../../database/schema";
-import { JOB_QUEUE, JobQueue } from "../../jobs/job-queue";
+import { JOB_QUEUE, JobQueue, registerAndRepeat } from "../../jobs/job-queue";
 import { NotificationsService } from "../../notifications/notifications.service";
 import { BatchAccessService, SignedInViewer } from "../access/batch-access.service";
 import {
@@ -41,14 +41,15 @@ export class PublicationService implements OnModuleInit {
   ) {}
 
   onModuleInit(): void {
-    this.jobs.register(PUBLISH_SCHEDULED_JOB, async () => {
-      await this.publishDue();
-    });
-    this.jobs
-      .repeat(PUBLISH_SCHEDULED_JOB, EVERY_FIVE_MINUTES)
-      .catch((err) =>
-        this.logger.error("Could not schedule content publication", err),
-      );
+    registerAndRepeat(
+      this.jobs,
+      PUBLISH_SCHEDULED_JOB,
+      async () => {
+        await this.publishDue();
+      },
+      EVERY_FIVE_MINUTES,
+      (err) => this.logger.error("Could not schedule content publication", err),
+    );
   }
 
   async schedule(

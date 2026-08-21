@@ -22,6 +22,7 @@ import {
 } from "../../database/schema";
 import { CacheService } from "../../cache/cache.service";
 import { CLOCK, Clock } from "../../common/clock";
+import { AuditLogService } from "../../audit/audit-log.service";
 import { BatchAccessService, Viewer } from "../access/batch-access.service";
 import { BatchMediaService } from "../batch-media.service";
 import { CreateBatchDto } from "../dto/create-batch.dto";
@@ -60,6 +61,7 @@ export class BatchCatalogueService {
     private readonly media: BatchMediaService,
     private readonly cache: CacheService,
     @Inject(CLOCK) private readonly clock: Clock,
+    private readonly auditLog: AuditLogService,
   ) {}
 
   async findAll(filters: FilterBatchesDto, viewer: Viewer) {
@@ -619,11 +621,30 @@ export class BatchCatalogueService {
       })
       .where(eq(lessons.lessonId, lessonId))
       .returning();
+
+    await this.auditLog.record({
+      action: "content.edit",
+      targetType: "lesson",
+      targetId: lessonId,
+      before: {
+        batchId,
+        title: existing.title,
+        status: existing.status,
+        isFreePreview: existing.isFreePreview,
+      },
+      after: {
+        batchId,
+        title: updated.title,
+        status: updated.status,
+        isFreePreview: updated.isFreePreview,
+      },
+    });
+
     return updated;
   }
 
   async deleteLesson(batchId: string, lessonId: string) {
-    await this.requireLesson(batchId, lessonId);
+    const existing = await this.requireLesson(batchId, lessonId);
     const subjectIds = await this.subjectIdsFor(batchId);
 
     await this.db.transaction(async (tx) => {
@@ -654,6 +675,14 @@ export class BatchCatalogueService {
           .set({ isDeleted: true, updatedAt: new Date() })
           .where(eq(lessons.lessonId, lessonId));
       }
+    });
+
+    await this.auditLog.record({
+      action: "content.delete",
+      targetType: "lesson",
+      targetId: lessonId,
+      before: { batchId, title: existing.title },
+      after: { batchId, removedFromBatch: true },
     });
 
     return { success: true };

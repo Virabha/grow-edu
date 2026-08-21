@@ -10,6 +10,7 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { Throttle } from "@nestjs/throttler";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { NotificationsService, NotificationType } from "./notifications.service";
@@ -84,6 +85,7 @@ export class NotificationsController {
 
   @Roles(UserRole.PLATFORM_ADMIN)
   @ApiOperation({ summary: "Send a notification to multiple users (queued)" })
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
   @Post("send-bulk")
   async sendBulk(@Body() dto: SendBulkNotificationDto) {
     await this.notificationsService.queuedFanout(

@@ -13,3 +13,14 @@ export interface JobQueue {
 }
 
 export const DEFAULT_ATTEMPTS = 3;
+
+export function registerAndRepeat(
+  jobs: JobQueue,
+  name: string,
+  handler: () => Promise<void>,
+  everyMilliseconds: number,
+  onScheduleError: (err: unknown) => void,
+): void {
+  jobs.register(name, handler);
+  jobs.repeat(name, everyMilliseconds).catch(onScheduleError);
+}

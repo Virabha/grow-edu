@@ -14,9 +14,12 @@ import { CLOCK, Clock } from "../../common/clock";
 import { DATABASE_CONNECTION } from "../../database/database.module";
 import * as schema from "../../database/schema";
 import { reportSchedules } from "../../database/schema";
-import { JOB_QUEUE, JobQueue } from "../../jobs/job-queue";
+import { JOB_QUEUE, JobQueue, registerAndRepeat } from "../../jobs/job-queue";
 import { NotificationsService } from "../../notifications/notifications.service";
-import { CreateReportScheduleDto } from "./dto/create-report-schedule.dto";
+import {
+  CreateReportScheduleDto,
+  ReportCadence,
+} from "./dto/create-report-schedule.dto";
 import { CorporateReportService } from "./corporate-report.service";
 
 export const REPORT_SCHEDULE_JOB = "report.schedule.send";
@@ -24,7 +27,7 @@ export const REPORT_SCHEDULE_JOB = "report.schedule.send";
 const EVERY_HOUR = 60 * 60 * 1000;
 const MILLIS_PER_DAY = 86_400_000;
 
-const CADENCE_DAYS: Record<string, number> = {
+const CADENCE_DAYS: Record<ReportCadence, number> = {
   DAILY: 1,
   WEEKLY: 7,
   FORTNIGHTLY: 14,
@@ -46,14 +49,15 @@ export class ReportScheduleService implements OnModuleInit {
   ) {}
 
   onModuleInit(): void {
-    this.jobs.register(REPORT_SCHEDULE_JOB, async () => {
-      await this.sendDue();
-    });
-    this.jobs
-      .repeat(REPORT_SCHEDULE_JOB, EVERY_HOUR)
-      .catch((err) =>
-        this.logger.error("Could not schedule report emails", err),
-      );
+    registerAndRepeat(
+      this.jobs,
+      REPORT_SCHEDULE_JOB,
+      async () => {
+        await this.sendDue();
+      },
+      EVERY_HOUR,
+      (err) => this.logger.error("Could not schedule report emails", err),
+    );
   }
 
   async create(
@@ -64,9 +68,6 @@ export class ReportScheduleService implements OnModuleInit {
     await this.reports.assertOwnsContract(actorId, contractId);
 
     const everyDays = CADENCE_DAYS[dto.cadence];
-    if (everyDays === undefined) {
-      throw new BadRequestException(`Unknown cadence: ${dto.cadence}`);
-    }
 
     const now = this.clock.now();
     const [created] = await this.db
@@ -194,7 +195,7 @@ export class ReportScheduleService implements OnModuleInit {
         );
       }
 
-      const everyDays = CADENCE_DAYS[schedule.cadence] ?? 7;
+      const everyDays = CADENCE_DAYS[schedule.cadence as ReportCadence] ?? 7;
       await this.db
         .update(reportSchedules)
         .set({

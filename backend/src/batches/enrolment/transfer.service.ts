@@ -26,6 +26,7 @@ import {
 import { Transaction } from "../../database/transaction";
 import { NotificationsService } from "../../notifications/notifications.service";
 import { BatchAccessService, SignedInViewer } from "../access/batch-access.service";
+import { BatchCapacityService } from "../access/batch-capacity.service";
 import { TransferStudentDto } from "../dto/transfer-student.dto";
 
 export const DESTINATION_FULL = "DESTINATION_FULL";
@@ -35,7 +36,7 @@ interface CarryOver {
   leftBehind: string[];
 }
 
-const WHAT_MOVES: CarryOver = {
+const CARRY_OVER_POLICY: CarryOver = {
   carried: ["enrolment", "access window", "how the place was paid for"],
   leftBehind: [
     "attendance",
@@ -53,6 +54,7 @@ export class TransferService {
     private readonly db: PostgresJsDatabase<typeof schema>,
     @Inject(CLOCK) private readonly clock: Clock,
     private readonly access: BatchAccessService,
+    private readonly capacity: BatchCapacityService,
     private readonly notifications: NotificationsService,
     private readonly auditLog: AuditLogService,
   ) {}
@@ -68,13 +70,13 @@ export class TransferService {
     }
 
     const leaving = await this.countsFor(fromBatchId, userId);
-    const room = await this.roomIn(this.db, toBatchId);
+    const room = await this.capacity.of(toBatchId);
 
     return {
       userId,
       from: { batchId: from.batchId, title: from.title },
       to: { batchId: to.batchId, title: to.title },
-      ...WHAT_MOVES,
+      ...CARRY_OVER_POLICY,
       leavingBehind: leaving,
       destinationHasRoom: room.free === null || room.free > 0,
       destinationFreePlaces: room.free,
@@ -97,8 +99,8 @@ export class TransferService {
     await this.access.requireBatch(dto.toBatchId);
 
     const result = await this.db.transaction(async (tx) => {
-      await this.lockBatch(tx, fromBatchId);
-      await this.lockBatch(tx, dto.toBatchId);
+      await this.capacity.lock(tx, fromBatchId);
+      await this.capacity.lock(tx, dto.toBatchId);
 
       const enrolment = await this.activeEnrolment(tx, fromBatchId, userId);
       if (!enrolment) {
@@ -114,7 +116,7 @@ export class TransferService {
         );
       }
 
-      const room = await this.roomIn(tx, dto.toBatchId);
+      const room = await this.capacity.of(dto.toBatchId, tx);
       const full = room.free !== null && room.free <= 0;
 
       if (full && dto.waitlistIfFull !== true) {
@@ -190,7 +192,7 @@ export class TransferService {
         batchId: dto.toBatchId,
         waitlisted: result.waitlisted,
         reason: dto.reason ?? null,
-        ...WHAT_MOVES,
+        ...CARRY_OVER_POLICY,
       },
     });
 
@@ -214,18 +216,10 @@ export class TransferService {
       fromBatchId,
       toBatchId: dto.toBatchId,
       waitlisted: result.waitlisted,
-      ...WHAT_MOVES,
+      ...CARRY_OVER_POLICY,
     };
   }
 
-  private async lockBatch(tx: Transaction, batchId: string): Promise<void> {
-    const locked = await tx.execute<{ batch_id: string }>(
-      sql`select batch_id from batches
-          where batch_id = ${batchId} and is_deleted = false
-          for update`,
-    );
-    if (!locked[0]) throw new NotFoundException("Batch not found");
-  }
 
   private async activeEnrolment(
     tx: Transaction | PostgresJsDatabase<typeof schema>,
@@ -246,33 +240,6 @@ export class TransferService {
     return row ?? null;
   }
 
-  private async roomIn(
-    tx: Transaction | PostgresJsDatabase<typeof schema>,
-    batchId: string,
-  ): Promise<{ capacity: number | null; free: number | null }> {
-    const [batch] = await tx
-      .select({ capacity: batches.capacity })
-      .from(batches)
-      .where(and(eq(batches.batchId, batchId), eq(batches.isDeleted, false)))
-      .limit(1);
-    if (!batch) throw new NotFoundException("Batch not found");
-    if (batch.capacity === null) return { capacity: null, free: null };
-
-    const [taken] = await tx
-      .select({ active: sql<number>`count(*)::int` })
-      .from(batchEnrollments)
-      .where(
-        and(
-          eq(batchEnrollments.batchId, batchId),
-          eq(batchEnrollments.status, "ACTIVE"),
-        ),
-      );
-
-    return {
-      capacity: batch.capacity,
-      free: Math.max(batch.capacity - Number(taken?.active ?? 0), 0),
-    };
-  }
 
   private async countsFor(batchId: string, userId: string) {
     const [attendance, progress, attempts, doubts, certificates] =

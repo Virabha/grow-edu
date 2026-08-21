@@ -31,6 +31,18 @@ export class BatchReportingController {
     return this.reporting.analytics(batchId);
   }
 
+  @BatchAccess("MANAGE")
+  @ApiOperation({
+    summary: "Which students on this batch are falling behind",
+  })
+  @Get(":batchId/students-at-risk")
+  studentsAtRisk(
+    @Param("batchId") batchId: string,
+    @CurrentUser() user: AuthedUser,
+  ) {
+    return this.reporting.studentsAtRisk(batchId, user);
+  }
+
   @BatchAccess("READ")
   @ApiOperation({ summary: "My progress in a batch (learner)" })
   @Get(":batchId/my-progress")

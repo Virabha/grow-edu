@@ -47,6 +47,10 @@ import { PracticeModule } from "./assessment/practice/practice.module";
 import { BatchesModule } from "./batches/batches.module";
 import { NotificationsModule } from "./notifications/notifications.module";
 import { ResultsModule } from "./assessment/results/results.module";
+import { ReviewModule } from "./review/review.module";
+import { DiscoveryModule } from "./discovery/discovery.module";
+import { CommunityModule } from "./community/community.module";
+import { HabitsModule } from "./habits/habits.module";
 
 @Module({
   imports: [
@@ -87,12 +91,16 @@ import { ResultsModule } from "./assessment/results/results.module";
     PracticeModule,
     NotificationsModule,
     ResultsModule,
+    ReviewModule,
     CertificateTemplateModule,
+    DiscoveryModule,
+    CommunityModule,
     BlogModule,
     OrdersModule,
     SessionIntegrityModule,
     AssignmentsModule,
     SettingsModule,
+    HabitsModule,
   ],
   controllers: [AppController],
   providers: [

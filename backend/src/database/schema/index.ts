@@ -9,6 +9,7 @@ export * from "./learning";
 export * from "./commerce";
 export * from "./invoices";
 export * from "./batches";
+export * from "./assessment";
 export * from "./store";
 export * from "./cms";
 export * from "./platform";

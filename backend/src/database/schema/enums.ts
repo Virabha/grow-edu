@@ -214,3 +214,27 @@ export const assignmentSubmissionStatusEnum = pgEnum(
   "assignment_submission_status",
   ["SUBMITTED", "GRADED", "RETURNED"],
 );
+
+export const assessmentTaxonomyKindEnum = pgEnum("assessment_taxonomy_kind", [
+  "SUBJECT",
+  "TOPIC",
+  "SUB_TOPIC",
+]);
+
+export const assessmentQuestionTypeEnum = pgEnum("assessment_question_type", [
+  "SINGLE_CORRECT",
+  "MULTIPLE_CORRECT",
+  "NUMERIC",
+  "WRITTEN",
+  "IMAGE_UPLOAD",
+]);
+
+export const assessmentPartialCreditRuleEnum = pgEnum(
+  "assessment_partial_credit_rule",
+  ["ALL_OR_NOTHING", "PROPORTIONAL"],
+);
+
+export const assessmentToleranceKindEnum = pgEnum(
+  "assessment_tolerance_kind",
+  ["ABSOLUTE", "RELATIVE"],
+);

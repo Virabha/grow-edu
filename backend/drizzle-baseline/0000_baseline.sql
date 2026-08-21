@@ -5,6 +5,30 @@ EXCEPTION
 END $$;
 --> statement-breakpoint
 DO $$ BEGIN
+ CREATE TYPE "assessment_partial_credit_rule" AS ENUM('ALL_OR_NOTHING', 'PROPORTIONAL');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ CREATE TYPE "assessment_question_type" AS ENUM('SINGLE_CORRECT', 'MULTIPLE_CORRECT', 'NUMERIC', 'WRITTEN', 'IMAGE_UPLOAD');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ CREATE TYPE "assessment_taxonomy_kind" AS ENUM('SUBJECT', 'TOPIC', 'SUB_TOPIC');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ CREATE TYPE "assessment_tolerance_kind" AS ENUM('ABSOLUTE', 'RELATIVE');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
  CREATE TYPE "assignment_submission_status" AS ENUM('SUBMITTED', 'GRADED', 'RETURNED');
 EXCEPTION
  WHEN duplicate_object THEN null;
@@ -885,6 +909,78 @@ CREATE TABLE IF NOT EXISTS "subject_lessons" (
 	CONSTRAINT "subject_lessons_subject_lesson_unique" UNIQUE("subject_id","lesson_id")
 );
 --> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "assessment_difficulty_levels" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"level_id" text PRIMARY KEY NOT NULL,
+	"ordinal" integer NOT NULL,
+	"label" text NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "assessment_difficulty_levels_ordinal_unique" UNIQUE("organization_id","ordinal")
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "assessment_question_groups" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"group_id" text PRIMARY KEY NOT NULL,
+	"title" text NOT NULL,
+	"stimulus" jsonb DEFAULT '[]'::jsonb NOT NULL,
+	"is_retired" boolean DEFAULT false NOT NULL,
+	"created_by" text NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "assessment_question_versions" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"question_version_id" text PRIMARY KEY NOT NULL,
+	"question_id" text NOT NULL,
+	"version" integer NOT NULL,
+	"prompt" jsonb NOT NULL,
+	"options" jsonb DEFAULT '[]'::jsonb NOT NULL,
+	"answer_key" jsonb,
+	"explanation" jsonb DEFAULT '[]'::jsonb NOT NULL,
+	"partial_credit_rule" "assessment_partial_credit_rule",
+	"tolerance_kind" "assessment_tolerance_kind",
+	"tolerance" numeric(12, 6),
+	"search_text" text DEFAULT '' NOT NULL,
+	"created_by" text NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "assessment_question_versions_unique" UNIQUE("question_id","version")
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "assessment_questions" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"question_id" text PRIMARY KEY NOT NULL,
+	"type" "assessment_question_type" NOT NULL,
+	"subject_id" text NOT NULL,
+	"topic_id" text NOT NULL,
+	"sub_topic_id" text,
+	"authored_difficulty" integer NOT NULL,
+	"observed_difficulty" numeric(6, 3),
+	"observed_attempt_count" integer DEFAULT 0 NOT NULL,
+	"group_id" text,
+	"group_order" integer,
+	"current_version" integer DEFAULT 1 NOT NULL,
+	"is_retired" boolean DEFAULT false NOT NULL,
+	"retired_at" timestamp,
+	"created_by" text NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "assessment_taxonomy_nodes" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"node_id" text PRIMARY KEY NOT NULL,
+	"kind" "assessment_taxonomy_kind" NOT NULL,
+	"parent_id" text,
+	"name" text NOT NULL,
+	"is_retired" boolean DEFAULT false NOT NULL,
+	"retired_at" timestamp,
+	"created_by" text NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "service_applications" (
 	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
 	"application_id" text PRIMARY KEY NOT NULL,
@@ -1288,6 +1384,14 @@ CREATE INDEX IF NOT EXISTS "lessons_pending_idx" ON "lessons" ("status","submitt
 CREATE INDEX IF NOT EXISTS "lessons_subject_order_idx" ON "lessons" ("subject_id","order");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "subject_lessons_subject_order_idx" ON "subject_lessons" ("subject_id","order");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "subject_lessons_lesson_idx" ON "subject_lessons" ("lesson_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "assessment_question_versions_question_idx" ON "assessment_question_versions" ("question_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "assessment_questions_subject_idx" ON "assessment_questions" ("subject_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "assessment_questions_topic_idx" ON "assessment_questions" ("topic_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "assessment_questions_sub_topic_idx" ON "assessment_questions" ("sub_topic_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "assessment_questions_group_idx" ON "assessment_questions" ("group_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "assessment_questions_difficulty_idx" ON "assessment_questions" ("authored_difficulty");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "assessment_taxonomy_nodes_parent_idx" ON "assessment_taxonomy_nodes" ("parent_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "assessment_taxonomy_nodes_kind_idx" ON "assessment_taxonomy_nodes" ("kind");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "service_applications_service_idx" ON "service_applications" ("service_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "service_applications_status_idx" ON "service_applications" ("status");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "service_applications_email_idx" ON "service_applications" ("applicant_email");--> statement-breakpoint

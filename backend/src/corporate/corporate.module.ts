@@ -8,6 +8,8 @@ import { CorporateAdminService } from './corporate-admin.service';
 import { JoinController } from './join.controller';
 import { JoinLinksService } from './join-links.service';
 import { SeatsService } from './seats.service';
+import { PerTokenThrottlerGuard } from '../auth/guards/per-token-throttler.guard';
+import { SubGroupsService } from './sub-groups.service';
 
 @Module({
   imports: [DatabaseModule],
@@ -21,6 +23,8 @@ import { SeatsService } from './seats.service';
     CorporateAdminService,
     JoinLinksService,
     SeatsService,
+    PerTokenThrottlerGuard,
+    SubGroupsService,
   ],
   exports: [ContractsService],
 })

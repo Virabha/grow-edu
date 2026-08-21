@@ -9,6 +9,43 @@ import {
 import { corporateContractStatusEnum } from "./enums";
 import { organizationId } from "./organizations";
 
+export const corporateSubGroups = pgTable(
+  "corporate_sub_groups",
+  {
+    organizationId: organizationId(),
+    subGroupId: text("sub_group_id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    contractId: text("contract_id").notNull(),
+    name: text("name").notNull(),
+    createdBy: text("created_by").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    contractIdx: index("corporate_sub_groups_contract_idx").on(table.contractId),
+  })
+);
+
+export const corporateSubGroupMembers = pgTable(
+  "corporate_sub_group_members",
+  {
+    organizationId: organizationId(),
+    subGroupMemberId: text("sub_group_member_id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    subGroupId: text("sub_group_id").notNull(),
+    contractId: text("contract_id").notNull(),
+    userId: text("user_id").notNull(),
+    addedBy: text("added_by").notNull(),
+    addedAt: timestamp("added_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    subGroupIdx: index("corporate_sub_group_members_sub_group_idx").on(table.subGroupId),
+    contractUserIdx: index("corporate_sub_group_members_contract_user_idx").on(table.contractId, table.userId),
+    uniqueMember: unique("corporate_sub_group_members_unique").on(table.subGroupId, table.userId),
+  })
+);
+
 export const corporateContracts = pgTable(
   "corporate_contracts",
   {

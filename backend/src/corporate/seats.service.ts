@@ -17,6 +17,7 @@ import {
   corporateContracts,
   corporateJoinLinks,
   corporateSeats,
+  corporateSubGroupMembers,
   users,
 } from '../database/schema';
 import { ClaimSeatDto } from './dto/claim-seat.dto';
@@ -209,6 +210,15 @@ export class SeatsService {
             ),
           );
       }
+
+      await tx
+        .delete(corporateSubGroupMembers)
+        .where(
+          and(
+            eq(corporateSubGroupMembers.contractId, contractId),
+            eq(corporateSubGroupMembers.userId, userId),
+          ),
+        );
 
       return { released: true, seatId: seat.seatId, batchIds };
     });

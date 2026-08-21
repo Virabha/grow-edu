@@ -6,8 +6,11 @@ import { Roles, UserRole } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { CorporateAdminService } from './corporate-admin.service';
+import { AddSubGroupMemberDto } from './dto/add-sub-group-member.dto';
+import { CreateSubGroupDto } from './dto/create-sub-group.dto';
 import { IssueJoinLinkDto } from './dto/issue-join-link.dto';
 import { JoinLinksService } from './join-links.service';
+import { SubGroupsService } from './sub-groups.service';
 
 @ApiTags('corporate')
 @ApiBearerAuth()
@@ -18,6 +21,7 @@ export class CorporateAdminController {
   constructor(
     private readonly corporate: CorporateAdminService,
     private readonly joinLinks: JoinLinksService,
+    private readonly subGroups: SubGroupsService,
   ) {}
 
   @ApiOperation({ summary: 'My organisation’s contracts and seat usage' })
@@ -55,5 +59,63 @@ export class CorporateAdminController {
   ) {
     await this.corporate.assertOwns(user.userId, contractId);
     return this.joinLinks.revokeAll(contractId, user.userId);
+  }
+
+  @ApiOperation({ summary: 'Create a sub-group for organising roster members' })
+  @Post('contracts/:contractId/sub-groups')
+  async createSubGroup(
+    @CurrentUser() user: { userId: string },
+    @Param('contractId') contractId: string,
+    @Body() dto: CreateSubGroupDto,
+  ) {
+    await this.corporate.assertOwns(user.userId, contractId);
+    return this.subGroups.create(contractId, dto.name, user.userId);
+  }
+
+  @ApiOperation({ summary: 'List sub-groups on a contract' })
+  @Get('contracts/:contractId/sub-groups')
+  async listSubGroups(
+    @CurrentUser() user: { userId: string },
+    @Param('contractId') contractId: string,
+  ) {
+    await this.corporate.assertOwns(user.userId, contractId);
+    return this.subGroups.list(contractId);
+  }
+
+  @ApiOperation({ summary: 'Delete a sub-group' })
+  @HttpCode(HttpStatus.OK)
+  @Delete('contracts/:contractId/sub-groups/:subGroupId')
+  async deleteSubGroup(
+    @CurrentUser() user: { userId: string },
+    @Param('contractId') contractId: string,
+    @Param('subGroupId') subGroupId: string,
+  ) {
+    await this.corporate.assertOwns(user.userId, contractId);
+    return this.subGroups.delete(subGroupId, contractId);
+  }
+
+  @ApiOperation({ summary: 'Add a roster member to a sub-group' })
+  @Post('contracts/:contractId/sub-groups/:subGroupId/members')
+  async addSubGroupMember(
+    @CurrentUser() user: { userId: string },
+    @Param('contractId') contractId: string,
+    @Param('subGroupId') subGroupId: string,
+    @Body() dto: AddSubGroupMemberDto,
+  ) {
+    await this.corporate.assertOwns(user.userId, contractId);
+    return this.subGroups.addMember(subGroupId, contractId, dto.userId, user.userId);
+  }
+
+  @ApiOperation({ summary: 'Remove a roster member from a sub-group' })
+  @HttpCode(HttpStatus.OK)
+  @Delete('contracts/:contractId/sub-groups/:subGroupId/members/:userId')
+  async removeSubGroupMember(
+    @CurrentUser() user: { userId: string },
+    @Param('contractId') contractId: string,
+    @Param('subGroupId') subGroupId: string,
+    @Param('userId') userId: string,
+  ) {
+    await this.corporate.assertOwns(user.userId, contractId);
+    return this.subGroups.removeMember(subGroupId, contractId, userId);
   }
 }

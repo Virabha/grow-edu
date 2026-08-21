@@ -334,6 +334,26 @@ CREATE TABLE IF NOT EXISTS "corporate_seats" (
 	"release_reason" text
 );
 --> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "corporate_sub_group_members" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"sub_group_member_id" text PRIMARY KEY NOT NULL,
+	"sub_group_id" text NOT NULL,
+	"contract_id" text NOT NULL,
+	"user_id" text NOT NULL,
+	"added_by" text NOT NULL,
+	"added_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "corporate_sub_group_members_unique" UNIQUE("sub_group_id","user_id")
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "corporate_sub_groups" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"sub_group_id" text PRIMARY KEY NOT NULL,
+	"contract_id" text NOT NULL,
+	"name" text NOT NULL,
+	"created_by" text NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "categories" (
 	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
 	"category_id" text PRIMARY KEY NOT NULL,
@@ -946,6 +966,9 @@ CREATE INDEX IF NOT EXISTS "corporate_join_links_token_hash_idx" ON "corporate_j
 CREATE INDEX IF NOT EXISTS "corporate_seats_contract_idx" ON "corporate_seats" ("contract_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "corporate_seats_user_idx" ON "corporate_seats" ("user_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "corporate_seats_contract_released_idx" ON "corporate_seats" ("contract_id","released_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "corporate_sub_group_members_sub_group_idx" ON "corporate_sub_group_members" ("sub_group_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "corporate_sub_group_members_contract_user_idx" ON "corporate_sub_group_members" ("contract_id","user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "corporate_sub_groups_contract_idx" ON "corporate_sub_groups" ("contract_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "categories_slug_idx" ON "categories" ("slug");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "categories_is_active_idx" ON "categories" ("is_active");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "categories_parent_idx" ON "categories" ("parent_category_id");--> statement-breakpoint

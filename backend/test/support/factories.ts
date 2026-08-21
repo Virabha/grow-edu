@@ -10,6 +10,8 @@ import {
   batchInstructors,
   batchSubjects,
   lessons,
+  corporateSubGroups,
+  corporateSubGroupMembers,
 } from '../../src/database/schema';
 import { TestDatabase } from './test-database';
 import { TestActor } from './test-app';
@@ -154,4 +156,35 @@ export async function createLesson(
     ...overrides,
   });
   return lessonId;
+}
+
+export async function createSubGroup(
+  database: TestDatabase,
+  contractId: string,
+  createdBy: string,
+  name?: string,
+): Promise<string> {
+  const subGroupId = randomUUID();
+  await database.db.insert(corporateSubGroups).values({
+    subGroupId,
+    contractId,
+    name: name ?? unique('subgroup'),
+    createdBy,
+  });
+  return subGroupId;
+}
+
+export async function addSubGroupMember(
+  database: TestDatabase,
+  subGroupId: string,
+  contractId: string,
+  userId: string,
+  addedBy: string,
+): Promise<void> {
+  await database.db.insert(corporateSubGroupMembers).values({
+    subGroupId,
+    contractId,
+    userId,
+    addedBy,
+  });
 }

@@ -6,9 +6,9 @@ Sub-groups are a grouping over a contract's roster. They land before the reports
 
 **Blocked by:** None - can start immediately
 
-**Status:** ready-for-agent
+**Status:** done 2026-08-21
 
-- [ ] A corporate admin can create sub-groups and assign their students to them
-- [ ] A student can belong to a sub-group without it affecting their access to anything
-- [ ] Sub-groups belong to a contract and are invisible to any other organisation
-- [ ] A student removed from the roster leaves their sub-group cleanly
+- [x] A corporate admin can create sub-groups and assign their students to them
+- [x] A student can belong to a sub-group without it affecting their access to anything
+- [x] Sub-groups belong to a contract and are invisible to any other organisation
+- [x] A student removed from the roster leaves their sub-group cleanly

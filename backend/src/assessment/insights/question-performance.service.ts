@@ -150,7 +150,6 @@ export class QuestionPerformanceService {
 
       const correct = bucket.filter((fact) => fact.isCorrect === true).length;
       const failureRate = 1 - correct / bucket.length;
-      if (failureRate < failureThreshold) continue;
 
       const perBatch = new Map<string, { total: number; correct: number }>();
       for (const fact of bucket) {
@@ -166,6 +165,8 @@ export class QuestionPerformanceService {
           tally.total >= minAttempts &&
           1 - tally.correct / tally.total >= failureThreshold,
       ).length;
+
+      if (failureRate < failureThreshold && batchesFailedIn === 0) continue;
 
       questions.push({
         questionId,

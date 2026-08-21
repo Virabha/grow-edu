@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
   Param,
   Patch,
   Post,
@@ -58,6 +59,7 @@ export class QuestionGroupController {
 
   @ApiOperation({ summary: "Add a question as a member of this group" })
   @Post(":groupId/members")
+  @HttpCode(200)
   addMember(
     @Param("groupId") groupId: string,
     @Body() dto: AddMemberDto,
@@ -78,6 +80,7 @@ export class QuestionGroupController {
     summary: "Retire a group; members remain independently usable",
   })
   @Post(":groupId/retire")
+  @HttpCode(200)
   retire(@Param("groupId") groupId: string) {
     return this.groups.retire(groupId);
   }

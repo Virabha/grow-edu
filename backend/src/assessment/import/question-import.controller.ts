@@ -9,7 +9,6 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { Roles, UserRole } from '../../auth/decorators/roles.decorator';
-import { CreateImportDto } from './dto/import.dto';
 import { QuestionImportService } from './question-import.service';
 
 interface AuthedUser {
@@ -25,8 +24,12 @@ export class QuestionImportController {
 
   @ApiOperation({ summary: 'Parse and preview a bulk question import' })
   @Post()
-  preview(@Body() dto: CreateImportDto, @CurrentUser() user: AuthedUser) {
-    return this.service.preview(dto.rows, user.userId);
+  preview(
+    @Body('rows') rows: unknown,
+    @CurrentUser() user: AuthedUser,
+  ) {
+    const safeRows = Array.isArray(rows) ? rows : [];
+    return this.service.preview(safeRows, user.userId);
   }
 
   @ApiOperation({ summary: 'Get the preview and status of an import' })

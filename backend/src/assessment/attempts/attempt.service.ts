@@ -24,6 +24,10 @@ import {
   assessmentTests,
 } from "../../database/schema";
 import { Queryable } from "../../database/transaction";
+import {
+  ErrorNotebookService,
+  NotebookDraft,
+} from "../notebook/error-notebook.service";
 import { clampToFloor, isBlank, scoreAnswer } from "./scoring";
 
 type AttemptRow = typeof assessmentAttempts.$inferSelect;
@@ -79,6 +83,7 @@ export class AttemptService {
   constructor(
     @Inject(DATABASE_CONNECTION)
     private readonly db: PostgresJsDatabase<typeof schema>,
+    private readonly notebook: ErrorNotebookService,
     @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
@@ -251,6 +256,7 @@ export class AttemptService {
       awardedMarks: string | null;
       status: "AUTO_SCORED" | "PENDING_GRADING";
     }[] = [];
+    const drafts: NotebookDraft[] = [];
 
     for (const answer of answers) {
       const placement = byPlacement.get(answer.placementId);
@@ -297,6 +303,20 @@ export class AttemptService {
       else if (scored.outcome === "WRONG") wrongCount += 1;
       else if (scored.outcome === "SKIPPED") skippedCount += 1;
 
+      if (scored.outcome === "WRONG" || scored.outcome === "PARTIAL") {
+        drafts.push({
+          userId,
+          questionId: answer.questionId,
+          questionVersion: answer.questionVersion,
+          attemptId,
+          answerId: answer.answerId,
+          topicId: question.topicId,
+          givenAnswer: answer.response,
+          correctAnswer: version.answerKey ?? null,
+          explanation: version.explanation,
+        });
+      }
+
       updates.push({
         answerId: answer.answerId,
         isCorrect: scored.outcome === "CORRECT",
@@ -336,6 +356,8 @@ export class AttemptService {
           updatedAt: now,
         })
         .where(eq(assessmentAttempts.attemptId, attemptId));
+
+      await this.notebook.collect(drafts, tx);
     });
 
     return this.view(attemptId, userId);

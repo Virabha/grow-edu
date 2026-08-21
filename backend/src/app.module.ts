@@ -40,6 +40,7 @@ import { AppCacheModule } from "./cache/cache.module";
 import { AssessmentModule } from "./assessment/assessment.module";
 import { GroupsModule } from "./assessment/groups/groups.module";
 import { ImportModule } from "./assessment/import/import.module";
+import { GradingModule } from "./assessment/grading/grading.module";
 import { TestsModule } from "./assessment/tests/tests.module";
 import { BatchesModule } from "./batches/batches.module";
 import { NotificationsModule } from "./notifications/notifications.module";
@@ -78,6 +79,7 @@ import { NotificationsModule } from "./notifications/notifications.module";
     GroupsModule,
     ImportModule,
     TestsModule,
+    GradingModule,
     NotificationsModule,
     CertificateTemplateModule,
     BlogModule,

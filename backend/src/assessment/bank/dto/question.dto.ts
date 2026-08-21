@@ -54,13 +54,13 @@ export class CreateQuestionDto {
   difficulty: number;
 
   @ApiProperty({ description: "Structured content blocks" })
-  @Transform(({ value }) => value)
+  @Transform(({ obj, key }) => obj[key])
   @IsArray()
   prompt: unknown[];
 
   @ApiPropertyOptional()
   @IsOptional()
-  @Transform(({ value }) => value)
+  @Transform(({ obj, key }) => obj[key])
   @IsArray()
   options?: unknown[];
 
@@ -71,7 +71,7 @@ export class CreateQuestionDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @Transform(({ value }) => value)
+  @Transform(({ obj, key }) => obj[key])
   @IsArray()
   explanation?: unknown[];
 
@@ -105,13 +105,13 @@ export class CreateQuestionDto {
 export class UpdateQuestionDto {
   @ApiPropertyOptional()
   @IsOptional()
-  @Transform(({ value }) => value)
+  @Transform(({ obj, key }) => obj[key])
   @IsArray()
   prompt?: unknown[];
 
   @ApiPropertyOptional()
   @IsOptional()
-  @Transform(({ value }) => value)
+  @Transform(({ obj, key }) => obj[key])
   @IsArray()
   options?: unknown[];
 
@@ -122,7 +122,7 @@ export class UpdateQuestionDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @Transform(({ value }) => value)
+  @Transform(({ obj, key }) => obj[key])
   @IsArray()
   explanation?: unknown[];
 

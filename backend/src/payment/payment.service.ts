@@ -21,6 +21,7 @@ import { Queryable } from '../database/transaction';
 import { eq, and, inArray, desc, like, sql } from 'drizzle-orm';
 import { EmailService } from '../email/email.service';
 import { ContractsService } from '../corporate/contracts.service';
+import { AuditLogService } from '../audit/audit-log.service';
 
 const MAX_PAGE_LIMIT = 100;
 const PLATFORM_CURRENCY = 'INR';
@@ -87,6 +88,7 @@ export class PaymentService {
     private readonly db: PostgresJsDatabase<typeof schema>,
     private emailService: EmailService,
     private readonly contracts: ContractsService,
+    private readonly auditLog: AuditLogService,
   ) {
     const razorpayKeyId = this.configService.razorpayKeyId;
     const razorpayKeySecret = this.configService.razorpayKeySecret;
@@ -230,6 +232,14 @@ export class PaymentService {
 
     if (!approved) return { success: true };
 
+    await this.auditLog.record({
+      action: 'payment.approve',
+      targetType: 'payment',
+      targetId: paymentId,
+      before: { status: payment.status },
+      after: { status: 'COMPLETED', notes: notes ?? null },
+    });
+
     if (payment.itemType === 'CORPORATE_CONTRACT') {
       return { success: true, message: 'Payment approved and contract activated' };
     }
@@ -288,6 +298,14 @@ export class PaymentService {
         updatedAt: now,
       })
       .where(eq(payments.paymentId, paymentId));
+
+    await this.auditLog.record({
+      action: 'payment.reject',
+      targetType: 'payment',
+      targetId: paymentId,
+      before: { status: payment.status },
+      after: { status: 'REJECTED', notes },
+    });
 
     return { success: true, message: 'Payment rejected' };
   }

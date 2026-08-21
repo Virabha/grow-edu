@@ -45,18 +45,24 @@ export async function createTestApp(
   return app;
 }
 
-export function tokenFor(app: INestApplication, actor: TestActor): string {
+export function tokenFor(
+  app: INestApplication,
+  actor: TestActor,
+  extra: Record<string, string> = {},
+): string {
   const jwtService = app.get(JwtService, { strict: false });
   return jwtService.sign({
     sub: actor.userId,
     email: actor.email,
     role: actor.role,
+    ...extra,
   });
 }
 
 export function authHeader(
   app: INestApplication,
   actor: TestActor,
+  extra: Record<string, string> = {},
 ): [string, string] {
-  return ['Authorization', `Bearer ${tokenFor(app, actor)}`];
+  return ['Authorization', `Bearer ${tokenFor(app, actor, extra)}`];
 }

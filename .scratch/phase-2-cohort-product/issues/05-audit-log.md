@@ -8,10 +8,10 @@ Impersonation, suspension, payment approval, refunds, content edits and permissi
 
 **Blocked by:** None - can start immediately
 
-**Status:** ready-for-agent
+**Status:** done 2026-08-21
 
-- [ ] A privileged action produces exactly one audit record naming the actor who performed it
-- [ ] The record captures before and after values where a change has them
-- [ ] No interface can edit or delete an audit record
-- [ ] An action performed while impersonating records both the impersonator and the impersonated account
-- [ ] The owner can search the log by actor, by target and by time range
+- [x] A privileged action produces exactly one audit record naming the actor who performed it
+- [x] The record captures before and after values where a change has them
+- [x] No interface can edit or delete an audit record
+- [x] An action performed while impersonating records both the impersonator and the impersonated account
+- [x] The owner can search the log by actor, by target and by time range

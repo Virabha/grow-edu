@@ -8,6 +8,7 @@ interface JwtPayload {
   email: string;
   role: string;
   deviceId?: string;
+  impersonatorId?: string;
 }
 
 interface UserFromJwt {
@@ -15,6 +16,7 @@ interface UserFromJwt {
   email: string;
   role: string;
   deviceId?: string;
+  impersonatorId?: string;
 }
 
 @Injectable()
@@ -28,7 +30,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: JwtPayload): Promise<UserFromJwt> {
-    return { userId: payload.sub, email: payload.email, role: payload.role, deviceId: payload.deviceId };
+    return {
+      userId: payload.sub,
+      email: payload.email,
+      role: payload.role,
+      deviceId: payload.deviceId,
+      impersonatorId: payload.impersonatorId,
+    };
   }
 }
 

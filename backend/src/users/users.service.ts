@@ -11,6 +11,7 @@ import * as schema from '../database/schema';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { EmailService } from '../email/email.service';
 import { FilesService } from '../files/files.service';
+import { AuditLogService } from '../audit/audit-log.service';
 
 const MAX_PAGE_LIMIT = 50;
 
@@ -25,6 +26,7 @@ export class UsersService {
     private readonly accountSuspension: AccountSuspensionService,
     private emailService: EmailService,
     private filesService: FilesService,
+    private readonly auditLog: AuditLogService,
   ) {}
 
   private ensureProfileImageUrl(profileImage: string | null): string | null {
@@ -254,6 +256,17 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
+    await this.auditLog.record({
+      action: 'user.suspend',
+      targetType: 'user',
+      targetId: targetUserId,
+      before: { suspendedAt: null },
+      after: {
+        suspendedAt: suspended.suspendedAt,
+        suspensionReason: suspended.suspensionReason,
+      },
+    });
+
     this.accountSuspension.forget(targetUserId);
     await this.revokeEveryDevice(targetUserId);
 
@@ -282,6 +295,13 @@ export class UsersService {
     }
 
     this.accountSuspension.forget(targetUserId);
+
+    await this.auditLog.record({
+      action: 'user.reinstate',
+      targetType: 'user',
+      targetId: targetUserId,
+      after: { suspendedAt: null },
+    });
 
     return { message: 'Account reinstated', userId: reinstated.userId };
   }

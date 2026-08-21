@@ -1,4 +1,4 @@
-import { Module } from "@nestjs/common";
+import { MiddlewareConsumer, Module, NestModule } from "@nestjs/common";
 import { APP_GUARD } from "@nestjs/core";
 import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
 import { AppController } from "./app.controller";
@@ -19,6 +19,8 @@ import { SettingsModule } from "./settings/settings.module";
 import { AppConfigModule } from "./config/config.module";
 import { ClockModule } from "./common/clock";
 import { JobsModule } from "./jobs/jobs.module";
+import { AuditModule } from "./audit/audit.module";
+import { RequestContextMiddleware } from "./audit/request-context.middleware";
 import { DatabaseModule } from "./database/database.module";
 import { AuthModule } from "./auth/auth.module";
 import { CategoriesModule } from "./categories/categories.module";
@@ -42,6 +44,7 @@ import { NotificationsModule } from "./notifications/notifications.module";
     AppConfigModule,
     ClockModule,
     JobsModule,
+    AuditModule,
     AppCacheModule,
     DatabaseModule,
     ThrottlerModule.forRoot([
@@ -84,4 +87,8 @@ import { NotificationsModule } from "./notifications/notifications.module";
     { provide: APP_GUARD, useClass: BatchAccessGuard },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(RequestContextMiddleware).forRoutes("*");
+  }
+}

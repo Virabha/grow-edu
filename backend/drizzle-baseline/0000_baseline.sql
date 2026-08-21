@@ -176,6 +176,23 @@ CREATE TABLE IF NOT EXISTS "organizations" (
 	CONSTRAINT "organizations_slug_unique" UNIQUE("slug")
 );
 --> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "audit_log" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"audit_id" text PRIMARY KEY NOT NULL,
+	"actor_id" text,
+	"actor_role" text,
+	"impersonator_id" text,
+	"action" text NOT NULL,
+	"target_type" text NOT NULL,
+	"target_id" text,
+	"before" jsonb,
+	"after" jsonb,
+	"ip_address" text,
+	"user_agent" text,
+	"request_id" text,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "email_tokens" (
 	"token_id" text PRIMARY KEY NOT NULL,
 	"user_id" text NOT NULL,
@@ -901,6 +918,10 @@ CREATE TABLE IF NOT EXISTS "video_encoding_jobs" (
 );
 --> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "organizations_slug_idx" ON "organizations" ("slug");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "audit_log_actor_idx" ON "audit_log" ("actor_id","created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "audit_log_target_idx" ON "audit_log" ("target_type","target_id","created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "audit_log_action_idx" ON "audit_log" ("action","created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "audit_log_created_at_idx" ON "audit_log" ("created_at");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "email_tokens_user_id_idx" ON "email_tokens" ("user_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "email_tokens_token_hash_idx" ON "email_tokens" ("token_hash");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "email_tokens_expires_at_idx" ON "email_tokens" ("expires_at");--> statement-breakpoint
@@ -1012,3 +1033,15 @@ CREATE INDEX IF NOT EXISTS "video_encoding_jobs_status_idx" ON "video_encoding_j
 INSERT INTO "organizations" ("organization_id", "name", "slug")
 VALUES ('00000000-0000-0000-0000-000000000001', 'groEdu', 'groedu')
 ON CONFLICT ("organization_id") DO NOTHING;
+--> statement-breakpoint
+CREATE OR REPLACE FUNCTION audit_log_is_append_only() RETURNS trigger AS $$
+BEGIN
+  RAISE EXCEPTION 'audit_log is append-only';
+END;
+$$ LANGUAGE plpgsql;
+--> statement-breakpoint
+DROP TRIGGER IF EXISTS audit_log_no_mutation ON "audit_log";
+--> statement-breakpoint
+CREATE TRIGGER audit_log_no_mutation
+  BEFORE UPDATE OR DELETE ON "audit_log"
+  FOR EACH ROW EXECUTE FUNCTION audit_log_is_append_only();

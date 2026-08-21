@@ -18,6 +18,7 @@ import { AssignmentsModule } from "./assignments/assignments.module";
 import { SettingsModule } from "./settings/settings.module";
 import { AppConfigModule } from "./config/config.module";
 import { ClockModule } from "./common/clock";
+import { JobsModule } from "./jobs/jobs.module";
 import { DatabaseModule } from "./database/database.module";
 import { AuthModule } from "./auth/auth.module";
 import { CategoriesModule } from "./categories/categories.module";
@@ -40,6 +41,7 @@ import { NotificationsModule } from "./notifications/notifications.module";
   imports: [
     AppConfigModule,
     ClockModule,
+    JobsModule,
     AppCacheModule,
     DatabaseModule,
     ThrottlerModule.forRoot([

@@ -3,6 +3,7 @@ import {
   Inject,
   Injectable,
   NotFoundException,
+  OnModuleInit,
 } from "@nestjs/common";
 import { and, asc, desc, eq, or, sql } from "drizzle-orm";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -20,6 +21,7 @@ import { NotificationsService } from "../../notifications/notifications.service"
 import { BatchAccessService, SignedInViewer, Viewer } from "../access/batch-access.service";
 import { BatchMediaService } from "../batch-media.service";
 import { CLOCK, Clock } from "../../common/clock";
+import { JOB_QUEUE, JobQueue } from "../../jobs/job-queue";
 import {
   CreateBatchAnnouncementDto,
   UpdateBatchAnnouncementDto,
@@ -34,6 +36,15 @@ import {
   UpdateBatchResourceDto,
 } from "../dto/batch-resource.dto";
 
+const ANNOUNCE_BATCH_JOB = "batch.announcement.fanout";
+
+type AnnouncementFanout = {
+  batchId: string;
+  title: string;
+  body: string;
+  slug: string;
+};
+
 const AUTHOR_COLUMNS = {
   userId: users.userId,
   firstName: users.firstName,
@@ -43,7 +54,7 @@ const AUTHOR_COLUMNS = {
 } as const;
 
 @Injectable()
-export class BatchEngagementService {
+export class BatchEngagementService implements OnModuleInit {
   constructor(
     @Inject(DATABASE_CONNECTION)
     private readonly db: PostgresJsDatabase<typeof schema>,
@@ -51,7 +62,26 @@ export class BatchEngagementService {
     private readonly media: BatchMediaService,
     private readonly notifications: NotificationsService,
     @Inject(CLOCK) private readonly clock: Clock,
+    @Inject(JOB_QUEUE) private readonly jobs: JobQueue,
   ) {}
+
+  onModuleInit(): void {
+    this.jobs.register<AnnouncementFanout>(
+      ANNOUNCE_BATCH_JOB,
+      async ({ batchId, title, body, slug }) => {
+        await this.notifications.fanout(
+          await this.access.enrolledUserIds(batchId),
+          {
+            type: "BATCH_ANNOUNCEMENT",
+            title: `Announcement: ${title}`,
+            body: body.slice(0, 200),
+            link: `/batches/${slug}?tab=announcements`,
+            batchId,
+          },
+        );
+      },
+    );
+  }
 
   async listAnnouncements(batchId: string, viewer: Viewer) {
     await this.access.require(batchId, viewer, "READ");
@@ -87,16 +117,12 @@ export class BatchEngagementService {
       })
       .returning();
 
-    await this.notifications.fanout(
-      await this.access.enrolledUserIds(batchId),
-      {
-        type: "BATCH_ANNOUNCEMENT",
-        title: `Announcement: ${dto.title}`,
-        body: dto.body.slice(0, 200),
-        link: `/batches/${batch.slug}?tab=announcements`,
-        batchId,
-      },
-    );
+    await this.jobs.enqueue<AnnouncementFanout>(ANNOUNCE_BATCH_JOB, {
+      batchId,
+      title: dto.title,
+      body: dto.body,
+      slug: batch.slug,
+    });
     return created;
   }
 

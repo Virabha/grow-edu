@@ -5,6 +5,8 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from '../../src/app.module';
 import { DATABASE_CONNECTION } from '../../src/database/database.module';
 import { CLOCK } from '../../src/common/clock';
+import { JOB_QUEUE } from '../../src/jobs/job-queue';
+import { InlineJobQueue } from '../../src/jobs/inline-job-queue';
 import { TestClock } from './test-clock';
 import { TestDatabase } from './test-database';
 
@@ -25,6 +27,8 @@ export async function createTestApp(
     .useValue(database.db)
     .overrideProvider(CLOCK)
     .useValue(clock)
+    .overrideProvider(JOB_QUEUE)
+    .useValue(new InlineJobQueue(clock))
     .compile();
 
   const app = moduleRef.createNestApplication<NestExpressApplication>();

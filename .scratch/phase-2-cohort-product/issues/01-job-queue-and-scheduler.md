@@ -4,14 +4,16 @@
 
 This gates most of the phase: recurrence generation, recording attachment, notification fan-out, lifecycle transitions, scheduled reports and exports all sit on it. It was Phase 1 item 7 and is the one thing that phase did not deliver.
 
-Unblocking it needs a dependency install in the backend (the local pnpm store major version no longer matches node_modules, so adding a package is refused) and a Redis connection string.
+The install was unblocked by running it with the purge confirmation bypassed, which is the fix pnpm itself prescribes for a non-interactive shell.
+
+**Caveat:** the BullMQ driver is written and typechecks but has never run against a live Redis. The REDIS_URL commented out in backend/.env points at a host that no longer resolves, so the instance behind it is gone. Everything proven by the tests is proven through the inline driver. Before relying on queued work in production, supply a live REDIS_URL and confirm a job round-trips.
 
 **Blocked by:** None - can start immediately
 
-**Status:** ready-for-agent
+**Status:** done 2026-08-21, with one caveat below
 
-- [ ] A job enqueued by a request is processed and its effect is observable
-- [ ] A failing job is retried, and gives up after a bounded number of attempts rather than retrying forever
-- [ ] A repeatable job can be registered and fires on its schedule
-- [ ] In the test environment a queued job completes within the triggering test with no sleep or poll
-- [ ] The application still boots when no Redis connection string is configured, with queue-backed features degraded rather than the process failing
+- [x] A job enqueued by a request is processed and its effect is observable
+- [x] A failing job is retried, and gives up after a bounded number of attempts rather than retrying forever
+- [x] A repeatable job can be registered and fires on its schedule
+- [x] In the test environment a queued job completes within the triggering test with no sleep or poll
+- [x] The application still boots when no Redis connection string is configured, with queue-backed features degraded rather than the process failing

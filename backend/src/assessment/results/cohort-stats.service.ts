@@ -46,11 +46,15 @@ export class CohortStatsService {
     const [staleCheck] = await this.db
       .select({ count: sql<number>`count(*)::int` })
       .from(assessmentAttempts)
+      .innerJoin(
+        assessmentTestStats,
+        eq(assessmentTestStats.testId, assessmentAttempts.testId),
+      )
       .where(
         and(
           eq(assessmentAttempts.testId, testId),
           ne(assessmentAttempts.status, "IN_PROGRESS"),
-          sql`${assessmentAttempts.updatedAt} > ${cached[0].computedAt}`,
+          sql`${assessmentAttempts.updatedAt} > ${assessmentTestStats.computedAt}`,
         ),
       );
 

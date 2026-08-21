@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, asc, eq, inArray } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 
 import { CLOCK, Clock } from '../../common/clock';
@@ -17,6 +17,7 @@ import {
   assessmentTests,
   assessmentWeakTopics,
 } from '../../database/schema';
+import { effectiveDifficultyExpr } from '../shared/difficulty';
 import { GenerationService } from './generation.service';
 
 export interface DailySetView {
@@ -171,15 +172,15 @@ export class DailyPracticeService {
     total: number,
   ): Promise<{ ordinal: number; count: number }[]> {
     const available = await this.db
-      .selectDistinct({ ordinal: assessmentQuestions.authoredDifficulty })
+      .selectDistinct({ ordinal: effectiveDifficultyExpr() })
       .from(assessmentQuestions)
       .where(
         and(
           inArray(assessmentQuestions.topicId, topicIds),
           eq(assessmentQuestions.isRetired, false),
+          isNull(assessmentQuestions.groupId),
         ),
-      )
-      .orderBy(asc(assessmentQuestions.authoredDifficulty));
+      );
 
     if (available.length === 0) {
       throw new ConflictException(
@@ -187,7 +188,9 @@ export class DailyPracticeService {
       );
     }
 
-    const ordinals = available.map((r) => r.ordinal);
+    const ordinals = available
+      .map((r) => Number(r.ordinal))
+      .sort((left, right) => left - right);
     const perLevel = Math.floor(total / ordinals.length);
     const remainder = total - perLevel * ordinals.length;
 

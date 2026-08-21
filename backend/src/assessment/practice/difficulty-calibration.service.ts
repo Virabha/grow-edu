@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { and, asc, desc, eq, isNotNull, not, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, isNotNull, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 
 import { CLOCK, Clock } from '../../common/clock';
@@ -11,9 +11,10 @@ import {
   assessmentQuestions,
 } from '../../database/schema';
 import { JOB_QUEUE, JobQueue, registerAndRepeat } from '../../jobs/job-queue';
+import { CALIBRATION_THRESHOLD } from '../shared/difficulty';
 
 export const CALIBRATION_JOB = 'assessment.difficulty.calibrate';
-export const CALIBRATION_THRESHOLD = 10;
+export { CALIBRATION_THRESHOLD };
 const REPEAT_INTERVAL_MS = 60 * 60 * 1000;
 
 export interface DivergentQuestion {

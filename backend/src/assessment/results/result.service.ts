@@ -171,7 +171,6 @@ export class ResultService {
       questions,
       parentOf,
       nameOf,
-      byPlacementId,
     );
 
     return {
@@ -234,8 +233,6 @@ export class ResultService {
     }
 
     const placements = await this.placementsOf(attempt.testId);
-    const byPlacementId = new Map(placements.map((p) => [p.placementId, p]));
-
     const myAnswers = await this.answersFor(attemptId);
     const topAnswers = await this.answersFor(cohortFigures.topAttemptId);
 
@@ -373,10 +370,6 @@ export class ResultService {
     questions: Map<string, typeof assessmentQuestions.$inferSelect>,
     parentOf: Map<string, string | null>,
     nameOf: Map<string, string>,
-    byPlacementId: Map<
-      string,
-      typeof assessmentTestQuestions.$inferSelect
-    >,
   ): TopicBreakdown[] {
     const topicMap = new Map<
       string,

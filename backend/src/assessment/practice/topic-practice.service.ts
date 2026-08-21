@@ -17,8 +17,10 @@ import {
   assessmentQuestions,
   assessmentQuestionsServed,
 } from '../../database/schema';
-
-const CALIBRATION_THRESHOLD = 10;
+import {
+  effectiveDifficultyExpr,
+  effectiveDifficultyOf,
+} from '../shared/difficulty';
 
 export interface QuestionServeView {
   servedId: string;
@@ -93,7 +95,7 @@ export class TopicPracticeService {
       throw new NotFoundException('No questions available for this topic');
     }
 
-    const difficulty = this.effectiveDifficulty(question);
+    const difficulty = effectiveDifficultyOf(question);
     const now = this.clock.now();
 
     const [served] = await this.db
@@ -173,33 +175,14 @@ export class TopicPracticeService {
     return currentDifficulty;
   }
 
-  private effectiveDifficulty(question: QuestionRow): number {
-    if (
-      question.observedAttemptCount >= CALIBRATION_THRESHOLD &&
-      question.observedDifficulty !== null
-    ) {
-      return Math.round(Number(question.observedDifficulty));
-    }
-    return question.authoredDifficulty;
-  }
 
-  private effectiveDifficultyExpr() {
-    return sql<number>`
-      CASE
-        WHEN ${assessmentQuestions.observedAttemptCount} >= ${CALIBRATION_THRESHOLD}
-          AND ${assessmentQuestions.observedDifficulty} IS NOT NULL
-          THEN ROUND(${assessmentQuestions.observedDifficulty}::numeric)
-        ELSE ${assessmentQuestions.authoredDifficulty}
-      END
-    `;
-  }
 
   private async findUnseen(
     topicId: string,
     targetOrdinal: number,
     servedIds: string[],
   ): Promise<QuestionRow | null> {
-    const expr = this.effectiveDifficultyExpr();
+    const expr = effectiveDifficultyExpr();
     const conditions = [
       eq(assessmentQuestions.topicId, topicId),
       eq(assessmentQuestions.isRetired, false),

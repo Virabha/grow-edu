@@ -387,6 +387,57 @@ describe("attempt scoring", () => {
       }
     });
 
+    it("scores a passage set as the sum of its constituent questions", async () => {
+      const testId = await publishedTest();
+      const groupId = await createQuestionGroup(
+        database,
+        admin.userId,
+        text("A trolley of mass m moves at speed v."),
+      );
+
+      const first = await createQuestion(database, taxonomy, admin.userId, {
+        groupId,
+        groupOrder: 1,
+      });
+      const second = await createQuestion(database, taxonomy, admin.userId, {
+        groupId,
+        groupOrder: 2,
+      });
+      const third = await createQuestion(database, taxonomy, admin.userId, {
+        groupId,
+        groupOrder: 3,
+      });
+
+      const firstPlacement = await placeQuestion(database, testId, first, {
+        order: 1,
+        groupId,
+        marks: "3",
+      });
+      const secondPlacement = await placeQuestion(database, testId, second, {
+        order: 2,
+        groupId,
+        marks: "4",
+      });
+      const thirdPlacement = await placeQuestion(database, testId, third, {
+        order: 3,
+        groupId,
+        marks: "5",
+      });
+
+      const attempt = await start(testId);
+      await answer(attempt.attemptId, firstPlacement, "a");
+      await answer(attempt.attemptId, secondPlacement, "a");
+      await answer(attempt.attemptId, thirdPlacement, "b");
+
+      const scored = await submit(attempt.attemptId);
+
+      expect(questionAt(scored, firstPlacement).awardedMarks).toBe(3);
+      expect(questionAt(scored, secondPlacement).awardedMarks).toBe(4);
+      expect(questionAt(scored, thirdPlacement).awardedMarks).toBe(0);
+      expect(scored.provisionalScore).toBe(7);
+      expect(scored.maxScore).toBe(12);
+    });
+
     it("allows an answer to be saved and revised before submission", async () => {
       const testId = await publishedTest();
       const questionId = await createQuestion(database, taxonomy, admin.userId);

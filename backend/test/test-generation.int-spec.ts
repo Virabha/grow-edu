@@ -17,6 +17,7 @@ import { TestClock } from './support/test-clock';
 import { createUser } from './support/factories';
 import {
   createQuestion,
+  createQuestionGroup,
   createTaxonomy,
   seedDifficultyScale,
   Taxonomy,
@@ -78,6 +79,54 @@ describe('test generation (ticket 17)', () => {
       .from(assessmentQuestions)
       .where(inArray(assessmentQuestions.questionId, questionIds));
   }
+
+  it('never serves part of a question group', async () => {
+    const groupId = await createQuestionGroup(database, admin.userId);
+    for (let i = 0; i < 4; i += 1) {
+      await createQuestion(database, taxonomy, admin.userId, {
+        difficulty: 1,
+        groupId,
+        groupOrder: i + 1,
+      });
+    }
+    for (let i = 0; i < 3; i += 1) {
+      await createQuestion(database, taxonomy, admin.userId, { difficulty: 1 });
+    }
+
+    const result = await generate({
+      topicCounts: [{ topicId: taxonomy.topicId, count: 3 }],
+      difficultyCounts: [{ ordinal: 1, count: 3 }],
+    });
+
+    const chosen = await questionsInTest(result.testId as string);
+    expect(chosen).toHaveLength(3);
+    for (const question of chosen) {
+      expect(question.groupId).toBeNull();
+    }
+  });
+
+  it('reports a shortage rather than splitting a group to fill the count', async () => {
+    const groupId = await createQuestionGroup(database, admin.userId);
+    for (let i = 0; i < 5; i += 1) {
+      await createQuestion(database, taxonomy, admin.userId, {
+        difficulty: 1,
+        groupId,
+        groupOrder: i + 1,
+      });
+    }
+    await createQuestion(database, taxonomy, admin.userId, { difficulty: 1 });
+
+    const body = await generate(
+      {
+        topicCounts: [{ topicId: taxonomy.topicId, count: 3 }],
+        difficultyCounts: [{ ordinal: 1, count: 3 }],
+      },
+      admin,
+      422,
+    );
+
+    expect(body.shortages).toBeDefined();
+  });
 
   it('honours per-topic counts exactly', async () => {
     for (let i = 0; i < 5; i += 1) {

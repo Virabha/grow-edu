@@ -23,6 +23,7 @@ import {
   assessmentTaxonomyNodes,
 } from '../../database/schema';
 import { JOB_QUEUE, JobQueue } from '../../jobs/job-queue';
+import { isRecord } from '../shared/type-guards';
 import { buildScoringShape } from '../bank/answer-key';
 import { contentToSearchText, parseContent, parseOptions } from '../bank/content';
 import {
@@ -39,10 +40,6 @@ interface CommitPayload {
   actorId: string;
 }
 
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 function asQuestionType(value: unknown): QuestionType | null {
   if (typeof value !== 'string') return null;

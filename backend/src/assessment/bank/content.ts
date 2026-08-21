@@ -1,12 +1,10 @@
 import { BadRequestException } from "@nestjs/common";
 
 import { ContentBlock, QuestionOption } from "../../database/schema";
+import { isRecord } from "../shared/type-guards";
 
 const BLOCK_TYPES = ["TEXT", "MATH", "CODE", "IMAGE"];
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 function requireString(
   block: Record<string, unknown>,

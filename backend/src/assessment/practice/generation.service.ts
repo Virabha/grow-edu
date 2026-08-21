@@ -4,7 +4,7 @@ import {
   Injectable,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { and, asc, eq, inArray, not } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, not } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 
 import { CLOCK, Clock } from '../../common/clock';
@@ -16,6 +16,7 @@ import {
   assessmentTestQuestions,
   assessmentTests,
 } from '../../database/schema';
+import { effectiveDifficultyExpr } from '../shared/difficulty';
 
 export interface GenerationCriteria {
   topicCounts: { topicId: string; count: number }[];
@@ -77,8 +78,9 @@ export class GenerationService {
 
       const baseConditions = [
         eq(assessmentQuestions.topicId, cell.topicId),
-        eq(assessmentQuestions.authoredDifficulty, cell.ordinal),
+        eq(effectiveDifficultyExpr(), cell.ordinal),
         eq(assessmentQuestions.isRetired, false),
+        isNull(assessmentQuestions.groupId),
       ];
 
       const allExcluded = [...excludeIds];

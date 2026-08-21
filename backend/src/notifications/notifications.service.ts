@@ -10,6 +10,7 @@ import { AppConfigService } from "../config";
 import { JOB_QUEUE, JobQueue } from "../jobs/job-queue";
 import { CLOCK, Clock } from "../common/clock";
 import { NotificationTemplateService } from "./notification-templates.service";
+import { PushService } from "./push.service";
 
 type DbType = PostgresJsDatabase<typeof schema>;
 
@@ -72,6 +73,7 @@ export class NotificationsService implements OnModuleInit {
     private readonly templateService: NotificationTemplateService,
     @Inject(JOB_QUEUE) private readonly jobs: JobQueue,
     @Inject(CLOCK) private readonly clock: Clock,
+    private readonly push: PushService,
   ) {}
 
   onModuleInit(): void {
@@ -105,6 +107,29 @@ export class NotificationsService implements OnModuleInit {
 
     if (inserted) {
       await this.deliverEmail(input.userId, inserted.title, inserted.body ?? undefined, inserted.link ?? undefined);
+      await this.deliverPush(
+        input.userId,
+        inserted.title,
+        inserted.body ?? "",
+        inserted.link,
+      );
+    }
+  }
+
+  private async deliverPush(
+    userId: string,
+    title: string,
+    body: string,
+    link: string | null,
+  ): Promise<void> {
+    try {
+      await this.push.deliver(userId, { title, body, link });
+    } catch (err) {
+      this.logger.warn(
+        `Push delivery failed for ${userId}: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
     }
   }
 

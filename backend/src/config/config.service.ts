@@ -87,6 +87,18 @@ export class AppConfigService {
     return this.configService.get("WEBHOOK_SECRET", { infer: true });
   }
 
+  get vapidPublicKey(): string | undefined {
+    return this.configService.get("VAPID_PUBLIC_KEY", { infer: true });
+  }
+
+  get vapidPrivateKey(): string | undefined {
+    return this.configService.get("VAPID_PRIVATE_KEY", { infer: true });
+  }
+
+  get vapidSubject(): string | undefined {
+    return this.configService.get("VAPID_SUBJECT", { infer: true });
+  }
+
   get razorpayKeyId(): string | undefined {
     return this.configService.get("RAZORPAY_KEY_ID", { infer: true });
   }

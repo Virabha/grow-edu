@@ -54,6 +54,9 @@ export const configSchema = z
 
     REDIS_URL: z.string().url().optional(),
     PEXELS_API_KEY: z.string().optional(),
+    VAPID_PUBLIC_KEY: z.string().optional(),
+    VAPID_PRIVATE_KEY: z.string().optional(),
+    VAPID_SUBJECT: z.string().optional(),
   })
   .superRefine((data, ctx) => {
     if (data.NODE_ENV === "production") {

@@ -151,3 +151,45 @@ export const userDevices = pgTable(
     ),
   }),
 );
+
+export const userSecondFactors = pgTable(
+  "user_second_factors",
+  {
+    organizationId: organizationId(),
+    secondFactorId: text("second_factor_id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id").notNull(),
+    secret: text("secret").notNull(),
+    confirmedAt: timestamp("confirmed_at"),
+    lastUsedAt: timestamp("last_used_at"),
+    lastUsedCode: text("last_used_code"),
+    recoveryCodes: jsonb("recovery_codes").$type<string[]>().notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    onePerUser: unique("user_second_factors_user_unique").on(table.userId),
+  }),
+);
+
+export const secondFactorChallenges = pgTable(
+  "second_factor_challenges",
+  {
+    organizationId: organizationId(),
+    challengeId: text("challenge_id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id").notNull(),
+    tokenHash: text("token_hash").notNull(),
+    expiresAt: timestamp("expires_at").notNull(),
+    consumedAt: timestamp("consumed_at"),
+    userAgent: text("user_agent"),
+    ipAddress: text("ip_address"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    tokenIdx: index("second_factor_challenges_token_idx").on(table.tokenHash),
+    userIdx: index("second_factor_challenges_user_idx").on(table.userId),
+  }),
+);

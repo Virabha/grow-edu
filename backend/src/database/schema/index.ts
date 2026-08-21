@@ -13,4 +13,5 @@ export * from "./store";
 export * from "./cms";
 export * from "./platform";
 export * from "./system";
+export * from "./reports";
 export * from "./relations";

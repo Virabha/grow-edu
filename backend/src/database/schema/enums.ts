@@ -29,6 +29,7 @@ export const lessonStatusEnum = pgEnum("lesson_status", [
   "DRAFT",
   "PENDING_APPROVAL",
   "PROCESSING",
+  "SCHEDULED",
   "READY",
 ]);
 
@@ -181,6 +182,13 @@ export const batchWaitlistStatusEnum = pgEnum("batch_waitlist_status", [
   "WAITING",
   "PROMOTED",
   "WITHDRAWN",
+]);
+
+export const broadcastAudienceEnum = pgEnum("broadcast_audience", [
+  "BATCH",
+  "CORPORATE",
+  "SUB_GROUP",
+  "SEGMENT",
 ]);
 
 export const invoiceKindEnum = pgEnum("invoice_kind", [

@@ -3,6 +3,7 @@ import {
   ConflictException,
   BadRequestException,
   ForbiddenException,
+  UnauthorizedException,
   Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -165,6 +166,45 @@ export class AuthService {
     return {
       message: 'Registration successful. Please check your email to verify your account.',
       email: newUser.email,
+    };
+  }
+
+  async payloadFor(userId: string): Promise<UserPayload> {
+    const [user] = await this.db
+      .select({
+        userId: users.userId,
+        email: users.email,
+        role: users.role,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        companyId: users.companyId,
+        suspendedAt: users.suspendedAt,
+        suspensionReason: users.suspensionReason,
+      })
+      .from(users)
+      .where(eq(users.userId, userId))
+      .limit(1);
+
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+    if (user.suspendedAt) {
+      throw new ForbiddenException({
+        code: ACCOUNT_SUSPENDED,
+        message:
+          'This account has been suspended. Contact support to have it reviewed.',
+        reason: user.suspensionReason,
+        suspendedAt: user.suspendedAt.toISOString(),
+      });
+    }
+
+    return {
+      id: user.userId,
+      email: user.email,
+      role: user.role,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      companyId: user.companyId ?? null,
     };
   }
 

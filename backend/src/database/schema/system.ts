@@ -5,9 +5,14 @@ import {
   boolean,
   integer,
   index,
+  jsonb,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { notificationTypeEnum, videoEncodingJobStatusEnum } from "./enums";
+import {
+  broadcastAudienceEnum,
+  notificationTypeEnum,
+  videoEncodingJobStatusEnum,
+} from "./enums";
 import { organizationId } from "./organizations";
 
 // ─── Notifications ──────────────────────────────────────────────────────────
@@ -75,4 +80,80 @@ export const videoEncodingJobs = pgTable(
     batchIdx: index("video_encoding_jobs_batch_idx").on(table.batchId),
     statusIdx: index("video_encoding_jobs_status_idx").on(table.status),
   })
+);
+
+export const broadcasts = pgTable(
+  "broadcasts",
+  {
+    organizationId: organizationId(),
+    broadcastId: text("broadcast_id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    audienceType: broadcastAudienceEnum("audience_type").notNull(),
+    audienceId: text("audience_id"),
+    segment: jsonb("segment").$type<Record<string, string>>(),
+    title: text("title").notNull(),
+    body: text("body").notNull(),
+    link: text("link"),
+    recipientCount: integer("recipient_count").notNull().default(0),
+    recipientIds: jsonb("recipient_ids").$type<string[]>().notNull(),
+    sentBy: text("sent_by").notNull(),
+    sentAt: timestamp("sent_at").notNull(),
+  },
+  (table) => ({
+    sentAtIdx: index("broadcasts_sent_at_idx").on(table.sentAt),
+    audienceIdx: index("broadcasts_audience_idx").on(
+      table.audienceType,
+      table.audienceId,
+    ),
+  }),
+);
+
+export const studentFeedback = pgTable(
+  "student_feedback",
+  {
+    organizationId: organizationId(),
+    feedbackId: text("feedback_id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    batchId: text("batch_id").notNull(),
+    userId: text("user_id").notNull(),
+    authorId: text("author_id").notNull(),
+    body: text("body").notNull(),
+    isDeleted: boolean("is_deleted").notNull().default(false),
+    createdAt: timestamp("created_at").notNull(),
+    updatedAt: timestamp("updated_at").notNull(),
+  },
+  (table) => ({
+    subjectIdx: index("student_feedback_subject_idx").on(
+      table.batchId,
+      table.userId,
+      table.createdAt,
+    ),
+    authorIdx: index("student_feedback_author_idx").on(table.authorId),
+  }),
+);
+
+export const pushSubscriptions = pgTable(
+  "push_subscriptions",
+  {
+    organizationId: organizationId(),
+    subscriptionId: text("subscription_id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id").notNull(),
+    endpoint: text("endpoint").notNull(),
+    p256dh: text("p256dh").notNull(),
+    auth: text("auth").notNull(),
+    userAgent: text("user_agent"),
+    failureCount: integer("failure_count").notNull().default(0),
+    lastUsedAt: timestamp("last_used_at"),
+    createdAt: timestamp("created_at").notNull(),
+  },
+  (table) => ({
+    endpointPerUser: uniqueIndex("push_subscriptions_endpoint_idx").on(
+      table.endpoint,
+    ),
+    userIdx: index("push_subscriptions_user_idx").on(table.userId),
+  }),
 );

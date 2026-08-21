@@ -7,6 +7,8 @@ import {
 import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
+import { AuditLogService } from "../../audit/audit-log.service";
+import { CLOCK, Clock } from "../../common/clock";
 import { DATABASE_CONNECTION } from "../../database/database.module";
 import * as schema from "../../database/schema";
 import {
@@ -18,7 +20,7 @@ import { CdnService } from "../../cdn/cdn.service";
 import { NotificationsService } from "../../notifications/notifications.service";
 import { BatchAccessService, SignedInViewer, Viewer } from "../access/batch-access.service";
 import { BatchMediaService } from "../batch-media.service";
-import { RecordAttendanceDto } from "../dto/batch-attendance.dto";
+import { CorrectAttendanceDto, RecordAttendanceDto } from "../dto/batch-attendance.dto";
 import {
   CreateBatchSessionDto,
   UpdateBatchSessionDto,
@@ -33,6 +35,8 @@ export class BatchSchedulingService {
     private readonly media: BatchMediaService,
     private readonly cdn: CdnService,
     private readonly notifications: NotificationsService,
+    private readonly auditLog: AuditLogService,
+    @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
   async list(
@@ -226,7 +230,10 @@ export class BatchSchedulingService {
       .limit(1);
 
     if (existing) {
-      if (dto.durationSeconds !== undefined) {
+      if (
+        existing.source !== "INSTRUCTOR_CORRECTION" &&
+        dto.durationSeconds !== undefined
+      ) {
         await this.db
           .update(batchAttendance)
           .set({ durationSeconds: dto.durationSeconds })
@@ -239,6 +246,7 @@ export class BatchSchedulingService {
       batchId,
       sessionId,
       userId,
+      source: "SELF_REPORTED",
       durationSeconds: dto.durationSeconds,
     });
     return { success: true, alreadyRecorded: false };
@@ -305,6 +313,112 @@ export class BatchSchedulingService {
       ...r.attendance,
       user: { ...r.user, profileImage: this.media.url(r.user.profileImage) },
     }));
+  }
+
+  async correctAttendance(
+    batchId: string,
+    sessionId: string,
+    targetUserId: string,
+    actorId: string,
+    dto: CorrectAttendanceDto,
+  ): Promise<{ success: boolean }> {
+    const session = await this.requireSession(batchId, sessionId);
+    if (session.type !== "LIVE") {
+      throw new BadRequestException("Attendance only tracked for live sessions");
+    }
+
+    const now = this.clock.now();
+    const [existing] = await this.db
+      .select()
+      .from(batchAttendance)
+      .where(
+        and(
+          eq(batchAttendance.sessionId, sessionId),
+          eq(batchAttendance.userId, targetUserId),
+        ),
+      )
+      .limit(1);
+
+    const markAbsent = dto.present === false;
+
+    if (markAbsent) {
+      if (existing) {
+        await this.db
+          .delete(batchAttendance)
+          .where(eq(batchAttendance.attendanceId, existing.attendanceId));
+      }
+    } else if (existing) {
+      await this.db
+        .update(batchAttendance)
+        .set({
+          durationSeconds:
+            dto.durationSeconds !== undefined
+              ? dto.durationSeconds
+              : existing.durationSeconds,
+          source: "INSTRUCTOR_CORRECTION",
+          correctedBy: actorId,
+          correctedAt: now,
+        })
+        .where(eq(batchAttendance.attendanceId, existing.attendanceId));
+    } else {
+      await this.db.insert(batchAttendance).values({
+        batchId,
+        sessionId,
+        userId: targetUserId,
+        source: "INSTRUCTOR_CORRECTION",
+        correctedBy: actorId,
+        correctedAt: now,
+        durationSeconds: dto.durationSeconds,
+        joinedAt: now,
+      });
+    }
+
+    await this.auditLog.record({
+      action: "attendance.corrected",
+      targetType: "batchAttendance",
+      targetId: sessionId,
+      before: { present: existing !== undefined },
+      after: {
+        targetUserId,
+        correctedBy: actorId,
+        batchId,
+        present: !markAbsent,
+      },
+    });
+
+    return { success: true };
+  }
+
+  async myAttendance(
+    batchId: string,
+    viewer: SignedInViewer,
+  ) {
+    await this.access.require(batchId, viewer, "READ");
+
+    const rows = await this.db
+      .select({
+        attendance: batchAttendance,
+        session: {
+          sessionId: batchSessions.sessionId,
+          title: batchSessions.title,
+          scheduledStartAt: batchSessions.scheduledStartAt,
+          scheduledEndAt: batchSessions.scheduledEndAt,
+        },
+      })
+      .from(batchAttendance)
+      .innerJoin(
+        batchSessions,
+        eq(batchAttendance.sessionId, batchSessions.sessionId),
+      )
+      .where(
+        and(
+          eq(batchAttendance.batchId, batchId),
+          eq(batchAttendance.userId, viewer.userId),
+        ),
+      )
+      .orderBy(asc(batchSessions.scheduledStartAt));
+
+    return rows;
   }
 
   private validateSessionShape(dto: CreateBatchSessionDto): void {

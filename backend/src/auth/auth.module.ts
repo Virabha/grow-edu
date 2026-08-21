@@ -4,6 +4,8 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
+import { SecondFactorController } from './second-factor.controller';
+import { SecondFactorService } from './second-factor.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
 import { DatabaseModule } from '../database/database.module';
@@ -26,16 +28,17 @@ import { PerEmailThrottlerGuard } from './guards/per-email-throttler.guard';
       inject: [AppConfigService],
     }),
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, SecondFactorController],
   providers: [
     AuthService,
+    SecondFactorService,
     TokenService,
     JwtStrategy,
     LocalStrategy,
     PerEmailThrottlerGuard,
     { provide: APP_FILTER, useClass: ThrottlerExceptionFilter },
   ],
-  exports: [AuthService, JwtModule],
+  exports: [AuthService, SecondFactorService, JwtModule],
 })
 export class AuthModule {}
 

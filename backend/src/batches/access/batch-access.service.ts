@@ -17,8 +17,14 @@ import {
   lessons,
   subjectLessons,
 } from "../../database/schema";
-import { BATCH_ACCESS_EXPIRED, BATCH_NOT_FOUND } from "./access.errors";
+import {
+  BATCH_ACCESS_EXPIRED,
+  BATCH_NOT_FOUND,
+  CONTENT_LOCKED,
+} from "./access.errors";
 import { CLOCK, Clock } from "../../common/clock";
+
+const MILLIS_PER_DAY = 86_400_000;
 
 export type Viewer = { userId?: string; role?: string };
 export type SignedInViewer = Viewer & { userId: string };
@@ -99,7 +105,11 @@ export class BatchAccessService {
     if (batchId) placedIn.push(eq(batchSubjects.batchId, batchId));
 
     const [row] = await this.db
-      .select({ lesson: lessons, batchId: batchSubjects.batchId })
+      .select({
+        lesson: lessons,
+        batchId: batchSubjects.batchId,
+        placement: subjectLessons,
+      })
       .from(subjectLessons)
       .innerJoin(lessons, eq(lessons.lessonId, subjectLessons.lessonId))
       .innerJoin(
@@ -121,10 +131,36 @@ export class BatchAccessService {
       };
     }
 
-    return {
-      ...(await this.require(row.batchId, viewer, level)),
-      lesson: row.lesson,
-    };
+    const access = await this.require(row.batchId, viewer, level);
+
+    if (level === "READ" && !access.isStaff) {
+      const unlocksAt = this.unlockTimeFor(row.placement, access.enrollment);
+      if (unlocksAt !== null && unlocksAt.getTime() > this.clock.now().getTime()) {
+        throw new ForbiddenException({
+          code: CONTENT_LOCKED,
+          message: "This is not open yet.",
+          unlocksAt: unlocksAt.toISOString(),
+        });
+      }
+    }
+
+    return { ...access, lesson: row.lesson };
+  }
+
+  unlockTimeFor(
+    placement: Pick<
+      typeof subjectLessons.$inferSelect,
+      "unlockAt" | "unlockAfterDays"
+    >,
+    enrollment: Enrollment | null,
+  ): Date | null {
+    if (placement.unlockAt !== null) return placement.unlockAt;
+    if (placement.unlockAfterDays === null) return null;
+    const from = enrollment?.accessStartsAt ?? enrollment?.createdAt;
+    if (!from) return null;
+    return new Date(
+      from.getTime() + placement.unlockAfterDays * MILLIS_PER_DAY,
+    );
   }
 
   async requireBatch(batchId: string): Promise<Batch> {

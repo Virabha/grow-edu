@@ -27,14 +27,23 @@ import { WaitlistService } from "./enrolment/waitlist.service";
 import { BatchLifecycleService } from "./lifecycle/batch-lifecycle.service";
 import { ApprovalsController } from "./lifecycle/approvals.controller";
 import { ApprovalsService } from "./lifecycle/approvals.service";
+import { PublicationService } from "./lifecycle/publication.service";
 import { CloneBatchController } from "./lifecycle/clone-batch.controller";
 import { CloneBatchService } from "./lifecycle/clone-batch.service";
 import { BatchReportingController } from "./reporting/batch-reporting.controller";
 import { BatchReportingService } from "./reporting/batch-reporting.service";
+import { StudentFeedbackController } from "./reporting/student-feedback.controller";
+import { StudentFeedbackService } from "./reporting/student-feedback.service";
+import { ReportScheduleService } from "./reporting/report-schedule.service";
+import { CorporateReportController } from "./reporting/corporate-report.controller";
+import { CorporateReportService } from "./reporting/corporate-report.service";
+import { ExportJobService } from "./reporting/export-job.service";
 import { RecurrenceController } from "./scheduling/recurrence.controller";
 import { RecurrenceService } from "./scheduling/recurrence.service";
 import { BatchSchedulingController } from "./scheduling/batch-scheduling.controller";
 import { BatchSchedulingService } from "./scheduling/batch-scheduling.service";
+import { RecordingService } from "./scheduling/recording.service";
+import { ReminderService } from "./scheduling/reminder.service";
 import { TimetableService } from "./scheduling/timetable.service";
 
 @Module({
@@ -52,6 +61,7 @@ import { TimetableService } from "./scheduling/timetable.service";
     WaitlistController,
     ApprovalsController,
     BatchReportingController,
+    StudentFeedbackController,
     BatchSchedulingController,
     RecurrenceController,
     BatchAssessmentController,
@@ -60,6 +70,7 @@ import { TimetableService } from "./scheduling/timetable.service";
     CertificateController,
     BatchCatalogueController,
     CloneBatchController,
+    CorporateReportController,
   ],
   providers: [
     BatchAccessService,
@@ -70,15 +81,22 @@ import { TimetableService } from "./scheduling/timetable.service";
     TransferService,
     BatchLifecycleService,
     ApprovalsService,
+    PublicationService,
     BatchSchedulingService,
+    RecordingService,
+    ReminderService,
     TimetableService,
     RecurrenceService,
     BatchAssessmentService,
     BatchEngagementService,
     DoubtInboxService,
     BatchReportingService,
+    StudentFeedbackService,
+    ReportScheduleService,
     CertificateService,
     CloneBatchService,
+    CorporateReportService,
+    ExportJobService,
   ],
   exports: [BatchAccessService, BatchEnrolmentService, CertificateService],
 })

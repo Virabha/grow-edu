@@ -438,16 +438,16 @@ export class BatchCatalogueService {
   }
 
   async listContent(batchId: string, viewer: Viewer) {
-    const { isStaff } = await this.access.require(batchId, viewer, "READ");
+    const { isStaff, enrollment } = await this.access.require(
+      batchId,
+      viewer,
+      "READ",
+    );
     const subjects = await this.listSubjects(batchId);
     if (subjects.length === 0) return [];
 
     const rows = await this.db
-      .select({
-        lesson: lessons,
-        subjectId: subjectLessons.subjectId,
-        order: subjectLessons.order,
-      })
+      .select({ lesson: lessons, placement: subjectLessons })
       .from(subjectLessons)
       .innerJoin(lessons, eq(lessons.lessonId, subjectLessons.lessonId))
       .where(
@@ -462,11 +462,21 @@ export class BatchCatalogueService {
       )
       .orderBy(asc(subjectLessons.subjectId), asc(subjectLessons.order));
 
-    const placed = rows.map((r) => ({
-      ...r.lesson,
-      subjectId: r.subjectId,
-      order: r.order,
-    }));
+    const now = this.clock.now();
+    const placed = rows.map((r) => {
+      const unlocksAt = this.access.unlockTimeFor(r.placement, enrollment);
+      const locked =
+        !isStaff && unlocksAt !== null && unlocksAt.getTime() > now.getTime();
+      return {
+        ...r.lesson,
+        subjectId: r.placement.subjectId,
+        order: r.placement.order,
+        unlocksAt: unlocksAt ? unlocksAt.toISOString() : null,
+        locked,
+        videoUrl: locked ? null : r.lesson.videoUrl,
+        textContent: locked ? null : r.lesson.textContent,
+      };
+    });
     const visible = isStaff
       ? placed
       : placed.filter((l) => l.status === "READY" || l.isFreePreview);

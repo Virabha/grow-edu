@@ -491,6 +491,25 @@ export const GROUPS: Record<string, GroupDefinition> = {
       responseTargetHours: 24,
     },
   },
+
+  liveSession: {
+    meta: {
+      title: 'Live Session',
+      description: 'Settings for live class sessions, including the reminder lead time sent to students.',
+    },
+    fields: [
+      {
+        key: 'reminderLeadMinutes',
+        label: 'Reminder Lead Time (minutes)',
+        type: 'number',
+        placeholder: '15',
+        help: 'How many minutes before a live class starts to send the enrolled-student reminder.',
+      },
+    ],
+    defaults: {
+      reminderLeadMinutes: 15,
+    },
+  },
 };
 
 export const DOUBTS_SETTINGS_GROUP = 'doubts';

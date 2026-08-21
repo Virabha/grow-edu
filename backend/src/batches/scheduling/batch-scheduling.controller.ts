@@ -17,12 +17,14 @@ import {
 
 import { CurrentUser } from "../../auth/decorators/current-user.decorator";
 import { BatchAccess } from "../access/batch-access.decorator";
-import { RecordAttendanceDto } from "../dto/batch-attendance.dto";
+import { CorrectAttendanceDto, RecordAttendanceDto } from "../dto/batch-attendance.dto";
+import { AttachRecordingDto } from "../dto/attach-recording.dto";
 import {
   CreateBatchSessionDto,
   UpdateBatchSessionDto,
 } from "../dto/batch-session.dto";
 import { BatchSchedulingService } from "./batch-scheduling.service";
+import { RecordingService } from "./recording.service";
 import { TimetableService } from "./timetable.service";
 
 interface AuthedUser {
@@ -37,6 +39,7 @@ export class BatchSchedulingController {
   constructor(
     private readonly scheduling: BatchSchedulingService,
     private readonly timetableService: TimetableService,
+    private readonly recordingService: RecordingService,
   ) {}
 
   @BatchAccess("READ")
@@ -123,5 +126,45 @@ export class BatchSchedulingController {
     @Param("sessionId") sessionId: string,
   ) {
     return this.scheduling.listAttendance(batchId, sessionId);
+  }
+
+  @BatchAccess("MANAGE")
+  @ApiOperation({ summary: "Instructor corrects an attendance record" })
+  @Patch(":batchId/sessions/:sessionId/attendance/:userId")
+  correctAttendance(
+    @Param("batchId") batchId: string,
+    @Param("sessionId") sessionId: string,
+    @Param("userId") targetUserId: string,
+    @Body() dto: CorrectAttendanceDto,
+    @CurrentUser() user: AuthedUser,
+  ) {
+    return this.scheduling.correctAttendance(
+      batchId,
+      sessionId,
+      targetUserId,
+      user.userId,
+      dto,
+    );
+  }
+
+  @BatchAccess("READ")
+  @ApiOperation({ summary: "Student views their own attendance across the batch" })
+  @Get(":batchId/attendance/me")
+  myAttendance(
+    @Param("batchId") batchId: string,
+    @CurrentUser() user: AuthedUser,
+  ) {
+    return this.scheduling.myAttendance(batchId, user);
+  }
+
+  @BatchAccess("MANAGE")
+  @ApiOperation({ summary: "Attach a recording to a session (webhook or admin)" })
+  @Post(":batchId/sessions/:sessionId/recording")
+  attachRecording(
+    @Param("batchId") batchId: string,
+    @Param("sessionId") sessionId: string,
+    @Body() dto: AttachRecordingDto,
+  ) {
+    return this.recordingService.attachRecording(batchId, sessionId, dto);
   }
 }

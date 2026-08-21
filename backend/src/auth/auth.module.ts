@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { APP_FILTER } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { AuthService } from './auth.service';
@@ -9,6 +10,8 @@ import { DatabaseModule } from '../database/database.module';
 import { AppConfigService } from '../config';
 import { EmailModule } from '../email/email.module';
 import { TokenService } from './token.service';
+import { ThrottlerExceptionFilter } from '../common/throttling/throttler-exception.filter';
+import { PerEmailThrottlerGuard } from './guards/per-email-throttler.guard';
 
 @Module({
   imports: [
@@ -29,6 +32,8 @@ import { TokenService } from './token.service';
     TokenService,
     JwtStrategy,
     LocalStrategy,
+    PerEmailThrottlerGuard,
+    { provide: APP_FILTER, useClass: ThrottlerExceptionFilter },
   ],
   exports: [AuthService, JwtModule],
 })

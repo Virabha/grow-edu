@@ -8,6 +8,7 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { PerEmailThrottlerGuard } from './guards/per-email-throttler.guard';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -45,6 +46,7 @@ export class AuthController {
   @ApiBody({ type: ForgotPasswordDto })
   @ApiResponse({ status: 200, description: 'Password reset email sent' })
   @Throttle({ default: { ttl: 60_000 * 60, limit: 5 } })
+  @UseGuards(PerEmailThrottlerGuard)
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
   async forgotPassword(@Body() dto: ForgotPasswordDto) {

@@ -6,10 +6,10 @@ A join link in particular is distributed widely and is the obvious thing to hamm
 
 **Blocked by:** None - can start immediately
 
-**Status:** ready-for-agent
+**Status:** done 2026-08-21
 
-- [ ] Repeated sign-in attempts from one source are throttled and the refusal is distinguishable from a wrong password
-- [ ] Password reset requests are throttled per account and per source
-- [ ] Join-link redemption is throttled without preventing a legitimate cohort from joining at the same time
-- [ ] Message-sending endpoints are throttled
-- [ ] A throttled caller is told when they may retry
+- [x] Repeated sign-in attempts from one source are throttled and the refusal is distinguishable from a wrong password
+- [x] Password reset requests are throttled per account and per source
+- [x] Join-link redemption is throttled without preventing a legitimate cohort from joining at the same time
+- [x] Message-sending endpoints are throttled — the only endpoints that send anything today are sign-up, password reset and verification, all throttled. Broadcast (ticket 33) must add its own limit when it lands.
+- [x] A throttled caller is told when they may retry

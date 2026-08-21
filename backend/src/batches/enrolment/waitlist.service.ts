@@ -31,12 +31,6 @@ export interface WaitlistPlace {
   joinedAt: string;
 }
 
-interface Capacity {
-  capacity: number | null;
-  active: number;
-  free: number | null;
-}
-
 @Injectable()
 export class WaitlistService {
   constructor(

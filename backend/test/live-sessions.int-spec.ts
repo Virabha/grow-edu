@@ -13,17 +13,45 @@ import { JOB_QUEUE } from '../src/jobs/job-queue';
 import { InlineJobQueue } from '../src/jobs/inline-job-queue';
 import { SESSION_REMINDER_JOB } from '../src/batches/scheduling/reminder.service';
 import { RECORDING_RECONCILE_JOB } from '../src/batches/scheduling/recording.service';
+import {
+  EndedSession,
+  ProviderRecording,
+  RECORDING_PROVIDER,
+  RecordingProvider,
+} from '../src/batches/scheduling/recording-provider';
 import { batchEnrollments } from '../src/database/schema';
 import { eq } from 'drizzle-orm';
 
 const NOW = '2026-09-01T09:00:00.000Z';
 const REMINDER_REPEAT_MS = 60 * 1000;
 
+class FakeRecordingProvider implements RecordingProvider {
+  readonly asked: EndedSession[] = [];
+  answer: ProviderRecording | null = null;
+  throwOnce = false;
+
+  async findRecording(session: EndedSession): Promise<ProviderRecording | null> {
+    this.asked.push(session);
+    if (this.throwOnce) {
+      this.throwOnce = false;
+      throw new Error('provider unreachable');
+    }
+    return this.answer;
+  }
+
+  reset(): void {
+    this.asked.length = 0;
+    this.answer = null;
+    this.throwOnce = false;
+  }
+}
+
 describe('live sessions (09 + 10 + 11)', () => {
   let database: TestDatabase;
   let app: INestApplication;
   const clock = new TestClock();
   let queue: InlineJobQueue;
+  const recordings = new FakeRecordingProvider();
   let admin: TestActor;
   let student: TestActor;
   let student2: TestActor;
@@ -32,7 +60,9 @@ describe('live sessions (09 + 10 + 11)', () => {
 
   beforeAll(async () => {
     database = await createTestDatabase();
-    app = await createTestApp(database, clock);
+    app = await createTestApp(database, clock, [
+      { token: RECORDING_PROVIDER, value: recordings },
+    ]);
     queue = app.get<InlineJobQueue>(JOB_QUEUE);
   });
 
@@ -44,6 +74,7 @@ describe('live sessions (09 + 10 + 11)', () => {
   beforeEach(async () => {
     clock.set(NOW);
     await truncateAll(database);
+    recordings.reset();
     admin = await createUser(database, 'PLATFORM_ADMIN');
     student = await createUser(database, 'LEARNER');
     student2 = await createUser(database, 'LEARNER');
@@ -256,6 +287,135 @@ describe('live sessions (09 + 10 + 11)', () => {
 
       const entries = await auditEntries('session.recording.pending');
       expect(entries.length).toBeGreaterThan(0);
+    });
+
+    async function endedSession() {
+      const { body } = await createLiveSession({
+        scheduledStartAt: '2026-09-01T07:00:00.000Z',
+        scheduledEndAt: '2026-09-01T08:00:00.000Z',
+      }).expect(201);
+      return (body as { sessionId: string }).sessionId;
+    }
+
+    function sessionAsStudent(sessionId: string) {
+      return request(app.getHttpServer())
+        .get(`/batches/${batchId}/sessions/${sessionId}`)
+        .set(...authHeader(app, student));
+    }
+
+    it('polls the provider for a session whose recording has not arrived', async () => {
+      const sessionId = await endedSession();
+
+      await queue.enqueue(RECORDING_RECONCILE_JOB, undefined);
+
+      expect(recordings.asked.map((s) => s.sessionId)).toContain(sessionId);
+      const asked = recordings.asked.find((s) => s.sessionId === sessionId);
+      expect(asked?.liveProvider).toBe('ZOOM');
+      expect(asked?.joinUrl).toBe('https://zoom.example/physics');
+    });
+
+    it('attaches the recording the provider hands back, without an admin call', async () => {
+      const sessionId = await endedSession();
+      recordings.answer = {
+        videoId: 'bunny-vid-polled',
+        thumbnailUrl: 'https://cdn.example/polled.jpg',
+        durationSeconds: 3600,
+      };
+
+      await queue.enqueue(RECORDING_RECONCILE_JOB, undefined);
+
+      const { body } = await sessionAsStudent(sessionId).expect(200);
+      expect((body as { recordingVideoId: string }).recordingVideoId).toBe(
+        'bunny-vid-polled',
+      );
+    });
+
+    it('records the poll-attached recording in the audit log', async () => {
+      await endedSession();
+      recordings.answer = { videoId: 'bunny-vid-audited' };
+
+      await queue.enqueue(RECORDING_RECONCILE_JOB, undefined);
+
+      const entries = await auditEntries('session.recording.attached');
+      expect(entries.length).toBeGreaterThan(0);
+    });
+
+    it('marks attendance the provider reported alongside the recording', async () => {
+      const sessionId = await endedSession();
+      recordings.answer = {
+        videoId: 'bunny-vid-attendance',
+        attendeeUserIds: [student.userId],
+      };
+
+      await queue.enqueue(RECORDING_RECONCILE_JOB, undefined);
+
+      const { body } = await request(app.getHttpServer())
+        .get(`/batches/${batchId}/sessions/${sessionId}/attendance`)
+        .set(...authHeader(app, admin))
+        .expect(200);
+
+      const present = (
+        body as { userId: string; source: string }[]
+      ).filter((r) => r.userId === student.userId);
+      expect(present).toHaveLength(1);
+      expect(present[0].source).toBe('PROVIDER');
+    });
+
+    it('stops polling a session once its recording is attached', async () => {
+      await endedSession();
+      recordings.answer = { videoId: 'bunny-vid-once' };
+      await queue.enqueue(RECORDING_RECONCILE_JOB, undefined);
+
+      recordings.reset();
+      await queue.enqueue(RECORDING_RECONCILE_JOB, undefined);
+
+      expect(recordings.asked).toEqual([]);
+    });
+
+    it('leaves the session pending when the provider has nothing yet', async () => {
+      const sessionId = await endedSession();
+      recordings.answer = null;
+
+      await queue.enqueue(RECORDING_RECONCILE_JOB, undefined);
+
+      const { body } = await sessionAsStudent(sessionId).expect(200);
+      expect(
+        (body as { recordingVideoId: string | null }).recordingVideoId,
+      ).toBeNull();
+      expect(await auditEntries('session.recording.pending')).not.toHaveLength(
+        0,
+      );
+    });
+
+    it('survives a provider that fails and retries on the next pass', async () => {
+      const sessionId = await endedSession();
+      recordings.throwOnce = true;
+      recordings.answer = { videoId: 'bunny-vid-after-outage' };
+
+      await queue.enqueue(RECORDING_RECONCILE_JOB, undefined);
+
+      const { body: first } = await sessionAsStudent(sessionId).expect(200);
+      expect(
+        (first as { recordingVideoId: string | null }).recordingVideoId,
+      ).toBeNull();
+
+      await queue.enqueue(RECORDING_RECONCILE_JOB, undefined);
+
+      const { body: second } = await sessionAsStudent(sessionId).expect(200);
+      expect((second as { recordingVideoId: string }).recordingVideoId).toBe(
+        'bunny-vid-after-outage',
+      );
+    });
+
+    it('does not poll a session that has not reached its end time', async () => {
+      await createLiveSession({
+        scheduledStartAt: '2026-09-01T18:00:00.000Z',
+        scheduledEndAt: '2026-09-01T19:00:00.000Z',
+      }).expect(201);
+
+      await queue.enqueue(RECORDING_RECONCILE_JOB, undefined);
+
+      expect(recordings.asked).toEqual([]);
     });
 
     it('a successfully attached recording appears in the audit log', async () => {

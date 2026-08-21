@@ -43,6 +43,10 @@ import { RecurrenceController } from "./scheduling/recurrence.controller";
 import { RecurrenceService } from "./scheduling/recurrence.service";
 import { BatchSchedulingController } from "./scheduling/batch-scheduling.controller";
 import { BatchSchedulingService } from "./scheduling/batch-scheduling.service";
+import {
+  NoRecordingProvider,
+  RECORDING_PROVIDER,
+} from "./scheduling/recording-provider";
 import { RecordingService } from "./scheduling/recording.service";
 import { ReminderService } from "./scheduling/reminder.service";
 import { TimetableService } from "./scheduling/timetable.service";
@@ -86,6 +90,7 @@ import { TimetableService } from "./scheduling/timetable.service";
     PublicationService,
     BatchSchedulingService,
     RecordingService,
+    { provide: RECORDING_PROVIDER, useClass: NoRecordingProvider },
     ReminderService,
     TimetableService,
     RecurrenceService,

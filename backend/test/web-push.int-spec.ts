@@ -73,6 +73,8 @@ describe('web push channel', () => {
   let admin: TestActor;
   let student: TestActor;
   let batchId: string;
+  let callerIp: string;
+  let testNumber = 0;
 
   beforeAll(async () => {
     database = await createTestDatabase();
@@ -111,6 +113,8 @@ describe('web push channel', () => {
   beforeEach(async () => {
     await truncateAll(database);
     clock.set('2027-03-01T09:00:00.000Z');
+    testNumber += 1;
+    callerIp = `203.0.115.${testNumber}`;
     sender.reset();
     admin = await createUser(database, 'PLATFORM_ADMIN');
     student = await createUser(database, 'LEARNER');
@@ -137,6 +141,7 @@ describe('web push channel', () => {
     return request(app.getHttpServer())
       .post('/admin/broadcasts')
       .set(...authHeader(app, admin))
+      .set('X-Forwarded-For', callerIp)
       .send({ audienceType: 'BATCH', audienceId: batchId, title, body: 'Body text.' });
   }
 

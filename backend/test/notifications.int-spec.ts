@@ -88,6 +88,8 @@ describe("notification infrastructure", () => {
   const clock = new TestClock();
   let admin: TestActor;
   let student: TestActor;
+  let callerIp: string;
+  let testNumber = 0;
 
   beforeAll(async () => {
     database = await createTestDatabase();
@@ -102,6 +104,8 @@ describe("notification infrastructure", () => {
   beforeEach(async () => {
     clock.reset();
     await truncateAll(database);
+    testNumber += 1;
+    callerIp = `203.0.116.${testNumber}`;
     admin = await createUser(database, "PLATFORM_ADMIN");
     student = await createUser(database, "LEARNER");
   });
@@ -114,6 +118,7 @@ describe("notification infrastructure", () => {
       try {
         await request(deferredApp.getHttpServer())
           .post("/notifications/send-bulk")
+          .set("X-Forwarded-For", callerIp)
           .set(...authHeader(deferredApp, admin))
           .send({
             userIds: [student.userId],
@@ -160,6 +165,7 @@ describe("notification infrastructure", () => {
 
       await request(app.getHttpServer())
         .post("/notifications/send-bulk")
+        .set("X-Forwarded-For", callerIp)
         .set(...authHeader(app, admin))
         .send({
           userIds: [student.userId],
@@ -198,6 +204,7 @@ describe("notification infrastructure", () => {
 
       await request(app.getHttpServer())
         .post("/notifications/send-bulk")
+        .set("X-Forwarded-For", callerIp)
         .set(...authHeader(app, admin))
         .send({
           userIds: [student.userId],
@@ -209,6 +216,7 @@ describe("notification infrastructure", () => {
 
       await request(app.getHttpServer())
         .post("/notifications/send-bulk")
+        .set("X-Forwarded-For", callerIp)
         .set(...authHeader(app, admin))
         .send({
           userIds: [student.userId],
@@ -227,6 +235,7 @@ describe("notification infrastructure", () => {
     it("notify delivers in-app notification visible via polling endpoint", async () => {
       await request(app.getHttpServer())
         .post("/notifications/send-bulk")
+        .set("X-Forwarded-For", callerIp)
         .set(...authHeader(app, admin))
         .send({
           userIds: [student.userId],
@@ -243,6 +252,7 @@ describe("notification infrastructure", () => {
     it("email failure does not prevent in-app notification or fail the request", async () => {
       await request(app.getHttpServer())
         .post("/notifications/send-bulk")
+        .set("X-Forwarded-For", callerIp)
         .set(...authHeader(app, admin))
         .send({
           userIds: [student.userId],
@@ -261,6 +271,7 @@ describe("notification infrastructure", () => {
     it("unread-count returns correct count and decreases to zero after mark-all-read", async () => {
       await request(app.getHttpServer())
         .post("/notifications/send-bulk")
+        .set("X-Forwarded-For", callerIp)
         .set(...authHeader(app, admin))
         .send({
           userIds: [student.userId],
@@ -271,6 +282,7 @@ describe("notification infrastructure", () => {
 
       await request(app.getHttpServer())
         .post("/notifications/send-bulk")
+        .set("X-Forwarded-For", callerIp)
         .set(...authHeader(app, admin))
         .send({
           userIds: [student.userId],
@@ -302,6 +314,7 @@ describe("notification infrastructure", () => {
     it("GET /notifications returns paginated data including unread count", async () => {
       await request(app.getHttpServer())
         .post("/notifications/send-bulk")
+        .set("X-Forwarded-For", callerIp)
         .set(...authHeader(app, admin))
         .send({
           userIds: [student.userId],

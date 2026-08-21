@@ -16,11 +16,14 @@ export type TestActor = {
   role: string;
 };
 
+export type ProviderOverride = { token: unknown; value: unknown };
+
 export async function createTestApp(
   database: TestDatabase,
   clock: TestClock = new TestClock(),
+  overrides: ProviderOverride[] = [],
 ): Promise<INestApplication> {
-  const moduleRef = await Test.createTestingModule({
+  const builder = Test.createTestingModule({
     imports: [AppModule],
   })
     .overrideProvider(DATABASE_CONNECTION)
@@ -28,8 +31,13 @@ export async function createTestApp(
     .overrideProvider(CLOCK)
     .useValue(clock)
     .overrideProvider(JOB_QUEUE)
-    .useValue(new InlineJobQueue(clock))
-    .compile();
+    .useValue(new InlineJobQueue(clock));
+
+  for (const override of overrides) {
+    builder.overrideProvider(override.token).useValue(override.value);
+  }
+
+  const moduleRef = await builder.compile();
 
   const app = moduleRef.createNestApplication<NestExpressApplication>();
   app.set('trust proxy', 1);

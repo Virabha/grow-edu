@@ -21,10 +21,16 @@ import { DoubtInboxController } from "./engagement/doubt-inbox.controller";
 import { DoubtInboxService } from "./engagement/doubt-inbox.service";
 import { BatchEnrolmentController } from "./enrolment/batch-enrolment.controller";
 import { BatchEnrolmentService } from "./enrolment/batch-enrolment.service";
+import { TransferService } from "./enrolment/transfer.service";
+import { WaitlistController } from "./enrolment/waitlist.controller";
+import { WaitlistService } from "./enrolment/waitlist.service";
+import { BatchLifecycleService } from "./lifecycle/batch-lifecycle.service";
 import { CloneBatchController } from "./lifecycle/clone-batch.controller";
 import { CloneBatchService } from "./lifecycle/clone-batch.service";
 import { BatchReportingController } from "./reporting/batch-reporting.controller";
 import { BatchReportingService } from "./reporting/batch-reporting.service";
+import { RecurrenceController } from "./scheduling/recurrence.controller";
+import { RecurrenceService } from "./scheduling/recurrence.service";
 import { BatchSchedulingController } from "./scheduling/batch-scheduling.controller";
 import { BatchSchedulingService } from "./scheduling/batch-scheduling.service";
 import { TimetableService } from "./scheduling/timetable.service";
@@ -41,8 +47,10 @@ import { TimetableService } from "./scheduling/timetable.service";
   ],
   controllers: [
     BatchEnrolmentController,
+    WaitlistController,
     BatchReportingController,
     BatchSchedulingController,
+    RecurrenceController,
     BatchAssessmentController,
     BatchEngagementController,
     DoubtInboxController,
@@ -55,8 +63,12 @@ import { TimetableService } from "./scheduling/timetable.service";
     BatchMediaService,
     BatchCatalogueService,
     BatchEnrolmentService,
+    WaitlistService,
+    TransferService,
+    BatchLifecycleService,
     BatchSchedulingService,
     TimetableService,
+    RecurrenceService,
     BatchAssessmentService,
     BatchEngagementService,
     DoubtInboxService,

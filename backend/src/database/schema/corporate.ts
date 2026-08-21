@@ -5,9 +5,17 @@ import {
   integer,
   index,
   unique,
+  jsonb,
 } from "drizzle-orm/pg-core";
 import { corporateContractStatusEnum } from "./enums";
 import { organizationId } from "./organizations";
+
+type RosterRowResult = {
+  row: number;
+  email: string | null;
+  status: "ADDED" | "EXISTING" | "INVALID" | "SEAT_POOL_EXHAUSTED" | "CONTRACT_NOT_ACTIVE";
+  reason?: string;
+};
 
 export const corporateSubGroups = pgTable(
   "corporate_sub_groups",
@@ -118,6 +126,27 @@ export const corporateJoinLinks = pgTable(
     tokenHashIdx: index("corporate_join_links_token_hash_idx").on(
       table.tokenHash
     ),
+  })
+);
+
+export const corporateRosterUploads = pgTable(
+  "corporate_roster_uploads",
+  {
+    organizationId: organizationId(),
+    uploadId: text("upload_id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    contractId: text("contract_id").notNull(),
+    actorId: text("actor_id").notNull(),
+    status: text("status").notNull().default("PROCESSING"),
+    rowCount: integer("row_count").notNull(),
+    rowResults: jsonb("row_results").$type<RosterRowResult[]>(),
+    processedAt: timestamp("processed_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    contractIdx: index("corporate_roster_uploads_contract_idx").on(table.contractId),
+    actorIdx: index("corporate_roster_uploads_actor_idx").on(table.actorId),
   })
 );
 

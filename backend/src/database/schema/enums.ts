@@ -177,6 +177,12 @@ export const refundStatusEnum = pgEnum("refund_status", [
   "DECLINED",
 ]);
 
+export const batchWaitlistStatusEnum = pgEnum("batch_waitlist_status", [
+  "WAITING",
+  "PROMOTED",
+  "WITHDRAWN",
+]);
+
 export const invoiceKindEnum = pgEnum("invoice_kind", [
   "INVOICE",
   "CREDIT_NOTE",

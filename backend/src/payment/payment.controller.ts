@@ -16,6 +16,7 @@ import { Roles, UserRole } from '../auth/decorators/roles.decorator';
 import { PaymentService } from './payment.service';
 import { UploadProofDto } from './dto/upload-proof.dto';
 import { ReviewPaymentDto } from './dto/review-payment.dto';
+import { RejectPaymentDto } from './dto/reject-payment.dto';
 import { UpdateQRSettingsDto } from './dto/qr-settings.dto';
 import { FilterPaymentsDto } from './dto/filter-payments.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
@@ -120,14 +121,10 @@ export class PaymentController {
   @ApiBearerAuth()
   async reject(
     @Param('paymentId') paymentId: string,
-    @Body() dto: ReviewPaymentDto,
+    @Body() dto: RejectPaymentDto,
     @CurrentUser() user: { userId: string },
   ) {
-    return this.paymentService.rejectPayment(
-      paymentId,
-      user.userId,
-      dto.notes || 'Rejected by admin',
-    );
+    return this.paymentService.rejectPayment(paymentId, user.userId, dto.reason);
   }
 
   @ApiOperation({ summary: 'Update QR/bank settings (admin)' })

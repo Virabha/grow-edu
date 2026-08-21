@@ -7,9 +7,13 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { CorporateAdminService } from './corporate-admin.service';
 import { AddSubGroupMemberDto } from './dto/add-sub-group-member.dto';
+import { AddRosterMemberDto } from './dto/add-roster-member.dto';
+import { BulkRosterUploadDto } from './dto/bulk-roster-upload.dto';
 import { CreateSubGroupDto } from './dto/create-sub-group.dto';
 import { IssueJoinLinkDto } from './dto/issue-join-link.dto';
+import { ReleaseSeatDto } from './dto/release-seat.dto';
 import { JoinLinksService } from './join-links.service';
+import { RosterService } from './roster.service';
 import { SubGroupsService } from './sub-groups.service';
 
 @ApiTags('corporate')
@@ -22,6 +26,7 @@ export class CorporateAdminController {
     private readonly corporate: CorporateAdminService,
     private readonly joinLinks: JoinLinksService,
     private readonly subGroups: SubGroupsService,
+    private readonly roster: RosterService,
   ) {}
 
   @ApiOperation({ summary: 'My organisation’s contracts and seat usage' })
@@ -117,5 +122,52 @@ export class CorporateAdminController {
   ) {
     await this.corporate.assertOwns(user.userId, contractId);
     return this.subGroups.removeMember(subGroupId, contractId, userId);
+  }
+
+  @ApiOperation({ summary: 'Add a student to the roster, consuming a seat' })
+  @Post('contracts/:contractId/roster')
+  async addRosterMember(
+    @CurrentUser() user: { userId: string },
+    @Param('contractId') contractId: string,
+    @Body() dto: AddRosterMemberDto,
+  ) {
+    await this.corporate.assertOwns(user.userId, contractId);
+    return this.roster.addMember(contractId, user.userId, dto.email, dto.firstName, dto.lastName);
+  }
+
+  @ApiOperation({ summary: 'Remove a student from the roster, freeing their seat' })
+  @HttpCode(HttpStatus.OK)
+  @Delete('contracts/:contractId/roster/:userId')
+  async removeRosterMember(
+    @CurrentUser() user: { userId: string },
+    @Param('contractId') contractId: string,
+    @Param('userId') userId: string,
+    @Body() dto: ReleaseSeatDto,
+  ) {
+    await this.corporate.assertOwns(user.userId, contractId);
+    return this.roster.removeMember(contractId, userId, user.userId, dto.reason);
+  }
+
+  @ApiOperation({ summary: 'Bulk upload students to the roster' })
+  @HttpCode(HttpStatus.ACCEPTED)
+  @Post('contracts/:contractId/roster/bulk')
+  async bulkRosterUpload(
+    @CurrentUser() user: { userId: string },
+    @Param('contractId') contractId: string,
+    @Body() dto: BulkRosterUploadDto,
+  ) {
+    await this.corporate.assertOwns(user.userId, contractId);
+    return this.roster.startBulkUpload(contractId, user.userId, dto.rows);
+  }
+
+  @ApiOperation({ summary: 'Get the result of a bulk roster upload' })
+  @Get('contracts/:contractId/roster/uploads/:uploadId')
+  async getBulkUploadResult(
+    @CurrentUser() user: { userId: string },
+    @Param('contractId') contractId: string,
+    @Param('uploadId') uploadId: string,
+  ) {
+    await this.corporate.assertOwns(user.userId, contractId);
+    return this.roster.getUploadResult(uploadId, contractId);
   }
 }

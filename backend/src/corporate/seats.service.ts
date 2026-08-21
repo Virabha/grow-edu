@@ -174,6 +174,67 @@ export class SeatsService {
     };
   }
 
+  async claimSeatDirectly(contractId: string, userId: string) {
+    return this.db.transaction(async (tx) => {
+      const contract = await this.lockContract(tx, contractId);
+
+      const status = effectiveStatus(
+        contract.status,
+        contract.endsAt,
+        this.clock.epochMillis(),
+      );
+      if (!acceptsSeatClaims(status)) {
+        throw new ForbiddenException({
+          code: CONTRACT_NOT_ACTIVE,
+          message: 'This contract is not active.',
+          contractStatus: status,
+        });
+      }
+
+      const [held] = await tx
+        .select({ seatId: corporateSeats.seatId })
+        .from(corporateSeats)
+        .where(
+          and(
+            eq(corporateSeats.contractId, contractId),
+            eq(corporateSeats.userId, userId),
+            isNull(corporateSeats.releasedAt),
+          ),
+        )
+        .limit(1);
+      if (held) {
+        throw new ConflictException({
+          code: SEAT_ALREADY_CLAIMED,
+          message: 'This student already holds a seat on this contract.',
+        });
+      }
+
+      const claimed = await this.countClaimed(tx, contractId);
+      if (claimed >= contract.seatCount) {
+        throw new ConflictException({
+          code: SEAT_POOL_EXHAUSTED,
+          message: 'Every seat on this contract has been claimed.',
+          seatCount: contract.seatCount,
+        });
+      }
+
+      const [seat] = await tx
+        .insert(corporateSeats)
+        .values({ contractId, userId })
+        .returning({ seatId: corporateSeats.seatId, claimedAt: corporateSeats.claimedAt });
+
+      const batchIds = await this.enrolIntoContractBatches(tx, contractId, userId, contract.endsAt);
+
+      return {
+        seatId: seat.seatId,
+        contractId,
+        claimedAt: seat.claimedAt,
+        seatsRemaining: contract.seatCount - (claimed + 1),
+        batchIds,
+      };
+    });
+  }
+
   async release(contractId: string, userId: string, actingAdminId: string, reason?: string) {
     return this.db.transaction(async (tx) => {
       const [seat] = await tx

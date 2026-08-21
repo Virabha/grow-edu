@@ -23,6 +23,7 @@ import { EmailService } from '../email/email.service';
 import { ContractsService } from '../corporate/contracts.service';
 import { AuditLogService } from '../audit/audit-log.service';
 import { InvoicesService } from '../invoices/invoices.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 const MAX_PAGE_LIMIT = 100;
 const PLATFORM_CURRENCY = 'INR';
@@ -91,6 +92,7 @@ export class PaymentService {
     private readonly contracts: ContractsService,
     private readonly auditLog: AuditLogService,
     private readonly invoices: InvoicesService,
+    private readonly notifications: NotificationsService,
   ) {
     const razorpayKeyId = this.configService.razorpayKeyId;
     const razorpayKeySecret = this.configService.razorpayKeySecret;
@@ -124,7 +126,11 @@ export class PaymentService {
       throw new BadRequestException('Proof upload only applies to manual QR payments');
     }
 
-    if (payment.status !== 'PENDING' && payment.status !== 'PROOF_UPLOADED') {
+    if (
+      payment.status !== 'PENDING' &&
+      payment.status !== 'PROOF_UPLOADED' &&
+      payment.status !== 'REJECTED'
+    ) {
       throw new BadRequestException(`Cannot upload proof for ${payment.status} payment`);
     }
 
@@ -311,7 +317,19 @@ export class PaymentService {
       after: { status: 'REJECTED', notes },
     });
 
-    return { success: true, message: 'Payment rejected' };
+    await this.notifications.queuedFanout(
+      [payment.userId],
+      'PAYMENT_REJECTED',
+      {
+        title: 'Your payment proof was not accepted',
+        body: notes,
+      },
+      `/orders/${paymentId}`,
+      payment.batchId ?? undefined,
+      `payment-rejected:${paymentId}:${now.getTime()}`,
+    );
+
+    return { success: true, message: 'Payment rejected', reason: notes };
   }
 
   async getPendingReviewPayments(filters?: { page?: number; limit?: number }) {
@@ -335,8 +353,56 @@ export class PaymentService {
 
     const total = Number(countRes[0]?.count ?? 0);
     return {
-      data: rows,
+      data: rows.map((row) => this.asQueueEntry(row)),
       pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    };
+  }
+
+  private asQueueEntry(row: {
+    paymentId: string;
+    amount: string;
+    currency: string;
+    transactionId: string | null;
+    payerName: string | null;
+    paymentProofUrl: string | null;
+    proofUploadedAt: Date | null;
+    itemType: 'BATCH' | 'CORPORATE_CONTRACT';
+    metadata: unknown;
+    user?: { userId: string; email: string; firstName: string | null; lastName: string | null } | null;
+    batch?: { batchId: string; title: string; slug: string } | null;
+  }) {
+    const name = [row.user?.firstName, row.user?.lastName]
+      .filter(Boolean)
+      .join(' ');
+    const snapshot =
+      row.metadata && typeof row.metadata === 'object'
+        ? (row.metadata as { batchTitle?: unknown }).batchTitle
+        : undefined;
+
+    return {
+      paymentId: row.paymentId,
+      amount: Number(row.amount),
+      currency: row.currency,
+      transactionId: row.transactionId,
+      proofUrl: row.paymentProofUrl,
+      proofUploadedAt: row.proofUploadedAt
+        ? row.proofUploadedAt.toISOString()
+        : null,
+      payer: {
+        userId: row.user?.userId ?? null,
+        name: row.payerName ?? (name.length > 0 ? name : null),
+        email: row.user?.email ?? null,
+      },
+      product: {
+        itemType: row.itemType,
+        batchId: row.batch?.batchId ?? null,
+        title:
+          row.batch?.title ??
+          (typeof snapshot === 'string' ? snapshot : null) ??
+          (row.itemType === 'CORPORATE_CONTRACT'
+            ? 'Corporate seat contract'
+            : 'Unknown batch'),
+      },
     };
   }
 

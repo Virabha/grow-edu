@@ -7,6 +7,7 @@ import { CorporateAdminController } from './corporate-admin.controller';
 import { CorporateAdminService } from './corporate-admin.service';
 import { JoinController } from './join.controller';
 import { JoinLinksService } from './join-links.service';
+import { RosterService } from './roster.service';
 import { SeatsService } from './seats.service';
 import { PerTokenThrottlerGuard } from '../auth/guards/per-token-throttler.guard';
 import { SubGroupsService } from './sub-groups.service';
@@ -22,6 +23,7 @@ import { SubGroupsService } from './sub-groups.service';
     ContractsService,
     CorporateAdminService,
     JoinLinksService,
+    RosterService,
     SeatsService,
     PerTokenThrottlerGuard,
     SubGroupsService,

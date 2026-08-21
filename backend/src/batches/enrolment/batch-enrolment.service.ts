@@ -27,6 +27,7 @@ import {
 import { BatchMediaService } from "../batch-media.service";
 import { CreateBatchEnrollmentsDto } from "../dto/batch-enrollment.dto";
 import { RecordLessonProgressDto } from "../dto/lesson-progress.dto";
+import { WaitlistService } from "./waitlist.service";
 
 const MAX_PAGE_LIMIT = 100;
 
@@ -41,6 +42,7 @@ export class BatchEnrolmentService implements OnModuleInit {
     private readonly media: BatchMediaService,
     private readonly notifications: NotificationsService,
     private readonly paymentService: PaymentService,
+    private readonly waitlist: WaitlistService,
   ) {}
 
   onModuleInit(): void {
@@ -114,7 +116,19 @@ export class BatchEnrolmentService implements OnModuleInit {
     if (await this.access.isEnrolled(batchId, userId)) {
       throw new BadRequestException("Already enrolled in this batch");
     }
-    await this.assertRoomFor(batchId, batch.capacity, 1);
+
+    if (batch.capacity !== null && (await this.freePlaces(batchId, batch.capacity)) <= 0) {
+      const place = await this.waitlist.join(batchId, { userId });
+      return {
+        paymentId: null as string | null,
+        enrolled: false,
+        waitlisted: true,
+        position: place.position,
+        originalAmount: Number(batch.price),
+        discountAmount: 0,
+        finalAmount: Number(batch.price),
+      };
+    }
 
     const originalAmount = Number(batch.price);
 
@@ -464,7 +478,36 @@ export class BatchEnrolmentService implements OnModuleInit {
       .update(batchEnrollments)
       .set({ status: "REVOKED", updatedAt: new Date() })
       .where(eq(batchEnrollments.enrollmentId, existing.enrollmentId));
-    return { success: true };
+
+    const promoted = await this.waitlist.promoteNext(batchId, (tx, nextUserId) =>
+      this.grantIn(tx, batchId, nextUserId),
+    );
+
+    return { success: true, promoted: promoted?.userId ?? null };
+  }
+
+  async grantIn(
+    tx: Queryable,
+    batchId: string,
+    userId: string,
+  ): Promise<void> {
+    await this.grant(batchId, userId, {
+      source: "ADMIN_GRANT",
+      tx,
+    });
+  }
+
+  private async freePlaces(batchId: string, capacity: number): Promise<number> {
+    const [{ count }] = await this.db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(batchEnrollments)
+      .where(
+        and(
+          eq(batchEnrollments.batchId, batchId),
+          eq(batchEnrollments.status, "ACTIVE"),
+        ),
+      );
+    return capacity - Number(count);
   }
 
   private async assertRoomFor(

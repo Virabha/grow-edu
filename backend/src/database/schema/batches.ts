@@ -14,6 +14,7 @@ import {
   batchDeliveryModeEnum,
   batchInstructorRoleEnum,
   batchEnrollmentStatusEnum,
+  batchWaitlistStatusEnum,
   batchEnrollmentSourceEnum,
   batchSessionTypeEnum,
   batchLiveProviderEnum,
@@ -137,12 +138,18 @@ export const lessons = pgTable(
     isFreePreview: boolean("is_free_preview").notNull().default(false),
     status: lessonStatusEnum("status").notNull().default("DRAFT"),
     order: integer("order").notNull(),
+    createdBy: text("created_by"),
+    submittedAt: timestamp("submitted_at"),
+    reviewedBy: text("reviewed_by"),
+    reviewedAt: timestamp("reviewed_at"),
+    reviewNotes: text("review_notes"),
     isDeleted: boolean("is_deleted").notNull().default(false),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (table) => ({
     subjectIdx: index("lessons_subject_idx").on(table.subjectId),
+    pendingIdx: index("lessons_pending_idx").on(table.status, table.submittedAt),
     subjectOrderIdx: index("lessons_subject_order_idx").on(
       table.subjectId,
       table.order
@@ -232,6 +239,35 @@ export const batchEnrollments = pgTable(
   })
 );
 
+export const batchWaitlist = pgTable(
+  "batch_waitlist",
+  {
+    organizationId: organizationId(),
+    waitlistId: text("waitlist_id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    batchId: text("batch_id").notNull(),
+    userId: text("user_id").notNull(),
+    status: batchWaitlistStatusEnum("status").notNull().default("WAITING"),
+    joinedAt: timestamp("joined_at").notNull(),
+    resolvedAt: timestamp("resolved_at"),
+    paymentId: text("payment_id"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    onePlacePerBatch: unique("batch_waitlist_batch_user_unique").on(
+      table.batchId,
+      table.userId
+    ),
+    queueIdx: index("batch_waitlist_queue_idx").on(
+      table.batchId,
+      table.status,
+      table.joinedAt
+    ),
+    userIdx: index("batch_waitlist_user_idx").on(table.userId),
+  })
+);
+
 export const batchSessions = pgTable(
   "batch_sessions",
   {
@@ -245,7 +281,6 @@ export const batchSessions = pgTable(
     title: text("title").notNull(),
     description: text("description"),
     type: batchSessionTypeEnum("type").notNull(),
-    // For LIVE sessions
     liveProvider: batchLiveProviderEnum("live_provider"),
     joinUrl: text("join_url"),
     meetingId: text("meeting_id"),
@@ -255,11 +290,12 @@ export const batchSessions = pgTable(
     actualStartAt: timestamp("actual_start_at"),
     actualEndAt: timestamp("actual_end_at"),
     status: batchSessionStatusEnum("status").notNull().default("SCHEDULED"),
-    // For RECORDING sessions (or live → archived)
     recordingVideoId: text("recording_video_id"),
     recordingDurationSeconds: integer("recording_duration_seconds"),
     recordingThumbnail: text("recording_thumbnail"),
     resources: jsonb("resources").$type<{ label: string; url: string }[]>(),
+    seriesId: text("series_id"),
+    occurrenceIndex: integer("occurrence_index"),
     isDeleted: boolean("is_deleted").notNull().default(false),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -271,6 +307,40 @@ export const batchSessions = pgTable(
       table.scheduledStartAt
     ),
     typeIdx: index("batch_sessions_type_idx").on(table.type),
+    seriesIdx: index("batch_sessions_series_idx").on(table.seriesId),
+    uniqueSeriesOccurrence: unique("batch_sessions_series_occurrence_unique").on(
+      table.seriesId,
+      table.occurrenceIndex
+    ),
+  })
+);
+
+export const batchRecurrenceSeries = pgTable(
+  "batch_recurrence_series",
+  {
+    organizationId: organizationId(),
+    seriesId: text("series_id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    batchId: text("batch_id").notNull(),
+    title: text("title").notNull(),
+    subjectId: text("subject_id"),
+    teacherId: text("teacher_id"),
+    liveProvider: batchLiveProviderEnum("live_provider"),
+    joinUrl: text("join_url"),
+    daysOfWeek: integer("days_of_week").array().notNull(),
+    startTimeUtc: text("start_time_utc").notNull(),
+    durationMinutes: integer("duration_minutes").notNull(),
+    windowStartAt: timestamp("window_start_at").notNull(),
+    windowEndAt: timestamp("window_end_at"),
+    lookAheadDays: integer("look_ahead_days").notNull().default(28),
+    isDeleted: boolean("is_deleted").notNull().default(false),
+    createdBy: text("created_by").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    batchIdx: index("batch_recurrence_series_batch_idx").on(table.batchId),
   })
 );
 

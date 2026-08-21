@@ -23,7 +23,8 @@ export type TimetableStatus =
   | "ATTENDED"
   | "MISSED"
   | "AVAILABLE"
-  | "CLOSED";
+  | "CLOSED"
+  | "CANCELLED";
 
 export interface TimetableItem {
   kind: TimetableKind;
@@ -163,7 +164,9 @@ export class TimetableService {
         : startsAt.getTime() <= now.getTime();
 
     let status: TimetableStatus = "UPCOMING";
-    if (session.type === "RECORDING") {
+    if (session.status === "CANCELLED") {
+      status = "CANCELLED";
+    } else if (session.type === "RECORDING") {
       status = "AVAILABLE";
     } else if (running) {
       status = "LIVE_NOW";
@@ -179,7 +182,7 @@ export class TimetableService {
       startsAt: startsAt.toISOString(),
       endsAt: endsAt ? endsAt.toISOString() : null,
       status,
-      joinUrl: running ? session.joinUrl : null,
+      joinUrl: running && status !== "CANCELLED" ? session.joinUrl : null,
       recordingVideoId: session.recordingVideoId,
       recordingThumbnail: this.media.url(session.recordingThumbnail),
       playbackUrl: this.playbackFor(session.recordingVideoId),

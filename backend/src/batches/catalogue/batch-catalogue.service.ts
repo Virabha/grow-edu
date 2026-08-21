@@ -21,6 +21,7 @@ import {
   users,
 } from "../../database/schema";
 import { CacheService } from "../../cache/cache.service";
+import { CLOCK, Clock } from "../../common/clock";
 import { BatchAccessService, Viewer } from "../access/batch-access.service";
 import { BatchMediaService } from "../batch-media.service";
 import { CreateBatchDto } from "../dto/create-batch.dto";
@@ -58,6 +59,7 @@ export class BatchCatalogueService {
     private readonly access: BatchAccessService,
     private readonly media: BatchMediaService,
     private readonly cache: CacheService,
+    @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
   async findAll(filters: FilterBatchesDto, viewer: Viewer) {
@@ -522,6 +524,7 @@ export class BatchCatalogueService {
 
   async createLesson(batchId: string, dto: CreateLessonDto, viewer: Viewer) {
     await this.requireSubject(batchId, dto.subjectId);
+    const status = this.settableStatus(dto.status ?? "DRAFT", viewer);
     const [created] = await this.db
       .insert(lessons)
       .values({
@@ -534,8 +537,10 @@ export class BatchCatalogueService {
         resources: dto.resources,
         duration: dto.duration,
         isFreePreview: dto.isFreePreview ?? false,
-        status: this.settableStatus(dto.status ?? "DRAFT", viewer),
+        status,
         order: dto.order,
+        createdBy: viewer.userId ?? null,
+        submittedAt: status === "PENDING_APPROVAL" ? this.clock.now() : null,
       })
       .returning();
 

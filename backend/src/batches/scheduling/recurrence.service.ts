@@ -236,7 +236,7 @@ export class RecurrenceService implements OnModuleInit {
 
     await this.db
       .update(batchSessions)
-      .set({ status: "CANCELLED", isDeleted: true, updatedAt: now })
+      .set({ status: "CANCELLED", updatedAt: now })
       .where(eq(batchSessions.sessionId, sessionId));
 
     await this.auditLog.record({

@@ -25,6 +25,8 @@ import { TransferService } from "./enrolment/transfer.service";
 import { WaitlistController } from "./enrolment/waitlist.controller";
 import { WaitlistService } from "./enrolment/waitlist.service";
 import { BatchLifecycleService } from "./lifecycle/batch-lifecycle.service";
+import { ApprovalsController } from "./lifecycle/approvals.controller";
+import { ApprovalsService } from "./lifecycle/approvals.service";
 import { CloneBatchController } from "./lifecycle/clone-batch.controller";
 import { CloneBatchService } from "./lifecycle/clone-batch.service";
 import { BatchReportingController } from "./reporting/batch-reporting.controller";
@@ -48,6 +50,7 @@ import { TimetableService } from "./scheduling/timetable.service";
   controllers: [
     BatchEnrolmentController,
     WaitlistController,
+    ApprovalsController,
     BatchReportingController,
     BatchSchedulingController,
     RecurrenceController,
@@ -66,6 +69,7 @@ import { TimetableService } from "./scheduling/timetable.service";
     WaitlistService,
     TransferService,
     BatchLifecycleService,
+    ApprovalsService,
     BatchSchedulingService,
     TimetableService,
     RecurrenceService,

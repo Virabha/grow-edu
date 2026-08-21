@@ -51,7 +51,7 @@ describe('payment approval', () => {
     return request(app.getHttpServer())
       .post(`/payments/${paymentId}/reject`)
       .set(...authHeader(app, admin))
-      .send({ notes: 'Proof unreadable' });
+      .send({ reason: 'The proof is unreadable' });
   }
 
   async function enrolledBatchIds(actor: TestActor): Promise<string[]> {

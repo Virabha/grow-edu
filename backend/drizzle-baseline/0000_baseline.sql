@@ -674,6 +674,27 @@ CREATE TABLE IF NOT EXISTS "batch_quizzes" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "batch_recurrence_series" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"series_id" text PRIMARY KEY NOT NULL,
+	"batch_id" text NOT NULL,
+	"title" text NOT NULL,
+	"subject_id" text,
+	"teacher_id" text,
+	"live_provider" "batch_live_provider",
+	"join_url" text,
+	"days_of_week" integer[] NOT NULL,
+	"start_time_utc" text NOT NULL,
+	"duration_minutes" integer NOT NULL,
+	"window_start_at" timestamp NOT NULL,
+	"window_end_at" timestamp,
+	"look_ahead_days" integer DEFAULT 28 NOT NULL,
+	"is_deleted" boolean DEFAULT false NOT NULL,
+	"created_by" text NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "batch_resources" (
 	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
 	"resource_id" text PRIMARY KEY NOT NULL,
@@ -716,9 +737,12 @@ CREATE TABLE IF NOT EXISTS "batch_sessions" (
 	"recording_duration_seconds" integer,
 	"recording_thumbnail" text,
 	"resources" jsonb,
+	"series_id" text,
+	"occurrence_index" integer,
 	"is_deleted" boolean DEFAULT false NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL
+	"updated_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "batch_sessions_series_occurrence_unique" UNIQUE("series_id","occurrence_index")
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "batch_subjects" (
@@ -802,6 +826,11 @@ CREATE TABLE IF NOT EXISTS "lessons" (
 	"is_free_preview" boolean DEFAULT false NOT NULL,
 	"status" "lesson_status" DEFAULT 'DRAFT' NOT NULL,
 	"order" integer NOT NULL,
+	"created_by" text,
+	"submitted_at" timestamp,
+	"reviewed_by" text,
+	"reviewed_at" timestamp,
+	"review_notes" text,
 	"is_deleted" boolean DEFAULT false NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
@@ -1127,6 +1156,7 @@ CREATE INDEX IF NOT EXISTS "batch_quiz_attempts_quiz_user_idx" ON "batch_quiz_at
 CREATE INDEX IF NOT EXISTS "batch_quiz_questions_quiz_idx" ON "batch_quiz_questions" ("quiz_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "batch_quizzes_batch_idx" ON "batch_quizzes" ("batch_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "batch_quizzes_subject_idx" ON "batch_quizzes" ("subject_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "batch_recurrence_series_batch_idx" ON "batch_recurrence_series" ("batch_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "batch_resources_batch_idx" ON "batch_resources" ("batch_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "batch_resources_type_idx" ON "batch_resources" ("type");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "batch_resources_subject_idx" ON "batch_resources" ("subject_id");--> statement-breakpoint
@@ -1134,6 +1164,7 @@ CREATE INDEX IF NOT EXISTS "batch_sessions_batch_idx" ON "batch_sessions" ("batc
 CREATE INDEX IF NOT EXISTS "batch_sessions_subject_idx" ON "batch_sessions" ("subject_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "batch_sessions_scheduled_start_idx" ON "batch_sessions" ("scheduled_start_at");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "batch_sessions_type_idx" ON "batch_sessions" ("type");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "batch_sessions_series_idx" ON "batch_sessions" ("series_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "batch_subjects_batch_idx" ON "batch_subjects" ("batch_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "batch_waitlist_queue_idx" ON "batch_waitlist" ("batch_id","status","joined_at");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "batch_waitlist_user_idx" ON "batch_waitlist" ("user_id");--> statement-breakpoint
@@ -1143,6 +1174,7 @@ CREATE INDEX IF NOT EXISTS "batches_start_date_idx" ON "batches" ("start_date");
 CREATE INDEX IF NOT EXISTS "batches_delivery_mode_idx" ON "batches" ("delivery_mode");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "lesson_progress_user_batch_idx" ON "lesson_progress" ("user_id","batch_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "lessons_subject_idx" ON "lessons" ("subject_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "lessons_pending_idx" ON "lessons" ("status","submitted_at");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "lessons_subject_order_idx" ON "lessons" ("subject_id","order");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "subject_lessons_subject_order_idx" ON "subject_lessons" ("subject_id","order");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "subject_lessons_lesson_idx" ON "subject_lessons" ("lesson_id");--> statement-breakpoint
@@ -1179,37 +1211,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS "notifications_dedupe_key_idx" ON "notificatio
 CREATE INDEX IF NOT EXISTS "video_encoding_jobs_lesson_idx" ON "video_encoding_jobs" ("lesson_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "video_encoding_jobs_batch_idx" ON "video_encoding_jobs" ("batch_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "video_encoding_jobs_status_idx" ON "video_encoding_jobs" ("status");--> statement-breakpoint
-ALTER TABLE "batch_sessions" ADD COLUMN IF NOT EXISTS "series_id" text;
---> statement-breakpoint
-ALTER TABLE "batch_sessions" ADD COLUMN IF NOT EXISTS "occurrence_index" integer;
---> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "batch_sessions_series_idx" ON "batch_sessions" ("series_id");
---> statement-breakpoint
-CREATE UNIQUE INDEX IF NOT EXISTS "batch_sessions_series_occurrence_unique" ON "batch_sessions" ("series_id","occurrence_index") WHERE "series_id" IS NOT NULL;
---> statement-breakpoint
-CREATE TABLE IF NOT EXISTS "batch_recurrence_series" (
-	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
-	"series_id" text PRIMARY KEY NOT NULL,
-	"batch_id" text NOT NULL,
-	"title" text NOT NULL,
-	"subject_id" text,
-	"teacher_id" text,
-	"live_provider" "batch_live_provider",
-	"join_url" text,
-	"days_of_week" integer[] NOT NULL,
-	"start_time_utc" text NOT NULL,
-	"duration_minutes" integer NOT NULL,
-	"window_start_at" timestamp NOT NULL,
-	"window_end_at" timestamp,
-	"look_ahead_days" integer DEFAULT 28 NOT NULL,
-	"is_deleted" boolean DEFAULT false NOT NULL,
-	"created_by" text NOT NULL,
-	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL
-);
---> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "batch_recurrence_series_batch_idx" ON "batch_recurrence_series" ("batch_id");
---> statement-breakpoint
 INSERT INTO "organizations" ("organization_id", "name", "slug")
 VALUES ('00000000-0000-0000-0000-000000000001', 'groEdu', 'groedu')
 ON CONFLICT ("organization_id") DO NOTHING;

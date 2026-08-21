@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 import { CLOCK, Clock } from "../../common/clock";
@@ -15,11 +15,8 @@ import {
   assessmentAttemptAnswers,
   assessmentAttempts,
   assessmentCriterionScores,
-  assessmentRubricCriteria,
-  assessmentRubrics,
   assessmentTestQuestions,
   assessmentTests,
-  batchEnrollments,
   assessmentQuestions,
 } from "../../database/schema";
 import { AttachFeedbackDto, GradeAnswerDto } from "./dto/grading.dto";
@@ -34,9 +31,17 @@ export class GradingService {
     private readonly rubrics: RubricService,
   ) {}
 
-  async getQueue(instructorId: string) {
-    const batchIds = await this.instructorBatchIds(instructorId);
-    if (batchIds.length === 0) return { item: null };
+  async getQueue(instructorId: string, role = "INSTRUCTOR") {
+    const isAdmin = role === "PLATFORM_ADMIN";
+    const batchIds = isAdmin ? [] : await this.instructorBatchIds(instructorId);
+    if (!isAdmin && batchIds.length === 0) return { item: null };
+
+    const whereClause = isAdmin
+      ? eq(assessmentAttemptAnswers.status, "PENDING_GRADING")
+      : and(
+          eq(assessmentAttemptAnswers.status, "PENDING_GRADING"),
+          inArray(assessmentTests.batchId, batchIds),
+        );
 
     const pendingAnswers = await this.db
       .select({
@@ -71,12 +76,7 @@ export class GradingService {
         assessmentTests,
         eq(assessmentAttempts.testId, assessmentTests.testId),
       )
-      .where(
-        and(
-          eq(assessmentAttemptAnswers.status, "PENDING_GRADING"),
-          inArray(assessmentTests.batchId, batchIds),
-        ),
-      )
+      .where(whereClause)
       .orderBy(asc(assessmentAttemptAnswers.createdAt))
       .limit(1);
 
@@ -109,8 +109,8 @@ export class GradingService {
     };
   }
 
-  async getAnswerForGrading(answerId: string, instructorId: string) {
-    const answer = await this.requireAnswerForInstructor(answerId, instructorId);
+  async getAnswerForGrading(answerId: string, instructorId: string, role = "INSTRUCTOR") {
+    const answer = await this.requireAnswerForInstructor(answerId, instructorId, role);
 
     const [placement] = await this.db
       .select()
@@ -163,8 +163,9 @@ export class GradingService {
     answerId: string,
     dto: GradeAnswerDto,
     instructorId: string,
+    role = "INSTRUCTOR",
   ) {
-    const answer = await this.requireAnswerForInstructor(answerId, instructorId);
+    const answer = await this.requireAnswerForInstructor(answerId, instructorId, role);
 
     if (answer.status === "AUTO_SCORED") {
       throw new BadRequestException(
@@ -261,15 +262,16 @@ export class GradingService {
 
     await this.maybeFinaliseAttempt(answer.attemptId, now);
 
-    return this.getAnswerForGrading(answerId, instructorId);
+    return this.getAnswerForGrading(answerId, instructorId, role);
   }
 
   async attachFeedback(
     answerId: string,
     dto: AttachFeedbackDto,
     instructorId: string,
+    role = "INSTRUCTOR",
   ) {
-    const answer = await this.requireAnswerForInstructor(answerId, instructorId);
+    const answer = await this.requireAnswerForInstructor(answerId, instructorId, role);
 
     if (answer.status !== "GRADED") {
       throw new BadRequestException(
@@ -329,6 +331,7 @@ export class GradingService {
   private async requireAnswerForInstructor(
     answerId: string,
     instructorId: string,
+    role = "INSTRUCTOR",
   ) {
     const [answer] = await this.db
       .select()
@@ -351,6 +354,8 @@ export class GradingService {
       .from(assessmentTests)
       .where(eq(assessmentTests.testId, attempt.testId))
       .limit(1);
+
+    if (role === "PLATFORM_ADMIN") return answer;
 
     if (!test || !test.batchId) {
       throw new ForbiddenException("Test is not associated with a batch");

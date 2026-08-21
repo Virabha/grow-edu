@@ -36,7 +36,7 @@ export class RegradeQueueController {
   @ApiOperation({ summary: "List open regrade requests across instructor batches" })
   @Get("queue")
   queue(@CurrentUser() user: AuthedUser) {
-    return this.regrade.getQueue(user.userId);
+    return this.regrade.getQueue(user.userId, user.role);
   }
 
   @ApiOperation({ summary: "Resolve a regrade request" })
@@ -46,6 +46,6 @@ export class RegradeQueueController {
     @Body() dto: ResolveRegradeDto,
     @CurrentUser() user: AuthedUser,
   ) {
-    return this.regrade.resolve(requestId, dto, user.userId);
+    return this.regrade.resolve(requestId, dto, user.userId, user.role);
   }
 }

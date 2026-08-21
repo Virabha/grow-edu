@@ -40,10 +40,13 @@ import { AppCacheModule } from "./cache/cache.module";
 import { AssessmentModule } from "./assessment/assessment.module";
 import { GroupsModule } from "./assessment/groups/groups.module";
 import { ImportModule } from "./assessment/import/import.module";
+import { IntegrityModule } from "./assessment/integrity/integrity.module";
 import { GradingModule } from "./assessment/grading/grading.module";
 import { TestsModule } from "./assessment/tests/tests.module";
+import { PracticeModule } from "./assessment/practice/practice.module";
 import { BatchesModule } from "./batches/batches.module";
 import { NotificationsModule } from "./notifications/notifications.module";
+import { ResultsModule } from "./assessment/results/results.module";
 
 @Module({
   imports: [
@@ -78,9 +81,12 @@ import { NotificationsModule } from "./notifications/notifications.module";
     AssessmentModule,
     GroupsModule,
     ImportModule,
+    IntegrityModule,
     TestsModule,
     GradingModule,
+    PracticeModule,
     NotificationsModule,
+    ResultsModule,
     CertificateTemplateModule,
     BlogModule,
     OrdersModule,

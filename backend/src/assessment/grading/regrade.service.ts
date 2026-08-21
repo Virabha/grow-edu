@@ -92,9 +92,17 @@ export class RegradeService {
     return request;
   }
 
-  async getQueue(instructorId: string) {
-    const batchIds = await this.instructorBatchIds(instructorId);
-    if (batchIds.length === 0) return [];
+  async getQueue(instructorId: string, role = "INSTRUCTOR") {
+    const isAdmin = role === "PLATFORM_ADMIN";
+    const batchIds = isAdmin ? [] : await this.instructorBatchIds(instructorId);
+    if (!isAdmin && batchIds.length === 0) return [];
+
+    const whereClause = isAdmin
+      ? eq(assessmentRegradeRequests.status, "OPEN")
+      : and(
+          eq(assessmentRegradeRequests.status, "OPEN"),
+          inArray(assessmentTests.batchId, batchIds),
+        );
 
     const requests = await this.db
       .select({
@@ -118,12 +126,7 @@ export class RegradeService {
         assessmentTests,
         eq(assessmentAttempts.testId, assessmentTests.testId),
       )
-      .where(
-        and(
-          eq(assessmentRegradeRequests.status, "OPEN"),
-          inArray(assessmentTests.batchId, batchIds),
-        ),
-      )
+      .where(whereClause)
       .orderBy(asc(assessmentRegradeRequests.createdAt));
 
     return requests;
@@ -133,6 +136,7 @@ export class RegradeService {
     requestId: string,
     dto: ResolveRegradeDto,
     instructorId: string,
+    role = "INSTRUCTOR",
   ) {
     const [request] = await this.db
       .select()
@@ -146,7 +150,9 @@ export class RegradeService {
       throw new ConflictException("This regrade request is already resolved");
     }
 
-    await this.assertInstructorCanSeeRequest(request, instructorId);
+    if (role !== "PLATFORM_ADMIN") {
+      await this.assertInstructorCanSeeRequest(request, instructorId);
+    }
 
     const originalMarks = Number(request.originalMarks ?? 0);
     const marksChanged = dto.resolvedMarks !== originalMarks;

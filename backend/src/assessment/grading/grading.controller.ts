@@ -22,7 +22,7 @@ export class GradingController {
   @ApiOperation({ summary: "Get the next ungraded item in the queue" })
   @Get("queue")
   queue(@CurrentUser() user: AuthedUser) {
-    return this.grading.getQueue(user.userId);
+    return this.grading.getQueue(user.userId, user.role);
   }
 
   @ApiOperation({ summary: "Get an answer for grading with rubric and images" })
@@ -31,7 +31,7 @@ export class GradingController {
     @Param("answerId") answerId: string,
     @CurrentUser() user: AuthedUser,
   ) {
-    return this.grading.getAnswerForGrading(answerId, user.userId);
+    return this.grading.getAnswerForGrading(answerId, user.userId, user.role);
   }
 
   @ApiOperation({ summary: "Grade an answer" })
@@ -41,7 +41,7 @@ export class GradingController {
     @Body() dto: GradeAnswerDto,
     @CurrentUser() user: AuthedUser,
   ) {
-    return this.grading.gradeAnswer(answerId, dto, user.userId);
+    return this.grading.gradeAnswer(answerId, dto, user.userId, user.role);
   }
 
   @ApiOperation({ summary: "Attach media feedback to a graded answer" })
@@ -51,7 +51,7 @@ export class GradingController {
     @Body() dto: AttachFeedbackDto,
     @CurrentUser() user: AuthedUser,
   ) {
-    return this.grading.attachFeedback(answerId, dto, user.userId);
+    return this.grading.attachFeedback(answerId, dto, user.userId, user.role);
   }
 }
 

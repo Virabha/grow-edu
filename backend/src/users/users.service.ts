@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException, ForbiddenException, UnauthorizedException, ConflictException, Logger } from '@nestjs/common';
 import { Inject } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { eq, desc, and, sql, isNull, ne } from 'drizzle-orm';
-import { userDevices, users } from '../database/schema';
+import { eq, desc, and, sql, isNull, ne, inArray } from 'drizzle-orm';
+import { pushSubscriptions, userDevices, users } from '../database/schema';
 import { DATABASE_CONNECTION } from '../database/database.module';
 import { AccountSuspensionService } from '../auth/account-suspension.service';
 import { DeviceRevocationService } from '../auth/device-revocation.service';
@@ -474,6 +474,10 @@ export class UsersService {
       .set({ revokedAt: new Date() })
       .where(eq(userDevices.deviceId, deviceId));
 
+    await this.db
+      .delete(pushSubscriptions)
+      .where(eq(pushSubscriptions.deviceId, deviceId));
+
     this.deviceRevocation.forget(deviceId);
 
     return { message: 'Device signed out' };
@@ -502,6 +506,11 @@ export class UsersService {
       .update(userDevices)
       .set({ revokedAt: new Date() })
       .where(and(...conditions));
+
+    const revokedDeviceIds = rows.map((r) => r.deviceId);
+    await this.db
+      .delete(pushSubscriptions)
+      .where(inArray(pushSubscriptions.deviceId, revokedDeviceIds));
 
     for (const row of rows) {
       this.deviceRevocation.forget(row.deviceId);

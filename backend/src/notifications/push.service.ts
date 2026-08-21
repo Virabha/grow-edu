@@ -1,12 +1,12 @@
-import { Inject, Injectable, Logger } from "@nestjs/common";
-import { and, eq, inArray } from "drizzle-orm";
+import { BadRequestException, Inject, Injectable, Logger } from "@nestjs/common";
+import { and, eq, inArray, isNull, ne } from "drizzle-orm";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 import { AppConfigService } from "../config";
 import { CLOCK, Clock } from "../common/clock";
 import { DATABASE_CONNECTION } from "../database/database.module";
 import * as schema from "../database/schema";
-import { pushSubscriptions } from "../database/schema";
+import { pushSubscriptions, userDevices } from "../database/schema";
 import { SubscribeToPushDto } from "./dto/subscribe-to-push.dto";
 import { encryptPayload, vapidAuthorization } from "./web-push";
 
@@ -24,6 +24,7 @@ export interface PushSender {
 
 const GONE_STATUSES = new Set([404, 410]);
 const JWT_TTL_SECONDS = 12 * 60 * 60;
+const PRUNE_THRESHOLD = 5;
 
 @Injectable()
 export class HttpPushSender implements PushSender {
@@ -57,7 +58,36 @@ export class PushService {
     userId: string,
     dto: SubscribeToPushDto,
     userAgent: string | null,
+    deviceId: string | null = null,
   ) {
+    if (deviceId) {
+      const [device] = await this.db
+        .select({ deviceId: userDevices.deviceId })
+        .from(userDevices)
+        .where(
+          and(
+            eq(userDevices.deviceId, deviceId),
+            isNull(userDevices.revokedAt),
+          ),
+        )
+        .limit(1);
+
+      if (!device) {
+        throw new BadRequestException(
+          "Device not found or has been signed out",
+        );
+      }
+
+      await this.db
+        .delete(pushSubscriptions)
+        .where(
+          and(
+            eq(pushSubscriptions.deviceId, deviceId),
+            ne(pushSubscriptions.endpoint, dto.endpoint),
+          ),
+        );
+    }
+
     const now = this.clock.now();
     const [saved] = await this.db
       .insert(pushSubscriptions)
@@ -67,6 +97,7 @@ export class PushService {
         p256dh: dto.keys.p256dh,
         auth: dto.keys.auth,
         userAgent,
+        deviceId: deviceId ?? null,
         createdAt: now,
       })
       .onConflictDoUpdate({
@@ -76,7 +107,9 @@ export class PushService {
           p256dh: dto.keys.p256dh,
           auth: dto.keys.auth,
           userAgent,
+          deviceId: deviceId ?? null,
           failureCount: 0,
+          prunedAt: null,
         },
       })
       .returning();
@@ -108,15 +141,27 @@ export class PushService {
         subscriptionId: pushSubscriptions.subscriptionId,
         endpoint: pushSubscriptions.endpoint,
         userAgent: pushSubscriptions.userAgent,
+        deviceId: pushSubscriptions.deviceId,
         createdAt: pushSubscriptions.createdAt,
       })
       .from(pushSubscriptions)
-      .where(eq(pushSubscriptions.userId, userId));
+      .where(
+        and(
+          eq(pushSubscriptions.userId, userId),
+          isNull(pushSubscriptions.prunedAt),
+        ),
+      );
 
     return rows.map((row) => ({
       ...row,
       createdAt: row.createdAt.toISOString(),
     }));
+  }
+
+  async removeByDeviceId(deviceId: string): Promise<void> {
+    await this.db
+      .delete(pushSubscriptions)
+      .where(eq(pushSubscriptions.deviceId, deviceId));
   }
 
   async deliver(
@@ -126,7 +171,12 @@ export class PushService {
     const subscriptions = await this.db
       .select()
       .from(pushSubscriptions)
-      .where(eq(pushSubscriptions.userId, userId));
+      .where(
+        and(
+          eq(pushSubscriptions.userId, userId),
+          isNull(pushSubscriptions.prunedAt),
+        ),
+      );
 
     if (subscriptions.length === 0) return { sent: 0, removed: 0 };
 
@@ -217,9 +267,18 @@ export class PushService {
       .where(eq(pushSubscriptions.subscriptionId, subscriptionId))
       .limit(1);
 
-    await this.db
-      .update(pushSubscriptions)
-      .set({ failureCount: (current?.failureCount ?? 0) + 1 })
-      .where(eq(pushSubscriptions.subscriptionId, subscriptionId));
+    const newCount = (current?.failureCount ?? 0) + 1;
+
+    if (newCount >= PRUNE_THRESHOLD) {
+      await this.db
+        .update(pushSubscriptions)
+        .set({ failureCount: newCount, prunedAt: this.clock.now() })
+        .where(eq(pushSubscriptions.subscriptionId, subscriptionId));
+    } else {
+      await this.db
+        .update(pushSubscriptions)
+        .set({ failureCount: newCount })
+        .where(eq(pushSubscriptions.subscriptionId, subscriptionId));
+    }
   }
 }

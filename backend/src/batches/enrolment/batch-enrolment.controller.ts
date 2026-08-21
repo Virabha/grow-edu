@@ -19,8 +19,12 @@ import { JwtAuthGuard } from "../../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../../auth/guards/roles.guard";
 import { CreateBatchEnrollmentsDto } from "../dto/batch-enrollment.dto";
 import { FilterBatchEnrollmentsDto } from "../dto/filter-batch-enrollments.dto";
-import { RecordLessonProgressDto } from "../dto/lesson-progress.dto";
+import {
+  RecordLessonProgressDto,
+  RecordPositionsDto,
+} from "../dto/lesson-progress.dto";
 import { BatchEnrolmentService } from "./batch-enrolment.service";
+import { LessonProgressService } from "./lesson-progress.service";
 
 interface AuthedUser {
   userId: string;
@@ -31,7 +35,10 @@ interface AuthedUser {
 @ApiBearerAuth()
 @Controller("batches")
 export class BatchEnrolmentController {
-  constructor(private readonly enrolments: BatchEnrolmentService) {}
+  constructor(
+    private readonly enrolments: BatchEnrolmentService,
+    private readonly lessonProgress: LessonProgressService,
+  ) {}
 
   @Authenticated()
   @ApiOperation({ summary: "Everything I have access to" })
@@ -83,7 +90,7 @@ export class BatchEnrolmentController {
     @Param("batchId") batchId: string,
     @CurrentUser() user: AuthedUser,
   ) {
-    return this.enrolments.lessonProgressFor(batchId, user);
+    return this.lessonProgress.listFor(batchId, user);
   }
 
   @BatchAccess("READ")
@@ -95,7 +102,42 @@ export class BatchEnrolmentController {
     @Body() dto: RecordLessonProgressDto,
     @CurrentUser() user: AuthedUser,
   ) {
-    return this.enrolments.recordLessonProgress(batchId, lessonId, user, dto);
+    return this.lessonProgress.record(batchId, lessonId, user, dto);
+  }
+
+  @BatchAccess("READ")
+  @ApiOperation({
+    summary: "Record a batch of playback positions from the client",
+  })
+  @Put(":batchId/positions")
+  recordPositions(
+    @Param("batchId") batchId: string,
+    @Body() dto: RecordPositionsDto,
+    @CurrentUser() user: AuthedUser,
+  ) {
+    return this.lessonProgress.recordPositions(batchId, user, dto);
+  }
+
+  @BatchAccess("READ")
+  @ApiOperation({ summary: "Where to resume a lesson" })
+  @Get(":batchId/lessons/:lessonId/position")
+  position(
+    @Param("batchId") batchId: string,
+    @Param("lessonId") lessonId: string,
+    @CurrentUser() user: AuthedUser,
+  ) {
+    return this.lessonProgress.positionFor(batchId, lessonId, user);
+  }
+
+  @BatchAccess("READ")
+  @ApiOperation({ summary: "Re-evaluate whether a lesson is complete" })
+  @Post(":batchId/lessons/:lessonId/progress/reconcile")
+  reconcileProgress(
+    @Param("batchId") batchId: string,
+    @Param("lessonId") lessonId: string,
+    @CurrentUser() user: AuthedUser,
+  ) {
+    return this.lessonProgress.reconcile(batchId, lessonId, user);
   }
 
   @ApiOperation({ summary: "Revoke a student's batch access (admin)" })

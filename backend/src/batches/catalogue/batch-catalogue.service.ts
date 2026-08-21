@@ -13,14 +13,20 @@ import { DATABASE_CONNECTION } from "../../database/database.module";
 import * as schema from "../../database/schema";
 import {
   batchInstructors,
+  batchQuizzes,
+  batchResources,
+  batchSessions,
   batchSubjects,
   batches,
+  lessonProgress,
   lessons,
   payments,
   subjectLessons,
   users,
+  videoEncodingJobs,
 } from "../../database/schema";
 import { CacheService } from "../../cache/cache.service";
+import { CdnService } from "../../cdn/cdn.service";
 import { CLOCK, Clock } from "../../common/clock";
 import { AuditLogService } from "../../audit/audit-log.service";
 import { BatchAccessService, Viewer } from "../access/batch-access.service";
@@ -60,6 +66,7 @@ export class BatchCatalogueService {
     private readonly access: BatchAccessService,
     private readonly media: BatchMediaService,
     private readonly cache: CacheService,
+    private readonly cdn: CdnService,
     @Inject(CLOCK) private readonly clock: Clock,
     private readonly auditLog: AuditLogService,
   ) {}
@@ -531,11 +538,46 @@ export class BatchCatalogueService {
       "READ",
       batchId,
     );
-    return lesson;
+    const playbackUrl = await this.signedPlaybackFor(lesson);
+
+    if (lesson.type !== "LIVE_SESSION" || lesson.sessionId === null) {
+      return { ...lesson, playbackUrl };
+    }
+    const [session] = await this.db
+      .select()
+      .from(batchSessions)
+      .where(eq(batchSessions.sessionId, lesson.sessionId));
+    return { ...lesson, playbackUrl, session: session ?? null };
+  }
+
+  private async signedPlaybackFor(
+    lesson: typeof lessons.$inferSelect,
+  ): Promise<string | null> {
+    if (lesson.type !== "VIDEO" && lesson.type !== "AUDIO") return null;
+    const [job] = await this.db
+      .select({ outputPath: videoEncodingJobs.outputPath })
+      .from(videoEncodingJobs)
+      .where(
+        and(
+          eq(videoEncodingJobs.lessonId, lesson.lessonId),
+          eq(videoEncodingJobs.status, "COMPLETED"),
+          eq(
+            videoEncodingJobs.renditionKind,
+            lesson.type === "AUDIO" ? "AUDIO" : "VIDEO",
+          ),
+        ),
+      );
+    if (!job || job.outputPath === null) return null;
+    try {
+      return this.cdn.getSignedEmbedUrl(job.outputPath);
+    } catch {
+      return null;
+    }
   }
 
   async createLesson(batchId: string, dto: CreateLessonDto, viewer: Viewer) {
     await this.requireSubject(batchId, dto.subjectId);
+    await this.requireTypeTargets(batchId, dto.type, dto);
     const status = this.settableStatus(dto.status ?? "DRAFT", viewer);
     const [created] = await this.db
       .insert(lessons)
@@ -548,6 +590,12 @@ export class BatchCatalogueService {
         textContent: dto.textContent,
         resources: dto.resources,
         duration: dto.duration,
+        audioUrl: dto.audioUrl,
+        audioDuration: dto.audioDuration,
+        documentFileKey: dto.documentFileKey,
+        documentPageCount: dto.documentPageCount,
+        sessionId: dto.sessionId,
+        quizId: dto.quizId,
         isFreePreview: dto.isFreePreview ?? false,
         status,
         order: dto.order,
@@ -562,7 +610,86 @@ export class BatchCatalogueService {
       order: dto.order,
     });
 
+    if (created.type === "DOCUMENT" && created.documentFileKey !== null) {
+      return this.mirrorLessonToResource(batchId, created, viewer);
+    }
+
     return created;
+  }
+
+  private async mirrorLessonToResource(
+    batchId: string,
+    lesson: typeof lessons.$inferSelect,
+    viewer: Viewer,
+  ) {
+    const now = this.clock.now();
+    const [resource] = await this.db
+      .insert(batchResources)
+      .values({
+        batchId,
+        subjectId: lesson.subjectId,
+        title: lesson.title,
+        description: lesson.description,
+        type: "NOTES",
+        fileKey: lesson.documentFileKey ?? "",
+        pageCount: lesson.documentPageCount,
+        lessonId: lesson.lessonId,
+        publishAt: lesson.publishAt,
+        uploadedBy: viewer.userId ?? lesson.createdBy ?? "",
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning();
+
+    const [linked] = await this.db
+      .update(lessons)
+      .set({ resourceId: resource.resourceId, updatedAt: now })
+      .where(eq(lessons.lessonId, lesson.lessonId))
+      .returning();
+
+    return linked;
+  }
+
+  private async requireTypeTargets(
+    batchId: string,
+    type: CreateLessonDto["type"] | undefined,
+    dto: Pick<CreateLessonDto, "sessionId" | "quizId">,
+  ): Promise<void> {
+    if (type === "LIVE_SESSION") {
+      if (!dto.sessionId) {
+        throw new BadRequestException(
+          "A live-session lesson must name the batch session it resolves to",
+        );
+      }
+      const [session] = await this.db
+        .select({ sessionId: batchSessions.sessionId })
+        .from(batchSessions)
+        .where(
+          and(
+            eq(batchSessions.sessionId, dto.sessionId),
+            eq(batchSessions.batchId, batchId),
+            eq(batchSessions.isDeleted, false),
+          ),
+        );
+      if (!session) {
+        throw new NotFoundException("That session is not on this batch");
+      }
+    }
+    if (type === "QUIZ" && dto.quizId) {
+      const [quiz] = await this.db
+        .select({ quizId: batchQuizzes.quizId })
+        .from(batchQuizzes)
+        .where(
+          and(
+            eq(batchQuizzes.quizId, dto.quizId),
+            eq(batchQuizzes.batchId, batchId),
+            eq(batchQuizzes.isDeleted, false),
+          ),
+        );
+      if (!quiz) {
+        throw new NotFoundException("That quiz is not on this batch");
+      }
+    }
   }
 
   async approveLesson(batchId: string, lessonId: string, viewer: Viewer) {
@@ -578,6 +705,19 @@ export class BatchCatalogueService {
       .where(eq(lessons.lessonId, lessonId))
       .returning();
     return approved;
+  }
+
+  private async assertNoProgressRecorded(lessonId: string): Promise<void> {
+    const [recorded] = await this.db
+      .select({ lessonProgressId: lessonProgress.lessonProgressId })
+      .from(lessonProgress)
+      .where(eq(lessonProgress.lessonId, lessonId))
+      .limit(1);
+    if (recorded) {
+      throw new ConflictException(
+        "A lesson's type cannot change once a student has progress against it",
+      );
+    }
   }
 
   private settableStatus(
@@ -598,6 +738,13 @@ export class BatchCatalogueService {
     if (dto.subjectId && dto.subjectId !== existing.subjectId) {
       await this.requireSubject(batchId, dto.subjectId);
     }
+    if (dto.type !== undefined && dto.type !== existing.type) {
+      await this.assertNoProgressRecorded(lessonId);
+    }
+    await this.requireTypeTargets(batchId, dto.type ?? existing.type, {
+      sessionId: dto.sessionId ?? existing.sessionId ?? undefined,
+      quizId: dto.quizId ?? existing.quizId ?? undefined,
+    });
 
     const [updated] = await this.db
       .update(lessons)
@@ -610,6 +757,19 @@ export class BatchCatalogueService {
         ...(dto.textContent !== undefined && { textContent: dto.textContent }),
         ...(dto.resources !== undefined && { resources: dto.resources }),
         ...(dto.duration !== undefined && { duration: dto.duration }),
+        ...(dto.audioUrl !== undefined && { audioUrl: dto.audioUrl }),
+        ...(dto.audioDuration !== undefined && {
+          audioDuration: dto.audioDuration,
+        }),
+        ...(dto.documentFileKey !== undefined && {
+          documentFileKey: dto.documentFileKey,
+          documentVersion: existing.documentVersion + 1,
+        }),
+        ...(dto.documentPageCount !== undefined && {
+          documentPageCount: dto.documentPageCount,
+        }),
+        ...(dto.sessionId !== undefined && { sessionId: dto.sessionId }),
+        ...(dto.quizId !== undefined && { quizId: dto.quizId }),
         ...(dto.isFreePreview !== undefined && {
           isFreePreview: dto.isFreePreview,
         }),
@@ -674,6 +834,13 @@ export class BatchCatalogueService {
           .update(lessons)
           .set({ isDeleted: true, updatedAt: new Date() })
           .where(eq(lessons.lessonId, lessonId));
+
+        if (existing.resourceId !== null) {
+          await tx
+            .update(batchResources)
+            .set({ isDeleted: true, updatedAt: this.clock.now() })
+            .where(eq(batchResources.resourceId, existing.resourceId));
+        }
       }
     });
 

@@ -87,6 +87,28 @@ export class VideoEncodingController {
     return result;
   }
 
+  @ApiOperation({ summary: "Create Bunny Stream audio rendition and get TUS upload auth" })
+  @ApiResponse({ status: 201, description: "Audio rendition job created, TUS auth returned" })
+  @Post("create-audio-upload")
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.INSTRUCTOR, UserRole.PLATFORM_ADMIN)
+  async createAudioUpload(
+    @Body() body: { batchId: string; lessonId: string; title?: string },
+    @CurrentUser() user: { userId: string; role: string },
+  ) {
+    const { batchId, lessonId, title } = body;
+    const lesson = await this.loadLessonForUser(lessonId, user);
+    if (lesson.subject.batchId !== batchId) {
+      throw new BadRequestException('Batch ID does not match the lesson\'s batch');
+    }
+    return this.videoEncodingService.createVideo(
+      lessonId,
+      batchId,
+      title ?? lesson.title,
+      'AUDIO',
+    );
+  }
+
   @ApiOperation({ summary: "Get encoding job status" })
   @ApiResponse({ status: 200, description: "Job status" })
   @Get("status/:jobId")

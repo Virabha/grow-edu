@@ -40,6 +40,23 @@ VALUES ('${DEFAULT_ORGANIZATION_ID}', 'groEdu', 'groedu')
 ON CONFLICT ("organization_id") DO NOTHING;
 `;
 
+const SEARCH_DOCUMENT_FULL_TEXT = `--> statement-breakpoint
+ALTER TABLE "search_documents" DROP COLUMN IF EXISTS "search_vector";
+--> statement-breakpoint
+ALTER TABLE "search_documents" ADD COLUMN "search_vector" tsvector
+  GENERATED ALWAYS AS (
+    setweight(to_tsvector('english', coalesce("title", '')), 'A') ||
+    setweight(to_tsvector('english', coalesce("body", '')), 'B')
+  ) STORED;
+--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "search_documents_vector_idx"
+  ON "search_documents" USING gin ("search_vector");
+--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "lesson_transcript_segments_body_idx"
+  ON "lesson_transcript_segments"
+  USING gin (to_tsvector('english', "body"));
+`;
+
 rmSync(DIR, { recursive: true, force: true });
 
 execFileSync(
@@ -61,5 +78,6 @@ rmSync(join(DIR, 'meta'), { recursive: true, force: true });
 appendFileSync(join(DIR, TARGET), SEED_DEFAULT_ORGANIZATION);
 appendFileSync(join(DIR, TARGET), APPEND_ONLY_AUDIT_LOG);
 appendFileSync(join(DIR, TARGET), IMMUTABLE_INVOICES);
+appendFileSync(join(DIR, TARGET), SEARCH_DOCUMENT_FULL_TEXT);
 
 console.log(`Baseline written to ${join(DIR, TARGET)}`);

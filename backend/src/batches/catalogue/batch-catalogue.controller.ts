@@ -22,6 +22,8 @@ import { RolesGuard } from "../../auth/guards/roles.guard";
 import {
   AssignInstructorDto,
   CreateLessonDto,
+  PlaceTestDto,
+  ReorderCurriculumDto,
   ReorderLessonsDto,
   UpdateLessonDto,
 } from "../dto/batch-content.dto";
@@ -33,6 +35,8 @@ import { CreateBatchDto } from "../dto/create-batch.dto";
 import { FilterBatchesDto } from "../dto/filter-batches.dto";
 import { UpdateBatchDto } from "../dto/update-batch.dto";
 import { BatchCatalogueService } from "./batch-catalogue.service";
+import { CurriculumService } from "./curriculum.service";
+import { RichLessonService } from "./rich-lesson.service";
 
 interface AuthedUser {
   userId: string;
@@ -42,7 +46,11 @@ interface AuthedUser {
 @ApiTags("batches")
 @Controller("batches")
 export class BatchCatalogueController {
-  constructor(private readonly catalogue: BatchCatalogueService) {}
+  constructor(
+    private readonly catalogue: BatchCatalogueService,
+    private readonly rich: RichLessonService,
+    private readonly curriculum: CurriculumService,
+  ) {}
 
   @ApiOperation({ summary: "List batches (public filters to published)" })
   @Public()
@@ -217,6 +225,115 @@ export class BatchCatalogueController {
     @CurrentUser() user?: AuthedUser,
   ) {
     return this.catalogue.getLesson(batchId, lessonId, user ?? {});
+  }
+
+  @BatchAccess("READ")
+  @ApiOperation({
+    summary: "The whole batch curriculum: every content type in one ordered list",
+  })
+  @ApiBearerAuth()
+  @Get(":batchId/curriculum/full")
+  unifiedCurriculum(
+    @Param("batchId") batchId: string,
+    @CurrentUser() user: AuthedUser,
+  ) {
+    return this.curriculum.unified(batchId, user);
+  }
+
+  @BatchAccess("MANAGE")
+  @ApiOperation({ summary: "Place a test in the curriculum (admin or teacher)" })
+  @ApiBearerAuth()
+  @Post(":batchId/subjects/:subjectId/tests")
+  placeTest(
+    @Param("batchId") batchId: string,
+    @Param("subjectId") subjectId: string,
+    @Body() dto: PlaceTestDto,
+  ) {
+    return this.curriculum.placeTest(
+      batchId,
+      subjectId,
+      dto.testId,
+      dto.order,
+      dto.unlockAfterDays,
+    );
+  }
+
+  @BatchAccess("MANAGE")
+  @ApiOperation({ summary: "Remove a test from the curriculum" })
+  @ApiBearerAuth()
+  @Delete(":batchId/curriculum/tests/:placementId")
+  removeTestPlacement(
+    @Param("batchId") batchId: string,
+    @Param("placementId") placementId: string,
+  ) {
+    return this.curriculum.removeTest(batchId, placementId);
+  }
+
+  @BatchAccess("MANAGE")
+  @ApiOperation({ summary: "Reorder curriculum items across every content type" })
+  @ApiBearerAuth()
+  @Put(":batchId/curriculum/reorder")
+  reorderCurriculum(
+    @Param("batchId") batchId: string,
+    @Body() dto: ReorderCurriculumDto,
+  ) {
+    return this.curriculum.reorder(batchId, dto.items);
+  }
+
+  @BatchAccess("MANAGE")
+  @ApiOperation({ summary: "Author a rich lesson's structured content" })
+  @ApiBearerAuth()
+  @Put(":batchId/lessons/:lessonId/rich-content")
+  putRichContent(
+    @Param("batchId") batchId: string,
+    @Param("lessonId") lessonId: string,
+    @Body("content") content: unknown,
+  ) {
+    return this.rich.put(batchId, lessonId, content);
+  }
+
+  @BatchAccess("READ")
+  @ApiOperation({ summary: "Read a rich lesson's structured content" })
+  @ApiBearerAuth()
+  @Get(":batchId/lessons/:lessonId/rich-content")
+  getRichContent(
+    @Param("batchId") batchId: string,
+    @Param("lessonId") lessonId: string,
+    @CurrentUser() user: AuthedUser,
+  ) {
+    return this.rich.get(batchId, lessonId, user);
+  }
+
+  @BatchAccess("READ")
+  @ApiOperation({ summary: "Answer a question embedded in a rich lesson" })
+  @ApiBearerAuth()
+  @Post(":batchId/lessons/:lessonId/inline-questions/:questionId")
+  answerInline(
+    @Param("batchId") batchId: string,
+    @Param("lessonId") lessonId: string,
+    @Param("questionId") questionId: string,
+    @Body("response") response: unknown,
+    @CurrentUser() user: AuthedUser,
+  ) {
+    return this.rich.answerInline(
+      batchId,
+      lessonId,
+      questionId,
+      response,
+      user,
+    );
+  }
+
+  @BatchAccess("READ")
+  @ApiOperation({ summary: "My answers to a rich lesson's inline questions" })
+  @ApiBearerAuth()
+  @Get(":batchId/lessons/:lessonId/inline-questions")
+  myInlineAnswers(
+    @Param("batchId") batchId: string,
+    @Param("lessonId") lessonId: string,
+    @CurrentUser() user: AuthedUser,
+  ) {
+    return this.rich.myInlineAnswers(batchId, lessonId, user);
   }
 
   @BatchAccess("MANAGE")

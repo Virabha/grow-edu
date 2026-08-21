@@ -510,9 +510,119 @@ export const GROUPS: Record<string, GroupDefinition> = {
       reminderLeadMinutes: 15,
     },
   },
+
+  completion: {
+    meta: {
+      title: 'Lesson Completion',
+      description:
+        'The threshold at which each lesson type counts as complete. Each type completes by its own rule.',
+    },
+    fields: [
+      { key: 'videoWatchedPercent', label: 'Video Watched (%)', type: 'number', help: 'Percentage of a video that must be watched before it counts as complete.' },
+      { key: 'audioListenedPercent', label: 'Audio Listened (%)', type: 'number', help: 'Percentage of an audio rendition that must be listened to.' },
+      { key: 'documentPagesPercent', label: 'Document Pages Viewed (%)', type: 'number', help: 'Percentage of a document’s pages that must be viewed.' },
+      { key: 'richBlocksPercent', label: 'Rich Lesson Blocks Seen (%)', type: 'number' },
+      { key: 'liveSessionMinAttendanceSeconds', label: 'Live Session Attendance (seconds)', type: 'number', help: 'Recorded attendance duration required before a live session counts as complete.' },
+    ],
+    defaults: {
+      videoWatchedPercent: 90,
+      audioListenedPercent: 90,
+      documentPagesPercent: 80,
+      richBlocksPercent: 100,
+      liveSessionMinAttendanceSeconds: 300,
+    },
+  },
+
+  studyHabits: {
+    meta: {
+      title: 'Study Habits',
+      description:
+        'How study time is measured and what a student must do for a day to count towards their streak.',
+    },
+    fields: [
+      { key: 'inactivityCutoffSeconds', label: 'Inactivity Cutoff (seconds)', type: 'number', help: 'A gap longer than this between activity events does not accrue study time.' },
+      { key: 'defaultDailyGoalMinutes', label: 'Default Daily Goal (minutes)', type: 'number', help: 'The daily goal a student starts with. Each student may edit their own.' },
+      { key: 'dailyReviewSize', label: 'Daily Review Queue Size', type: 'number' },
+      { key: 'badgeStudyMinutesTotal', label: 'Badge — Total Study Minutes', type: 'number' },
+      { key: 'badgeStreakDays', label: 'Badge — Streak Days', type: 'number' },
+      { key: 'badgeLessonsCompleted', label: 'Badge — Lessons Completed', type: 'number' },
+      { key: 'badgeReviewsCompleted', label: 'Badge — Reviews Completed', type: 'number' },
+    ],
+    defaults: {
+      inactivityCutoffSeconds: 300,
+      defaultDailyGoalMinutes: 30,
+      dailyReviewSize: 20,
+      badgeStudyMinutesTotal: 600,
+      badgeStreakDays: 7,
+      badgeLessonsCompleted: 25,
+      badgeReviewsCompleted: 100,
+    },
+  },
+
+  community: {
+    meta: {
+      title: 'Community',
+      description:
+        'Bounds on the batch feed and peer study groups. There is no direct messaging anywhere on the platform.',
+    },
+    fields: [
+      { key: 'studyGroupMemberCap', label: 'Study Group Size Cap', type: 'number', help: 'The largest a peer study group may become.' },
+      { key: 'studyGroupsPerBatch', label: 'Study Groups Per Batch', type: 'number' },
+      { key: 'feedPostMaxLength', label: 'Feed Post Maximum Length', type: 'number' },
+    ],
+    defaults: {
+      studyGroupMemberCap: 8,
+      studyGroupsPerBatch: 20,
+      feedPostMaxLength: 2000,
+    },
+  },
+
+  discovery: {
+    meta: {
+      title: 'Catalogue & Onboarding',
+      description:
+        'The goals a student may choose from and how the catalogue and low-bandwidth mode behave.',
+    },
+    fields: [
+      { key: 'goalOptions', label: 'Goal Options', type: 'textarea', help: 'One goal per line, written as key|Label. These are what a student picks from at sign-up.' },
+      { key: 'cataloguePageSize', label: 'Catalogue Page Size', type: 'number' },
+      { key: 'lowBandwidthImageKilobytes', label: 'Low-Bandwidth Image Threshold (KB)', type: 'number', help: 'Images larger than this are suppressed when a student turns low-bandwidth mode on.' },
+      { key: 'diagnosticQuestionCount', label: 'Diagnostic Test Questions', type: 'number' },
+    ],
+    defaults: {
+      goalOptions: 'JEE|JEE\nNEET|NEET\nUPSC|UPSC\nCAT|CAT\nFOUNDATION|School Foundation',
+      cataloguePageSize: 20,
+      lowBandwidthImageKilobytes: 100,
+      diagnosticQuestionCount: 15,
+    },
+  },
+
+  signIn: {
+    meta: {
+      title: 'Consumer Sign-In',
+      description:
+        'One-time codes for phone sign-in. Every unrated code request has a direct monetary cost.',
+    },
+    fields: [
+      { key: 'otpLength', label: 'One-Time Code Length', type: 'number' },
+      { key: 'otpTtlSeconds', label: 'One-Time Code Lifetime (seconds)', type: 'number' },
+      { key: 'otpMaxAttempts', label: 'Maximum Verification Attempts', type: 'number' },
+    ],
+    defaults: {
+      otpLength: 6,
+      otpTtlSeconds: 300,
+      otpMaxAttempts: 5,
+    },
+  },
 };
 
 export const DOUBTS_SETTINGS_GROUP = 'doubts';
 export const DEFAULT_DOUBT_RESPONSE_TARGET_HOURS = 24;
+
+export const COMPLETION_SETTINGS_GROUP = 'completion';
+export const STUDY_HABITS_SETTINGS_GROUP = 'studyHabits';
+export const COMMUNITY_SETTINGS_GROUP = 'community';
+export const DISCOVERY_SETTINGS_GROUP = 'discovery';
+export const SIGN_IN_SETTINGS_GROUP = 'signIn';
 
 export const KNOWN_GROUPS = new Set(Object.keys(GROUPS));

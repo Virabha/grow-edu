@@ -5,6 +5,7 @@ export const userRoleEnum = pgEnum("user_role", [
   "INSTRUCTOR",
   "CORPORATE_ADMIN",
   "PLATFORM_ADMIN",
+  "PARENT",
 ]);
 
 export const paymentStatusEnum = pgEnum("payment_status", [
@@ -23,7 +24,15 @@ export const paymentGatewayEnum = pgEnum("payment_gateway", [
   "FREE",
 ]);
 
-export const lessonTypeEnum = pgEnum("lesson_type", ["VIDEO", "TEXT", "QUIZ"]);
+export const lessonTypeEnum = pgEnum("lesson_type", [
+  "VIDEO",
+  "TEXT",
+  "QUIZ",
+  "DOCUMENT",
+  "AUDIO",
+  "RICH",
+  "LIVE_SESSION",
+]);
 
 export const lessonStatusEnum = pgEnum("lesson_status", [
   "DRAFT",
@@ -153,6 +162,10 @@ export const notificationTypeEnum = pgEnum("notification_type", [
   "BATCH_CERTIFICATE",
   "PAYMENT_APPROVED",
   "PAYMENT_REJECTED",
+  "WEEKLY_REPORT_CARD",
+  "PARENT_LINK_REQUEST",
+  "BADGE_AWARDED",
+  "DAILY_REVIEW_DUE",
   "GENERIC",
 ]);
 
@@ -273,4 +286,77 @@ export const assessmentAnomalyKindEnum = pgEnum("assessment_anomaly_kind", [
   "TIMING_OUTLIER",
   "IDENTICAL_SEQUENCE",
   "SUBMISSION_PATTERN",
+]);
+
+export const mediaRenditionKindEnum = pgEnum("media_rendition_kind", [
+  "VIDEO",
+  "AUDIO",
+]);
+
+export const lessonTranscriptStatusEnum = pgEnum("lesson_transcript_status", [
+  "PENDING",
+  "PROCESSING",
+  "READY",
+  "FAILED",
+]);
+
+export const batchVisibilityEnum = pgEnum("batch_visibility", [
+  "PUBLIC",
+  "CORPORATE_ONLY",
+]);
+
+export const documentAnnotationStateEnum = pgEnum("document_annotation_state", [
+  "ANCHORED",
+  "ORPHANED",
+]);
+
+export const reviewItemSourceEnum = pgEnum("review_item_source", [
+  "ERROR_NOTEBOOK",
+  "BOOKMARKED_QUESTION",
+]);
+
+export const reviewOutcomeEnum = pgEnum("review_outcome", ["CORRECT", "WRONG"]);
+
+export const reviewQueueEntryKindEnum = pgEnum("review_queue_entry_kind", [
+  "REVIEW",
+  "PRACTICE",
+]);
+
+export const communityAuthorKindEnum = pgEnum("community_author_kind", [
+  "STUDENT",
+  "INSTRUCTOR",
+  "ADMIN",
+]);
+
+export const contentReportTargetEnum = pgEnum("content_report_target", [
+  "FEED_POST",
+  "GROUP_MESSAGE",
+]);
+
+export const contentReportStatusEnum = pgEnum("content_report_status", [
+  "OPEN",
+  "RESOLVED",
+  "DISMISSED",
+]);
+
+export const identityProviderEnum = pgEnum("identity_provider", [
+  "PASSWORD",
+  "PHONE",
+  "GOOGLE",
+]);
+
+export const parentLinkStatusEnum = pgEnum("parent_link_status", [
+  "PENDING",
+  "ACTIVE",
+  "REVOKED",
+]);
+
+export const searchDocumentKindEnum = pgEnum("search_document_kind", [
+  "BATCH",
+  "INSTRUCTOR",
+]);
+
+export const curriculumItemKindEnum = pgEnum("curriculum_item_kind", [
+  "LESSON",
+  "TEST",
 ]);

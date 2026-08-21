@@ -26,7 +26,6 @@ import {
 } from "../access/batch-access.service";
 import { BatchMediaService } from "../batch-media.service";
 import { CreateBatchEnrollmentsDto } from "../dto/batch-enrollment.dto";
-import { RecordLessonProgressDto } from "../dto/lesson-progress.dto";
 import { WaitlistService } from "./waitlist.service";
 import { BatchCapacityService } from "../access/batch-capacity.service";
 
@@ -410,58 +409,6 @@ export class BatchEnrolmentService implements OnModuleInit {
       .returning();
 
     return created;
-  }
-
-  async recordLessonProgress(
-    batchId: string,
-    lessonId: string,
-    viewer: SignedInViewer,
-    dto: RecordLessonProgressDto,
-  ) {
-    await this.access.requireForLesson(lessonId, viewer, "READ", batchId);
-    const userId = viewer.userId;
-    const now = new Date();
-
-    const [row] = await this.db
-      .insert(lessonProgress)
-      .values({
-        userId,
-        lessonId,
-        batchId,
-        completed: dto.completed ?? false,
-        timeSpent: dto.timeSpent ?? 0,
-        lastPosition: dto.lastPosition,
-        lastAccessed: now,
-      })
-      .onConflictDoUpdate({
-        target: [lessonProgress.userId, lessonProgress.lessonId],
-        set: {
-          ...(dto.completed !== undefined && { completed: dto.completed }),
-          ...(dto.timeSpent !== undefined && {
-            timeSpent: sql`${lessonProgress.timeSpent} + ${dto.timeSpent}`,
-          }),
-          ...(dto.lastPosition !== undefined && {
-            lastPosition: dto.lastPosition,
-          }),
-          lastAccessed: now,
-          updatedAt: now,
-        },
-      })
-      .returning();
-    return row;
-  }
-
-  async lessonProgressFor(batchId: string, viewer: SignedInViewer) {
-    await this.access.require(batchId, viewer, "READ");
-    return this.db
-      .select()
-      .from(lessonProgress)
-      .where(
-        and(
-          eq(lessonProgress.batchId, batchId),
-          eq(lessonProgress.userId, viewer.userId),
-        ),
-      );
   }
 
   async revoke(batchId: string, userId: string) {

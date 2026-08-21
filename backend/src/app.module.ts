@@ -51,6 +51,9 @@ import { ReviewModule } from "./review/review.module";
 import { DiscoveryModule } from "./discovery/discovery.module";
 import { CommunityModule } from "./community/community.module";
 import { HabitsModule } from "./habits/habits.module";
+import { ParentsModule } from "./parents/parents.module";
+import { MediaModule } from "./media/media.module";
+import { StudyToolsModule } from "./study-tools/study-tools.module";
 
 @Module({
   imports: [
@@ -101,6 +104,9 @@ import { HabitsModule } from "./habits/habits.module";
     AssignmentsModule,
     SettingsModule,
     HabitsModule,
+    StudyToolsModule,
+    MediaModule,
+    ParentsModule,
   ],
   controllers: [AppController],
   providers: [

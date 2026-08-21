@@ -18,6 +18,7 @@ import { RegisterDto } from './dto/register.dto';
 import { EmailService } from '../email/email.service';
 import { TokenService } from './token.service';
 import { AppConfigService } from '../config';
+import { IdentityService } from './identity.service';
 
 export interface UserPayload {
   id: string;
@@ -64,6 +65,7 @@ export class AuthService {
     private emailService: EmailService,
     private tokenService: TokenService,
     private configService: AppConfigService,
+    private readonly identityService: IdentityService,
   ) {}
 
   async validateUser(email: string, password: string): Promise<UserPayload | null> {
@@ -142,6 +144,8 @@ export class AuthService {
         firstName: users.firstName,
         lastName: users.lastName,
       });
+
+    await this.identityService.linkIdentity(newUser.userId, 'PASSWORD', newUser.email);
 
     try {
       const verificationToken = await this.tokenService.generateToken(

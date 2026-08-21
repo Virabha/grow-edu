@@ -120,7 +120,11 @@ export class BatchAccessService {
       .limit(1);
     if (!row) throw this.absent();
 
-    if (level === "READ" && row.lesson.isFreePreview) {
+    if (
+      level === "READ" &&
+      row.lesson.isFreePreview &&
+      row.lesson.status === "READY"
+    ) {
       const batch = await this.load(row.batchId);
       if (!batch) throw this.absent();
       return {

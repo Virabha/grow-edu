@@ -225,6 +225,8 @@ export class BatchEngagementService implements OnModuleInit {
       })
       .returning();
 
+    const linked = await this.mirrorResourceToLesson(created, uploadedBy);
+
     if (!dto.publishAt || new Date(dto.publishAt) <= this.clock.now()) {
       const label =
         dto.type === "DPP" ? "DPP" : dto.type === "NOTES" ? "notes" : "resource";
@@ -238,7 +240,7 @@ export class BatchEngagementService implements OnModuleInit {
         },
       );
     }
-    return created;
+    return linked;
   }
 
   async updateResource(
@@ -272,12 +274,87 @@ export class BatchEngagementService implements OnModuleInit {
   }
 
   async deleteResource(batchId: string, resourceId: string) {
-    await this.requireResource(batchId, resourceId);
+    const resource = await this.requireResource(batchId, resourceId);
+    const now = this.clock.now();
     await this.db
       .update(batchResources)
-      .set({ isDeleted: true, updatedAt: new Date() })
+      .set({ isDeleted: true, updatedAt: now })
       .where(eq(batchResources.resourceId, resourceId));
+
+    if (resource.lessonId !== null) {
+      await this.db
+        .update(lessons)
+        .set({ isDeleted: true, updatedAt: now })
+        .where(eq(lessons.lessonId, resource.lessonId));
+      await this.db
+        .update(subjectLessons)
+        .set({ isDeleted: true })
+        .where(eq(subjectLessons.lessonId, resource.lessonId));
+    }
     return { success: true };
+  }
+
+  private async mirrorResourceToLesson(
+    resource: typeof batchResources.$inferSelect,
+    createdBy: string,
+  ): Promise<typeof batchResources.$inferSelect> {
+    const subjectId = resource.subjectId ?? (await this.firstSubjectOf(resource.batchId));
+    if (subjectId === null) return resource;
+
+    const now = this.clock.now();
+    const [placed] = await this.db
+      .select({ next: sql<number>`coalesce(max(${subjectLessons.order}), 0) + 1` })
+      .from(subjectLessons)
+      .where(eq(subjectLessons.subjectId, subjectId));
+    const order = placed?.next ?? 1;
+
+    const [lesson] = await this.db
+      .insert(lessons)
+      .values({
+        subjectId,
+        title: resource.title,
+        description: resource.description,
+        type: "DOCUMENT",
+        documentFileKey: resource.fileKey,
+        documentPageCount: resource.pageCount,
+        resourceId: resource.resourceId,
+        status: "READY",
+        order,
+        createdBy,
+        publishAt: resource.publishAt,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning();
+
+    await this.db.insert(subjectLessons).values({
+      subjectId,
+      lessonId: lesson.lessonId,
+      order,
+      unlockAt: resource.publishAt,
+    });
+
+    const [updated] = await this.db
+      .update(batchResources)
+      .set({ lessonId: lesson.lessonId, updatedAt: now })
+      .where(eq(batchResources.resourceId, resource.resourceId))
+      .returning();
+    return updated;
+  }
+
+  private async firstSubjectOf(batchId: string): Promise<string | null> {
+    const [subject] = await this.db
+      .select({ subjectId: batchSubjects.subjectId })
+      .from(batchSubjects)
+      .where(
+        and(
+          eq(batchSubjects.batchId, batchId),
+          eq(batchSubjects.isDeleted, false),
+        ),
+      )
+      .orderBy(asc(batchSubjects.displayOrder))
+      .limit(1);
+    return subject?.subjectId ?? null;
   }
 
   async listResourceLibrary(batchId: string, viewer: Viewer) {

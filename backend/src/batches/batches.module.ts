@@ -14,6 +14,8 @@ import { BatchAssessmentService } from "./assessment/batch-assessment.service";
 import { BatchMediaService } from "./batch-media.service";
 import { BatchCatalogueController } from "./catalogue/batch-catalogue.controller";
 import { BatchCatalogueService } from "./catalogue/batch-catalogue.service";
+import { CurriculumService } from "./catalogue/curriculum.service";
+import { RichLessonService } from "./catalogue/rich-lesson.service";
 import { CertificateController } from "./certificates/certificate.controller";
 import { CertificateService } from "./certificates/certificate.service";
 import { BatchEngagementController } from "./engagement/batch-engagement.controller";
@@ -22,6 +24,7 @@ import { DoubtInboxController } from "./engagement/doubt-inbox.controller";
 import { DoubtInboxService } from "./engagement/doubt-inbox.service";
 import { BatchEnrolmentController } from "./enrolment/batch-enrolment.controller";
 import { BatchEnrolmentService } from "./enrolment/batch-enrolment.service";
+import { LessonProgressService } from "./enrolment/lesson-progress.service";
 import { TransferService } from "./enrolment/transfer.service";
 import { WaitlistController } from "./enrolment/waitlist.controller";
 import { WaitlistService } from "./enrolment/waitlist.service";
@@ -82,7 +85,10 @@ import { TimetableService } from "./scheduling/timetable.service";
     BatchCapacityService,
     BatchMediaService,
     BatchCatalogueService,
+    RichLessonService,
+    CurriculumService,
     BatchEnrolmentService,
+    LessonProgressService,
     WaitlistService,
     TransferService,
     BatchLifecycleService,
@@ -105,6 +111,11 @@ import { TimetableService } from "./scheduling/timetable.service";
     CorporateReportService,
     ExportJobService,
   ],
-  exports: [BatchAccessService, BatchEnrolmentService, CertificateService],
+  exports: [
+    BatchAccessService,
+    BatchEnrolmentService,
+    LessonProgressService,
+    CertificateService,
+  ],
 })
 export class BatchesModule {}

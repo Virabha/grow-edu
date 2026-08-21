@@ -26,6 +26,7 @@ import {
   batchQuizAttemptStatusEnum,
   lessonTypeEnum,
   lessonStatusEnum,
+  batchVisibilityEnum,
 } from "./enums";
 import { organizationId } from "./organizations";
 
@@ -57,6 +58,8 @@ export const batches = pgTable(
       .default("LIVE"),
     categoryId: text("category_id"),
     status: batchStatusEnum("status").notNull().default("DRAFT"),
+    visibility: batchVisibilityEnum("visibility").notNull().default("PUBLIC"),
+    goalKey: text("goal_key"),
     isDeleted: boolean("is_deleted").notNull().default(false),
     createdBy: text("created_by").notNull(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -135,6 +138,14 @@ export const lessons = pgTable(
     textContent: text("text_content"),
     resources: jsonb("resources").$type<{ label: string; url: string }[]>(),
     duration: integer("duration"),
+    audioUrl: text("audio_url"),
+    audioDuration: integer("audio_duration"),
+    documentFileKey: text("document_file_key"),
+    documentPageCount: integer("document_page_count"),
+    documentVersion: integer("document_version").notNull().default(1),
+    sessionId: text("session_id"),
+    resourceId: text("resource_id"),
+    quizId: text("quiz_id"),
     isFreePreview: boolean("is_free_preview").notNull().default(false),
     status: lessonStatusEnum("status").notNull().default("DRAFT"),
     order: integer("order").notNull(),
@@ -197,8 +208,13 @@ export const lessonProgress = pgTable(
     lessonId: text("lesson_id").notNull(),
     batchId: text("batch_id").notNull(),
     completed: boolean("completed").notNull().default(false),
+    completedAt: timestamp("completed_at"),
     timeSpent: integer("time_spent").notNull().default(0),
     lastPosition: integer("last_position"),
+    positionRecordedAt: timestamp("position_recorded_at"),
+    watchedSeconds: integer("watched_seconds").notNull().default(0),
+    listenedSeconds: integer("listened_seconds").notNull().default(0),
+    pagesViewed: integer("pages_viewed").notNull().default(0),
     lastAccessed: timestamp("last_accessed").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
@@ -387,6 +403,7 @@ export const batchResources = pgTable(
     fileSize: integer("file_size"),
     pageCount: integer("page_count"),
     dayNumber: integer("day_number"),
+    lessonId: text("lesson_id"),
     publishAt: timestamp("publish_at"),
     isDownloadable: boolean("is_downloadable").notNull().default(false),
     uploadedBy: text("uploaded_by").notNull(),
@@ -628,13 +645,21 @@ export const batchCertificates = pgTable(
     batchId: text("batch_id").notNull(),
     userId: text("user_id").notNull(),
     certificateNumber: text("certificate_number").notNull(),
+    verificationCode: text("verification_code")
+      .notNull()
+      .$defaultFn(() => crypto.randomUUID().replace(/-/g, "")),
     issuedAt: timestamp("issued_at").notNull().defaultNow(),
     revokedAt: timestamp("revoked_at"),
+    revokedBy: text("revoked_by"),
+    revocationReason: text("revocation_reason"),
     metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
   },
   (table) => ({
     batchIdx: index("batch_certificates_batch_idx").on(table.batchId),
     userIdx: index("batch_certificates_user_idx").on(table.userId),
+    verificationCodeUnique: unique("batch_certificates_verification_unique").on(
+      table.verificationCode,
+    ),
     certificateNumberPerOrg: unique(
       "batch_certificates_organization_number_unique"
     ).on(table.organizationId, table.certificateNumber),

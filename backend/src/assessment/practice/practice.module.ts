@@ -15,6 +15,6 @@ import { CalibrationController, PracticeController } from './practice.controller
     TopicPracticeService,
     DifficultyCalibrationService,
   ],
-  exports: [GenerationService],
+  exports: [GenerationService, DailyPracticeService],
 })
 export class PracticeModule {}

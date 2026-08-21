@@ -6,10 +6,12 @@ import {
   integer,
   index,
   jsonb,
+  unique,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import {
   broadcastAudienceEnum,
+  mediaRenditionKindEnum,
   notificationTypeEnum,
   videoEncodingJobStatusEnum,
 } from "./enums";
@@ -66,6 +68,9 @@ export const videoEncodingJobs = pgTable(
     jobId: text("job_id").primaryKey(),
     lessonId: text("lesson_id").notNull(),
     batchId: text("batch_id").notNull(),
+    renditionKind: mediaRenditionKindEnum("rendition_kind")
+      .notNull()
+      .default("VIDEO"),
     status: videoEncodingJobStatusEnum("status").notNull().default("PENDING"),
     inputPath: text("input_path").notNull(),
     outputPath: text("output_path"),
@@ -79,6 +84,10 @@ export const videoEncodingJobs = pgTable(
     lessonIdx: index("video_encoding_jobs_lesson_idx").on(table.lessonId),
     batchIdx: index("video_encoding_jobs_batch_idx").on(table.batchId),
     statusIdx: index("video_encoding_jobs_status_idx").on(table.status),
+    oneRenditionPerLesson: unique("video_encoding_jobs_lesson_rendition_unique").on(
+      table.lessonId,
+      table.renditionKind,
+    ),
   })
 );
 
@@ -142,11 +151,13 @@ export const pushSubscriptions = pgTable(
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
     userId: text("user_id").notNull(),
+    deviceId: text("device_id"),
     endpoint: text("endpoint").notNull(),
     p256dh: text("p256dh").notNull(),
     auth: text("auth").notNull(),
     userAgent: text("user_agent"),
     failureCount: integer("failure_count").notNull().default(0),
+    prunedAt: timestamp("pruned_at"),
     lastUsedAt: timestamp("last_used_at"),
     createdAt: timestamp("created_at").notNull(),
   },
@@ -155,5 +166,6 @@ export const pushSubscriptions = pgTable(
       table.endpoint,
     ),
     userIdx: index("push_subscriptions_user_idx").on(table.userId),
+    deviceIdx: uniqueIndex("push_subscriptions_device_idx").on(table.deviceId),
   }),
 );

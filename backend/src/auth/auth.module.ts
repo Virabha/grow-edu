@@ -14,6 +14,18 @@ import { EmailModule } from '../email/email.module';
 import { TokenService } from './token.service';
 import { ThrottlerExceptionFilter } from '../common/throttling/throttler-exception.filter';
 import { PerEmailThrottlerGuard } from './guards/per-email-throttler.guard';
+import { PerPhoneThrottlerGuard } from './guards/per-phone-throttler.guard';
+import { IdentityService } from './identity.service';
+import { PhoneSignInService } from './phone-sign-in.service';
+import { PhoneSignInController } from './phone-sign-in.controller';
+import { GoogleSignInService } from './google-sign-in.service';
+import { GoogleSignInController } from './google-sign-in.controller';
+import { IdentityController } from './identity.controller';
+import { SMS_SENDER, LogSmsSender } from './ports/sms-sender';
+import {
+  GOOGLE_TOKEN_VERIFIER,
+} from './ports/google-token-verifier';
+import { HttpGoogleTokenVerifier } from './ports/http-google-token-verifier';
 
 @Module({
   imports: [
@@ -28,7 +40,13 @@ import { PerEmailThrottlerGuard } from './guards/per-email-throttler.guard';
       inject: [AppConfigService],
     }),
   ],
-  controllers: [AuthController, SecondFactorController],
+  controllers: [
+    AuthController,
+    SecondFactorController,
+    PhoneSignInController,
+    GoogleSignInController,
+    IdentityController,
+  ],
   providers: [
     AuthService,
     SecondFactorService,
@@ -36,9 +54,14 @@ import { PerEmailThrottlerGuard } from './guards/per-email-throttler.guard';
     JwtStrategy,
     LocalStrategy,
     PerEmailThrottlerGuard,
+    PerPhoneThrottlerGuard,
+    IdentityService,
+    PhoneSignInService,
+    GoogleSignInService,
+    { provide: SMS_SENDER, useClass: LogSmsSender },
+    { provide: GOOGLE_TOKEN_VERIFIER, useClass: HttpGoogleTokenVerifier },
     { provide: APP_FILTER, useClass: ThrottlerExceptionFilter },
   ],
-  exports: [AuthService, SecondFactorService, JwtModule],
+  exports: [AuthService, SecondFactorService, JwtModule, IdentityService],
 })
 export class AuthModule {}
-

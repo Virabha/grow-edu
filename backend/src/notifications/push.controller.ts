@@ -12,6 +12,7 @@ import { PushService } from "./push.service";
 
 interface AuthedUser {
   userId: string;
+  deviceId?: string;
 }
 
 @ApiTags("push")
@@ -39,6 +40,7 @@ export class PushController {
       user.userId,
       dto,
       req.headers["user-agent"] ?? null,
+      user.deviceId ?? null,
     );
   }
 

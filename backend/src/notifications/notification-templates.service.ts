@@ -26,6 +26,14 @@ const DEFAULT_TEMPLATES: Record<NotificationType, { subject: string; body: strin
   BATCH_CERTIFICATE: { subject: "{{title}}", body: "{{body}}" },
   PAYMENT_APPROVED: { subject: "{{title}}", body: "{{body}}" },
   PAYMENT_REJECTED: { subject: "{{title}}", body: "{{body}}" },
+  WEEKLY_REPORT_CARD: {
+    subject: "Your weekly study report",
+    body: "{{summary}}",
+  },
+  BADGE_AWARDED: {
+    subject: "You earned a badge: {{badgeName}}",
+    body: "Congratulations! You earned the {{badgeName}} badge.",
+  },
   GENERIC: { subject: "{{title}}", body: "{{body}}" },
 };
 

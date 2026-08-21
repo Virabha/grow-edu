@@ -24,6 +24,8 @@ export type NotificationType =
   | "BATCH_CERTIFICATE"
   | "PAYMENT_APPROVED"
   | "PAYMENT_REJECTED"
+  | "WEEKLY_REPORT_CARD"
+  | "BADGE_AWARDED"
   | "GENERIC";
 
 export interface CreateNotificationInput {

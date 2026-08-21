@@ -8,10 +8,10 @@ The timetable is a view, not a new entity.
 
 **Blocked by:** None - can start immediately
 
-**Status:** ready-for-agent
+**Status:** done 2026-08-21
 
-- [ ] Opening a batch lands on today and next rather than the full curriculum
-- [ ] Sessions, published tests and dated deadlines appear together in chronological order
-- [ ] A missed session is distinguishable from an upcoming one
-- [ ] A past session with a recording plays from the timetable without navigating elsewhere
-- [ ] A live session in progress is joinable in one click
+- [x] Opening a batch lands on today and next rather than the full curriculum
+- [x] Sessions, published tests and dated deadlines appear together in chronological order
+- [x] A missed session is distinguishable from an upcoming one
+- [x] A past session with a recording plays from the timetable without navigating elsewhere
+- [x] A live session in progress is joinable in one click

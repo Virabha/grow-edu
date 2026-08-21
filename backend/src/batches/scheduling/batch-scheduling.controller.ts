@@ -23,6 +23,7 @@ import {
   UpdateBatchSessionDto,
 } from "../dto/batch-session.dto";
 import { BatchSchedulingService } from "./batch-scheduling.service";
+import { TimetableService } from "./timetable.service";
 
 interface AuthedUser {
   userId: string;
@@ -33,7 +34,20 @@ interface AuthedUser {
 @ApiBearerAuth()
 @Controller("batches")
 export class BatchSchedulingController {
-  constructor(private readonly scheduling: BatchSchedulingService) {}
+  constructor(
+    private readonly scheduling: BatchSchedulingService,
+    private readonly timetableService: TimetableService,
+  ) {}
+
+  @BatchAccess("READ")
+  @ApiOperation({ summary: "What is on today and next for this batch" })
+  @Get(":batchId/timetable")
+  timetable(
+    @Param("batchId") batchId: string,
+    @CurrentUser() user: AuthedUser,
+  ) {
+    return this.timetableService.forBatch(batchId, user);
+  }
 
   @BatchAccess("READ")
   @ApiOperation({ summary: "List sessions in a batch (enrolled or staff)" })

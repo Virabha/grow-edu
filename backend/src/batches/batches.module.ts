@@ -23,6 +23,7 @@ import { BatchReportingController } from "./reporting/batch-reporting.controller
 import { BatchReportingService } from "./reporting/batch-reporting.service";
 import { BatchSchedulingController } from "./scheduling/batch-scheduling.controller";
 import { BatchSchedulingService } from "./scheduling/batch-scheduling.service";
+import { TimetableService } from "./scheduling/timetable.service";
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { BatchSchedulingService } from "./scheduling/batch-scheduling.service";
     BatchCatalogueService,
     BatchEnrolmentService,
     BatchSchedulingService,
+    TimetableService,
     BatchAssessmentService,
     BatchEngagementService,
     BatchReportingService,

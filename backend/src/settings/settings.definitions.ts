@@ -619,6 +619,74 @@ export const GROUPS: Record<string, GroupDefinition> = {
       otpMaxAttempts: 5,
     },
   },
+
+  execution: {
+    meta: {
+      title: 'Code Execution',
+      description:
+        'Bounds on running and judging submitted code. Every run has a direct monetary cost, so these are limits rather than preferences.',
+    },
+    fields: [
+      { key: 'sampleRunsPerMinute', label: 'Sample Runs Per Minute', type: 'number', help: 'How many times a student may run against the visible cases in a minute.' },
+      { key: 'sampleRunsPerDay', label: 'Sample Runs Per Day', type: 'number' },
+      { key: 'submissionsPerMinute', label: 'Submissions Per Minute', type: 'number' },
+      { key: 'submissionsPerDay', label: 'Submissions Per Day', type: 'number' },
+      { key: 'defaultTimeLimitMs', label: 'Default Time Limit (ms)', type: 'number' },
+      { key: 'defaultMemoryLimitMb', label: 'Default Memory Limit (MB)', type: 'number' },
+      { key: 'supportedLanguages', label: 'Supported Languages', type: 'textarea', help: 'One per line, written as key|Label. A problem may support any subset of these.' },
+    ],
+    defaults: {
+      sampleRunsPerMinute: 10,
+      sampleRunsPerDay: 300,
+      submissionsPerMinute: 5,
+      submissionsPerDay: 100,
+      defaultTimeLimitMs: 2000,
+      defaultMemoryLimitMb: 256,
+      supportedLanguages: 'python|Python 3\njavascript|JavaScript\ntypescript|TypeScript\njava|Java\ncpp|C++\ngo|Go',
+    },
+  },
+
+  environments: {
+    meta: {
+      title: 'Development Environments',
+      description:
+        'The most expensive item on the platform. Idle reclamation and concurrency ceilings are what keep it affordable.',
+    },
+    fields: [
+      { key: 'maxConcurrentPerStudent', label: 'Concurrent Environments Per Student', type: 'number' },
+      { key: 'idleHibernateMinutes', label: 'Hibernate After Idle (minutes)', type: 'number' },
+      { key: 'dormantReclaimHours', label: 'Reclaim After Dormant (hours)', type: 'number' },
+      { key: 'cpuLimit', label: 'CPU Limit Per Environment', type: 'number' },
+      { key: 'memoryLimitMb', label: 'Memory Limit Per Environment (MB)', type: 'number' },
+      { key: 'egressAllowList', label: 'Allowed Egress Destinations', type: 'textarea', help: 'One host per line. An environment is never provisioned without a policy.' },
+    ],
+    defaults: {
+      maxConcurrentPerStudent: 1,
+      idleHibernateMinutes: 30,
+      dormantReclaimHours: 168,
+      cpuLimit: 2,
+      memoryLimitMb: 4096,
+      egressAllowList: 'registry.npmjs.org\npypi.org\nfiles.pythonhosted.org\ngithub.com\nproxy.golang.org',
+    },
+  },
+
+  projectReview: {
+    meta: {
+      title: 'Project Review',
+      description:
+        'Automated checks and similarity screening. A similarity flag is an input to a human decision and never an accusation.',
+    },
+    fields: [
+      { key: 'similarityFlagThreshold', label: 'Similarity Flag Threshold (%)', type: 'number', help: 'Below this score a comparison is not surfaced to staff at all.' },
+      { key: 'checkTimeoutSeconds', label: 'Automated Check Timeout (seconds)', type: 'number' },
+      { key: 'maxResubmissionCycles', label: 'Maximum Resubmission Cycles', type: 'number' },
+    ],
+    defaults: {
+      similarityFlagThreshold: 70,
+      checkTimeoutSeconds: 600,
+      maxResubmissionCycles: 5,
+    },
+  },
 };
 
 export const DOUBTS_SETTINGS_GROUP = 'doubts';
@@ -629,5 +697,8 @@ export const STUDY_HABITS_SETTINGS_GROUP = 'studyHabits';
 export const COMMUNITY_SETTINGS_GROUP = 'community';
 export const DISCOVERY_SETTINGS_GROUP = 'discovery';
 export const SIGN_IN_SETTINGS_GROUP = 'signIn';
+export const EXECUTION_SETTINGS_GROUP = 'execution';
+export const ENVIRONMENTS_SETTINGS_GROUP = 'environments';
+export const PROJECT_REVIEW_SETTINGS_GROUP = 'projectReview';
 
 export const KNOWN_GROUPS = new Set(Object.keys(GROUPS));

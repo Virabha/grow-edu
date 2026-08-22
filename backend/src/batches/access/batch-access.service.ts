@@ -15,6 +15,9 @@ import {
   batchSubjects,
   batches,
   lessons,
+  pathEnrolments,
+  pathStageProgress,
+  pathStages,
   subjectLessons,
 } from "../../database/schema";
 import {
@@ -60,16 +63,21 @@ export class BatchAccessService {
     if (level === "MANAGE" || !viewer.userId) throw this.absent();
 
     const enrollment = await this.activeEnrollment(batchId, viewer.userId);
-    if (!enrollment) throw this.absent();
-    if (enrollment.accessEndsAt && enrollment.accessEndsAt < this.clock.now()) {
-      throw new ForbiddenException({
-        code: BATCH_ACCESS_EXPIRED,
-        message:
-          "Your access to this batch has ended. Contact support to renew it.",
-      });
+    if (enrollment) {
+      if (enrollment.accessEndsAt && enrollment.accessEndsAt < this.clock.now()) {
+        throw new ForbiddenException({
+          code: BATCH_ACCESS_EXPIRED,
+          message:
+            "Your access to this batch has ended. Contact support to renew it.",
+        });
+      }
+      return { batch, isStaff: false, enrollment };
     }
 
-    return { batch, isStaff: false, enrollment };
+    const hasPathAccess = await this.hasActiveBatchViaPath(batchId, viewer.userId);
+    if (!hasPathAccess) throw this.absent();
+
+    return { batch, isStaff: false, enrollment: null };
   }
 
   async requireForSubject(
@@ -238,6 +246,32 @@ export class BatchAccessService {
         and(
           eq(batchInstructors.batchId, batchId),
           eq(batchInstructors.instructorId, viewer.userId),
+        ),
+      )
+      .limit(1);
+    return row !== undefined;
+  }
+
+  private async hasActiveBatchViaPath(batchId: string, userId: string): Promise<boolean> {
+    const [row] = await this.db
+      .select({ enrolmentId: pathEnrolments.enrolmentId })
+      .from(pathEnrolments)
+      .innerJoin(pathStages, eq(pathStages.pathId, pathEnrolments.pathId))
+      .innerJoin(
+        pathStageProgress,
+        and(
+          eq(pathStageProgress.stageId, pathStages.stageId),
+          eq(pathStageProgress.userId, userId),
+        ),
+      )
+      .where(
+        and(
+          eq(pathEnrolments.userId, userId),
+          eq(pathEnrolments.status, "ACTIVE"),
+          eq(pathStages.kind, "BATCH"),
+          eq(pathStages.batchId, batchId),
+          eq(pathStages.isDeleted, false),
+          inArray(pathStageProgress.state, ["OPEN", "COMPLETE"]),
         ),
       )
       .limit(1);

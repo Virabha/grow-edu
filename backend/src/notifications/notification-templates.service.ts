@@ -34,6 +34,26 @@ const DEFAULT_TEMPLATES: Record<NotificationType, { subject: string; body: strin
     subject: "You earned a badge: {{badgeName}}",
     body: "Congratulations! You earned the {{badgeName}} badge.",
   },
+  PARENT_LINK_REQUEST: {
+    subject: "{{parentName}} would like to follow your progress",
+    body: "{{body}}",
+  },
+  DAILY_REVIEW_DUE: {
+    subject: "Your review queue is ready",
+    body: "{{body}}",
+  },
+  CODE_VERDICT: {
+    subject: "{{problemTitle}}: {{verdict}}",
+    body: "{{body}}",
+  },
+  PROJECT_MILESTONE_REVIEWED: {
+    subject: "{{milestoneTitle}} has been reviewed",
+    body: "{{body}}",
+  },
+  PATH_CERTIFICATE: {
+    subject: "Your {{pathTitle}} credential has been issued",
+    body: "{{body}}",
+  },
   GENERIC: { subject: "{{title}}", body: "{{body}}" },
 };
 

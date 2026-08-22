@@ -55,6 +55,14 @@ import { ParentsModule } from "./parents/parents.module";
 import { MediaModule } from "./media/media.module";
 import { StudyToolsModule } from "./study-tools/study-tools.module";
 import { DiagnosticModule } from "./diagnostic/diagnostic.module";
+import { EnvironmentsModule } from "./environments/environments.module";
+import { PathsModule } from "./paths/paths.module";
+import { ProjectsModule } from "./projects/projects.module";
+import { PortfolioModule } from "./portfolio/portfolio.module";
+import { CodingModule } from "./coding/coding.module";
+import { SkillsModule } from "./skills/skills.module";
+import { CredentialsModule } from "./credentials/credentials.module";
+import { ProjectReviewModule } from "./project-review/project-review.module";
 
 @Module({
   imports: [
@@ -109,6 +117,14 @@ import { DiagnosticModule } from "./diagnostic/diagnostic.module";
     MediaModule,
     ParentsModule,
     DiagnosticModule,
+    CodingModule,
+    PortfolioModule,
+    ProjectsModule,
+    PathsModule,
+    SkillsModule,
+    CredentialsModule,
+    EnvironmentsModule,
+    ProjectReviewModule,
   ],
   controllers: [AppController],
   providers: [

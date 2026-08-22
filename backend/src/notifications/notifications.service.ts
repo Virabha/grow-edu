@@ -26,6 +26,11 @@ export type NotificationType =
   | "PAYMENT_REJECTED"
   | "WEEKLY_REPORT_CARD"
   | "BADGE_AWARDED"
+  | "PARENT_LINK_REQUEST"
+  | "DAILY_REVIEW_DUE"
+  | "CODE_VERDICT"
+  | "PROJECT_MILESTONE_REVIEWED"
+  | "PATH_CERTIFICATE"
   | "GENERIC";
 
 export interface CreateNotificationInput {

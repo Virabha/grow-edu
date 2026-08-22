@@ -6,10 +6,11 @@
 
 **Blocked by:** 01, 05
 
-**Status:** not-started
+**Status:** partial
+**Covered by:** test/ai-study-plans.int-spec.ts
 
-- [ ] The plan draws on the weak-topic map rather than on the syllabus order alone
-- [ ] The plan respects declared available time
+- [x] The plan draws on the weak-topic map rather than on the syllabus order alone
+- [x] The plan respects declared available time
 - [ ] An upcoming test date shifts the plan toward revision
-- [ ] Spaced-repetition items due today appear in the plan
-- [ ] A student with no history still gets a usable plan
+- [x] Spaced-repetition items due today appear in the plan
+- [x] A student with no history still gets a usable plan

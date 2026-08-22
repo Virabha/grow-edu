@@ -6,10 +6,11 @@
 
 **Blocked by:** 01, 05
 
-**Status:** not-started
+**Status:** done
+**Covered by:** test/ai-question-generation.int-spec.ts
 
-- [ ] An instructor generates drafts from a lesson at a chosen topic and difficulty
-- [ ] Drafts enter the existing question bank rather than a parallel store
-- [ ] Every generated question carries a subject and topic tag
-- [ ] A generated question is marked unreviewed on creation
-- [ ] A malformed generation persists no questions at all
+- [x] An instructor generates drafts from a lesson at a chosen topic and difficulty
+- [x] Drafts enter the existing question bank rather than a parallel store
+- [x] Every generated question carries a subject and topic tag
+- [x] A generated question is marked unreviewed on creation
+- [x] A malformed generation persists no questions at all

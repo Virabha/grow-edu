@@ -7,6 +7,7 @@
 **Blocked by:** 35, 36, 37
 
 **Status:** needs-frontend-work
+**Note:** All three blocking backend tickets are complete. Ticket 35 (page-builder): done, 5/5. Ticket 36 (blog-and-articles): done, 5/5. Ticket 37 (metadata-and-structured-data): done, 5/5. This ticket is unblocked on the backend side.
 
 - [ ] Sections can be reordered, shown and hidden
 - [ ] The block palette comes from the server

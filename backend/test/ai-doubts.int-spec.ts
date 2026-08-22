@@ -14,7 +14,9 @@ import {
   enrol,
   assignInstructor,
 } from './support/factories';
-import { DoubtAnswerService } from '../src/batches/engagement/doubt-answer.service';
+import { DOUBT_DRAIN_JOB } from '../src/batches/engagement/doubt-answer.service';
+import { InlineJobQueue } from '../src/jobs/inline-job-queue';
+import { JOB_QUEUE } from '../src/jobs/job-queue';
 import { aiDoubtAnswers } from '../src/database/schema';
 import { eq } from 'drizzle-orm';
 
@@ -23,7 +25,7 @@ describe('ai-doubts: answering, citation and labelling', () => {
   let app: INestApplication;
   let provider: RecordingModelProvider;
   let clock: TestClock;
-  let answers: DoubtAnswerService;
+  let queue: InlineJobQueue;
 
   let admin: TestActor;
   let instructor: TestActor;
@@ -39,7 +41,7 @@ describe('ai-doubts: answering, citation and labelling', () => {
     app = await createTestApp(database, clock, [
       { token: MODEL_PROVIDER, value: provider },
     ]);
-    answers = app.get<DoubtAnswerService>(DoubtAnswerService);
+    queue = app.get<InlineJobQueue>(JOB_QUEUE);
   });
 
   afterAll(async () => {
@@ -109,7 +111,7 @@ describe('ai-doubts: answering, citation and labelling', () => {
 
       const doubtId = response.body.doubtId;
 
-      await answers.drain();
+      await queue.enqueue(DOUBT_DRAIN_JOB, undefined);
 
       const aiAnswer = await database.db
         .select()
@@ -135,7 +137,7 @@ describe('ai-doubts: answering, citation and labelling', () => {
         .send({ title: 'My question', body: 'Please explain this concept' })
         .expect(201);
 
-      await answers.drain();
+      await queue.enqueue(DOUBT_DRAIN_JOB, undefined);
 
       expect(provider.calls.length).toBeGreaterThan(0);
       expect(provider.calls[0].model).toBe('claude-opus-5');
@@ -153,7 +155,7 @@ describe('ai-doubts: answering, citation and labelling', () => {
         .send({ title: 'A question', body: 'Detail about it' })
         .expect(201);
 
-      await answers.drain();
+      await queue.enqueue(DOUBT_DRAIN_JOB, undefined);
 
       expect(provider.calls.length).toBeGreaterThan(0);
       const call = provider.calls[0];
@@ -179,7 +181,7 @@ describe('ai-doubts: answering, citation and labelling', () => {
 
       const doubtId = response.body.doubtId;
 
-      await answers.drain();
+      await queue.enqueue(DOUBT_DRAIN_JOB, undefined);
 
       const aiAnswer = await database.db
         .select()
@@ -213,7 +215,7 @@ describe('ai-doubts: answering, citation and labelling', () => {
 
       const doubtId = response.body.doubtId;
 
-      await answers.drain();
+      await queue.enqueue(DOUBT_DRAIN_JOB, undefined);
 
       const aiAnswer = await database.db
         .select()
@@ -238,7 +240,7 @@ describe('ai-doubts: answering, citation and labelling', () => {
 
       const doubtId = response.body.doubtId;
 
-      await answers.drain();
+      await queue.enqueue(DOUBT_DRAIN_JOB, undefined);
 
       const aiAnswer = await database.db
         .select()
@@ -266,7 +268,7 @@ describe('ai-doubts: answering, citation and labelling', () => {
 
       const doubtId = response.body.doubtId;
 
-      await answers.drain();
+      await queue.enqueue(DOUBT_DRAIN_JOB, undefined);
 
       const aiAnswer = await database.db
         .select()
@@ -298,14 +300,14 @@ describe('ai-doubts: answering, citation and labelling', () => {
 
       const doubtId = createResponse.body.doubtId;
 
-      await answers.drain();
+      await queue.enqueue(DOUBT_DRAIN_JOB, undefined);
 
       await request(app.getHttpServer())
         .post(`/batches/${batchId}/doubts/${doubtId}/escalate`)
         .set(...authHeader(app, student))
         .expect(201);
 
-      await answers.drain();
+      await queue.enqueue(DOUBT_DRAIN_JOB, undefined);
 
       const commitResponse = await request(app.getHttpServer())
         .post(`/batches/${batchId}/doubts/${doubtId}/draft/commit`)
@@ -346,7 +348,7 @@ describe('ai-doubts: answering, citation and labelling', () => {
 
       const doubtId = response.body.doubtId;
 
-      await answers.drain();
+      await queue.enqueue(DOUBT_DRAIN_JOB, undefined);
 
       const aiAnswer = await database.db
         .select()

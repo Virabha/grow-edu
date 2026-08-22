@@ -6,10 +6,11 @@
 
 **Blocked by:** 01, 05, 21
 
-**Status:** not-started
+**Status:** partial
+**Covered by:** test/ai-project-feedback.int-spec.ts
 
-- [ ] An automated pass runs on submission and reaches the reviewer
-- [ ] The draft is never visible to the student
-- [ ] Suggested rubric scores are stored as suggestions, not as scores
-- [ ] A reviewer can discard the draft entirely
+- [x] An automated pass runs on submission and reaches the reviewer
+- [x] The draft is never visible to the student
+- [x] Suggested rubric scores are stored as suggestions, not as scores
+- [x] A reviewer can discard the draft entirely
 - [ ] Committed feedback is attributed to the reviewer

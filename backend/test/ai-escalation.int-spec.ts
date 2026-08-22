@@ -14,7 +14,9 @@ import {
   enrol,
   assignInstructor,
 } from './support/factories';
-import { DoubtAnswerService } from '../src/batches/engagement/doubt-answer.service';
+import { DOUBT_DRAIN_JOB } from '../src/batches/engagement/doubt-answer.service';
+import { InlineJobQueue } from '../src/jobs/inline-job-queue';
+import { JOB_QUEUE } from '../src/jobs/job-queue';
 import { aiDoubtAnswers, aiDoubtDrafts, batchDoubts } from '../src/database/schema';
 import { eq } from 'drizzle-orm';
 
@@ -23,7 +25,7 @@ describe('ai-escalation: escalation, drafts and unhelpful report', () => {
   let app: INestApplication;
   let provider: RecordingModelProvider;
   let clock: TestClock;
-  let answers: DoubtAnswerService;
+  let queue: InlineJobQueue;
 
   let admin: TestActor;
   let instructor: TestActor;
@@ -39,7 +41,7 @@ describe('ai-escalation: escalation, drafts and unhelpful report', () => {
     app = await createTestApp(database, clock, [
       { token: MODEL_PROVIDER, value: provider },
     ]);
-    answers = app.get<DoubtAnswerService>(DoubtAnswerService);
+    queue = app.get<InlineJobQueue>(JOB_QUEUE);
   });
 
   afterAll(async () => {
@@ -90,7 +92,7 @@ describe('ai-escalation: escalation, drafts and unhelpful report', () => {
 
     const doubtId = response.body.doubtId;
 
-    await answers.drain();
+    await queue.enqueue(DOUBT_DRAIN_JOB, undefined);
 
     const [aiAnswer] = await database.db
       .select()
@@ -188,7 +190,7 @@ describe('ai-escalation: escalation, drafts and unhelpful report', () => {
         .set(...authHeader(app, student))
         .expect(201);
 
-      await answers.drain();
+      await queue.enqueue(DOUBT_DRAIN_JOB, undefined);
 
       const [draft] = await database.db
         .select()
@@ -209,7 +211,7 @@ describe('ai-escalation: escalation, drafts and unhelpful report', () => {
         .set(...authHeader(app, student))
         .expect(201);
 
-      await answers.drain();
+      await queue.enqueue(DOUBT_DRAIN_JOB, undefined);
 
       await request(app.getHttpServer())
         .get(`/batches/${batchId}/doubts/${doubtId}/draft`)
@@ -225,7 +227,7 @@ describe('ai-escalation: escalation, drafts and unhelpful report', () => {
         .set(...authHeader(app, student))
         .expect(201);
 
-      await answers.drain();
+      await queue.enqueue(DOUBT_DRAIN_JOB, undefined);
 
       const response = await request(app.getHttpServer())
         .get(`/batches/${batchId}/doubts/${doubtId}/draft`)
@@ -243,7 +245,7 @@ describe('ai-escalation: escalation, drafts and unhelpful report', () => {
         .set(...authHeader(app, student))
         .expect(201);
 
-      await answers.drain();
+      await queue.enqueue(DOUBT_DRAIN_JOB, undefined);
 
       await request(app.getHttpServer())
         .post(`/batches/${batchId}/doubts/${doubtId}/draft/commit`)
@@ -269,7 +271,7 @@ describe('ai-escalation: escalation, drafts and unhelpful report', () => {
         .set(...authHeader(app, student))
         .expect(201);
 
-      await answers.drain();
+      await queue.enqueue(DOUBT_DRAIN_JOB, undefined);
 
       await request(app.getHttpServer())
         .delete(`/batches/${batchId}/doubts/${doubtId}/draft`)
@@ -306,7 +308,7 @@ describe('ai-escalation: escalation, drafts and unhelpful report', () => {
         .set(...authHeader(app, student))
         .expect(201);
 
-      await answers.drain();
+      await queue.enqueue(DOUBT_DRAIN_JOB, undefined);
 
       const [doubt] = await database.db
         .select()
@@ -321,7 +323,7 @@ describe('ai-escalation: escalation, drafts and unhelpful report', () => {
         .set(...authHeader(app, instructor))
         .expect(200);
 
-      expect(draftResponse.body).toBeNull();
+      expect(draftResponse.body.draftId).toBeUndefined();
     });
   });
 

@@ -6,10 +6,11 @@
 
 **Blocked by:** 22
 
-**Status:** not-started
+**Status:** partial
+**Covered by:** test/ai-plan-regeneration.int-spec.ts
 
-- [ ] Regeneration runs on a repeating job
-- [ ] A student cannot force regeneration on demand
-- [ ] Falling behind shifts the plan rather than accumulating an impossible backlog
+- [x] Regeneration runs on a repeating job
+- [x] A student cannot force regeneration on demand
+- [x] Falling behind shifts the plan rather than accumulating an impossible backlog
 - [ ] Racing ahead pulls work forward
-- [ ] A regeneration failure leaves the previous plan in place
+- [x] A regeneration failure leaves the previous plan in place

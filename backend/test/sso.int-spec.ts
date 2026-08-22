@@ -6,7 +6,7 @@ import * as request from 'supertest';
 import { createTestDatabase, truncateAll, TestDatabase } from './support/test-database';
 import { createTestApp, authHeader, TestActor } from './support/test-app';
 import { TestClock } from './support/test-clock';
-import { createUser, createCompany, createCorporateAdmin } from './support/factories';
+import { createUser, createCompany, createCorporateAdmin, createBatch, enrol } from './support/factories';
 import { users } from '../src/database/schema';
 import {
   SSO_PROVIDER,
@@ -402,5 +402,152 @@ describe('single sign-on (tickets 24, 25, 26)', () => {
       .send({ companyId, label: 'attempt' });
 
     expect(privilegedRes.status).toBe(403);
+  });
+
+  describe('ticket 26: authentication is delegated, authorisation is not', () => {
+    async function configuredCompany() {
+      const admin = await createUser(database, 'PLATFORM_ADMIN');
+      const companyId = await createCompany(database);
+      await setupSso(companyId, admin);
+      return { admin, companyId };
+    }
+
+    it('ignores a role asserted by the identity provider', async () => {
+      const { companyId } = await configuredCompany();
+
+      claimsToReturn = {
+        subject: ssoSubject(),
+        email: ssoEmail(),
+        emailVerified: true,
+        role: 'PLATFORM_ADMIN',
+        roles: ['PLATFORM_ADMIN', 'INSTRUCTOR'],
+        isAdmin: true,
+      };
+
+      const res = await signIn(companyId);
+      expect(res.status).toBe(200);
+      expect(res.body.user.role).toBe('LEARNER');
+
+      const [row] = await database.db
+        .select({ role: users.role })
+        .from(users)
+        .where(eq(users.email, ssoEmail()));
+      expect(row.role).toBe('LEARNER');
+
+      await request(app.getHttpServer())
+        .post('/enterprise/credentials')
+        .set('Authorization', `Bearer ${res.body.access_token as string}`)
+        .send({ companyId, label: 'attempt' })
+        .expect(403);
+    });
+
+    it('does not let a provider claim add a batch enrolment', async () => {
+      const { admin, companyId } = await configuredCompany();
+      const batchId = await createBatch(database, admin.userId);
+
+      claimsToReturn = {
+        subject: ssoSubject(),
+        email: ssoEmail(),
+        emailVerified: true,
+        enrolments: [batchId],
+        batches: [batchId],
+      };
+
+      const res = await signIn(companyId);
+      expect(res.status).toBe(200);
+
+      await request(app.getHttpServer())
+        .get(`/batches/${batchId}/content`)
+        .set('Authorization', `Bearer ${res.body.access_token as string}`)
+        .expect(403);
+    });
+
+    it('keeps a revoked enrolment revoked across a fresh sign-on', async () => {
+      const { admin, companyId } = await configuredCompany();
+      const batchId = await createBatch(database, admin.userId);
+      const email = ssoEmail();
+
+      claimsToReturn = { subject: ssoSubject(), email, emailVerified: true };
+      const first = await signIn(companyId);
+      expect(first.status).toBe(200);
+      const userId = first.body.user.userId as string;
+
+      await enrol(database, batchId, userId, { status: 'REVOKED' as never });
+
+      claimsToReturn = {
+        subject: ssoSubject(),
+        email,
+        emailVerified: true,
+        enrolments: [batchId],
+      };
+      const second = await signIn(companyId);
+      expect(second.status).toBe(200);
+      expect(second.body.user.userId).toBe(userId);
+
+      await request(app.getHttpServer())
+        .get(`/batches/${batchId}/content`)
+        .set('Authorization', `Bearer ${second.body.access_token as string}`)
+        .expect(403);
+    });
+
+    it('grants access that comes from a real enrolment, not from a claim', async () => {
+      const { admin, companyId } = await configuredCompany();
+      const batchId = await createBatch(database, admin.userId);
+      const email = ssoEmail();
+
+      claimsToReturn = { subject: ssoSubject(), email, emailVerified: true };
+      const first = await signIn(companyId);
+      const userId = first.body.user.userId as string;
+
+      await enrol(database, batchId, userId);
+
+      const second = await signIn(companyId);
+      await request(app.getHttpServer())
+        .get(`/batches/${batchId}/content`)
+        .set('Authorization', `Bearer ${second.body.access_token as string}`)
+        .expect(200);
+    });
+
+    it('requires the administrative path for a role change, not a sign-on', async () => {
+      const { companyId } = await configuredCompany();
+      const email = ssoEmail();
+
+      claimsToReturn = { subject: ssoSubject(), email, emailVerified: true };
+      const first = await signIn(companyId);
+      const userId = first.body.user.userId as string;
+
+      await database.db
+        .update(users)
+        .set({ role: 'INSTRUCTOR' })
+        .where(eq(users.userId, userId));
+
+      claimsToReturn = {
+        subject: ssoSubject(),
+        email,
+        emailVerified: true,
+        role: 'PLATFORM_ADMIN',
+      };
+      const second = await signIn(companyId);
+
+      expect(second.body.user.role).toBe('INSTRUCTOR');
+      await request(app.getHttpServer())
+        .post('/enterprise/credentials')
+        .set('Authorization', `Bearer ${second.body.access_token as string}`)
+        .send({ companyId, label: 'attempt' })
+        .expect(403);
+    });
+
+    it('rejects claims whose required fields are the wrong shape', async () => {
+      const { companyId } = await configuredCompany();
+
+      claimsToReturn = {
+        subject: ssoSubject(),
+        email: ssoEmail(),
+        emailVerified: 'yes',
+      };
+
+      const res = await signIn(companyId);
+      expect(res.status).toBe(401);
+    });
   });
 });

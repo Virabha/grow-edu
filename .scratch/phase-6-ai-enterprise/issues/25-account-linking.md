@@ -6,10 +6,11 @@
 
 **Blocked by:** 24
 
-**Status:** not-started
+**Status:** partial
+**Covered by:** test/sso.int-spec.ts
 
-- [ ] First sign-in with a matching verified email links to the existing account
+- [x] First sign-in with a matching verified email links to the existing account
 - [ ] Linking reuses the Phase 1 merge mechanism rather than a parallel one
-- [ ] An unverified email does not silently link
+- [x] An unverified email does not silently link
 - [ ] A linked account keeps its existing enrolments and progress
-- [ ] Signing in twice does not create a second link
+- [x] Signing in twice does not create a second link

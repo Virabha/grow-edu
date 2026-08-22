@@ -6,10 +6,11 @@
 
 **Blocked by:** nothing
 
-**Status:** not-started
+**Status:** partial
+**Covered by:** test/ai-foundation.int-spec.ts, test/ai-doubts.int-spec.ts, src/ai/marking-boundary.spec.ts
 
 - [ ] A `MODEL_PROVIDER` token resolves to an HTTP implementation in the running application
-- [ ] A test can substitute a stub through the existing `createTestApp` provider-override list
-- [ ] The interface carries the model identifier, so per-feature model choice is a caller decision
+- [x] A test can substitute a stub through the existing `createTestApp` provider-override list
+- [x] The interface carries the model identifier, so per-feature model choice is a caller decision
 - [ ] No feature module imports an Anthropic SDK type directly
-- [ ] A provider error surfaces as a typed failure, not an unhandled rejection
+- [x] A provider error surfaces as a typed failure, not an unhandled rejection

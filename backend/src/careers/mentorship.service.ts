@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { and, desc, eq, inArray, isNull } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { CLOCK, Clock } from "../common/clock";
 import { DATABASE_CONNECTION } from "../database/database.module";
@@ -13,6 +13,7 @@ import * as schema from "../database/schema";
 import {
   batchSessions,
   mentorSessionFeedback,
+  mentorSessionLinks,
   pathMentorAssignments,
 } from "../database/schema";
 import { AssignMentorDto } from "./dto/assign-mentor.dto";
@@ -99,10 +100,62 @@ export class MentorshipService {
   }
 
   async engagement() {
-    return this.db
+    const assignments = await this.db
       .select()
       .from(pathMentorAssignments)
       .orderBy(desc(pathMentorAssignments.assignedAt));
+
+    if (assignments.length === 0) return [];
+
+    const activity = await this.db
+      .select({
+        assignmentId: mentorSessionLinks.assignmentId,
+        sessionsScheduled: sql<number>`count(*)::int`,
+        sessionsHeld: sql<number>`sum(case when ${batchSessions.status} = 'ENDED' then 1 else 0 end)::int`,
+        lastSessionAt: sql<Date | null>`max(${batchSessions.scheduledStartAt})`,
+      })
+      .from(mentorSessionLinks)
+      .innerJoin(
+        batchSessions,
+        eq(batchSessions.sessionId, mentorSessionLinks.sessionId),
+      )
+      .where(
+        inArray(
+          mentorSessionLinks.assignmentId,
+          assignments.map((assignment) => assignment.assignmentId),
+        ),
+      )
+      .groupBy(mentorSessionLinks.assignmentId);
+
+    const feedbackCounts = await this.db
+      .select({
+        assignmentId: mentorSessionLinks.assignmentId,
+        feedbackWritten: sql<number>`count(*)::int`,
+      })
+      .from(mentorSessionFeedback)
+      .innerJoin(
+        mentorSessionLinks,
+        eq(mentorSessionLinks.sessionId, mentorSessionFeedback.sessionId),
+      )
+      .groupBy(mentorSessionLinks.assignmentId);
+
+    const activityByAssignment = new Map(
+      activity.map((row) => [row.assignmentId, row]),
+    );
+    const feedbackByAssignment = new Map(
+      feedbackCounts.map((row) => [row.assignmentId, row.feedbackWritten]),
+    );
+
+    return assignments.map((assignment) => {
+      const held = activityByAssignment.get(assignment.assignmentId);
+      return {
+        ...assignment,
+        sessionsScheduled: held?.sessionsScheduled ?? 0,
+        sessionsHeld: held?.sessionsHeld ?? 0,
+        lastSessionAt: held?.lastSessionAt ?? null,
+        feedbackWritten: feedbackByAssignment.get(assignment.assignmentId) ?? 0,
+      };
+    });
   }
 
   async createSession(dto: CreateMentorSessionDto, mentorId: string) {
@@ -141,6 +194,15 @@ export class MentorshipService {
       })
       .returning();
 
+    await this.db.insert(mentorSessionLinks).values({
+      sessionId: session.sessionId,
+      assignmentId: assignment.assignmentId,
+      mentorId,
+      studentId: dto.studentId,
+      pathId: dto.pathId,
+      createdAt: now,
+    });
+
     return session;
   }
 
@@ -166,14 +228,14 @@ export class MentorshipService {
         .orderBy(desc(batchSessions.scheduledStartAt));
     }
 
-    const feedbacks = await this.db
-      .select({ sessionId: mentorSessionFeedback.sessionId })
-      .from(mentorSessionFeedback)
-      .where(eq(mentorSessionFeedback.studentId, viewerId));
+    const links = await this.db
+      .select({ sessionId: mentorSessionLinks.sessionId })
+      .from(mentorSessionLinks)
+      .where(eq(mentorSessionLinks.studentId, viewerId));
 
-    if (feedbacks.length === 0) return [];
+    if (links.length === 0) return [];
 
-    const sessionIds = feedbacks.map((f) => f.sessionId);
+    const sessionIds = links.map((link) => link.sessionId);
     return this.db
       .select()
       .from(batchSessions)

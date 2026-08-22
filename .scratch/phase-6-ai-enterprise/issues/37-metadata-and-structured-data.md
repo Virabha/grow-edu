@@ -6,10 +6,11 @@
 
 **Blocked by:** 35, 36
 
-**Status:** not-started
+**Status:** done
+**Covered by:** test/page-metadata.int-spec.ts
 
-- [ ] Title, description, canonical URL and social preview are owner-controlled per page
-- [ ] Structured data is emitted for pages that warrant it
-- [ ] A page with no explicit metadata falls back to a sensible default rather than emitting nothing
-- [ ] Metadata is served with the page, not fetched by the client afterwards
-- [ ] A malformed structured-data configuration is rejected at write time
+- [x] Title, description, canonical URL and social preview are owner-controlled per page
+- [x] Structured data is emitted for pages that warrant it
+- [x] A page with no explicit metadata falls back to a sensible default rather than emitting nothing
+- [x] Metadata is served with the page, not fetched by the client afterwards
+- [x] A malformed structured-data configuration is rejected at write time

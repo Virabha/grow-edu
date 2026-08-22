@@ -6,10 +6,11 @@
 
 **Blocked by:** 11
 
-**Status:** not-started
+**Status:** done
+**Covered by:** test/ai-escalation.int-spec.ts
 
-- [ ] Escalation queues a draft reply for the instructor
-- [ ] The draft is never visible to the student
-- [ ] The instructor can discard the draft and write their own
-- [ ] A sent reply is attributed to the instructor, not to automation
-- [ ] A failed draft leaves the doubt answerable rather than blocked
+- [x] Escalation queues a draft reply for the instructor
+- [x] The draft is never visible to the student
+- [x] The instructor can discard the draft and write their own
+- [x] A sent reply is attributed to the instructor, not to automation
+- [x] A failed draft leaves the doubt answerable rather than blocked

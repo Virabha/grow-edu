@@ -6,10 +6,11 @@
 
 **Blocked by:** 01, 03, 06, 07
 
-**Status:** not-started
+**Status:** partial
+**Covered by:** test/ai-doubts.int-spec.ts
 
-- [ ] Posting a doubt returns immediately with a pending state
-- [ ] The answer is produced by a queued job, never inline with the request
-- [ ] The answer carries citations to the lessons it drew on
+- [x] Posting a doubt returns immediately with a pending state
+- [x] The answer is produced by a queued job, never inline with the request
+- [x] The answer carries citations to the lessons it drew on
 - [ ] The student is notified when the answer arrives
-- [ ] An answer is grounded in retrieved content rather than the model's own knowledge
+- [x] An answer is grounded in retrieved content rather than the model's own knowledge

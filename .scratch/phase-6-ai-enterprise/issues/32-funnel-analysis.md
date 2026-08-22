@@ -6,10 +6,11 @@
 
 **Blocked by:** 29, 30
 
-**Status:** not-started
+**Status:** partial
+**Covered by:** test/funnel-analytics.int-spec.ts
 
-- [ ] The funnel shows progression across the captured stages
-- [ ] A stage with no data reads as unknown rather than zero
-- [ ] The funnel breaks down by source
-- [ ] A date range bounds the report
+- [x] The funnel shows progression across the captured stages
+- [x] A stage with no data reads as unknown rather than zero
+- [x] The funnel breaks down by source
+- [x] A date range bounds the report
 - [ ] The report is scoped to the viewer

@@ -6,10 +6,11 @@
 
 **Blocked by:** nothing
 
-**Status:** not-started
+**Status:** done
+**Covered by:** test/page-builder.int-spec.ts
 
-- [ ] A page is an ordered list of blocks from a defined palette
-- [ ] A block kind outside the palette is rejected
-- [ ] Blocks can be reordered, shown and hidden
-- [ ] A draft page is not publicly readable until published
-- [ ] Publishing is an explicit action, not a side effect of saving
+- [x] A page is an ordered list of blocks from a defined palette
+- [x] A block kind outside the palette is rejected
+- [x] Blocks can be reordered, shown and hidden
+- [x] A draft page is not publicly readable until published
+- [x] Publishing is an explicit action, not a side effect of saving

@@ -533,3 +533,21 @@ export const aiDoubtDraftStatusEnum = pgEnum("ai_doubt_draft_status", [
   "COMMITTED",
   "DISCARDED",
 ]);
+
+export const aiCodeReviewStatusEnum = pgEnum("ai_code_review_status", [
+  "PENDING",
+  "READY",
+  "FAILED",
+]);
+
+export const aiProjectFeedbackStatusEnum = pgEnum("ai_project_feedback_status", [
+  "PENDING",
+  "READY",
+  "FAILED",
+  "DISCARDED",
+]);
+
+export const aiStudyPlanStatusEnum = pgEnum("ai_study_plan_status", [
+  "ACTIVE",
+  "SUPERSEDED",
+]);

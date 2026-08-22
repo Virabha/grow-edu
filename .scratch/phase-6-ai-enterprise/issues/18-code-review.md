@@ -6,10 +6,11 @@
 
 **Blocked by:** 01, 05, 21
 
-**Status:** not-started
+**Status:** partial
+**Covered by:** test/ai-code-review.int-spec.ts
 
 - [ ] Review runs only after a judged verdict exists
-- [ ] Review never alters the verdict
-- [ ] Commentary covers approach, complexity, naming and structure
-- [ ] A failed review leaves the verdict and the submission intact
-- [ ] Review is queued, not inline with submission
+- [x] Review never alters the verdict
+- [x] Commentary covers approach, complexity, naming and structure
+- [x] A failed review leaves the verdict and the submission intact
+- [x] Review is queued, not inline with submission

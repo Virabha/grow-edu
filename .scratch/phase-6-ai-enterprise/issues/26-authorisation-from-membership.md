@@ -6,10 +6,11 @@
 
 **Blocked by:** 24, 25
 
-**Status:** not-started
+**Status:** partial
+**Covered by:** test/sso.int-spec.ts
 
 - [ ] A provider claiming an administrator role does not grant one
-- [ ] Access derives from enrolment records after sign-in
+- [x] Access derives from enrolment records after sign-in
 - [ ] A provider claim cannot add a batch enrolment
 - [ ] A revoked enrolment stays revoked across a fresh sign-on
 - [ ] Role changes require the existing administrative path

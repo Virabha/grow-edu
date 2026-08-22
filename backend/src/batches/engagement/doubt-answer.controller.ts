@@ -34,7 +34,7 @@ export class DoubtAnswerController {
     return this.answers.escalate(batchId, doubtId, user.userId);
   }
 
-  @BatchAccess("MANAGE")
+  @BatchAccess("READ")
   @ApiOperation({ summary: "Instructor reads the AI-generated draft reply (never visible to student)" })
   @Get(":batchId/doubts/:doubtId/draft")
   getDraft(

@@ -6,10 +6,11 @@
 
 **Blocked by:** 04, 05
 
-**Status:** not-started
+**Status:** done
+**Covered by:** test/ai-lecture-summaries.int-spec.ts
 
-- [ ] A summary and key points are derived from an existing transcript
-- [ ] Chapters carry timestamps that are strictly increasing
-- [ ] No chapter timestamp falls outside the lecture duration
-- [ ] A lesson with no transcript produces no summary rather than an empty one
-- [ ] Summarisation uses the batch path and the cheaper model
+- [x] A summary and key points are derived from an existing transcript
+- [x] Chapters carry timestamps that are strictly increasing
+- [x] No chapter timestamp falls outside the lecture duration
+- [x] A lesson with no transcript produces no summary rather than an empty one
+- [x] Summarisation uses the batch path and the cheaper model

@@ -6,10 +6,11 @@
 
 **Blocked by:** nothing
 
-**Status:** not-started
+**Status:** done
+**Covered by:** test/branded-portal.int-spec.ts
 
-- [ ] Branding is configured per corporate
-- [ ] A corporate's students receive that corporate's branding
-- [ ] A student outside any corporate receives the platform default
-- [ ] Branding configuration does not alter any access decision
-- [ ] A corporate administrator cannot set branding for another corporate
+- [x] Branding is configured per corporate
+- [x] A corporate's students receive that corporate's branding
+- [x] A student outside any corporate receives the platform default
+- [x] Branding configuration does not alter any access decision
+- [x] A corporate administrator cannot set branding for another corporate

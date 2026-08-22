@@ -6,10 +6,11 @@
 
 **Blocked by:** 01, 05
 
-**Status:** not-started
+**Status:** partial
+**Covered by:** test/ai-doubts.int-spec.ts, test/ai-question-generation.int-spec.ts
 
 - [ ] A provider timeout on a doubt routes it to an instructor with a visible state
-- [ ] A provider error never leaves a record stuck in a pending state indefinitely
+- [x] A provider error never leaves a record stuck in a pending state indefinitely
 - [ ] The student is told plainly that automation failed rather than shown an empty answer
-- [ ] A failed generation for an instructor feature reports the failure rather than producing nothing
+- [x] A failed generation for an instructor feature reports the failure rather than producing nothing
 - [ ] Repeated provider failure does not retry without bound

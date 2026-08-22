@@ -16,7 +16,7 @@ import {
   users,
 } from "../../database/schema";
 import { CLOCK, Clock } from "../../common/clock";
-import { SSO_PROVIDER, SsoProvider } from "./sso-provider";
+import { SSO_PROVIDER, SsoProvider, trustedClaimsOnly } from "./sso-provider";
 import { ConfigureSsoDto } from "./dto/configure-sso.dto";
 
 @Injectable()
@@ -112,7 +112,8 @@ export class SsoService {
       });
     }
 
-    const claims = await this.provider.verify(companyId, token);
+    const asserted = await this.provider.verify(companyId, token);
+    const claims = asserted ? trustedClaimsOnly(asserted) : null;
     if (!claims || !claims.emailVerified) {
       throw new UnauthorizedException({
         code: "SSO_INVALID",

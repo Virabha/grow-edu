@@ -14,7 +14,9 @@ import {
   enrol,
   assignInstructor,
 } from './support/factories';
-import { DoubtAnswerService } from '../src/batches/engagement/doubt-answer.service';
+import { DOUBT_DRAIN_JOB } from '../src/batches/engagement/doubt-answer.service';
+import { InlineJobQueue } from '../src/jobs/inline-job-queue';
+import { JOB_QUEUE } from '../src/jobs/job-queue';
 import { aiDoubtAnswers, lessonTranscripts, lessonTranscriptSegments } from '../src/database/schema';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
@@ -24,7 +26,7 @@ describe('ai-grounding: retrieval scoping', () => {
   let app: INestApplication;
   let provider: RecordingModelProvider;
   let clock: TestClock;
-  let answers: DoubtAnswerService;
+  let queue: InlineJobQueue;
 
   let admin: TestActor;
   let instructor: TestActor;
@@ -44,7 +46,7 @@ describe('ai-grounding: retrieval scoping', () => {
     app = await createTestApp(database, clock, [
       { token: MODEL_PROVIDER, value: provider },
     ]);
-    answers = app.get<DoubtAnswerService>(DoubtAnswerService);
+    queue = app.get<InlineJobQueue>(JOB_QUEUE);
   });
 
   afterAll(async () => {
@@ -96,7 +98,7 @@ describe('ai-grounding: retrieval scoping', () => {
       .send({ title: DECOY_TEXT, body: 'Please explain this topic in detail' })
       .expect(201);
 
-    await answers.drain();
+    await queue.enqueue(DOUBT_DRAIN_JOB, undefined);
 
     expect(provider.calls.length).toBeGreaterThan(0);
     const call = provider.calls[0];
@@ -129,7 +131,7 @@ describe('ai-grounding: retrieval scoping', () => {
       .send({ title: 'A question about the topic', body: 'Some detail about it' })
       .expect(201);
 
-    await answers.drain();
+    await queue.enqueue(DOUBT_DRAIN_JOB, undefined);
 
     expect(provider.calls.length).toBeGreaterThan(0);
     const call = provider.calls[0];
@@ -177,7 +179,7 @@ describe('ai-grounding: retrieval scoping', () => {
       .send({ title: 'A question about the video', body: 'What was covered?' })
       .expect(201);
 
-    await answers.drain();
+    await queue.enqueue(DOUBT_DRAIN_JOB, undefined);
 
     expect(provider.calls.length).toBeGreaterThan(0);
     const call = provider.calls[0];
@@ -199,7 +201,7 @@ describe('ai-grounding: retrieval scoping', () => {
 
     const doubtId = adminResponse.body.doubtId;
 
-    await answers.drain();
+    await queue.enqueue(DOUBT_DRAIN_JOB, undefined);
 
     const aiAnswer = await database.db
       .select()

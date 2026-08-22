@@ -1,6 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
 
+import { eq } from 'drizzle-orm';
 import { createTestApp, authHeader, TestActor } from './support/test-app';
 import { createTestDatabase, truncateAll, TestDatabase } from './support/test-database';
 import { TestClock } from './support/test-clock';
@@ -356,8 +357,137 @@ describe('mentorship (tickets 38 and 39)', () => {
       expect(res.body.notes).toBe('Great session.');
     });
 
-    it('void - suppresses unused assignmentId warning', () => {
-      void assignmentId;
+    it('keeps the assignment reachable for the session tests', () => {
+      expect(typeof assignmentId).toBe('string');
+    });
+  });
+
+  describe('the owner can see whether sessions are actually happening', () => {
+    async function assignAndSchedule() {
+      const assignment = await request(app.getHttpServer())
+        .post('/mentorship/assignments')
+        .set(...authHeader(app, admin))
+        .send({ pathId, mentorId: mentor.userId, studentId: student.userId })
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .post('/mentorship/sessions')
+        .set(...authHeader(app, mentor))
+        .send({
+          pathId,
+          studentId: student.userId,
+          title: 'Weekly catch-up',
+          scheduledStartAt: '2027-08-01T10:00:00.000Z',
+          scheduledEndAt: '2027-08-01T11:00:00.000Z',
+        })
+        .expect(201);
+
+      return assignment.body.assignmentId;
+    }
+
+    it('reports zero sessions for an assignment nobody has met on', async () => {
+      await request(app.getHttpServer())
+        .post('/mentorship/assignments')
+        .set(...authHeader(app, admin))
+        .send({ pathId, mentorId: mentor.userId, studentId: student.userId })
+        .expect(201);
+
+      const res = await request(app.getHttpServer())
+        .get('/mentorship/engagement')
+        .set(...authHeader(app, admin))
+        .expect(200);
+
+      expect(res.body).toHaveLength(1);
+      expect(res.body[0].sessionsScheduled).toBe(0);
+      expect(res.body[0].lastSessionAt).toBeNull();
+      expect(res.body[0].feedbackWritten).toBe(0);
+    });
+
+    it('counts a scheduled session against the assignment it belongs to', async () => {
+      await assignAndSchedule();
+
+      const res = await request(app.getHttpServer())
+        .get('/mentorship/engagement')
+        .set(...authHeader(app, admin))
+        .expect(200);
+
+      expect(res.body[0].sessionsScheduled).toBe(1);
+      expect(res.body[0].lastSessionAt).not.toBeNull();
+    });
+
+    it('distinguishes a session that was scheduled from one that was held', async () => {
+      await assignAndSchedule();
+
+      const before = await request(app.getHttpServer())
+        .get('/mentorship/engagement')
+        .set(...authHeader(app, admin))
+        .expect(200);
+      expect(before.body[0].sessionsHeld).toBe(0);
+
+      await database.db
+        .update(batchSessions)
+        .set({ status: 'ENDED' })
+        .where(eq(batchSessions.type, 'ONE_TO_ONE'));
+
+      const after = await request(app.getHttpServer())
+        .get('/mentorship/engagement')
+        .set(...authHeader(app, admin))
+        .expect(200);
+      expect(after.body[0].sessionsHeld).toBe(1);
+    });
+
+    it('does not attribute one mentor\'s sessions to another assignment', async () => {
+      await assignAndSchedule();
+      await request(app.getHttpServer())
+        .post('/mentorship/assignments')
+        .set(...authHeader(app, admin))
+        .send({
+          pathId,
+          mentorId: anotherMentor.userId,
+          studentId: anotherStudent.userId,
+        })
+        .expect(201);
+
+      const res = await request(app.getHttpServer())
+        .get('/mentorship/engagement')
+        .set(...authHeader(app, admin))
+        .expect(200);
+
+      const busy = res.body.filter(
+        (row: { sessionsScheduled: number }) => row.sessionsScheduled > 0,
+      );
+      expect(busy).toHaveLength(1);
+      expect(busy[0].mentorId).toBe(mentor.userId);
+    });
+
+    it('refuses an instructor sight of the engagement report', async () => {
+      await request(app.getHttpServer())
+        .get('/mentorship/engagement')
+        .set(...authHeader(app, mentor))
+        .expect(403);
+    });
+
+    it('shows a student their scheduled session before any feedback exists', async () => {
+      await assignAndSchedule();
+
+      const res = await request(app.getHttpServer())
+        .get('/mentorship/sessions')
+        .set(...authHeader(app, student))
+        .expect(200);
+
+      expect(res.body).toHaveLength(1);
+      expect(res.body[0].title).toBe('Weekly catch-up');
+    });
+
+    it('does not show a student another student\'s session', async () => {
+      await assignAndSchedule();
+
+      const res = await request(app.getHttpServer())
+        .get('/mentorship/sessions')
+        .set(...authHeader(app, anotherStudent))
+        .expect(200);
+
+      expect(res.body).toEqual([]);
     });
   });
 });

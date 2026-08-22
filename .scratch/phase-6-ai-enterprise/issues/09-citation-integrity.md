@@ -6,10 +6,11 @@
 
 **Blocked by:** 07, 08
 
-**Status:** not-started
+**Status:** partial
+**Covered by:** test/ai-doubts.int-spec.ts
 
-- [ ] A citation pointing at a non-existent lesson causes the answer to be rejected
-- [ ] A citation pointing at a lesson the student cannot access causes the answer to be rejected
+- [x] A citation pointing at a non-existent lesson causes the answer to be rejected
+- [x] A citation pointing at a lesson the student cannot access causes the answer to be rejected
 - [ ] A rejected answer routes the doubt to a human rather than showing nothing
 - [ ] Every citation shown resolves to a lesson the student can open
 - [ ] Citation checking happens before the answer is visible, not after

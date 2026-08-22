@@ -6,10 +6,11 @@
 
 **Blocked by:** 01
 
-**Status:** not-started
+**Status:** partial
+**Covered by:** test/ai-grounding.int-spec.ts
 
-- [ ] Retrieval returns content only from batches the asking student is enrolled in
+- [x] Retrieval returns content only from batches the asking student is enrolled in
 - [ ] Content belonging to another organisation is never retrieved
-- [ ] A student enrolled in one batch cannot surface another batch's lesson through a crafted question
-- [ ] Retrieval draws on transcript segments as well as lesson text
+- [x] A student enrolled in one batch cannot surface another batch's lesson through a crafted question
+- [x] Retrieval draws on transcript segments as well as lesson text
 - [ ] An unenrolled student retrieving against a batch gets nothing, not an error revealing the batch exists

@@ -44,6 +44,31 @@ export const pathMentorAssignments = pgTable(
   }),
 );
 
+export const mentorSessionLinks = pgTable(
+  "mentor_session_links",
+  {
+    organizationId: organizationId(),
+    linkId: text("link_id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    sessionId: text("session_id").notNull(),
+    assignmentId: text("assignment_id").notNull(),
+    mentorId: text("mentor_id").notNull(),
+    studentId: text("student_id").notNull(),
+    pathId: text("path_id").notNull(),
+    createdAt: timestamp("created_at").notNull(),
+  },
+  (table) => ({
+    onePerSession: unique("mentor_session_links_session_unique").on(
+      table.sessionId,
+    ),
+    assignmentIdx: index("mentor_session_links_assignment_idx").on(
+      table.assignmentId,
+    ),
+    studentIdx: index("mentor_session_links_student_idx").on(table.studentId),
+  }),
+);
+
 export const mentorSessionFeedback = pgTable(
   "mentor_session_feedback",
   {

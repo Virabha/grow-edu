@@ -6,10 +6,11 @@
 
 **Blocked by:** nothing
 
-**Status:** not-started
+**Status:** done
+**Covered by:** test/job-board.int-spec.ts
 
-- [ ] The owner can post an opening and see who applied
-- [ ] A student can apply and track their application status
-- [ ] Employer visibility extends only to published portfolios
-- [ ] An unpublished portfolio is not reachable through the job board
-- [ ] A student cannot see another student's applications
+- [x] The owner can post an opening and see who applied
+- [x] A student can apply and track their application status
+- [x] Employer visibility extends only to published portfolios
+- [x] An unpublished portfolio is not reachable through the job board
+- [x] A student cannot see another student's applications

@@ -6,10 +6,11 @@
 
 **Blocked by:** 01, 02
 
-**Status:** not-started
+**Status:** partial
+**Covered by:** src/ai/prompt.spec.ts
 
-- [ ] Two questions against the same batch produce byte-identical prefixes
-- [ ] Retrieved grounding material is ordered deterministically, not by map or set iteration
+- [x] Two questions against the same batch produce byte-identical prefixes
+- [x] Retrieved grounding material is ordered deterministically, not by map or set iteration
 - [ ] No timestamp, request identifier or user identifier appears before the cache breakpoint
-- [ ] The assembled prefix is exercised by a test that compares two real assemblies, not by inspection
+- [x] The assembled prefix is exercised by a test that compares two real assemblies, not by inspection
 - [ ] Cache-read tokens returned by the provider are recorded against the call

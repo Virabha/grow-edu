@@ -6,10 +6,11 @@
 
 **Blocked by:** 08, 10
 
-**Status:** not-started
+**Status:** partial
+**Covered by:** test/ai-escalation.int-spec.ts
 
-- [ ] Marking an answer unhelpful moves the doubt to an instructor inbox
-- [ ] The escalated doubt carries the automated answer that was rejected
+- [x] Marking an answer unhelpful moves the doubt to an instructor inbox
+- [x] The escalated doubt carries the automated answer that was rejected
 - [ ] The student is told a human has been reached
-- [ ] Escalation is available on every automated answer, not only failed ones
+- [x] Escalation is available on every automated answer, not only failed ones
 - [ ] An escalated doubt cannot be answered automatically a second time

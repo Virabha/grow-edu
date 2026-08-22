@@ -194,8 +194,23 @@ describe('low-bandwidth mode (ticket 36)', () => {
         .set(...authHeader(app, student))
         .expect(200);
 
-      expect(typeof res.body.imageSuppressThresholdKb).toBe('number');
-      expect(res.body.imageSuppressThresholdKb).toBeGreaterThan(0);
+      const original = res.body.imageSuppressThresholdKb;
+      expect(typeof original).toBe('number');
+
+      const changed = original + 417;
+      await request(app.getHttpServer())
+        .put('/settings/discovery')
+        .set(...authHeader(app, admin))
+        .send({ lowBandwidthImageKilobytes: changed })
+        .expect(200);
+
+      const after = await request(app.getHttpServer())
+        .get(`/batches/${batchId}/lessons/${lessonId}/playback`)
+        .set(...authHeader(app, student))
+        .expect(200);
+
+      expect(after.body.imageSuppressThresholdKb).toBe(changed);
+      expect(after.body.imageSuppressThresholdKb).not.toBe(original);
     });
   });
 });

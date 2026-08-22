@@ -6,10 +6,11 @@
 
 **Blocked by:** nothing
 
-**Status:** not-started
+**Status:** partial
+**Covered by:** test/funnel-analytics.int-spec.ts
 
-- [ ] Page views, catalogue views, checkout starts and completions are captured
+- [x] Page views, catalogue views, checkout starts and completions are captured
 - [ ] Capture never blocks the response it measures
-- [ ] An event carries enough context to attribute it to a source
-- [ ] Events are retained on a defined schedule rather than for ever
-- [ ] A malformed event is dropped rather than failing the request
+- [x] An event carries enough context to attribute it to a source
+- [x] Events are retained on a defined schedule rather than for ever
+- [x] A malformed event is dropped rather than failing the request

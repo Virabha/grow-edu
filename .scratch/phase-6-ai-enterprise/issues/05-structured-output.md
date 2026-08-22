@@ -6,10 +6,11 @@
 
 **Blocked by:** 01
 
-**Status:** not-started
+**Status:** partial
+**Covered by:** src/ai/structured.spec.ts, test/ai-question-generation.int-spec.ts
 
 - [ ] Every parsed feature declares its response shape
 - [ ] A response failing the shape is rejected and recorded as a failure
-- [ ] A rejected response persists nothing partial
+- [x] A rejected response persists nothing partial
 - [ ] A rejected response is retried a bounded number of times, then gives up visibly
 - [ ] Prose is never parsed with a regular expression to recover a field

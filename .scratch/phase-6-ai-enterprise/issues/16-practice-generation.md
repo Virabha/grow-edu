@@ -6,10 +6,11 @@
 
 **Blocked by:** 04, 14, 15
 
-**Status:** not-started
+**Status:** partial
+**Covered by:** test/ai-question-generation.int-spec.ts
 
-- [ ] An instructor requests a count of problems at a target topic and difficulty
-- [ ] Generation runs through the batch path rather than as individual calls
-- [ ] Results enter the bank unreviewed and tagged
+- [x] An instructor requests a count of problems at a target topic and difficulty
+- [x] Generation runs through the batch path rather than as individual calls
+- [x] Results enter the bank unreviewed and tagged
 - [ ] The instructor is notified when a bulk generation completes
-- [ ] A partially completed bulk generation keeps what succeeded
+- [x] A partially completed bulk generation keeps what succeeded

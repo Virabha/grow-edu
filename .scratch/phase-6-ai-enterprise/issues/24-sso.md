@@ -6,10 +6,11 @@
 
 **Blocked by:** nothing
 
-**Status:** not-started
+**Status:** done
+**Covered by:** test/sso.int-spec.ts
 
-- [ ] Sign-on configuration is stored per corporate, not globally
-- [ ] Two corporates can use different providers simultaneously
-- [ ] A misconfigured provider fails closed with a clear error
-- [ ] Provider secrets are never returned through any read path
-- [ ] A corporate administrator cannot configure sign-on for another corporate
+- [x] Sign-on configuration is stored per corporate, not globally
+- [x] Two corporates can use different providers simultaneously
+- [x] A misconfigured provider fails closed with a clear error
+- [x] Provider secrets are never returned through any read path
+- [x] A corporate administrator cannot configure sign-on for another corporate

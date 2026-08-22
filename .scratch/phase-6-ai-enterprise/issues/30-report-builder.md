@@ -6,10 +6,11 @@
 
 **Blocked by:** nothing
 
-**Status:** not-started
+**Status:** partial
+**Covered by:** test/report-builder.int-spec.ts
 
-- [ ] The owner composes a report from a defined dimension and measure palette
-- [ ] A dimension outside the palette is rejected
-- [ ] No client-supplied string reaches a query as SQL
-- [ ] A report with no matching rows returns empty rather than erroring
+- [x] The owner composes a report from a defined dimension and measure palette
+- [x] A dimension outside the palette is rejected
+- [x] No client-supplied string reaches a query as SQL
+- [x] A report with no matching rows returns empty rather than erroring
 - [ ] An expensive report is bounded rather than allowed to run unbounded

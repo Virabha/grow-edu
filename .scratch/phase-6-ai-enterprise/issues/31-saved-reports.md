@@ -6,10 +6,11 @@
 
 **Blocked by:** 30
 
-**Status:** not-started
+**Status:** partial
+**Covered by:** test/report-builder.int-spec.ts
 
-- [ ] A saved report is evaluated against the viewer's scope
-- [ ] A corporate administrator viewing a shared report sees only their own corporate
+- [x] A saved report is evaluated against the viewer's scope
+- [x] A corporate administrator viewing a shared report sees only their own corporate
 - [ ] Scheduling reuses the existing job queue
 - [ ] An export produces the same rows the viewer would see interactively
-- [ ] Revoking a share stops access immediately
+- [x] Revoking a share stops access immediately

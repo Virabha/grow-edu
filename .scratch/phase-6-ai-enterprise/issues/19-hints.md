@@ -6,10 +6,11 @@
 
 **Blocked by:** 01, 05
 
-**Status:** not-started
+**Status:** partial
+**Covered by:** test/ai-hints.int-spec.ts
 
-- [ ] Hints escalate in specificity across a bounded sequence
-- [ ] The bound is enforced by the server, not by the client hiding a button
-- [ ] Every hint taken is recorded against the submission
-- [ ] Hint requests are rate-limited independently of the run rate limit
+- [x] Hints escalate in specificity across a bounded sequence
+- [x] The bound is enforced by the server, not by the client hiding a button
+- [x] Every hint taken is recorded against the submission
+- [x] Hint requests are rate-limited independently of the run rate limit
 - [ ] A hint never contains a complete working solution

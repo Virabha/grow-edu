@@ -6,10 +6,11 @@
 
 **Blocked by:** 01, 02
 
-**Status:** not-started
+**Status:** partial
+**Covered by:** test/ai-question-generation.int-spec.ts
 
-- [ ] A bulk request is submitted as a batch rather than as N individual calls
-- [ ] Polling and reconciliation happen on a repeating job, never inline with a request
-- [ ] A partially completed batch persists the completed items and retries only the rest
+- [x] A bulk request is submitted as a batch rather than as N individual calls
+- [x] Polling and reconciliation happen on a repeating job, never inline with a request
+- [x] A partially completed batch persists the completed items and retries only the rest
 - [ ] A reconciled item is never processed twice
 - [ ] Batch usage is attributed the same way individual calls are

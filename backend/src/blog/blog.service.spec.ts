@@ -1,6 +1,8 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { DATABASE_CONNECTION } from '../database/database.module';
+import { CLOCK } from '../common/clock';
+import { JOB_QUEUE } from '../jobs/job-queue';
 import { BlogService } from './blog.service';
 
 type ChainBuilder = {
@@ -35,14 +37,30 @@ function makeChain(rows: unknown[]): ChainBuilder {
   return b;
 }
 
+const NOW = new Date('2026-01-01T00:00:00Z');
+
+const fixedClock = {
+  now: () => NOW,
+  epochMillis: () => NOW.getTime(),
+};
+
+const silentQueue = {
+  register: () => undefined,
+  enqueue: () => Promise.resolve(),
+  repeat: () => Promise.resolve(),
+};
+
 async function buildService(db: Record<string, jest.Mock>) {
   const mod = await Test.createTestingModule({
-    providers: [BlogService, { provide: DATABASE_CONNECTION, useValue: db }],
+    providers: [
+      BlogService,
+      { provide: DATABASE_CONNECTION, useValue: db },
+      { provide: CLOCK, useValue: fixedClock },
+      { provide: JOB_QUEUE, useValue: silentQueue },
+    ],
   }).compile();
   return mod.get(BlogService);
 }
-
-const NOW = new Date('2026-01-01T00:00:00Z');
 
 describe('BlogService › slug de-duplication', () => {
   it('auto-appends -2 when base slug already exists', async () => {

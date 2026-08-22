@@ -6,10 +6,11 @@
 
 **Blocked by:** nothing
 
-**Status:** not-started
+**Status:** done
+**Covered by:** test/integration-api.int-spec.ts
 
-- [ ] Credentials are issued and revoked independently of user accounts
-- [ ] A corporate's credentials reach only that corporate's students
-- [ ] An out-of-scope record is indistinguishable from a missing one
-- [ ] The API carries a version in its path
-- [ ] A revoked credential stops working immediately
+- [x] Credentials are issued and revoked independently of user accounts
+- [x] A corporate's credentials reach only that corporate's students
+- [x] An out-of-scope record is indistinguishable from a missing one
+- [x] The API carries a version in its path
+- [x] A revoked credential stops working immediately

@@ -6,10 +6,11 @@
 
 **Blocked by:** 38, 39
 
-**Status:** not-started
+**Status:** done
+**Covered by:** test/mock-interviews.int-spec.ts
 
-- [ ] A mock interview is a scheduled session with a structured feedback form
-- [ ] Feedback is recorded against defined competencies
-- [ ] Competency outcomes feed the existing skill map
-- [ ] A student can read their own interview feedback
-- [ ] An interviewer cannot alter feedback after the student has seen it without it being recorded
+- [x] A mock interview is a scheduled session with a structured feedback form
+- [x] Feedback is recorded against defined competencies
+- [x] Competency outcomes feed the existing skill map
+- [x] A student can read their own interview feedback
+- [x] An interviewer cannot alter feedback after the student has seen it without it being recorded

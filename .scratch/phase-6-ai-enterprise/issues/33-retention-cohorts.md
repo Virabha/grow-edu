@@ -6,10 +6,11 @@
 
 **Blocked by:** 29, 30
 
-**Status:** not-started
+**Status:** partial
+**Covered by:** test/retention-cohorts.int-spec.ts
 
-- [ ] Cohorts are computed on a repeating job and materialised
+- [x] Cohorts are computed on a repeating job and materialised
 - [ ] A read serves materialised rows rather than recomputing
-- [ ] Cohorts break down by joining month and by source
+- [x] Cohorts break down by joining month and by source
 - [ ] A recomputation failure leaves the previous materialisation readable
 - [ ] The report is scoped to the viewer

@@ -6,7 +6,8 @@
 
 **Blocked by:** 30
 
-**Status:** not-started
+**Status:** partial
+**Covered by:** (none — no integration test file found for this ticket)
 
 - [ ] The report covers attendance, results and responsiveness
 - [ ] Responsiveness derives from recorded timestamps, not from editable fields

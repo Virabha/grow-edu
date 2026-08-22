@@ -6,10 +6,11 @@
 
 **Blocked by:** nothing
 
-**Status:** not-started
+**Status:** done
+**Covered by:** test/articles.int-spec.ts
 
-- [ ] An article can be drafted, scheduled and published
-- [ ] A draft is not publicly readable
-- [ ] A scheduled article publishes through the existing job queue
-- [ ] Publication is reversible
-- [ ] The paths this ticket touches gain tests
+- [x] An article can be drafted, scheduled and published
+- [x] A draft is not publicly readable
+- [x] A scheduled article publishes through the existing job queue
+- [x] Publication is reversible
+- [x] The paths this ticket touches gain tests

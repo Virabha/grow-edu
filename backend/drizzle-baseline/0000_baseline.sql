@@ -17,6 +17,12 @@ EXCEPTION
 END $$;
 --> statement-breakpoint
 DO $$ BEGIN
+ CREATE TYPE "ai_code_review_status" AS ENUM('PENDING', 'READY', 'FAILED');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
  CREATE TYPE "ai_doubt_answer_status" AS ENUM('PENDING', 'ANSWERED', 'FAILED', 'REJECTED', 'ESCALATED');
 EXCEPTION
  WHEN duplicate_object THEN null;
@@ -24,6 +30,18 @@ END $$;
 --> statement-breakpoint
 DO $$ BEGIN
  CREATE TYPE "ai_doubt_draft_status" AS ENUM('PENDING', 'COMMITTED', 'DISCARDED');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ CREATE TYPE "ai_project_feedback_status" AS ENUM('PENDING', 'READY', 'FAILED', 'DISCARDED');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ CREATE TYPE "ai_study_plan_status" AS ENUM('ACTIVE', 'SUPERSEDED');
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
@@ -2843,6 +2861,75 @@ CREATE TABLE IF NOT EXISTS "ai_doubt_drafts" (
 	CONSTRAINT "ai_doubt_drafts_doubt_unique" UNIQUE("doubt_id")
 );
 --> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "ai_code_reviews" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"review_id" text PRIMARY KEY NOT NULL,
+	"run_id" text NOT NULL,
+	"status" "ai_code_review_status" DEFAULT 'PENDING' NOT NULL,
+	"approach" text,
+	"complexity" text,
+	"naming" text,
+	"structure" text,
+	"failure_reason" text,
+	"created_at" timestamp NOT NULL,
+	"updated_at" timestamp NOT NULL,
+	CONSTRAINT "ai_code_reviews_run_unique" UNIQUE("run_id")
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "coding_hint_requests" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"request_id" text PRIMARY KEY NOT NULL,
+	"run_id" text NOT NULL,
+	"user_id" text NOT NULL,
+	"hint_level" integer NOT NULL,
+	"hint_text" text NOT NULL,
+	"created_at" timestamp NOT NULL,
+	CONSTRAINT "coding_hint_requests_level_unique" UNIQUE("run_id","hint_level")
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "ai_project_feedback_drafts" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"draft_id" text PRIMARY KEY NOT NULL,
+	"submission_id" text NOT NULL,
+	"status" "ai_project_feedback_status" DEFAULT 'PENDING' NOT NULL,
+	"readability_summary" text,
+	"structure_summary" text,
+	"failure_reason" text,
+	"discarded_at" timestamp,
+	"created_at" timestamp NOT NULL,
+	"updated_at" timestamp NOT NULL,
+	CONSTRAINT "ai_project_feedback_drafts_submission_unique" UNIQUE("submission_id")
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "ai_project_suggested_scores" (
+	"suggest_id" text PRIMARY KEY NOT NULL,
+	"draft_id" text NOT NULL,
+	"criterion_id" text NOT NULL,
+	"suggested_value" numeric(6, 2) NOT NULL,
+	"rationale" text,
+	CONSTRAINT "ai_project_suggested_scores_unique" UNIQUE("draft_id","criterion_id")
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "ai_study_plans" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"plan_id" text PRIMARY KEY NOT NULL,
+	"user_id" text NOT NULL,
+	"summary" text NOT NULL,
+	"items" jsonb DEFAULT '[]'::jsonb NOT NULL,
+	"inputs" jsonb NOT NULL,
+	"generated_at" timestamp NOT NULL,
+	"superseded_at" timestamp
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "student_study_preferences" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"preference_id" text PRIMARY KEY NOT NULL,
+	"user_id" text NOT NULL,
+	"available_minutes_per_day" integer DEFAULT 60 NOT NULL,
+	"updated_at" timestamp NOT NULL,
+	CONSTRAINT "student_study_preferences_user_unique" UNIQUE("user_id")
+);
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "funnel_events" (
 	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
 	"event_id" text PRIMARY KEY NOT NULL,
@@ -2924,6 +3011,18 @@ CREATE TABLE IF NOT EXISTS "mentor_session_feedback" (
 	"created_at" timestamp NOT NULL,
 	"updated_at" timestamp NOT NULL,
 	CONSTRAINT "mentor_session_feedback_session_unique" UNIQUE("session_id")
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "mentor_session_links" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"link_id" text PRIMARY KEY NOT NULL,
+	"session_id" text NOT NULL,
+	"assignment_id" text NOT NULL,
+	"mentor_id" text NOT NULL,
+	"student_id" text NOT NULL,
+	"path_id" text NOT NULL,
+	"created_at" timestamp NOT NULL,
+	CONSTRAINT "mentor_session_links_session_unique" UNIQUE("session_id")
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "mock_interview_scores" (
@@ -3273,6 +3372,12 @@ CREATE INDEX IF NOT EXISTS "ai_doubt_answers_pending_idx" ON "ai_doubt_answers" 
 CREATE INDEX IF NOT EXISTS "ai_doubt_answers_batch_idx" ON "ai_doubt_answers" ("batch_id","marked_unhelpful_at");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "ai_doubt_drafts_doubt_idx" ON "ai_doubt_drafts" ("doubt_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "ai_doubt_drafts_answer_idx" ON "ai_doubt_drafts" ("answer_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "ai_code_reviews_status_idx" ON "ai_code_reviews" ("status","created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "coding_hint_requests_user_idx" ON "coding_hint_requests" ("user_id","created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "coding_hint_requests_run_idx" ON "coding_hint_requests" ("run_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "ai_project_feedback_drafts_status_idx" ON "ai_project_feedback_drafts" ("status","created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "ai_project_suggested_scores_draft_idx" ON "ai_project_suggested_scores" ("draft_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "ai_study_plans_active_idx" ON "ai_study_plans" ("user_id","superseded_at");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "funnel_events_kind_idx" ON "funnel_events" ("kind");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "funnel_events_captured_at_idx" ON "funnel_events" ("captured_at");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "funnel_events_source_idx" ON "funnel_events" ("source");--> statement-breakpoint
@@ -3286,6 +3391,8 @@ CREATE INDEX IF NOT EXISTS "job_applications_student_idx" ON "job_applications" 
 CREATE INDEX IF NOT EXISTS "job_applications_opening_idx" ON "job_applications" ("opening_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "job_openings_status_idx" ON "job_openings" ("status");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "mentor_session_feedback_mentor_idx" ON "mentor_session_feedback" ("mentor_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "mentor_session_links_assignment_idx" ON "mentor_session_links" ("assignment_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "mentor_session_links_student_idx" ON "mentor_session_links" ("student_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "mock_interview_scores_interview_idx" ON "mock_interview_scores" ("mock_interview_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "mock_interviews_path_student_idx" ON "mock_interviews" ("path_id","student_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "mock_interviews_mentor_idx" ON "mock_interviews" ("mentor_id");--> statement-breakpoint

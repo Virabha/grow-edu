@@ -6,10 +6,11 @@
 
 **Blocked by:** nothing
 
-**Status:** not-started
+**Status:** done
+**Covered by:** test/mentorship.int-spec.ts
 
-- [ ] A mentor is assigned to specific students within a path
-- [ ] Assignment reuses the existing instructor role model
-- [ ] A mentor sees only their assigned students
-- [ ] Reassignment preserves the previous relationship's history
-- [ ] The owner can read mentor engagement across all mentors
+- [x] A mentor is assigned to specific students within a path
+- [x] Assignment reuses the existing instructor role model
+- [x] A mentor sees only their assigned students
+- [x] Reassignment preserves the previous relationship's history
+- [x] The owner can read mentor engagement across all mentors

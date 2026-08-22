@@ -6,10 +6,11 @@
 
 **Blocked by:** 01
 
-**Status:** not-started
+**Status:** partial
+**Covered by:** test/ai-foundation.int-spec.ts
 
 - [ ] Every model call writes a usage row carrying feature, organisation and model
-- [ ] Input, output, cache-read and cache-write tokens are stored separately
+- [x] Input, output, cache-read and cache-write tokens are stored separately
 - [ ] A call that fails still records the attempt and its feature
 - [ ] The owner can read cost aggregated by feature and by organisation for a date range
-- [ ] A student cannot read cost data through any path
+- [x] A student cannot read cost data through any path

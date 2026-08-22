@@ -6,10 +6,11 @@
 
 **Blocked by:** 08
 
-**Status:** not-started
+**Status:** partial
+**Covered by:** test/ai-doubts.int-spec.ts, test/ai-escalation.int-spec.ts
 
 - [ ] An automated answer is marked as such on the stored record
 - [ ] An instructor answer is distinguishable from an automated one in every read path
-- [ ] An instructor editing a drafted reply produces an answer attributed to the instructor
+- [x] An instructor editing a drafted reply produces an answer attributed to the instructor
 - [ ] The marker cannot be set by a client
 - [ ] A doubt answered automatically then escalated shows both, distinctly

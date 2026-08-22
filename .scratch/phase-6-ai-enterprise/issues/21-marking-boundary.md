@@ -6,10 +6,11 @@
 
 **Blocked by:** nothing
 
-**Status:** not-started
+**Status:** done
+**Covered by:** src/ai/marking-boundary.spec.ts
 
-- [ ] No AI path writes to an awarded-marks column
-- [ ] No AI path writes a committed rubric criterion score
-- [ ] No AI path sets a project milestone to passed
-- [ ] No AI path issues a certificate or a credential
-- [ ] The assertion is a test that fails the build, not a convention
+- [x] No AI path writes to an awarded-marks column
+- [x] No AI path writes a committed rubric criterion score
+- [x] No AI path sets a project milestone to passed
+- [x] No AI path issues a certificate or a credential
+- [x] The assertion is a test that fails the build, not a convention

@@ -6,10 +6,11 @@
 
 **Blocked by:** 14
 
-**Status:** not-started
+**Status:** done
+**Covered by:** test/ai-review-gating.int-spec.ts
 
-- [ ] An unreviewed question cannot appear in a test
-- [ ] An unreviewed question cannot appear in topic practice
-- [ ] An unreviewed question cannot appear in a daily practice set
-- [ ] Approving a question makes it servable and records who approved it
-- [ ] An instructor can reject a generated question, and a rejected one never becomes servable
+- [x] An unreviewed question cannot appear in a test
+- [x] An unreviewed question cannot appear in topic practice
+- [x] An unreviewed question cannot appear in a daily practice set
+- [x] Approving a question makes it servable and records who approved it
+- [x] An instructor can reject a generated question, and a rejected one never becomes servable

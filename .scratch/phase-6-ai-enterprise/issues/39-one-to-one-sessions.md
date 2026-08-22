@@ -6,10 +6,11 @@
 
 **Blocked by:** 38
 
-**Status:** not-started
+**Status:** done
+**Covered by:** test/mentorship.int-spec.ts
 
-- [ ] Sessions reuse the Phase 2 scheduling machinery
-- [ ] Each session carries a private feedback record
-- [ ] The student cannot read the private feedback
-- [ ] A mentor cannot read another mentor's session feedback
-- [ ] The owner can see whether sessions are actually happening
+- [x] Sessions reuse the Phase 2 scheduling machinery
+- [x] Each session carries a private feedback record
+- [x] The student cannot read the private feedback
+- [x] A mentor cannot read another mentor's session feedback
+- [x] The owner can see whether sessions are actually happening

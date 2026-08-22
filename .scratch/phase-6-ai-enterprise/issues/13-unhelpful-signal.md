@@ -6,10 +6,11 @@
 
 **Blocked by:** 11
 
-**Status:** not-started
+**Status:** partial
+**Covered by:** test/ai-escalation.int-spec.ts
 
-- [ ] Every unhelpful mark is recorded with the question, the answer and the context
+- [x] Every unhelpful mark is recorded with the question, the answer and the context
 - [ ] The owner can read them grouped by batch, subject and topic
 - [ ] The report distinguishes an answer marked unhelpful from one that failed to generate
 - [ ] An instructor can see the unhelpful set for their own batches
-- [ ] A student cannot read another student's doubts through this report
+- [x] A student cannot read another student's doubts through this report

@@ -4,6 +4,7 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
   Param,
   Patch,
   Post,
@@ -151,6 +152,7 @@ export class BlogController {
   }
 
   @Post('posts/:blogPostId/publish')
+  @HttpCode(200)
   @UseGuards(RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN)
   @ApiBearerAuth()
@@ -160,6 +162,7 @@ export class BlogController {
   }
 
   @Post('posts/:blogPostId/unpublish')
+  @HttpCode(200)
   @UseGuards(RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN)
   @ApiBearerAuth()
@@ -169,6 +172,7 @@ export class BlogController {
   }
 
   @Post('posts/:blogPostId/schedule')
+  @HttpCode(200)
   @UseGuards(RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN)
   @ApiBearerAuth()

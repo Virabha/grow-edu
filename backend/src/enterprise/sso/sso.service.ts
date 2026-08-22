@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
   UnauthorizedException,
+  UnprocessableEntityException,
 } from "@nestjs/common";
 import { and, eq } from "drizzle-orm";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -135,12 +136,19 @@ export class SsoService {
     }
 
     const [byEmail] = await this.db
-      .select({ userId: users.userId })
+      .select({ userId: users.userId, emailVerified: users.emailVerified })
       .from(users)
-      .where(and(eq(users.email, claims.email), eq(users.emailVerified, true)))
+      .where(eq(users.email, claims.email))
       .limit(1);
 
     if (byEmail) {
+      if (!byEmail.emailVerified) {
+        throw new UnprocessableEntityException({
+          code: "EMAIL_NOT_VERIFIED",
+          message:
+            "An account with this email exists but is not verified. Please verify your email first.",
+        });
+      }
       await this.db.insert(corporateSsoLinks).values({
         companyId,
         userId: byEmail.userId,

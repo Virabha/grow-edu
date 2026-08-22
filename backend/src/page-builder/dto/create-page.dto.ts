@@ -1,11 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  IsArray,
   IsNotEmpty,
   IsObject,
   IsOptional,
   IsString,
   MaxLength,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
 
 export class CreatePageDto {
   @ApiProperty({ description: 'Page title', maxLength: 300 })
@@ -48,4 +50,10 @@ export class CreatePageDto {
   @IsOptional()
   @IsObject()
   structuredData?: Record<string, unknown>;
+
+  @ApiPropertyOptional({ description: 'Ordered array of blocks from the palette', type: [Object] })
+  @IsOptional()
+  @IsArray()
+  @Transform(({ obj, key }) => obj[key])
+  blocks?: unknown[];
 }

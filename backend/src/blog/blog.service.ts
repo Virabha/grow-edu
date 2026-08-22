@@ -594,6 +594,7 @@ export class BlogService implements OnModuleInit {
         content: blogPosts.content,
         coverImageUrl: blogPosts.coverImageUrl,
         authorName: blogPosts.authorName,
+        status: blogPosts.status,
         tags: blogPosts.tags,
         views: blogPosts.viewCount,
         publishedAt: blogPosts.publishedAt,

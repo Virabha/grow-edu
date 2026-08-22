@@ -116,7 +116,7 @@ export class PageBuilderService {
     return row;
   }
 
-  async createPage(dto: CreatePageDto, rawBlocks: unknown) {
+  async createPage(dto: CreatePageDto, rawBlocks: unknown[]) {
     const slug = dto.slug ? slugify(dto.slug) : slugify(dto.title);
 
     const [conflict] = await this.db
@@ -128,7 +128,7 @@ export class PageBuilderService {
 
     if (dto.structuredData) validateStructuredData(dto.structuredData);
 
-    const blocks = rawBlocks !== undefined ? parseAndValidateBlocks(rawBlocks) : [];
+    const blocks = rawBlocks !== undefined && rawBlocks !== null ? parseAndValidateBlocks(rawBlocks) : [];
 
     const [row] = await this.db
       .insert(landingPages)
@@ -146,7 +146,7 @@ export class PageBuilderService {
     return row;
   }
 
-  async updatePage(id: string, dto: UpdatePageDto, rawBlocks: unknown) {
+  async updatePage(id: string, dto: UpdatePageDto, rawBlocks: unknown[] | undefined) {
     await this.getPage(id);
 
     if (dto.slug !== undefined) {
@@ -163,7 +163,7 @@ export class PageBuilderService {
 
     if (dto.structuredData) validateStructuredData(dto.structuredData);
 
-    const blocks = rawBlocks !== undefined ? parseAndValidateBlocks(rawBlocks) : undefined;
+    const blocks = rawBlocks !== undefined && rawBlocks !== null ? parseAndValidateBlocks(rawBlocks) : undefined;
 
     const [row] = await this.db
       .update(landingPages)

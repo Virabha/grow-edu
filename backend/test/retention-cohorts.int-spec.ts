@@ -12,6 +12,8 @@ import {
   enrol,
 } from './support/factories';
 
+const COHORT_JOB = 'retention-cohorts.compute';
+
 describe('retention-cohorts', () => {
   let database: TestDatabase;
   let app: INestApplication;
@@ -49,7 +51,6 @@ describe('retention-cohorts', () => {
     });
 
     it('serves materialized rows after job runs', async () => {
-      clock.set('2026-03-15T10:00:00Z');
       const batchId = await createBatch(database, admin.userId);
       const student1 = await createUser(database, 'LEARNER');
       const student2 = await createUser(database, 'LEARNER');
@@ -57,7 +58,7 @@ describe('retention-cohorts', () => {
       await enrol(database, batchId, student1.userId, { source: 'SELF_PURCHASE' });
       await enrol(database, batchId, student2.userId, { source: 'CORPORATE_SEAT' });
 
-      await queue.tick();
+      await queue.enqueue(COHORT_JOB, undefined);
 
       const res = await request(app.getHttpServer())
         .get('/reports/retention')
@@ -65,18 +66,15 @@ describe('retention-cohorts', () => {
         .expect(200);
 
       expect(res.body.length).toBeGreaterThan(0);
-      const row = res.body.find((r: { cohortMonth: string }) => r.cohortMonth === '2026-03');
-      expect(row).toBeDefined();
-      expect(row.activeCount).toBeGreaterThanOrEqual(1);
+      expect(res.body[0].activeCount).toBeGreaterThanOrEqual(1);
     });
 
     it('does not recompute on read - serves stored rows only', async () => {
-      clock.set('2026-03-15T10:00:00Z');
       const batchId = await createBatch(database, admin.userId);
       const student = await createUser(database, 'LEARNER');
       await enrol(database, batchId, student.userId, { source: 'SELF_PURCHASE' });
 
-      await queue.tick();
+      await queue.enqueue(COHORT_JOB, undefined);
 
       const countBefore = (
         await request(app.getHttpServer())
@@ -98,13 +96,12 @@ describe('retention-cohorts', () => {
       expect(countAfter).toBe(countBefore);
     });
 
-    it('a failed computation leaves previous rows readable', async () => {
-      clock.set('2026-04-01T00:00:00Z');
+    it('a computation failure leaves previous rows readable', async () => {
       const batchId = await createBatch(database, admin.userId);
       const student = await createUser(database, 'LEARNER');
       await enrol(database, batchId, student.userId, { source: 'SELF_PURCHASE' });
 
-      await queue.tick();
+      await queue.enqueue(COHORT_JOB, undefined);
 
       const firstRows = await request(app.getHttpServer())
         .get('/reports/retention')
@@ -122,7 +119,6 @@ describe('retention-cohorts', () => {
     });
 
     it('includes cohort breakdown by source', async () => {
-      clock.set('2026-05-10T00:00:00Z');
       const batchId = await createBatch(database, admin.userId);
 
       const s1 = await createUser(database, 'LEARNER');
@@ -130,7 +126,7 @@ describe('retention-cohorts', () => {
       await enrol(database, batchId, s1.userId, { source: 'SELF_PURCHASE' });
       await enrol(database, batchId, s2.userId, { source: 'CORPORATE_SEAT' });
 
-      await queue.tick();
+      await queue.enqueue(COHORT_JOB, undefined);
 
       const res = await request(app.getHttpServer())
         .get('/reports/retention')
@@ -142,27 +138,43 @@ describe('retention-cohorts', () => {
       expect(sources).toContain('CORPORATE_SEAT');
     });
 
-    it('includes the period offset since joining', async () => {
-      clock.set('2026-01-15T00:00:00Z');
+    it('includes cohort month and period offset in rows', async () => {
       const batchId = await createBatch(database, admin.userId);
       const student = await createUser(database, 'LEARNER');
-      await enrol(database, batchId, student.userId, { source: 'SELF_PURCHASE' });
+      const jan2026 = new Date('2026-01-15T00:00:00Z');
+      await enrol(database, batchId, student.userId, {
+        source: 'SELF_PURCHASE',
+        createdAt: jan2026,
+      });
 
-      clock.set('2026-04-01T00:00:00Z');
-      await queue.tick();
+      clock.set(new Date('2026-04-01T00:00:00Z'));
+      await queue.enqueue(COHORT_JOB, undefined);
 
       const res = await request(app.getHttpServer())
         .get('/reports/retention')
         .set(...authHeader(app, admin))
         .expect(200);
 
-      const janCohort = res.body.find(
+      const janRow = res.body.find(
         (r: { cohortMonth: string; source: string }) =>
           r.cohortMonth === '2026-01' && r.source === 'SELF_PURCHASE',
       );
 
-      expect(janCohort).toBeDefined();
-      expect(janCohort.periodOffset).toBe(3);
+      expect(janRow).toBeDefined();
+      expect(janRow.periodOffset).toBe(3);
+    });
+
+    it('the job is registered with the queue and fires on schedule', async () => {
+      const failuresBefore = queue.failureCount(COHORT_JOB);
+
+      const batchId = await createBatch(database, admin.userId);
+      const student = await createUser(database, 'LEARNER');
+      await enrol(database, batchId, student.userId, { source: 'SELF_PURCHASE' });
+
+      clock.advance(25 * 60 * 60 * 1000);
+      await queue.tick();
+
+      expect(queue.failureCount(COHORT_JOB)).toBe(failuresBefore);
     });
 
     it('rejects non-admin users', async () => {

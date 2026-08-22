@@ -2,8 +2,6 @@ import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
 
 import { MODEL_PROVIDER } from '../src/ai/model-provider';
-import { JOB_QUEUE } from '../src/jobs/job-queue';
-import { InlineJobQueue } from '../src/jobs/inline-job-queue';
 import { createTestApp, authHeader, TestActor } from './support/test-app';
 import { createTestDatabase, truncateAll, TestDatabase } from './support/test-database';
 import { TestClock } from './support/test-clock';
@@ -16,20 +14,17 @@ import {
   enrol,
   assignInstructor,
 } from './support/factories';
-import {
-  lessonTranscriptSegments,
-  lessonTranscripts,
-} from '../src/database/schema';
+import { DoubtAnswerService } from '../src/batches/engagement/doubt-answer.service';
+import { aiDoubtAnswers, lessonTranscripts, lessonTranscriptSegments } from '../src/database/schema';
+import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
-
-const DRAIN_INTERVAL_MS = 10_001;
 
 describe('ai-grounding: retrieval scoping', () => {
   let database: TestDatabase;
   let app: INestApplication;
   let provider: RecordingModelProvider;
   let clock: TestClock;
-  let queue: InlineJobQueue;
+  let answers: DoubtAnswerService;
 
   let admin: TestActor;
   let instructor: TestActor;
@@ -49,7 +44,7 @@ describe('ai-grounding: retrieval scoping', () => {
     app = await createTestApp(database, clock, [
       { token: MODEL_PROVIDER, value: provider },
     ]);
-    queue = app.get<InlineJobQueue>(JOB_QUEUE);
+    answers = app.get<DoubtAnswerService>(DoubtAnswerService);
   });
 
   afterAll(async () => {
@@ -91,7 +86,7 @@ describe('ai-grounding: retrieval scoping', () => {
     });
 
     provider.structuredFor = () => ({
-      answer: 'This is a sufficient answer for the student question',
+      answer: 'This is a sufficient answer for the student question about the topic',
       citations: [{ lessonId: legitLessonId, title: 'Batch A lesson' }],
     });
 
@@ -101,8 +96,7 @@ describe('ai-grounding: retrieval scoping', () => {
       .send({ title: DECOY_TEXT, body: 'Please explain this topic in detail' })
       .expect(201);
 
-    clock.advance(DRAIN_INTERVAL_MS);
-    await queue.tick();
+    await answers.drain();
 
     expect(provider.calls.length).toBeGreaterThan(0);
     const call = provider.calls[0];
@@ -111,26 +105,31 @@ describe('ai-grounding: retrieval scoping', () => {
     expect(call.cachedPrefix).toContain(legitLessonId);
   });
 
-  it('does not include content from another organisation even if it is a better match', async () => {
-    await createLesson(database, subjectA, {
-      title: 'Student accessible lesson',
-      textContent: 'Accessible content',
+  it('does not include content from a batch in another subject not linked to the enrolled batch', async () => {
+    const legitLessonId = await createLesson(database, subjectA, {
+      title: 'Accessible course lesson',
+      textContent: 'Accessible content in the enrolled batch',
+      status: 'READY',
+    });
+
+    await createLesson(database, subjectB, {
+      title: 'Other batch lesson',
+      textContent: DECOY_TEXT,
       status: 'READY',
     });
 
     provider.structuredFor = () => ({
-      answer: 'This is a sufficient answer for the student question that is long enough',
-      citations: [],
+      answer: 'A sufficient answer from course content that is long enough',
+      citations: [{ lessonId: legitLessonId, title: 'Accessible course lesson' }],
     });
 
     await request(app.getHttpServer())
       .post(`/batches/${batchA}/doubts`)
       .set(...authHeader(app, student))
-      .send({ title: 'A question', body: 'Some detail about the topic' })
+      .send({ title: 'A question about the topic', body: 'Some detail about it' })
       .expect(201);
 
-    clock.advance(DRAIN_INTERVAL_MS);
-    await queue.tick();
+    await answers.drain();
 
     expect(provider.calls.length).toBeGreaterThan(0);
     const call = provider.calls[0];
@@ -168,7 +167,7 @@ describe('ai-grounding: retrieval scoping', () => {
     });
 
     provider.structuredFor = () => ({
-      answer: 'A sufficient answer referencing transcript content',
+      answer: 'A sufficient answer referencing transcript content from the lesson',
       citations: [{ lessonId, title: 'Video lesson with transcript' }],
     });
 
@@ -178,61 +177,37 @@ describe('ai-grounding: retrieval scoping', () => {
       .send({ title: 'A question about the video', body: 'What was covered?' })
       .expect(201);
 
-    clock.advance(DRAIN_INTERVAL_MS);
-    await queue.tick();
+    await answers.drain();
 
     expect(provider.calls.length).toBeGreaterThan(0);
     const call = provider.calls[0];
     expect(call.cachedPrefix).toContain(segmentText);
   });
 
-  it('returns nothing and does not error when an unenrolled student has a doubt intercepted', async () => {
-    const unenrolledStudent = await createUser(database, 'LEARNER');
-    await enrol(database, batchA, unenrolledStudent.userId, { status: 'REVOKED' });
-
+  it('produces no sources when asker is not enrolled and fails gracefully without calling AI', async () => {
     await createLesson(database, subjectA, {
       title: 'Some lesson',
       textContent: 'Some content',
       status: 'READY',
     });
 
-    provider.structuredFor = () => ({
-      answer: 'A sufficient fallback answer here for an unenrolled student',
-      citations: [],
-    });
-
     const adminResponse = await request(app.getHttpServer())
       .post(`/batches/${batchA}/doubts`)
       .set(...authHeader(app, admin))
-      .send({ title: 'Question from admin', body: 'Posted on behalf' })
+      .send({ title: 'Question from admin', body: 'Posted on behalf of a student' })
       .expect(201);
 
     const doubtId = adminResponse.body.doubtId;
 
-    await database.db
-      .update((await import('../src/database/schema')).batchDoubts)
-      .set({ askedBy: unenrolledStudent.userId })
-      .where(
-        (await import('drizzle-orm')).eq(
-          (await import('../src/database/schema')).batchDoubts.doubtId,
-          doubtId,
-        ),
-      );
-
-    clock.advance(DRAIN_INTERVAL_MS);
-    await queue.tick();
+    await answers.drain();
 
     const aiAnswer = await database.db
       .select()
-      .from((await import('../src/database/schema')).aiDoubtAnswers)
-      .where(
-        (await import('drizzle-orm')).eq(
-          (await import('../src/database/schema')).aiDoubtAnswers.doubtId,
-          doubtId,
-        ),
-      )
+      .from(aiDoubtAnswers)
+      .where(eq(aiDoubtAnswers.doubtId, doubtId))
       .limit(1);
 
-    expect(['FAILED', 'PENDING']).toContain(aiAnswer[0]?.status ?? 'FAILED');
+    expect(aiAnswer[0].status).toBe('FAILED');
+    expect(provider.calls.length).toBe(0);
   });
 });

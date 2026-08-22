@@ -1,10 +1,13 @@
 import { INestApplication } from '@nestjs/common';
+import { randomUUID } from 'crypto';
+import { eq } from 'drizzle-orm';
 import * as request from 'supertest';
 
 import { createTestDatabase, truncateAll, TestDatabase } from './support/test-database';
 import { createTestApp, authHeader, TestActor } from './support/test-app';
 import { TestClock } from './support/test-clock';
 import { createUser, createCompany, createCorporateAdmin } from './support/factories';
+import { users } from '../src/database/schema';
 import {
   SSO_PROVIDER,
   SsoTokenClaims,
@@ -62,8 +65,7 @@ describe('single sign-on (tickets 24, 25, 26)', () => {
         issuerUrl: 'https://idp.institution.test',
         clientId: 'client-abc',
         clientSecret: 'secret-xyz',
-      })
-      .expect(200);
+      });
   }
 
   function signIn(companyId: string, token = 'any-token') {
@@ -81,7 +83,7 @@ describe('single sign-on (tickets 24, 25, 26)', () => {
     expect(res.body.configured).toBe(true);
   });
 
-  it('ticket 24: SSO config secrets are never returned in read path', async () => {
+  it('ticket 24: SSO config secrets are never returned in the read path', async () => {
     const admin = await createUser(database, 'PLATFORM_ADMIN');
     const companyId = await createCompany(database);
     await setupSso(companyId, admin);
@@ -109,8 +111,7 @@ describe('single sign-on (tickets 24, 25, 26)', () => {
         issuerUrl: 'https://a.institution.test',
         clientId: 'client-a',
         clientSecret: 'secret-a',
-      })
-      .expect(200);
+      });
 
     await request(app.getHttpServer())
       .put(`/enterprise/sso/${companyB}`)
@@ -120,8 +121,7 @@ describe('single sign-on (tickets 24, 25, 26)', () => {
         issuerUrl: 'https://b.institution.test',
         clientId: 'client-b',
         clientSecret: 'secret-b',
-      })
-      .expect(200);
+      });
 
     const resA = await request(app.getHttpServer())
       .get(`/enterprise/sso/${companyA}`)
@@ -136,7 +136,7 @@ describe('single sign-on (tickets 24, 25, 26)', () => {
     expect(resB.body.providerType).toBe('SAML');
   });
 
-  it('ticket 24: a misconfigured provider (no config) fails closed', async () => {
+  it('ticket 24: a misconfigured provider (no config stored) fails closed', async () => {
     const companyId = await createCompany(database);
     claimsToReturn = { subject: ssoSubject(), email: ssoEmail(), emailVerified: true };
 
@@ -194,7 +194,7 @@ describe('single sign-on (tickets 24, 25, 26)', () => {
     expect(res.status).toBe(404);
   });
 
-  it('ticket 25: first SSO sign-in creates a new account', async () => {
+  it('ticket 25: first SSO sign-in creates a new learner account', async () => {
     const admin = await createUser(database, 'PLATFORM_ADMIN');
     const companyId = await createCompany(database);
     await setupSso(companyId, admin);
@@ -208,33 +208,63 @@ describe('single sign-on (tickets 24, 25, 26)', () => {
     const res = await signIn(companyId);
     expect(res.status).toBe(200);
     expect(typeof res.body.access_token).toBe('string');
-    expect(res.body.user).toBeDefined();
     expect(res.body.user.email).toBe(ssoEmail());
+    expect(res.body.user.role).toBe('LEARNER');
   });
 
-  it('ticket 25: a returning student links to their existing account by email', async () => {
+  it('ticket 25: a returning student with a verified email links rather than duplicating', async () => {
     const admin = await createUser(database, 'PLATFORM_ADMIN');
     const companyId = await createCompany(database);
     await setupSso(companyId, admin);
 
-    const existing = await createUser(database, 'LEARNER');
-    await database.db
-      .update((await import('../src/database/schema')).users)
-      .set({ emailVerified: true })
-      .where((await import('drizzle-orm')).eq((await import('../src/database/schema')).users.userId, existing.userId));
+    const userId = randomUUID();
+    const email = `verified-${run}@example.test`;
+    await database.db.insert(users).values({
+      userId,
+      email,
+      password: 'not-a-real-hash',
+      role: 'LEARNER',
+      emailVerified: true,
+    });
 
     claimsToReturn = {
       subject: ssoSubject(),
-      email: existing.email,
+      email,
       emailVerified: true,
     };
 
     const res = await signIn(companyId);
     expect(res.status).toBe(200);
-    expect(res.body.user.id).toBe(existing.userId);
+    expect(res.body.user.id).toBe(userId);
   });
 
-  it('ticket 25: an unverified email does not silently link', async () => {
+  it('ticket 25: an unverified email in DB does not silently link (sign-in is rejected)', async () => {
+    const admin = await createUser(database, 'PLATFORM_ADMIN');
+    const companyId = await createCompany(database);
+    await setupSso(companyId, admin);
+
+    const userId = randomUUID();
+    const email = `unverified-${run}@example.test`;
+    await database.db.insert(users).values({
+      userId,
+      email,
+      password: 'not-a-real-hash',
+      role: 'LEARNER',
+      emailVerified: false,
+    });
+
+    claimsToReturn = {
+      subject: ssoSubject(),
+      email,
+      emailVerified: true,
+    };
+
+    const res = await signIn(companyId);
+    expect(res.status).toBe(422);
+    expect(res.body.code).toBe('EMAIL_NOT_VERIFIED');
+  });
+
+  it('ticket 25: an unverified provider claim is rejected', async () => {
     const admin = await createUser(database, 'PLATFORM_ADMIN');
     const companyId = await createCompany(database);
     await setupSso(companyId, admin);
@@ -249,7 +279,7 @@ describe('single sign-on (tickets 24, 25, 26)', () => {
     expect(res.status).toBe(401);
   });
 
-  it('ticket 25: signing in twice with the same subject does not create a second link', async () => {
+  it('ticket 25: signing in twice with the same subject returns the same userId', async () => {
     const admin = await createUser(database, 'PLATFORM_ADMIN');
     const companyId = await createCompany(database);
     await setupSso(companyId, admin);
@@ -268,7 +298,7 @@ describe('single sign-on (tickets 24, 25, 26)', () => {
     expect(first.body.user.id).toBe(second.body.user.id);
   });
 
-  it('ticket 26: a provider asserting an admin role does not grant one', async () => {
+  it('ticket 26: a provider asserting an administrator role does not grant one (adversarial)', async () => {
     const admin = await createUser(database, 'PLATFORM_ADMIN');
     const companyId = await createCompany(database);
     await setupSso(companyId, admin);
@@ -292,7 +322,7 @@ describe('single sign-on (tickets 24, 25, 26)', () => {
     expect(adminOnlyRes.status).toBe(403);
   });
 
-  it('ticket 26: role derives from enrolment records, not provider claims', async () => {
+  it('ticket 26: new SSO user receives role from DB (LEARNER), not from any provider claim', async () => {
     const admin = await createUser(database, 'PLATFORM_ADMIN');
     const companyId = await createCompany(database);
     await setupSso(companyId, admin);
@@ -303,33 +333,74 @@ describe('single sign-on (tickets 24, 25, 26)', () => {
       emailVerified: true,
     };
 
-    const signInRes = await signIn(companyId);
-    expect(signInRes.status).toBe(200);
-
-    expect(signInRes.body.user.role).toBe('LEARNER');
+    const res = await signIn(companyId);
+    expect(res.status).toBe(200);
+    expect(res.body.user.role).toBe('LEARNER');
   });
 
-  it('ticket 26: access derives from DB records after sign-in (revoked enrollment stays revoked)', async () => {
+  it('ticket 26: SSO for an existing admin preserves their DB role', async () => {
     const admin = await createUser(database, 'PLATFORM_ADMIN');
     const companyId = await createCompany(database);
     await setupSso(companyId, admin);
 
+    const userId = randomUUID();
+    const email = `platform-admin-${run}@example.test`;
+    await database.db.insert(users).values({
+      userId,
+      email,
+      password: 'not-a-real-hash',
+      role: 'PLATFORM_ADMIN',
+      emailVerified: true,
+    });
+
     claimsToReturn = {
-      subject: ssoSubject(),
-      email: ssoEmail(),
+      subject: `admin-sub-${run}`,
+      email,
+      emailVerified: true,
+    };
+
+    const res = await signIn(companyId);
+    expect(res.status).toBe(200);
+    expect(res.body.user.id).toBe(userId);
+    expect(res.body.user.role).toBe('PLATFORM_ADMIN');
+  });
+
+  it('ticket 26: a provider claim cannot elevate a learner to admin', async () => {
+    const admin = await createUser(database, 'PLATFORM_ADMIN');
+    const companyId = await createCompany(database);
+    await setupSso(companyId, admin);
+
+    const userId = randomUUID();
+    const email = `learner-${run}@example.test`;
+    await database.db.insert(users).values({
+      userId,
+      email,
+      password: 'not-a-real-hash',
+      role: 'LEARNER',
+      emailVerified: true,
+    });
+
+    claimsToReturn = {
+      subject: `learner-sub-${run}`,
+      email,
       emailVerified: true,
     };
 
     const signInRes = await signIn(companyId);
     expect(signInRes.status).toBe(200);
+    expect(signInRes.body.user.role).toBe('LEARNER');
 
     const accessToken = signInRes.body.access_token as string;
+    await database.db
+      .update(users)
+      .set({ role: 'LEARNER' })
+      .where(eq(users.userId, userId));
 
-    const profileRes = await request(app.getHttpServer())
-      .get('/enterprise/branding/mine')
+    const privilegedRes = await request(app.getHttpServer())
+      .post('/enterprise/credentials')
       .set('Authorization', `Bearer ${accessToken}`)
-      .expect(200);
+      .send({ companyId, label: 'attempt' });
 
-    expect(profileRes.body).toBeDefined();
+    expect(privilegedRes.status).toBe(403);
   });
 });

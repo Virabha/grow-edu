@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
   Param,
   Patch,
   Post,
@@ -58,11 +59,8 @@ export class PageBuilderController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new page (admin)' })
   @ApiResponse({ status: 409, description: 'Slug already exists' })
-  createPage(
-    @Body() dto: CreatePageDto,
-    @Body('blocks') blocks: unknown,
-  ) {
-    return this.service.createPage(dto, blocks);
+  createPage(@Body() dto: CreatePageDto) {
+    return this.service.createPage(dto, (dto.blocks as unknown[] | undefined) ?? []);
   }
 
   @Get(':pageId')
@@ -84,12 +82,12 @@ export class PageBuilderController {
   updatePage(
     @Param('pageId') pageId: string,
     @Body() dto: UpdatePageDto,
-    @Body('blocks') blocks: unknown,
   ) {
-    return this.service.updatePage(pageId, dto, blocks);
+    return this.service.updatePage(pageId, dto, dto.blocks);
   }
 
   @Post(':pageId/publish')
+  @HttpCode(200)
   @UseGuards(RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN)
   @ApiBearerAuth()
@@ -99,6 +97,7 @@ export class PageBuilderController {
   }
 
   @Post(':pageId/unpublish')
+  @HttpCode(200)
   @UseGuards(RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN)
   @ApiBearerAuth()

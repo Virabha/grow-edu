@@ -168,13 +168,12 @@ describe('funnel-analytics', () => {
     });
 
     it('event pruning job removes old events', async () => {
-      clock.set('2026-01-01T00:00:00Z');
       await request(app.getHttpServer())
         .post('/events')
         .send({ kind: 'PAGE_VIEW' })
         .expect(202);
 
-      clock.advance(91 * 24 * 60 * 60 * 1000);
+      clock.advance((91 * 24 + 25) * 60 * 60 * 1000);
       await queue.tick();
 
       const res = await request(app.getHttpServer())

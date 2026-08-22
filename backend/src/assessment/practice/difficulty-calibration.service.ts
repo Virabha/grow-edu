@@ -55,6 +55,12 @@ export class DifficultyCalibrationService implements OnModuleInit {
 
     const minOrdinal = levels[0].ordinal;
     const maxOrdinal = levels[levels.length - 1].ordinal;
+    const configuredOrdinals = levels.map((level) => level.ordinal);
+
+    const snapToConfigured = (value: number): number =>
+      configuredOrdinals.reduce((nearest, ordinal) =>
+        Math.abs(ordinal - value) < Math.abs(nearest - value) ? ordinal : nearest,
+      );
 
     const stats = await this.db
       .select({
@@ -82,8 +88,9 @@ export class DifficultyCalibrationService implements OnModuleInit {
       }
 
       const accuracy = stat.correct / stat.total;
-      const observed =
-        minOrdinal + (1 - accuracy) * (maxOrdinal - minOrdinal);
+      const observed = snapToConfigured(
+        minOrdinal + (1 - accuracy) * (maxOrdinal - minOrdinal),
+      );
 
       await this.db
         .update(assessmentQuestions)

@@ -12,6 +12,7 @@ import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { DATABASE_CONNECTION } from "../../database/database.module";
 import * as schema from "../../database/schema";
 import {
+  aiDoubtAnswers,
   batchAnnouncements,
   batchDoubtReplies,
   batchDoubts,
@@ -24,7 +25,11 @@ import {
   users,
 } from "../../database/schema";
 import { NotificationsService } from "../../notifications/notifications.service";
-import { BatchAccessService, SignedInViewer, Viewer } from "../access/batch-access.service";
+import {
+  BatchAccessService,
+  SignedInViewer,
+  Viewer,
+} from "../access/batch-access.service";
 import { BatchMediaService } from "../batch-media.service";
 import { CLOCK, Clock } from "../../common/clock";
 import { JOB_QUEUE, JobQueue } from "../../jobs/job-queue";
@@ -229,7 +234,11 @@ export class BatchEngagementService implements OnModuleInit {
 
     if (!dto.publishAt || new Date(dto.publishAt) <= this.clock.now()) {
       const label =
-        dto.type === "DPP" ? "DPP" : dto.type === "NOTES" ? "notes" : "resource";
+        dto.type === "DPP"
+          ? "DPP"
+          : dto.type === "NOTES"
+            ? "notes"
+            : "resource";
       await this.notifications.fanout(
         await this.access.enrolledUserIds(batchId),
         {
@@ -298,12 +307,15 @@ export class BatchEngagementService implements OnModuleInit {
     resource: typeof batchResources.$inferSelect,
     createdBy: string,
   ): Promise<typeof batchResources.$inferSelect> {
-    const subjectId = resource.subjectId ?? (await this.firstSubjectOf(resource.batchId));
+    const subjectId =
+      resource.subjectId ?? (await this.firstSubjectOf(resource.batchId));
     if (subjectId === null) return resource;
 
     const now = this.clock.now();
     const [placed] = await this.db
-      .select({ next: sql<number>`coalesce(max(${subjectLessons.order}), 0) + 1` })
+      .select({
+        next: sql<number>`coalesce(max(${subjectLessons.order}), 0) + 1`,
+      })
       .from(subjectLessons)
       .where(eq(subjectLessons.subjectId, subjectId));
     const order = placed?.next ?? 1;
@@ -442,7 +454,10 @@ export class BatchEngagementService implements OnModuleInit {
       .where(and(...conditions))
       .orderBy(desc(batchDoubts.createdAt));
 
-    return rows.map((r) => ({ ...r.doubt, author: this.presentAuthor(r.author) }));
+    return rows.map((r) => ({
+      ...r.doubt,
+      author: this.presentAuthor(r.author),
+    }));
   }
 
   async getDoubt(batchId: string, doubtId: string, viewer: Viewer) {
@@ -478,10 +493,23 @@ export class BatchEngagementService implements OnModuleInit {
       row.doubt.anchorId,
     );
 
+    const [aiAnswerRow] = await this.db
+      .select({
+        answerText: aiDoubtAnswers.answerText,
+        source: aiDoubtAnswers.source,
+        status: aiDoubtAnswers.status,
+        citations: aiDoubtAnswers.citations,
+        markedUnhelpfulAt: aiDoubtAnswers.markedUnhelpfulAt,
+      })
+      .from(aiDoubtAnswers)
+      .where(eq(aiDoubtAnswers.doubtId, doubtId))
+      .limit(1);
+
     return {
       ...row.doubt,
       author: this.presentAuthor(row.author),
       anchorContext,
+      aiAnswer: aiAnswerRow ?? null,
       replies: replies.map((r) => ({
         ...r.reply,
         author: this.presentAuthor(r.author),
@@ -505,7 +533,9 @@ export class BatchEngagementService implements OnModuleInit {
       await this.requireLessonInBatch(batchId, dto.anchorId);
     } else if (anchorType === "QUESTION") {
       if (!dto.anchorId) {
-        throw new BadRequestException("anchorId is required for QUESTION anchor");
+        throw new BadRequestException(
+          "anchorId is required for QUESTION anchor",
+        );
       }
       await this.requireQuestionInBatch(batchId, dto.anchorId);
     }

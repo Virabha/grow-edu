@@ -459,7 +459,7 @@ describe('single sign-on (tickets 24, 25, 26)', () => {
       await request(app.getHttpServer())
         .get(`/batches/${batchId}/content`)
         .set('Authorization', `Bearer ${res.body.access_token as string}`)
-        .expect(403);
+        .expect(404);
     });
 
     it('keeps a revoked enrolment revoked across a fresh sign-on', async () => {
@@ -470,7 +470,7 @@ describe('single sign-on (tickets 24, 25, 26)', () => {
       claimsToReturn = { subject: ssoSubject(), email, emailVerified: true };
       const first = await signIn(companyId);
       expect(first.status).toBe(200);
-      const userId = first.body.user.userId as string;
+      const userId = first.body.user.id as string;
 
       await enrol(database, batchId, userId, { status: 'REVOKED' as never });
 
@@ -482,12 +482,12 @@ describe('single sign-on (tickets 24, 25, 26)', () => {
       };
       const second = await signIn(companyId);
       expect(second.status).toBe(200);
-      expect(second.body.user.userId).toBe(userId);
+      expect(second.body.user.id).toBe(userId);
 
       await request(app.getHttpServer())
         .get(`/batches/${batchId}/content`)
         .set('Authorization', `Bearer ${second.body.access_token as string}`)
-        .expect(403);
+        .expect(404);
     });
 
     it('grants access that comes from a real enrolment, not from a claim', async () => {
@@ -497,7 +497,7 @@ describe('single sign-on (tickets 24, 25, 26)', () => {
 
       claimsToReturn = { subject: ssoSubject(), email, emailVerified: true };
       const first = await signIn(companyId);
-      const userId = first.body.user.userId as string;
+      const userId = first.body.user.id as string;
 
       await enrol(database, batchId, userId);
 
@@ -514,7 +514,7 @@ describe('single sign-on (tickets 24, 25, 26)', () => {
 
       claimsToReturn = { subject: ssoSubject(), email, emailVerified: true };
       const first = await signIn(companyId);
-      const userId = first.body.user.userId as string;
+      const userId = first.body.user.id as string;
 
       await database.db
         .update(users)

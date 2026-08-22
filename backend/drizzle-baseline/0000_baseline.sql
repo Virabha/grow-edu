@@ -2835,6 +2835,8 @@ CREATE TABLE IF NOT EXISTS "ai_doubt_answers" (
 	"batch_id" text NOT NULL,
 	"asked_by" text NOT NULL,
 	"subject_id" text,
+	"topic_id" text,
+	"source" text DEFAULT 'AI' NOT NULL,
 	"status" "ai_doubt_answer_status" DEFAULT 'PENDING' NOT NULL,
 	"answer_text" text,
 	"citations" jsonb DEFAULT '[]'::jsonb NOT NULL,
@@ -3453,3 +3455,9 @@ ALTER TABLE "study_time_daily_totals"
 ALTER TABLE "study_time_daily_totals"
   ADD CONSTRAINT "study_time_daily_totals_bucket_unique"
   UNIQUE NULLS NOT DISTINCT ("user_id", "day", "batch_id", "subject_id");
+--> statement-breakpoint
+DROP INDEX IF EXISTS "assessment_regrade_requests_open_unique";
+--> statement-breakpoint
+CREATE UNIQUE INDEX "assessment_regrade_requests_open_unique"
+  ON "assessment_regrade_requests" ("answer_id")
+  WHERE "status" = 'OPEN';

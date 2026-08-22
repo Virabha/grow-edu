@@ -27,6 +27,8 @@ export const aiDoubtAnswers = pgTable(
     batchId: text("batch_id").notNull(),
     askedBy: text("asked_by").notNull(),
     subjectId: text("subject_id"),
+    topicId: text("topic_id"),
+    source: text("source").notNull().default("AI"),
     status: aiDoubtAnswerStatusEnum("status").notNull().default("PENDING"),
     answerText: text("answer_text"),
     citations: jsonb("citations")

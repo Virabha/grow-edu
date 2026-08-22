@@ -75,10 +75,19 @@ export class AiDoubtReportController {
 
   @Roles(UserRole.PLATFORM_ADMIN)
   @ApiOperation({
-    summary: "Answers students marked unhelpful, grouped by batch and subject — the primary AI quality signal",
+    summary: "Answers students marked unhelpful, grouped by batch, subject and topic — the primary AI quality signal",
   })
   @Get("doubts/unhelpful")
   unhelpful() {
     return this.answers.unhelpfulReport();
+  }
+
+  @Roles(UserRole.INSTRUCTOR)
+  @ApiOperation({
+    summary: "Unhelpful answers scoped to the instructor's own batches",
+  })
+  @Get("doubts/unhelpful/mine")
+  unhelpfulMine(@CurrentUser() user: AuthedUser) {
+    return this.answers.instructorUnhelpfulReport(user.userId);
   }
 }

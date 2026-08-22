@@ -11,6 +11,7 @@ import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 import { AuditLogService } from "../../audit/audit-log.service";
 import { CLOCK, Clock } from "../../common/clock";
+import { isUniqueViolation } from "../../common/unique-violation";
 import { DATABASE_CONNECTION } from "../../database/database.module";
 import * as schema from "../../database/schema";
 import {
@@ -76,20 +77,31 @@ export class RegradeService {
     }
 
     const now = this.clock.now();
-    const [request] = await this.db
-      .insert(assessmentRegradeRequests)
-      .values({
-        answerId: dto.answerId,
-        attemptId: answer.attemptId,
-        studentId,
-        reason: dto.reason,
-        status: "OPEN",
-        originalMarks: answer.awardedMarks,
-        createdAt: now,
-      })
-      .returning();
+    try {
+      const [request] = await this.db
+        .insert(assessmentRegradeRequests)
+        .values({
+          answerId: dto.answerId,
+          attemptId: answer.attemptId,
+          studentId,
+          reason: dto.reason,
+          status: "OPEN",
+          originalMarks: answer.awardedMarks,
+          createdAt: now,
+        })
+        .returning();
 
-    return request;
+      return request;
+    } catch (err) {
+      if (
+        isUniqueViolation(err, "assessment_regrade_requests_open_unique")
+      ) {
+        throw new ConflictException(
+          "An open regrade request already exists for this answer",
+        );
+      }
+      throw err;
+    }
   }
 
   async getQueue(instructorId: string, role = "INSTRUCTOR") {
@@ -191,7 +203,7 @@ export class RegradeService {
     const outcome = marksChanged ? "CHANGED" : "UPHELD";
 
     await this.db.transaction(async (tx) => {
-      await tx
+      const claimed = await tx
         .update(assessmentRegradeRequests)
         .set({
           status: outcome,
@@ -200,7 +212,19 @@ export class RegradeService {
           resolvedBy: instructorId,
           resolvedAt: now,
         })
-        .where(eq(assessmentRegradeRequests.requestId, requestId));
+        .where(
+          and(
+            eq(assessmentRegradeRequests.requestId, requestId),
+            eq(assessmentRegradeRequests.status, "OPEN"),
+          ),
+        )
+        .returning({ requestId: assessmentRegradeRequests.requestId });
+
+      if (claimed.length === 0) {
+        throw new ConflictException(
+          "This regrade request is already resolved",
+        );
+      }
 
       if (marksChanged) {
         await tx

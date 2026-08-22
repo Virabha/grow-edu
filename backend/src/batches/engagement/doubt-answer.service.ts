@@ -7,7 +7,7 @@ import {
   NotFoundException,
   OnModuleInit,
 } from "@nestjs/common";
-import { and, asc, eq, isNotNull, isNull, inArray } from "drizzle-orm";
+import { and, asc, eq, isNotNull, isNull, inArray, or } from "drizzle-orm";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 import { AiService } from "../../ai/ai.service";
@@ -337,46 +337,85 @@ export class DoubtAnswerService implements OnModuleInit {
     Array<{
       batchId: string;
       subjectId: string | null;
+      topicId: string | null;
       doubtId: string;
       question: string;
       questionTitle: string;
       aiAnswer: string | null;
-      markedUnhelpfulAt: Date;
+      markedUnhelpfulAt: Date | null;
+      category: "UNHELPFUL" | "FAILED";
     }>
   > {
-    const conditions = [isNotNull(aiDoubtAnswers.markedUnhelpfulAt)];
-    if (instructorBatchIds && instructorBatchIds.length > 0) {
-      conditions.push(inArray(aiDoubtAnswers.batchId, instructorBatchIds));
-    }
+    const scopeCondition =
+      instructorBatchIds && instructorBatchIds.length > 0
+        ? inArray(aiDoubtAnswers.batchId, instructorBatchIds)
+        : undefined;
+
+    const signalCondition = or(
+      isNotNull(aiDoubtAnswers.markedUnhelpfulAt),
+      eq(aiDoubtAnswers.status, "FAILED"),
+    );
+
+    const where = scopeCondition
+      ? and(signalCondition, scopeCondition)
+      : signalCondition;
 
     const rows = await this.db
       .select({
         batchId: aiDoubtAnswers.batchId,
         subjectId: aiDoubtAnswers.subjectId,
+        topicId: aiDoubtAnswers.topicId,
         doubtId: aiDoubtAnswers.doubtId,
         question: batchDoubts.body,
         questionTitle: batchDoubts.title,
         aiAnswer: aiDoubtAnswers.answerText,
         markedUnhelpfulAt: aiDoubtAnswers.markedUnhelpfulAt,
+        status: aiDoubtAnswers.status,
       })
       .from(aiDoubtAnswers)
       .innerJoin(batchDoubts, eq(batchDoubts.doubtId, aiDoubtAnswers.doubtId))
-      .where(and(...conditions))
+      .where(where)
       .orderBy(
         asc(aiDoubtAnswers.batchId),
         asc(aiDoubtAnswers.subjectId),
+        asc(aiDoubtAnswers.topicId),
         asc(aiDoubtAnswers.markedUnhelpfulAt),
       );
 
     return rows.map((r) => ({
       batchId: r.batchId,
       subjectId: r.subjectId,
+      topicId: r.topicId,
       doubtId: r.doubtId,
       question: r.question,
       questionTitle: r.questionTitle,
       aiAnswer: r.aiAnswer,
-      markedUnhelpfulAt: r.markedUnhelpfulAt as Date,
+      markedUnhelpfulAt: r.markedUnhelpfulAt,
+      category: r.markedUnhelpfulAt !== null ? "UNHELPFUL" : "FAILED",
     }));
+  }
+
+  async instructorUnhelpfulReport(instructorId: string): Promise<
+    Array<{
+      batchId: string;
+      subjectId: string | null;
+      topicId: string | null;
+      doubtId: string;
+      question: string;
+      questionTitle: string;
+      aiAnswer: string | null;
+      markedUnhelpfulAt: Date | null;
+      category: "UNHELPFUL" | "FAILED";
+    }>
+  > {
+    const instructorBatches = await this.db
+      .select({ batchId: batchInstructors.batchId })
+      .from(batchInstructors)
+      .where(eq(batchInstructors.instructorId, instructorId));
+
+    const batchIds = instructorBatches.map((r) => r.batchId);
+    if (batchIds.length === 0) return [];
+    return this.unhelpfulReport(batchIds);
   }
 
   async drain(): Promise<void> {
@@ -592,6 +631,13 @@ export class DoubtAnswerService implements OnModuleInit {
       .where(eq(aiDoubtAnswers.answerId, answer.answerId));
 
     await this.notifyInstructor(answer.batchId, doubt.title);
+    await this.notifications.create({
+      userId: answer.askedBy,
+      type: "BATCH_DOUBT_REPLY",
+      title: "Your doubt could not be answered automatically",
+      body: "An instructor has been notified and will help you soon",
+      batchId: answer.batchId,
+    });
   }
 
   private async rejectToHuman(
@@ -605,6 +651,13 @@ export class DoubtAnswerService implements OnModuleInit {
       .where(eq(aiDoubtAnswers.answerId, answer.answerId));
 
     await this.notifyInstructor(answer.batchId, doubt.title);
+    await this.notifications.create({
+      userId: answer.askedBy,
+      type: "BATCH_DOUBT_REPLY",
+      title: "Your doubt could not be answered automatically",
+      body: "An instructor has been notified and will help you soon",
+      batchId: answer.batchId,
+    });
   }
 
   private async markFailed(answerId: string): Promise<void> {

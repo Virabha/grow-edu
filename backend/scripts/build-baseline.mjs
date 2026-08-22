@@ -66,6 +66,14 @@ ALTER TABLE "study_time_daily_totals"
   UNIQUE NULLS NOT DISTINCT ("user_id", "day", "batch_id", "subject_id");
 `;
 
+const REGRADE_ONE_OPEN_PER_ANSWER = `--> statement-breakpoint
+DROP INDEX IF EXISTS "assessment_regrade_requests_open_unique";
+--> statement-breakpoint
+CREATE UNIQUE INDEX "assessment_regrade_requests_open_unique"
+  ON "assessment_regrade_requests" ("answer_id")
+  WHERE "status" = 'OPEN';
+`;
+
 rmSync(DIR, { recursive: true, force: true });
 
 execFileSync(
@@ -89,5 +97,6 @@ appendFileSync(join(DIR, TARGET), APPEND_ONLY_AUDIT_LOG);
 appendFileSync(join(DIR, TARGET), IMMUTABLE_INVOICES);
 appendFileSync(join(DIR, TARGET), SEARCH_DOCUMENT_FULL_TEXT);
 appendFileSync(join(DIR, TARGET), STUDY_TIME_BUCKET_NULLS_NOT_DISTINCT);
+appendFileSync(join(DIR, TARGET), REGRADE_ONE_OPEN_PER_ANSWER);
 
 console.log(`Baseline written to ${join(DIR, TARGET)}`);

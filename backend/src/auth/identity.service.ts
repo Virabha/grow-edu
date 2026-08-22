@@ -8,6 +8,7 @@ import * as bcrypt from 'bcrypt';
 import { and, count, eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { CLOCK, Clock } from '../common/clock';
+import { isUniqueViolation } from '../common/unique-violation';
 import { DATABASE_CONNECTION } from '../database/database.module';
 import * as schema from '../database/schema';
 import { userIdentities, users } from '../database/schema';
@@ -152,13 +153,4 @@ export class IdentityService {
         ),
       );
   }
-}
-
-function isUniqueViolation(err: unknown): boolean {
-  return (
-    typeof err === 'object' &&
-    err !== null &&
-    'code' in err &&
-    (err as Record<string, unknown>)['code'] === '23505'
-  );
 }

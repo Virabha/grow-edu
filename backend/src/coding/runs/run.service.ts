@@ -125,10 +125,13 @@ export class RunService implements OnModuleInit {
 
   async execute(run: RunRow): Promise<void> {
     const now = this.clock.now();
-    await this.db
+    const claimed = await this.db
       .update(codingRuns)
       .set({ status: "RUNNING" })
-      .where(eq(codingRuns.runId, run.runId));
+      .where(and(eq(codingRuns.runId, run.runId), eq(codingRuns.status, "PENDING")))
+      .returning({ runId: codingRuns.runId });
+
+    if (claimed.length === 0) return;
 
     try {
       const visibility =

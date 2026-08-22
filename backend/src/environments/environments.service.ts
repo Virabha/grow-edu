@@ -12,6 +12,7 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { and, eq, isNull, isNotNull, lt } from 'drizzle-orm';
 import { DATABASE_CONNECTION } from '../database/database.module';
 import { CLOCK, Clock } from '../common/clock';
+import { isUniqueViolation } from '../common/unique-violation';
 import { JOB_QUEUE, JobQueue, registerAndRepeat } from '../jobs/job-queue';
 import { SettingsService } from '../settings/settings.service';
 import { ENVIRONMENTS_SETTINGS_GROUP } from '../settings/settings.definitions';
@@ -96,22 +97,34 @@ export class EnvironmentsService implements OnModuleInit {
     }
 
     const now = this.clock.now();
-    const [inserted] = await this.db
-      .insert(devEnvironments)
-      .values({
-        userId,
-        pathId: stage.pathId,
-        stageId,
-        projectId: stage.projectId ?? '',
-        cpuLimit: envSettings.cpuLimit,
-        memoryLimitMb: envSettings.memoryLimitMb,
-        egressPolicy: envSettings.egressPolicy,
-        status: 'PROVISIONING',
-        lastActiveAt: now,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .returning();
+    let inserted: DevEnv;
+    try {
+      const rows = await this.db
+        .insert(devEnvironments)
+        .values({
+          userId,
+          pathId: stage.pathId,
+          stageId,
+          projectId: stage.projectId ?? '',
+          cpuLimit: envSettings.cpuLimit,
+          memoryLimitMb: envSettings.memoryLimitMb,
+          egressPolicy: envSettings.egressPolicy,
+          status: 'PROVISIONING',
+          lastActiveAt: now,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .returning();
+      inserted = rows[0];
+    } catch (err) {
+      if (isUniqueViolation(err, 'dev_environments_user_stage_unique')) {
+        const raced = await this.findEnvironment(userId, stageId);
+        if (raced) {
+          return this.handleExistingEnvironment(raced, userId, stage);
+        }
+      }
+      throw err;
+    }
 
     try {
       const provisioned = await this.provider.provision({

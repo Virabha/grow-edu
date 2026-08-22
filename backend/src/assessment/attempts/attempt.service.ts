@@ -10,6 +10,7 @@ import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 import { CLOCK, Clock } from "../../common/clock";
+import { isUniqueViolation } from "../../common/unique-violation";
 import { DATABASE_CONNECTION } from "../../database/database.module";
 import * as schema from "../../database/schema";
 import {
@@ -129,44 +130,52 @@ export class AttemptService {
       0,
     );
 
-    const attemptId = await this.db.transaction(async (tx) => {
-      const [attempt] = await tx
-        .insert(assessmentAttempts)
-        .values({
-          testId,
-          userId,
-          attemptNo: used + 1,
-          status: "IN_PROGRESS",
-          startedAt: now,
-          expiresAt: new Date(now.getTime() + test.durationMinutes * 60_000),
-          maxScore: maxScore.toFixed(2),
-          createdAt: now,
-          updatedAt: now,
-        })
-        .returning();
+    let attemptId: string;
+    try {
+      attemptId = await this.db.transaction(async (tx) => {
+        const [attempt] = await tx
+          .insert(assessmentAttempts)
+          .values({
+            testId,
+            userId,
+            attemptNo: used + 1,
+            status: "IN_PROGRESS",
+            startedAt: now,
+            expiresAt: new Date(now.getTime() + test.durationMinutes * 60_000),
+            maxScore: maxScore.toFixed(2),
+            createdAt: now,
+            updatedAt: now,
+          })
+          .returning();
 
-      await tx.insert(assessmentAttemptAnswers).values(
-        placements.map((placement) => ({
-          attemptId: attempt.attemptId,
-          placementId: placement.placementId,
-          questionId: placement.questionId,
-          questionVersion:
-            questions.get(placement.questionId)?.currentVersion ?? 1,
-          response: null,
-          elapsedSeconds: 0,
-          isSkipped: true,
-          status: HUMAN_GRADED.includes(
-            questions.get(placement.questionId)?.type ?? "",
-          )
-            ? ("PENDING_GRADING" as const)
-            : ("AUTO_SCORED" as const),
-          createdAt: now,
-          updatedAt: now,
-        })),
-      );
+        await tx.insert(assessmentAttemptAnswers).values(
+          placements.map((placement) => ({
+            attemptId: attempt.attemptId,
+            placementId: placement.placementId,
+            questionId: placement.questionId,
+            questionVersion:
+              questions.get(placement.questionId)?.currentVersion ?? 1,
+            response: null,
+            elapsedSeconds: 0,
+            isSkipped: true,
+            status: HUMAN_GRADED.includes(
+              questions.get(placement.questionId)?.type ?? "",
+            )
+              ? ("PENDING_GRADING" as const)
+              : ("AUTO_SCORED" as const),
+            createdAt: now,
+            updatedAt: now,
+          })),
+        );
 
-      return attempt.attemptId;
-    });
+        return attempt.attemptId;
+      });
+    } catch (err) {
+      if (isUniqueViolation(err, "assessment_attempts_unique")) {
+        throw new ConflictException("No attempts remaining on this test");
+      }
+      throw err;
+    }
 
     return this.view(attemptId, userId);
   }

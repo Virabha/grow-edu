@@ -18,6 +18,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 
+import QRCode from "react-qr-code";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -433,11 +435,23 @@ export default function LoginPage() {
                   Secure your account.
                 </h1>
                 <p className="mt-3 text-sm text-muted-foreground">
-                  Staff accounts require a second factor. Add the key below to
-                  your authenticator app, then enter the 6-digit code it shows.
+                  Staff accounts require a second factor. Scan the code below
+                  with your authenticator app, or enter the key by hand, then
+                  type the 6-digit code it shows.
                 </p>
 
                 <div className="mt-6 space-y-4">
+                  <div>
+                    <p className={labelClass}>Scan with your authenticator app</p>
+                    <div className="flex justify-center rounded-lg border border-input bg-white p-4">
+                      <QRCode
+                        value={loginStep.setup.otpauthUri}
+                        size={192}
+                        aria-label="QR code for authenticator app setup"
+                      />
+                    </div>
+                  </div>
+
                   <div>
                     <p className={labelClass}>Authenticator URI</p>
                     <div className="flex items-center gap-2 rounded-lg border border-input bg-muted px-3 py-2">

@@ -8,6 +8,7 @@ import {
   lessonProgress,
   reviewLogs,
   studentBadges,
+  studyTimeDailyTotals,
 } from "../database/schema";
 import { JOB_QUEUE, JobQueue, registerAndRepeat } from "../jobs/job-queue";
 import { NotificationsService } from "../notifications/notifications.service";
@@ -143,14 +144,21 @@ export class BadgeService implements OnModuleInit {
   }
 
   private async evaluateAll(): Promise<void> {
-    const rows = await this.db
-      .selectDistinct({ userId: lessonProgress.userId })
-      .from(lessonProgress);
-    for (const row of rows) {
+    const [fromLessons, fromReviews, fromStudyTime] = await Promise.all([
+      this.db.selectDistinct({ userId: lessonProgress.userId }).from(lessonProgress),
+      this.db.selectDistinct({ userId: reviewLogs.userId }).from(reviewLogs),
+      this.db.selectDistinct({ userId: studyTimeDailyTotals.userId }).from(studyTimeDailyTotals),
+    ]);
+    const allUserIds = new Set([
+      ...fromLessons.map((r) => r.userId),
+      ...fromReviews.map((r) => r.userId),
+      ...fromStudyTime.map((r) => r.userId),
+    ]);
+    for (const userId of allUserIds) {
       try {
-        await this.evaluateBadges(row.userId);
+        await this.evaluateBadges(userId);
       } catch (err) {
-        this.logger.error(`Badge evaluation failed for ${row.userId}`, err);
+        this.logger.error(`Badge evaluation failed for ${userId}`, err);
       }
     }
   }

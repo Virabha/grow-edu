@@ -238,6 +238,17 @@ export class GradingService {
               },
             });
         }
+        await tx
+          .update(assessmentAttemptAnswers)
+          .set({
+            awardedMarks: awardedMarks.toString(),
+            graderComment: dto.comment ?? null,
+            gradedBy: instructorId,
+            gradedAt: now,
+            status: "GRADED",
+            updatedAt: now,
+          })
+          .where(eq(assessmentAttemptAnswers.answerId, answerId));
       });
     } else if (dto.totalMarks !== undefined) {
       if (dto.totalMarks < 0 || dto.totalMarks > placementMarks) {
@@ -252,17 +263,19 @@ export class GradingService {
       );
     }
 
-    await this.db
-      .update(assessmentAttemptAnswers)
-      .set({
-        awardedMarks: awardedMarks.toString(),
-        graderComment: dto.comment ?? null,
-        gradedBy: instructorId,
-        gradedAt: now,
-        status: "GRADED",
-        updatedAt: now,
-      })
-      .where(eq(assessmentAttemptAnswers.answerId, answerId));
+    if (!dto.criteria || dto.criteria.length === 0 || !placement.rubricId) {
+      await this.db
+        .update(assessmentAttemptAnswers)
+        .set({
+          awardedMarks: awardedMarks.toString(),
+          graderComment: dto.comment ?? null,
+          gradedBy: instructorId,
+          gradedAt: now,
+          status: "GRADED",
+          updatedAt: now,
+        })
+        .where(eq(assessmentAttemptAnswers.answerId, answerId));
+    }
 
     await this.maybeFinaliseAttempt(answer.attemptId, now);
 

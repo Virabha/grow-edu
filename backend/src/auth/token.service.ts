@@ -28,8 +28,7 @@ export class TokenService {
   async generateToken(userId: string, tokenType: EmailTokenType): Promise<string> {
     const token = randomUUID();
     const tokenHash = this.hashToken(token);
-    const expiresAt = new Date();
-    expiresAt.setHours(expiresAt.getHours() + this.TOKEN_EXPIRY_HOURS);
+    const expiresAt = new Date(this.clock.now().getTime() + this.TOKEN_EXPIRY_HOURS * 3_600_000);
 
     await this.db.insert(emailTokens).values({
       userId,

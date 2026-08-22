@@ -130,31 +130,30 @@ export class RunService implements OnModuleInit {
       .set({ status: "RUNNING" })
       .where(eq(codingRuns.runId, run.runId));
 
-    const visibility =
-      run.kind === "SAMPLE_RUN"
-        ? "VISIBLE"
-        : run.kind === "JUDGE_SUBMISSION"
-          ? "HIDDEN"
-          : "ALL";
-    const cases = await this.problems.casesFor(run.problemId, visibility);
-    const language = await this.problems.languageFor(run.problemId, run.language);
-
-    const payloadCases: ExecutionCase[] = cases.map((testCase) => ({
-      ordinal: testCase.ordinal,
-      input: testCase.input,
-      expectedOutput: testCase.expectedOutput,
-    }));
-
-    const visibleByOrdinal = new Map(
-      cases
-        .filter((testCase) => testCase.visibility === "VISIBLE")
-        .map((testCase) => [testCase.ordinal, testCase]),
-    );
-    const secrets = cases
-      .filter((testCase) => testCase.visibility === "HIDDEN")
-      .flatMap((testCase) => [testCase.input, testCase.expectedOutput]);
-
     try {
+      const visibility =
+        run.kind === "SAMPLE_RUN"
+          ? "VISIBLE"
+          : run.kind === "JUDGE_SUBMISSION"
+            ? "HIDDEN"
+            : "ALL";
+      const cases = await this.problems.casesFor(run.problemId, visibility);
+      const language = await this.problems.languageFor(run.problemId, run.language);
+
+      const payloadCases: ExecutionCase[] = cases.map((testCase) => ({
+        ordinal: testCase.ordinal,
+        input: testCase.input,
+        expectedOutput: testCase.expectedOutput,
+      }));
+
+      const visibleByOrdinal = new Map(
+        cases
+          .filter((testCase) => testCase.visibility === "VISIBLE")
+          .map((testCase) => [testCase.ordinal, testCase]),
+      );
+      const secrets = cases
+        .filter((testCase) => testCase.visibility === "HIDDEN")
+        .flatMap((testCase) => [testCase.input, testCase.expectedOutput]);
       if (payloadCases.length === 0) {
         throw new Error("That problem has no test cases to run");
       }
@@ -204,7 +203,7 @@ export class RunService implements OnModuleInit {
                     ? ("VISIBLE" as const)
                     : ("HIDDEN" as const),
                   passed: outcome.outcome === "OK",
-                  actualOutput: visible ? outcome.actualOutput : null,
+                  actualOutput: outcome.actualOutput,
                   runtimeMs: outcome.runtimeMs,
                   createdAt: now,
                 };
@@ -262,8 +261,8 @@ export class RunService implements OnModuleInit {
       .from(codingRunCaseResults)
       .where(eq(codingRunCaseResults.runId, runId))
       .orderBy(asc(codingRunCaseResults.caseOrdinal));
-    const visible = await this.problems.casesFor(run.problemId, "VISIBLE");
-    return this.present(run, results, isStaff, visible);
+    const cases = await this.problems.casesFor(run.problemId, isStaff ? "ALL" : "VISIBLE");
+    return this.present(run, results, isStaff, cases);
   }
 
   async history(problemId: string, userId: string) {
@@ -492,11 +491,9 @@ export class RunService implements OnModuleInit {
     run: RunRow,
     results: (typeof codingRunCaseResults.$inferSelect)[],
     isStaff = false,
-    visibleCases: { ordinal: number; input: string; expectedOutput: string }[] = [],
+    cases: { ordinal: number; input: string; expectedOutput: string; visibility?: string }[] = [],
   ) {
-    const visibleByOrdinal = new Map(
-      visibleCases.map((testCase) => [testCase.ordinal, testCase]),
-    );
+    const caseByOrdinal = new Map(cases.map((tc) => [tc.ordinal, tc]));
     return {
       runId: run.runId,
       problemId: run.problemId,
@@ -510,24 +507,32 @@ export class RunService implements OnModuleInit {
       memoryKb: run.memoryKb,
       queuedAt: run.queuedAt,
       completedAt: run.completedAt,
-      cases: results.map((result) => {
-        const shown =
-          result.visibility === "VISIBLE"
-            ? visibleByOrdinal.get(result.caseOrdinal)
-            : undefined;
-        return {
-          ordinal: result.caseOrdinal,
-          visibility: result.visibility,
-          passed: result.passed,
-          input: shown?.input ?? null,
-          expectedOutput: shown?.expectedOutput ?? null,
-          actualOutput:
-            isStaff || result.visibility === "VISIBLE"
-              ? result.actualOutput
-              : null,
-          runtimeMs: result.runtimeMs,
-        };
-      }),
+      cases: isStaff
+        ? results.map((result) => {
+            const tc = caseByOrdinal.get(result.caseOrdinal);
+            return {
+              ordinal: result.caseOrdinal,
+              visibility: result.visibility,
+              passed: result.passed,
+              input: tc?.input ?? null,
+              expectedOutput: tc?.expectedOutput ?? null,
+              actualOutput: result.actualOutput,
+              runtimeMs: result.runtimeMs,
+            };
+          })
+        : results
+            .filter((result) => result.visibility === "VISIBLE")
+            .map((result) => {
+              const tc = caseByOrdinal.get(result.caseOrdinal);
+              return {
+                ordinal: result.caseOrdinal,
+                passed: result.passed,
+                input: tc?.input ?? null,
+                expectedOutput: tc?.expectedOutput ?? null,
+                actualOutput: result.actualOutput,
+                runtimeMs: result.runtimeMs,
+              };
+            }),
     };
   }
 

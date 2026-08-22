@@ -295,7 +295,7 @@ export const batchSessions = pgTable(
     sessionId: text("session_id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
-    batchId: text("batch_id").notNull(),
+    batchId: text("batch_id"),
     subjectId: text("subject_id"),
     teacherId: text("teacher_id"),
     title: text("title").notNull(),

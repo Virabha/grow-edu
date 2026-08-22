@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, or } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 
 import { CLOCK, Clock } from '../../common/clock';
@@ -171,6 +171,10 @@ export class DailyPracticeService {
     topicIds: string[],
     total: number,
   ): Promise<{ ordinal: number; count: number }[]> {
+    const reviewable = or(
+      isNull(assessmentQuestions.reviewStatus),
+      eq(assessmentQuestions.reviewStatus, 'APPROVED'),
+    );
     const available = await this.db
       .selectDistinct({ ordinal: effectiveDifficultyExpr() })
       .from(assessmentQuestions)
@@ -179,6 +183,7 @@ export class DailyPracticeService {
           inArray(assessmentQuestions.topicId, topicIds),
           eq(assessmentQuestions.isRetired, false),
           isNull(assessmentQuestions.groupId),
+          ...(reviewable ? [reviewable] : []),
         ),
       );
 

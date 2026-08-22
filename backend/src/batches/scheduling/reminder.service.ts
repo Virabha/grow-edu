@@ -46,7 +46,7 @@ export class ReminderService implements OnModuleInit {
         );
 
       for (const session of sessions) {
-        if (!session.scheduledStartAt) continue;
+        if (!session.scheduledStartAt || !session.batchId) continue;
         const startIso = session.scheduledStartAt.toISOString();
         const fanoutId = `reminder:${session.sessionId}:${startIso}`;
         const enrolledIds = await this.access.enrolledUserIds(session.batchId);

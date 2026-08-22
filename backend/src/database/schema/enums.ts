@@ -87,6 +87,7 @@ export const batchInstructorRoleEnum = pgEnum("batch_instructor_role", [
   "LEAD",
   "SUBJECT",
   "ASSISTANT",
+  "MENTOR",
 ]);
 
 export const batchEnrollmentSourceEnum = pgEnum("batch_enrollment_source", [
@@ -105,6 +106,7 @@ export const batchEnrollmentStatusEnum = pgEnum("batch_enrollment_status", [
 export const batchSessionTypeEnum = pgEnum("batch_session_type", [
   "LIVE",
   "RECORDING",
+  "ONE_TO_ONE",
 ]);
 
 export const batchLiveProviderEnum = pgEnum("batch_live_provider", [
@@ -183,9 +185,12 @@ export const badgeCriteriaEnum = pgEnum("badge_criteria_type", [
 
 export const blogPostStatusEnum = pgEnum("blog_post_status", [
   "DRAFT",
+  "SCHEDULED",
   "PUBLISHED",
   "ARCHIVED",
 ]);
+
+export const pageStatusEnum = pgEnum("page_status", ["DRAFT", "PUBLISHED"]);
 
 export const refundStatusEnum = pgEnum("refund_status", [
   "NONE",
@@ -459,4 +464,72 @@ export const portfolioItemKindEnum = pgEnum("portfolio_item_kind", [
   "PROJECT",
   "SKILL",
   "CERTIFICATE",
+]);
+
+export const aiCallOutcomeEnum = pgEnum("ai_call_outcome", [
+  "SUCCEEDED",
+  "FAILED",
+  "REJECTED",
+]);
+
+export const aiBatchStatusEnum = pgEnum("ai_batch_status", [
+  "SUBMITTED",
+  "COMPLETE",
+  "FAILED",
+]);
+
+export const aiBatchItemStateEnum = pgEnum("ai_batch_item_state", [
+  "PENDING",
+  "SUCCEEDED",
+  "FAILED",
+  "RECONCILED",
+]);
+
+export const ssoProviderTypeEnum = pgEnum("sso_provider_type", [
+  "OIDC",
+  "SAML",
+]);
+
+export const questionReviewStatusEnum = pgEnum("question_review_status", [
+  "UNREVIEWED",
+  "APPROVED",
+  "REJECTED",
+]);
+
+export const lessonSummaryStatusEnum = pgEnum("lesson_summary_status", [
+  "PENDING",
+  "READY",
+  "FAILED",
+]);
+
+export const funnelEventKindEnum = pgEnum("funnel_event_kind", [
+  "PAGE_VIEW",
+  "CATALOGUE_VIEW",
+  "CHECKOUT_START",
+  "CHECKOUT_COMPLETE",
+]);
+
+export const mockInterviewStatusEnum = pgEnum("mock_interview_status", [
+  "SCHEDULED",
+  "COMPLETED",
+  "CANCELLED",
+]);
+
+export const jobOpeningStatusEnum = pgEnum("job_opening_status", [
+  "OPEN",
+  "CLOSED",
+]);
+
+export const aiDoubtAnswerStatusEnum = pgEnum("ai_doubt_answer_status", [
+  "PENDING",
+  "ANSWERED",
+  "FAILED",
+  "REJECTED",
+  "ESCALATED",
+]);
+
+export const aiDoubtDraftStatusEnum = pgEnum("ai_doubt_draft_status", [
+  "PENDING",
+  "COMMITTED",
+  "DISCARDED",
 ]);

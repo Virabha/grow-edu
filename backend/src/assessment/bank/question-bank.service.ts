@@ -48,6 +48,9 @@ export interface QuestionView {
   currentVersion: number;
   isRetired: boolean;
   isHumanGraded: boolean;
+  reviewStatus: string | null;
+  reviewedBy: string | null;
+  reviewedAt: Date | null;
   prompt: ContentBlock[];
   options: QuestionOption[];
   answerKey: QuestionAnswerKey | null;
@@ -102,6 +105,7 @@ export class QuestionBankService {
           authoredDifficulty: dto.difficulty,
           groupId: dto.groupId ?? null,
           groupOrder: dto.groupOrder ?? null,
+          reviewStatus: null,
           currentVersion: 1,
           createdBy: actorId,
           createdAt: now,
@@ -382,7 +386,51 @@ export class QuestionBankService {
     if (row.isRetired) {
       throw new ConflictException("That question is retired");
     }
+    if (row.reviewStatus === "UNREVIEWED") {
+      throw new ConflictException("That question has not been reviewed yet");
+    }
+    if (row.reviewStatus === "REJECTED") {
+      throw new ConflictException("That question was rejected");
+    }
     return row;
+  }
+
+  async approve(questionId: string, actorId: string): Promise<QuestionView> {
+    const question = await this.require(questionId);
+    if (question.reviewStatus !== "UNREVIEWED") {
+      throw new ConflictException(
+        "Only unreviewed questions can be approved",
+      );
+    }
+
+    const now = this.clock.now();
+    const [updated] = await this.db
+      .update(assessmentQuestions)
+      .set({ reviewStatus: "APPROVED", reviewedBy: actorId, reviewedAt: now, updatedAt: now })
+      .where(eq(assessmentQuestions.questionId, questionId))
+      .returning();
+
+    const version = await this.versionOf(questionId, updated.currentVersion);
+    return this.present(updated, version);
+  }
+
+  async reject(questionId: string, actorId: string): Promise<QuestionView> {
+    const question = await this.require(questionId);
+    if (question.reviewStatus !== "UNREVIEWED") {
+      throw new ConflictException(
+        "Only unreviewed questions can be rejected",
+      );
+    }
+
+    const now = this.clock.now();
+    const [updated] = await this.db
+      .update(assessmentQuestions)
+      .set({ reviewStatus: "REJECTED", reviewedBy: actorId, reviewedAt: now, updatedAt: now })
+      .where(eq(assessmentQuestions.questionId, questionId))
+      .returning();
+
+    const version = await this.versionOf(questionId, updated.currentVersion);
+    return this.present(updated, version);
   }
 
   private answerKeyAsInput(
@@ -451,6 +499,9 @@ export class QuestionBankService {
       currentVersion: question.currentVersion,
       isRetired: question.isRetired,
       isHumanGraded: isHumanGraded(question.type),
+      reviewStatus: question.reviewStatus ?? null,
+      reviewedBy: question.reviewedBy ?? null,
+      reviewedAt: question.reviewedAt ?? null,
       prompt: version.prompt,
       options: version.options,
       answerKey: version.answerKey ?? null,

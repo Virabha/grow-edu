@@ -189,6 +189,10 @@ export class AssessmentTestService {
       if (!question) throw new NotFoundException("Question not found");
       if (question.isRetired)
         throw new ConflictException("Cannot add a retired question to a test");
+      if (question.reviewStatus === "UNREVIEWED")
+        throw new ConflictException("Cannot add an unreviewed question to a test");
+      if (question.reviewStatus === "REJECTED")
+        throw new ConflictException("Cannot add a rejected question to a test");
 
       const [{ maxOrder }] = await tx
         .select({
@@ -345,6 +349,18 @@ export class AssessmentTestService {
     if (retired)
       throw new ConflictException(
         "One or more questions in this group are retired",
+      );
+
+    const unreviewed = members.find((m) => m.reviewStatus === "UNREVIEWED");
+    if (unreviewed)
+      throw new ConflictException(
+        "One or more questions in this group have not been reviewed",
+      );
+
+    const rejected = members.find((m) => m.reviewStatus === "REJECTED");
+    if (rejected)
+      throw new ConflictException(
+        "One or more questions in this group were rejected",
       );
 
     const memberIds = members.map((m) => m.questionId);

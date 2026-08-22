@@ -24,6 +24,9 @@ import { CompletionCriteriaController } from "./certificates/completion-criteria
 import { CompletionCriteriaService } from "./certificates/completion-criteria.service";
 import { BatchEngagementController } from "./engagement/batch-engagement.controller";
 import { BatchEngagementService } from "./engagement/batch-engagement.service";
+import { DoubtAnswerController, AiDoubtReportController } from "./engagement/doubt-answer.controller";
+import { DoubtAnswerService } from "./engagement/doubt-answer.service";
+import { DoubtGroundingService } from "./engagement/doubt-grounding.service";
 import { DoubtInboxController } from "./engagement/doubt-inbox.controller";
 import { DoubtInboxService } from "./engagement/doubt-inbox.service";
 import { BatchEnrolmentController } from "./enrolment/batch-enrolment.controller";
@@ -79,6 +82,8 @@ import { TimetableService } from "./scheduling/timetable.service";
     RecurrenceController,
     BatchAssessmentController,
     BatchEngagementController,
+    DoubtAnswerController,
+    AiDoubtReportController,
     DoubtInboxController,
     CertificateController,
     CertificateVerificationController,
@@ -110,6 +115,8 @@ import { TimetableService } from "./scheduling/timetable.service";
     RecurrenceService,
     BatchAssessmentService,
     BatchEngagementService,
+    DoubtGroundingService,
+    DoubtAnswerService,
     DoubtInboxService,
     BatchReportingService,
     StudentFeedbackService,

@@ -55,7 +55,7 @@ type Instructor = {
   lastName: string | null;
   email: string;
   profileImage: string | null;
-  role: "LEAD" | "SUBJECT" | "ASSISTANT";
+  role: "LEAD" | "SUBJECT" | "ASSISTANT" | "MENTOR";
 };
 
 @Injectable()

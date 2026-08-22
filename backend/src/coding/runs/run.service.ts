@@ -507,32 +507,24 @@ export class RunService implements OnModuleInit {
       memoryKb: run.memoryKb,
       queuedAt: run.queuedAt,
       completedAt: run.completedAt,
-      cases: isStaff
-        ? results.map((result) => {
-            const tc = caseByOrdinal.get(result.caseOrdinal);
-            return {
-              ordinal: result.caseOrdinal,
-              visibility: result.visibility,
-              passed: result.passed,
-              input: tc?.input ?? null,
-              expectedOutput: tc?.expectedOutput ?? null,
-              actualOutput: result.actualOutput,
-              runtimeMs: result.runtimeMs,
-            };
-          })
-        : results
-            .filter((result) => result.visibility === "VISIBLE")
-            .map((result) => {
-              const tc = caseByOrdinal.get(result.caseOrdinal);
-              return {
-                ordinal: result.caseOrdinal,
-                passed: result.passed,
-                input: tc?.input ?? null,
-                expectedOutput: tc?.expectedOutput ?? null,
-                actualOutput: result.actualOutput,
-                runtimeMs: result.runtimeMs,
-              };
-            }),
+      cases: results.map((result) => {
+        const shown =
+          isStaff || result.visibility === "VISIBLE"
+            ? caseByOrdinal.get(result.caseOrdinal)
+            : undefined;
+        return {
+          ordinal: result.caseOrdinal,
+          visibility: result.visibility,
+          passed: result.passed,
+          input: shown?.input ?? null,
+          expectedOutput: shown?.expectedOutput ?? null,
+          actualOutput:
+            isStaff || result.visibility === "VISIBLE"
+              ? result.actualOutput
+              : null,
+          runtimeMs: result.runtimeMs,
+        };
+      }),
     };
   }
 

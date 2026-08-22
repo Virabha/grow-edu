@@ -1,4 +1,34 @@
 DO $$ BEGIN
+ CREATE TYPE "ai_batch_item_state" AS ENUM('PENDING', 'SUCCEEDED', 'FAILED', 'RECONCILED');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ CREATE TYPE "ai_batch_status" AS ENUM('SUBMITTED', 'COMPLETE', 'FAILED');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ CREATE TYPE "ai_call_outcome" AS ENUM('SUCCEEDED', 'FAILED', 'REJECTED');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ CREATE TYPE "ai_doubt_answer_status" AS ENUM('PENDING', 'ANSWERED', 'FAILED', 'REJECTED', 'ESCALATED');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ CREATE TYPE "ai_doubt_draft_status" AS ENUM('PENDING', 'COMMITTED', 'DISCARDED');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
  CREATE TYPE "application_status" AS ENUM('NEW', 'REVIEWED', 'CONTACTED', 'ACCEPTED', 'REJECTED');
 EXCEPTION
  WHEN duplicate_object THEN null;
@@ -113,7 +143,7 @@ EXCEPTION
 END $$;
 --> statement-breakpoint
 DO $$ BEGIN
- CREATE TYPE "batch_instructor_role" AS ENUM('LEAD', 'SUBJECT', 'ASSISTANT');
+ CREATE TYPE "batch_instructor_role" AS ENUM('LEAD', 'SUBJECT', 'ASSISTANT', 'MENTOR');
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
@@ -149,7 +179,7 @@ EXCEPTION
 END $$;
 --> statement-breakpoint
 DO $$ BEGIN
- CREATE TYPE "batch_session_type" AS ENUM('LIVE', 'RECORDING');
+ CREATE TYPE "batch_session_type" AS ENUM('LIVE', 'RECORDING', 'ONE_TO_ONE');
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
@@ -173,7 +203,7 @@ EXCEPTION
 END $$;
 --> statement-breakpoint
 DO $$ BEGIN
- CREATE TYPE "blog_post_status" AS ENUM('DRAFT', 'PUBLISHED', 'ARCHIVED');
+ CREATE TYPE "blog_post_status" AS ENUM('DRAFT', 'SCHEDULED', 'PUBLISHED', 'ARCHIVED');
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
@@ -269,6 +299,12 @@ EXCEPTION
 END $$;
 --> statement-breakpoint
 DO $$ BEGIN
+ CREATE TYPE "funnel_event_kind" AS ENUM('PAGE_VIEW', 'CATALOGUE_VIEW', 'CHECKOUT_START', 'CHECKOUT_COMPLETE');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
  CREATE TYPE "identity_provider" AS ENUM('PASSWORD', 'PHONE', 'GOOGLE');
 EXCEPTION
  WHEN duplicate_object THEN null;
@@ -287,7 +323,19 @@ EXCEPTION
 END $$;
 --> statement-breakpoint
 DO $$ BEGIN
+ CREATE TYPE "job_opening_status" AS ENUM('OPEN', 'CLOSED');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
  CREATE TYPE "lesson_status" AS ENUM('DRAFT', 'PENDING_APPROVAL', 'PROCESSING', 'SCHEDULED', 'READY');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ CREATE TYPE "lesson_summary_status" AS ENUM('PENDING', 'READY', 'FAILED');
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
@@ -311,7 +359,19 @@ EXCEPTION
 END $$;
 --> statement-breakpoint
 DO $$ BEGIN
+ CREATE TYPE "mock_interview_status" AS ENUM('SCHEDULED', 'COMPLETED', 'CANCELLED');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
  CREATE TYPE "notification_type" AS ENUM('BATCH_ANNOUNCEMENT', 'BATCH_DOUBT_REPLY', 'BATCH_SESSION_SCHEDULED', 'BATCH_QUIZ_PUBLISHED', 'BATCH_RESOURCE_ADDED', 'BATCH_ENROLLMENT', 'BATCH_CERTIFICATE', 'PAYMENT_APPROVED', 'PAYMENT_REJECTED', 'WEEKLY_REPORT_CARD', 'PARENT_LINK_REQUEST', 'BADGE_AWARDED', 'DAILY_REVIEW_DUE', 'CODE_VERDICT', 'PROJECT_MILESTONE_REVIEWED', 'PATH_CERTIFICATE', 'GENERIC');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ CREATE TYPE "page_status" AS ENUM('DRAFT', 'PUBLISHED');
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
@@ -377,6 +437,12 @@ EXCEPTION
 END $$;
 --> statement-breakpoint
 DO $$ BEGIN
+ CREATE TYPE "question_review_status" AS ENUM('UNREVIEWED', 'APPROVED', 'REJECTED');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
  CREATE TYPE "refund_status" AS ENUM('NONE', 'REQUESTED', 'APPROVED', 'DECLINED');
 EXCEPTION
  WHEN duplicate_object THEN null;
@@ -408,6 +474,12 @@ END $$;
 --> statement-breakpoint
 DO $$ BEGIN
  CREATE TYPE "skill_subject_kind" AS ENUM('PROBLEM', 'PROJECT', 'STAGE');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ CREATE TYPE "sso_provider_type" AS ENUM('OIDC', 'SAML');
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
@@ -992,7 +1064,7 @@ CREATE TABLE IF NOT EXISTS "batch_resources" (
 CREATE TABLE IF NOT EXISTS "batch_sessions" (
 	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
 	"session_id" text PRIMARY KEY NOT NULL,
-	"batch_id" text NOT NULL,
+	"batch_id" text,
 	"subject_id" text,
 	"teacher_id" text,
 	"title" text NOT NULL,
@@ -1192,6 +1264,9 @@ CREATE TABLE IF NOT EXISTS "assessment_questions" (
 	"group_id" text,
 	"group_order" integer,
 	"current_version" integer DEFAULT 1 NOT NULL,
+	"review_status" "question_review_status",
+	"reviewed_by" text,
+	"reviewed_at" timestamp,
 	"is_retired" boolean DEFAULT false NOT NULL,
 	"retired_at" timestamp,
 	"created_by" text NOT NULL,
@@ -2433,7 +2508,13 @@ CREATE TABLE IF NOT EXISTS "blog_posts" (
 	"status" "blog_post_status" DEFAULT 'DRAFT' NOT NULL,
 	"tags" jsonb DEFAULT '[]'::jsonb,
 	"view_count" integer DEFAULT 0 NOT NULL,
+	"scheduled_at" timestamp,
 	"published_at" timestamp,
+	"meta_title" text,
+	"meta_description" text,
+	"canonical_url" text,
+	"og_image_url" text,
+	"structured_data" jsonb,
 	"is_deleted" boolean DEFAULT false NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
@@ -2474,6 +2555,23 @@ CREATE TABLE IF NOT EXISTS "faqs" (
 	"answer" text NOT NULL,
 	"display_order" integer DEFAULT 0 NOT NULL,
 	"is_active" boolean DEFAULT true NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "landing_pages" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"id" text PRIMARY KEY NOT NULL,
+	"slug" text NOT NULL,
+	"title" text NOT NULL,
+	"status" "page_status" DEFAULT 'DRAFT' NOT NULL,
+	"blocks" jsonb DEFAULT '[]'::jsonb NOT NULL,
+	"meta_title" text,
+	"meta_description" text,
+	"canonical_url" text,
+	"og_image_url" text,
+	"structured_data" jsonb,
+	"published_at" timestamp,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
@@ -2654,6 +2752,270 @@ CREATE TABLE IF NOT EXISTS "report_schedules" (
 	"created_by" text NOT NULL,
 	"created_at" timestamp NOT NULL,
 	"updated_at" timestamp NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "ai_batch_items" (
+	"item_id" text PRIMARY KEY NOT NULL,
+	"batch_id" text NOT NULL,
+	"reference" text NOT NULL,
+	"state" "ai_batch_item_state" DEFAULT 'PENDING' NOT NULL,
+	"context" jsonb DEFAULT '{}'::jsonb NOT NULL,
+	"result_text" text,
+	"result_structured" jsonb,
+	"failure_reason" text,
+	"reconciled_at" timestamp,
+	"created_at" timestamp NOT NULL,
+	CONSTRAINT "ai_batch_items_reference_unique" UNIQUE("batch_id","reference")
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "ai_batches" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"batch_id" text PRIMARY KEY NOT NULL,
+	"feature" text NOT NULL,
+	"model" text NOT NULL,
+	"provider_reference" text,
+	"status" "ai_batch_status" DEFAULT 'SUBMITTED' NOT NULL,
+	"requested_by" text,
+	"failure_reason" text,
+	"submitted_at" timestamp NOT NULL,
+	"completed_at" timestamp
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "ai_model_calls" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"call_id" text PRIMARY KEY NOT NULL,
+	"feature" text NOT NULL,
+	"model" text NOT NULL,
+	"outcome" "ai_call_outcome" NOT NULL,
+	"input_tokens" integer DEFAULT 0 NOT NULL,
+	"output_tokens" integer DEFAULT 0 NOT NULL,
+	"cache_read_tokens" integer DEFAULT 0 NOT NULL,
+	"cache_write_tokens" integer DEFAULT 0 NOT NULL,
+	"batched" text DEFAULT 'NO' NOT NULL,
+	"failure_reason" text,
+	"created_at" timestamp NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "lesson_summaries" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"summary_id" text PRIMARY KEY NOT NULL,
+	"lesson_id" text NOT NULL,
+	"status" "lesson_summary_status" DEFAULT 'PENDING' NOT NULL,
+	"summary" text,
+	"key_points" jsonb DEFAULT '[]'::jsonb,
+	"chapters" jsonb DEFAULT '[]'::jsonb,
+	"requested_by" text,
+	"created_at" timestamp NOT NULL,
+	"updated_at" timestamp NOT NULL,
+	CONSTRAINT "lesson_summaries_lesson_unique" UNIQUE("lesson_id")
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "ai_doubt_answers" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"answer_id" text PRIMARY KEY NOT NULL,
+	"doubt_id" text NOT NULL,
+	"batch_id" text NOT NULL,
+	"asked_by" text NOT NULL,
+	"subject_id" text,
+	"status" "ai_doubt_answer_status" DEFAULT 'PENDING' NOT NULL,
+	"answer_text" text,
+	"citations" jsonb DEFAULT '[]'::jsonb NOT NULL,
+	"reply_id" text,
+	"marked_unhelpful_at" timestamp,
+	"created_at" timestamp NOT NULL,
+	"updated_at" timestamp NOT NULL,
+	CONSTRAINT "ai_doubt_answers_doubt_unique" UNIQUE("doubt_id")
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "ai_doubt_drafts" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"draft_id" text PRIMARY KEY NOT NULL,
+	"doubt_id" text NOT NULL,
+	"batch_id" text NOT NULL,
+	"answer_id" text NOT NULL,
+	"draft_text" text NOT NULL,
+	"status" "ai_doubt_draft_status" DEFAULT 'PENDING' NOT NULL,
+	"committed_at" timestamp,
+	"committed_reply_id" text,
+	"is_discarded" boolean DEFAULT false NOT NULL,
+	"created_at" timestamp NOT NULL,
+	"updated_at" timestamp NOT NULL,
+	CONSTRAINT "ai_doubt_drafts_doubt_unique" UNIQUE("doubt_id")
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "funnel_events" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"event_id" text PRIMARY KEY NOT NULL,
+	"kind" "funnel_event_kind" NOT NULL,
+	"batch_id" text,
+	"source" text,
+	"session_key" text,
+	"user_id" text,
+	"captured_at" timestamp NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "report_shares" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"share_id" text PRIMARY KEY NOT NULL,
+	"report_id" text NOT NULL,
+	"granted_to" text NOT NULL,
+	"granted_by" text NOT NULL,
+	"revoked_at" timestamp,
+	"created_at" timestamp NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "retention_cohort_rows" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"row_id" text PRIMARY KEY NOT NULL,
+	"cohort_month" text NOT NULL,
+	"source" text,
+	"period_offset" integer NOT NULL,
+	"active_count" integer NOT NULL,
+	"computed_at" timestamp NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "saved_reports" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"report_id" text PRIMARY KEY NOT NULL,
+	"title" text NOT NULL,
+	"created_by" text NOT NULL,
+	"definition" jsonb NOT NULL,
+	"is_deleted" boolean DEFAULT false NOT NULL,
+	"created_at" timestamp NOT NULL,
+	"updated_at" timestamp NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "job_applications" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"application_id" text PRIMARY KEY NOT NULL,
+	"opening_id" text NOT NULL,
+	"student_id" text NOT NULL,
+	"portfolio_id" text NOT NULL,
+	"status" "application_status" DEFAULT 'NEW' NOT NULL,
+	"applied_at" timestamp NOT NULL,
+	"updated_at" timestamp NOT NULL,
+	"reviewed_by" text,
+	"reviewed_at" timestamp,
+	"notes" text,
+	CONSTRAINT "job_applications_opening_student_unique" UNIQUE("opening_id","student_id")
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "job_openings" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"opening_id" text PRIMARY KEY NOT NULL,
+	"title" text NOT NULL,
+	"description" text NOT NULL,
+	"location" text,
+	"tags" jsonb DEFAULT '[]'::jsonb,
+	"status" "job_opening_status" DEFAULT 'OPEN' NOT NULL,
+	"posted_by" text NOT NULL,
+	"created_at" timestamp NOT NULL,
+	"updated_at" timestamp NOT NULL,
+	"closed_at" timestamp
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "mentor_session_feedback" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"feedback_id" text PRIMARY KEY NOT NULL,
+	"session_id" text NOT NULL,
+	"mentor_id" text NOT NULL,
+	"student_id" text NOT NULL,
+	"notes" text NOT NULL,
+	"created_at" timestamp NOT NULL,
+	"updated_at" timestamp NOT NULL,
+	CONSTRAINT "mentor_session_feedback_session_unique" UNIQUE("session_id")
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "mock_interview_scores" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"score_id" text PRIMARY KEY NOT NULL,
+	"mock_interview_id" text NOT NULL,
+	"skill_id" text NOT NULL,
+	"score" integer NOT NULL,
+	"notes" text,
+	"edited_after_student_viewed" boolean DEFAULT false NOT NULL,
+	"created_at" timestamp NOT NULL,
+	"updated_at" timestamp NOT NULL,
+	CONSTRAINT "mock_interview_scores_interview_skill_unique" UNIQUE("mock_interview_id","skill_id")
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "mock_interviews" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"mock_interview_id" text PRIMARY KEY NOT NULL,
+	"session_id" text,
+	"path_id" text NOT NULL,
+	"mentor_id" text NOT NULL,
+	"student_id" text NOT NULL,
+	"status" "mock_interview_status" DEFAULT 'SCHEDULED' NOT NULL,
+	"scheduled_at" timestamp NOT NULL,
+	"completed_at" timestamp,
+	"student_first_viewed_at" timestamp,
+	"created_at" timestamp NOT NULL,
+	"updated_at" timestamp NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "path_mentor_assignments" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"assignment_id" text PRIMARY KEY NOT NULL,
+	"path_id" text NOT NULL,
+	"mentor_id" text NOT NULL,
+	"student_id" text NOT NULL,
+	"assigned_by" text NOT NULL,
+	"assigned_at" timestamp NOT NULL,
+	"revoked_at" timestamp,
+	"revoked_by" text,
+	CONSTRAINT "path_mentor_assignments_active_unique" UNIQUE("path_id","mentor_id","student_id")
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "corporate_api_credentials" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"credential_id" text PRIMARY KEY NOT NULL,
+	"company_id" text NOT NULL,
+	"label" text NOT NULL,
+	"key_hash" text NOT NULL,
+	"issued_by" text NOT NULL,
+	"issued_at" timestamp NOT NULL,
+	"revoked_at" timestamp,
+	"revoked_by" text,
+	CONSTRAINT "corporate_api_credentials_key_hash_unique" UNIQUE("key_hash")
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "corporate_branding" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"branding_id" text PRIMARY KEY NOT NULL,
+	"company_id" text NOT NULL,
+	"name" text NOT NULL,
+	"logo_url" text,
+	"primary_color" text,
+	"updated_by" text NOT NULL,
+	"created_at" timestamp NOT NULL,
+	"updated_at" timestamp NOT NULL,
+	CONSTRAINT "corporate_branding_company_id_unique" UNIQUE("company_id")
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "corporate_sso_configs" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"sso_config_id" text PRIMARY KEY NOT NULL,
+	"company_id" text NOT NULL,
+	"provider_type" "sso_provider_type" NOT NULL,
+	"issuer_url" text NOT NULL,
+	"client_id" text NOT NULL,
+	"client_secret" text NOT NULL,
+	"created_by" text NOT NULL,
+	"created_at" timestamp NOT NULL,
+	"updated_at" timestamp NOT NULL,
+	CONSTRAINT "corporate_sso_configs_company_id_unique" UNIQUE("company_id")
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "corporate_sso_links" (
+	"organization_id" text DEFAULT '00000000-0000-0000-0000-000000000001' NOT NULL,
+	"link_id" text PRIMARY KEY NOT NULL,
+	"company_id" text NOT NULL,
+	"user_id" text NOT NULL,
+	"external_subject" text NOT NULL,
+	"linked_at" timestamp NOT NULL,
+	CONSTRAINT "corporate_sso_links_company_subject_unique" UNIQUE("company_id","external_subject"),
+	CONSTRAINT "corporate_sso_links_company_user_unique" UNIQUE("company_id","user_id")
 );
 --> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "organizations_slug_idx" ON "organizations" ("slug");--> statement-breakpoint
@@ -2872,6 +3234,8 @@ CREATE INDEX IF NOT EXISTS "brands_is_active_idx" ON "brands" ("is_active");--> 
 CREATE UNIQUE INDEX IF NOT EXISTS "certificate_templates_scope_key" ON "certificate_templates" ("organization_id","scope");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "faqs_display_order_idx" ON "faqs" ("display_order");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "faqs_is_active_idx" ON "faqs" ("is_active");--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "landing_pages_slug_key" ON "landing_pages" ("organization_id","slug");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "landing_pages_status_idx" ON "landing_pages" ("status");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "site_settings_key_idx" ON "site_settings" ("key");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "social_links_display_order_idx" ON "social_links" ("display_order");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "testimonials_display_order_idx" ON "testimonials" ("display_order");--> statement-breakpoint
@@ -2900,6 +3264,39 @@ CREATE INDEX IF NOT EXISTS "export_jobs_status_idx" ON "export_jobs" ("status");
 CREATE INDEX IF NOT EXISTS "report_schedules_due_idx" ON "report_schedules" ("is_paused","next_run_at");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "report_schedules_recipient_idx" ON "report_schedules" ("recipient_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "report_schedules_contract_idx" ON "report_schedules" ("contract_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "ai_batch_items_state_idx" ON "ai_batch_items" ("batch_id","state");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "ai_batches_status_idx" ON "ai_batches" ("status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "ai_model_calls_feature_idx" ON "ai_model_calls" ("organization_id","feature","created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "ai_model_calls_created_idx" ON "ai_model_calls" ("created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "lesson_summaries_status_idx" ON "lesson_summaries" ("status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "ai_doubt_answers_pending_idx" ON "ai_doubt_answers" ("status","created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "ai_doubt_answers_batch_idx" ON "ai_doubt_answers" ("batch_id","marked_unhelpful_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "ai_doubt_drafts_doubt_idx" ON "ai_doubt_drafts" ("doubt_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "ai_doubt_drafts_answer_idx" ON "ai_doubt_drafts" ("answer_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "funnel_events_kind_idx" ON "funnel_events" ("kind");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "funnel_events_captured_at_idx" ON "funnel_events" ("captured_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "funnel_events_source_idx" ON "funnel_events" ("source");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "funnel_events_batch_idx" ON "funnel_events" ("batch_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "report_shares_report_idx" ON "report_shares" ("report_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "report_shares_granted_to_idx" ON "report_shares" ("granted_to");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "retention_cohort_rows_cohort_idx" ON "retention_cohort_rows" ("cohort_month");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "retention_cohort_rows_computed_at_idx" ON "retention_cohort_rows" ("computed_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "saved_reports_created_by_idx" ON "saved_reports" ("created_by");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "job_applications_student_idx" ON "job_applications" ("student_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "job_applications_opening_idx" ON "job_applications" ("opening_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "job_openings_status_idx" ON "job_openings" ("status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "mentor_session_feedback_mentor_idx" ON "mentor_session_feedback" ("mentor_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "mock_interview_scores_interview_idx" ON "mock_interview_scores" ("mock_interview_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "mock_interviews_path_student_idx" ON "mock_interviews" ("path_id","student_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "mock_interviews_mentor_idx" ON "mock_interviews" ("mentor_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "path_mentor_assignments_path_student_idx" ON "path_mentor_assignments" ("path_id","student_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "path_mentor_assignments_mentor_idx" ON "path_mentor_assignments" ("mentor_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "corporate_api_credentials_company_idx" ON "corporate_api_credentials" ("company_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "corporate_api_credentials_key_hash_idx" ON "corporate_api_credentials" ("key_hash");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "corporate_branding_company_idx" ON "corporate_branding" ("company_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "corporate_sso_configs_company_idx" ON "corporate_sso_configs" ("company_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "corporate_sso_links_company_idx" ON "corporate_sso_links" ("company_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "corporate_sso_links_user_idx" ON "corporate_sso_links" ("user_id");--> statement-breakpoint
 INSERT INTO "organizations" ("organization_id", "name", "slug")
 VALUES ('00000000-0000-0000-0000-000000000001', 'groEdu', 'groedu')
 ON CONFLICT ("organization_id") DO NOTHING;

@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, asc, desc, eq, inArray, isNotNull, not, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNotNull, isNull, not, or, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 
 import { CLOCK, Clock } from '../../common/clock';
@@ -177,16 +177,25 @@ export class TopicPracticeService {
 
 
 
+  private reviewableCondition() {
+    return or(
+      isNull(assessmentQuestions.reviewStatus),
+      eq(assessmentQuestions.reviewStatus, 'APPROVED'),
+    );
+  }
+
   private async findUnseen(
     topicId: string,
     targetOrdinal: number,
     servedIds: string[],
   ): Promise<QuestionRow | null> {
     const expr = effectiveDifficultyExpr();
+    const reviewable = this.reviewableCondition();
     const conditions = [
       eq(assessmentQuestions.topicId, topicId),
       eq(assessmentQuestions.isRetired, false),
       sql`(${expr}) = ${targetOrdinal}`,
+      ...(reviewable ? [reviewable] : []),
     ];
 
     if (servedIds.length > 0) {
@@ -209,9 +218,11 @@ export class TopicPracticeService {
     topicId: string,
     servedIds: string[],
   ): Promise<QuestionRow | null> {
+    const reviewable = this.reviewableCondition();
     const conditions = [
       eq(assessmentQuestions.topicId, topicId),
       eq(assessmentQuestions.isRetired, false),
+      ...(reviewable ? [reviewable] : []),
     ];
 
     if (servedIds.length > 0) {
@@ -248,6 +259,7 @@ export class TopicPracticeService {
 
     if (oldest.length === 0) return null;
 
+    const reviewable = this.reviewableCondition();
     const rows = await this.db
       .select()
       .from(assessmentQuestions)
@@ -255,6 +267,7 @@ export class TopicPracticeService {
         and(
           eq(assessmentQuestions.questionId, oldest[0].questionId),
           eq(assessmentQuestions.isRetired, false),
+          ...(reviewable ? [reviewable] : []),
         ),
       )
       .limit(1);

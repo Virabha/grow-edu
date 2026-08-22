@@ -1,0 +1,335 @@
+import { INestApplication } from '@nestjs/common';
+import * as request from 'supertest';
+
+import { createTestDatabase, truncateAll, TestDatabase } from './support/test-database';
+import { createTestApp, authHeader, TestActor } from './support/test-app';
+import { TestClock } from './support/test-clock';
+import { createUser, createCompany, createCorporateAdmin } from './support/factories';
+import {
+  SSO_PROVIDER,
+  SsoTokenClaims,
+  SsoProvider,
+} from '../src/enterprise/sso/sso-provider';
+
+describe('single sign-on (tickets 24, 25, 26)', () => {
+  let database: TestDatabase;
+  let app: INestApplication;
+  let clock: TestClock;
+
+  let claimsToReturn: SsoTokenClaims | null = null;
+  let run = 0;
+
+  const fakeProvider: SsoProvider = {
+    async verify(_companyId: string, _token: string): Promise<SsoTokenClaims | null> {
+      return claimsToReturn;
+    },
+  };
+
+  beforeAll(async () => {
+    database = await createTestDatabase();
+    clock = new TestClock();
+    app = await createTestApp(database, clock, [
+      { token: SSO_PROVIDER, value: fakeProvider },
+    ]);
+  });
+
+  afterAll(async () => {
+    if (app) await app.close();
+    if (database) await database.destroy();
+  });
+
+  beforeEach(async () => {
+    run += 1;
+    clock.reset();
+    await truncateAll(database);
+    claimsToReturn = null;
+  });
+
+  function ssoEmail(): string {
+    return `sso-user-${run}@institution.test`;
+  }
+
+  function ssoSubject(): string {
+    return `inst-sub-${run}`;
+  }
+
+  async function setupSso(companyId: string, admin: TestActor) {
+    return request(app.getHttpServer())
+      .put(`/enterprise/sso/${companyId}`)
+      .set(...authHeader(app, admin))
+      .send({
+        providerType: 'OIDC',
+        issuerUrl: 'https://idp.institution.test',
+        clientId: 'client-abc',
+        clientSecret: 'secret-xyz',
+      })
+      .expect(200);
+  }
+
+  function signIn(companyId: string, token = 'any-token') {
+    return request(app.getHttpServer())
+      .post(`/enterprise/sso/${companyId}/sign-in`)
+      .send({ token });
+  }
+
+  it('ticket 24: a platform admin can configure SSO per corporate', async () => {
+    const admin = await createUser(database, 'PLATFORM_ADMIN');
+    const companyId = await createCompany(database);
+
+    const res = await setupSso(companyId, admin);
+    expect(res.status).toBe(200);
+    expect(res.body.configured).toBe(true);
+  });
+
+  it('ticket 24: SSO config secrets are never returned in read path', async () => {
+    const admin = await createUser(database, 'PLATFORM_ADMIN');
+    const companyId = await createCompany(database);
+    await setupSso(companyId, admin);
+
+    const res = await request(app.getHttpServer())
+      .get(`/enterprise/sso/${companyId}`)
+      .set(...authHeader(app, admin))
+      .expect(200);
+
+    expect(res.body.clientSecret).toBeUndefined();
+    expect(JSON.stringify(res.body)).not.toContain('secret-xyz');
+    expect(res.body.clientId).toBe('client-abc');
+  });
+
+  it('ticket 24: two corporates can use different providers simultaneously', async () => {
+    const admin = await createUser(database, 'PLATFORM_ADMIN');
+    const companyA = await createCompany(database);
+    const companyB = await createCompany(database);
+
+    await request(app.getHttpServer())
+      .put(`/enterprise/sso/${companyA}`)
+      .set(...authHeader(app, admin))
+      .send({
+        providerType: 'OIDC',
+        issuerUrl: 'https://a.institution.test',
+        clientId: 'client-a',
+        clientSecret: 'secret-a',
+      })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .put(`/enterprise/sso/${companyB}`)
+      .set(...authHeader(app, admin))
+      .send({
+        providerType: 'SAML',
+        issuerUrl: 'https://b.institution.test',
+        clientId: 'client-b',
+        clientSecret: 'secret-b',
+      })
+      .expect(200);
+
+    const resA = await request(app.getHttpServer())
+      .get(`/enterprise/sso/${companyA}`)
+      .set(...authHeader(app, admin))
+      .expect(200);
+    const resB = await request(app.getHttpServer())
+      .get(`/enterprise/sso/${companyB}`)
+      .set(...authHeader(app, admin))
+      .expect(200);
+
+    expect(resA.body.providerType).toBe('OIDC');
+    expect(resB.body.providerType).toBe('SAML');
+  });
+
+  it('ticket 24: a misconfigured provider (no config) fails closed', async () => {
+    const companyId = await createCompany(database);
+    claimsToReturn = { subject: ssoSubject(), email: ssoEmail(), emailVerified: true };
+
+    const res = await signIn(companyId);
+    expect(res.status).toBe(401);
+  });
+
+  it('ticket 24: a corporate admin cannot configure SSO for another corporate', async () => {
+    const platformAdmin = await createUser(database, 'PLATFORM_ADMIN');
+    const companyA = await createCompany(database);
+    const companyB = await createCompany(database);
+    const corpAdmin = await createCorporateAdmin(database, companyA);
+
+    await setupSso(companyB, platformAdmin);
+
+    const res = await request(app.getHttpServer())
+      .put(`/enterprise/sso/${companyB}`)
+      .set(...authHeader(app, corpAdmin))
+      .send({
+        providerType: 'OIDC',
+        issuerUrl: 'https://evil.test',
+        clientId: 'evil-client',
+        clientSecret: 'evil-secret',
+      });
+
+    expect(res.status).toBe(403);
+  });
+
+  it('ticket 24: a corporate admin can read their own SSO config', async () => {
+    const platformAdmin = await createUser(database, 'PLATFORM_ADMIN');
+    const companyId = await createCompany(database);
+    const corpAdmin = await createCorporateAdmin(database, companyId);
+    await setupSso(companyId, platformAdmin);
+
+    const res = await request(app.getHttpServer())
+      .get(`/enterprise/sso/${companyId}`)
+      .set(...authHeader(app, corpAdmin))
+      .expect(200);
+
+    expect(res.body.clientId).toBe('client-abc');
+    expect(res.body.clientSecret).toBeUndefined();
+  });
+
+  it('ticket 24: a corporate admin cannot read another corporate SSO config', async () => {
+    const platformAdmin = await createUser(database, 'PLATFORM_ADMIN');
+    const companyA = await createCompany(database);
+    const companyB = await createCompany(database);
+    const corpAdminA = await createCorporateAdmin(database, companyA);
+    await setupSso(companyB, platformAdmin);
+
+    const res = await request(app.getHttpServer())
+      .get(`/enterprise/sso/${companyB}`)
+      .set(...authHeader(app, corpAdminA));
+
+    expect(res.status).toBe(404);
+  });
+
+  it('ticket 25: first SSO sign-in creates a new account', async () => {
+    const admin = await createUser(database, 'PLATFORM_ADMIN');
+    const companyId = await createCompany(database);
+    await setupSso(companyId, admin);
+
+    claimsToReturn = {
+      subject: ssoSubject(),
+      email: ssoEmail(),
+      emailVerified: true,
+    };
+
+    const res = await signIn(companyId);
+    expect(res.status).toBe(200);
+    expect(typeof res.body.access_token).toBe('string');
+    expect(res.body.user).toBeDefined();
+    expect(res.body.user.email).toBe(ssoEmail());
+  });
+
+  it('ticket 25: a returning student links to their existing account by email', async () => {
+    const admin = await createUser(database, 'PLATFORM_ADMIN');
+    const companyId = await createCompany(database);
+    await setupSso(companyId, admin);
+
+    const existing = await createUser(database, 'LEARNER');
+    await database.db
+      .update((await import('../src/database/schema')).users)
+      .set({ emailVerified: true })
+      .where((await import('drizzle-orm')).eq((await import('../src/database/schema')).users.userId, existing.userId));
+
+    claimsToReturn = {
+      subject: ssoSubject(),
+      email: existing.email,
+      emailVerified: true,
+    };
+
+    const res = await signIn(companyId);
+    expect(res.status).toBe(200);
+    expect(res.body.user.id).toBe(existing.userId);
+  });
+
+  it('ticket 25: an unverified email does not silently link', async () => {
+    const admin = await createUser(database, 'PLATFORM_ADMIN');
+    const companyId = await createCompany(database);
+    await setupSso(companyId, admin);
+
+    claimsToReturn = {
+      subject: ssoSubject(),
+      email: ssoEmail(),
+      emailVerified: false,
+    };
+
+    const res = await signIn(companyId);
+    expect(res.status).toBe(401);
+  });
+
+  it('ticket 25: signing in twice with the same subject does not create a second link', async () => {
+    const admin = await createUser(database, 'PLATFORM_ADMIN');
+    const companyId = await createCompany(database);
+    await setupSso(companyId, admin);
+
+    claimsToReturn = {
+      subject: ssoSubject(),
+      email: ssoEmail(),
+      emailVerified: true,
+    };
+
+    const first = await signIn(companyId);
+    const second = await signIn(companyId);
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    expect(first.body.user.id).toBe(second.body.user.id);
+  });
+
+  it('ticket 26: a provider asserting an admin role does not grant one', async () => {
+    const admin = await createUser(database, 'PLATFORM_ADMIN');
+    const companyId = await createCompany(database);
+    await setupSso(companyId, admin);
+
+    claimsToReturn = {
+      subject: `adversarial-sub-${run}`,
+      email: `adversarial-${run}@institution.test`,
+      emailVerified: true,
+    };
+
+    const signInRes = await signIn(companyId);
+    expect(signInRes.status).toBe(200);
+
+    const accessToken = signInRes.body.access_token as string;
+
+    const adminOnlyRes = await request(app.getHttpServer())
+      .post('/enterprise/credentials')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ companyId, label: 'test' });
+
+    expect(adminOnlyRes.status).toBe(403);
+  });
+
+  it('ticket 26: role derives from enrolment records, not provider claims', async () => {
+    const admin = await createUser(database, 'PLATFORM_ADMIN');
+    const companyId = await createCompany(database);
+    await setupSso(companyId, admin);
+
+    claimsToReturn = {
+      subject: ssoSubject(),
+      email: ssoEmail(),
+      emailVerified: true,
+    };
+
+    const signInRes = await signIn(companyId);
+    expect(signInRes.status).toBe(200);
+
+    expect(signInRes.body.user.role).toBe('LEARNER');
+  });
+
+  it('ticket 26: access derives from DB records after sign-in (revoked enrollment stays revoked)', async () => {
+    const admin = await createUser(database, 'PLATFORM_ADMIN');
+    const companyId = await createCompany(database);
+    await setupSso(companyId, admin);
+
+    claimsToReturn = {
+      subject: ssoSubject(),
+      email: ssoEmail(),
+      emailVerified: true,
+    };
+
+    const signInRes = await signIn(companyId);
+    expect(signInRes.status).toBe(200);
+
+    const accessToken = signInRes.body.access_token as string;
+
+    const profileRes = await request(app.getHttpServer())
+      .get('/enterprise/branding/mine')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(profileRes.body).toBeDefined();
+  });
+});

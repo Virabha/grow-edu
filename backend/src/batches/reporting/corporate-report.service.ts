@@ -26,7 +26,7 @@ export type AttendanceReportRow = {
   attendancePercent: number | null;
   sessions: Array<{
     sessionId: string;
-    batchId: string;
+    batchId: string | null;
     title: string;
     attended: boolean;
   }>;

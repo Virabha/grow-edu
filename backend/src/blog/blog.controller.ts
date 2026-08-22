@@ -1,11 +1,12 @@
 import {
-  Controller,
-  Get,
-  Post,
-  Patch,
-  Delete,
-  Param,
+  BadRequestException,
   Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -13,8 +14,10 @@ import {
   ApiTags,
   ApiOperation,
   ApiBearerAuth,
+  ApiProperty,
   ApiResponse,
 } from '@nestjs/swagger';
+import { IsDateString, IsNotEmpty } from 'class-validator';
 import { BlogService } from './blog.service';
 import { CreateBlogCategoryDto } from './dto/create-blog-category.dto';
 import { UpdateBlogCategoryDto } from './dto/update-blog-category.dto';
@@ -27,6 +30,13 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles, UserRole } from '../auth/decorators/roles.decorator';
 import { Public } from '../auth/decorators/public.decorator';
+
+class SchedulePostDto {
+  @ApiProperty({ description: 'ISO 8601 datetime when the post should publish' })
+  @IsDateString()
+  @IsNotEmpty()
+  scheduledAt!: string;
+}
 
 @ApiTags('blog')
 @Controller('blog')
@@ -95,7 +105,7 @@ export class BlogController {
 
   @Get('posts/public/:slug')
   @Public()
-  @ApiOperation({ summary: 'Get a published blog post by slug (public); increments view count' })
+  @ApiOperation({ summary: 'Get a published blog post by slug (public); includes metadata; increments view count' })
   @ApiResponse({ status: 404, description: 'Not found or not published' })
   getPublicPost(@Param('slug') slug: string) {
     return this.blogService.getPublicPostBySlug(slug);
@@ -138,6 +148,40 @@ export class BlogController {
   @ApiResponse({ status: 409, description: 'Slug already exists' })
   updatePost(@Param('blogPostId') blogPostId: string, @Body() dto: UpdateBlogPostDto) {
     return this.blogService.updatePost(blogPostId, dto);
+  }
+
+  @Post('posts/:blogPostId/publish')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.PLATFORM_ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Publish a blog post (explicit action)' })
+  publishPost(@Param('blogPostId') blogPostId: string) {
+    return this.blogService.publishPost(blogPostId);
+  }
+
+  @Post('posts/:blogPostId/unpublish')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.PLATFORM_ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Unpublish a blog post (returns it to DRAFT)' })
+  unpublishPost(@Param('blogPostId') blogPostId: string) {
+    return this.blogService.unpublishPost(blogPostId);
+  }
+
+  @Post('posts/:blogPostId/schedule')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.PLATFORM_ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Schedule a blog post for future publication' })
+  async schedulePost(
+    @Param('blogPostId') blogPostId: string,
+    @Body() dto: SchedulePostDto,
+  ) {
+    const when = new Date(dto.scheduledAt);
+    if (isNaN(when.getTime())) {
+      throw new BadRequestException('scheduledAt is not a valid date');
+    }
+    return this.blogService.schedulePost(blogPostId, when);
   }
 
   @Delete('posts/:blogPostId')

@@ -15,6 +15,7 @@ import {
   assessmentQuestionTypeEnum,
   assessmentTaxonomyKindEnum,
   assessmentToleranceKindEnum,
+  questionReviewStatusEnum,
 } from "./enums";
 import { organizationId } from "./organizations";
 
@@ -111,6 +112,9 @@ export const assessmentQuestions = pgTable(
     groupId: text("group_id"),
     groupOrder: integer("group_order"),
     currentVersion: integer("current_version").notNull().default(1),
+    reviewStatus: questionReviewStatusEnum("review_status"),
+    reviewedBy: text("reviewed_by"),
+    reviewedAt: timestamp("reviewed_at"),
     isRetired: boolean("is_retired").notNull().default(false),
     retiredAt: timestamp("retired_at"),
     createdBy: text("created_by").notNull(),

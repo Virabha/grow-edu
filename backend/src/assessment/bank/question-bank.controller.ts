@@ -12,6 +12,12 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 
 import { CurrentUser } from "../../auth/decorators/current-user.decorator";
 import { Roles, UserRole } from "../../auth/decorators/roles.decorator";
+import { BulkGenerationService } from "./bulk-generation.service";
+import { QuestionGenerationService } from "./question-generation.service";
+import {
+  BulkGenerateQuestionsDto,
+  GenerateQuestionsDto,
+} from "./dto/question-generation.dto";
 import {
   CreateQuestionDto,
   SearchQuestionsDto,
@@ -22,6 +28,7 @@ import { QuestionBankService } from "./question-bank.service";
 
 interface AuthedUser {
   userId: string;
+  organizationId?: string;
 }
 
 @ApiTags("assessment")
@@ -29,12 +36,46 @@ interface AuthedUser {
 @Controller("assessment/questions")
 @Roles(UserRole.PLATFORM_ADMIN, UserRole.INSTRUCTOR)
 export class QuestionBankController {
-  constructor(private readonly bank: QuestionBankService) {}
+  constructor(
+    private readonly bank: QuestionBankService,
+    private readonly generation: QuestionGenerationService,
+    private readonly bulkGeneration: BulkGenerationService,
+  ) {}
 
   @ApiOperation({ summary: "Author a question independently of any test" })
   @Post()
   create(@Body() dto: CreateQuestionDto, @CurrentUser() user: AuthedUser) {
     return this.bank.create(dto, user.userId);
+  }
+
+  @ApiOperation({ summary: "Generate draft questions from a lesson using AI" })
+  @Post("generate")
+  generate(@Body() dto: GenerateQuestionsDto, @CurrentUser() user: AuthedUser) {
+    return this.generation.generateFromLesson(
+      dto.lessonId ?? "",
+      dto.subjectId,
+      dto.topicId,
+      dto.difficulty,
+      dto.count,
+      user.userId,
+      user.organizationId ?? null,
+    );
+  }
+
+  @ApiOperation({ summary: "Submit a bulk batch generation of practice questions" })
+  @Post("bulk-generate")
+  bulkGenerate(
+    @Body() dto: BulkGenerateQuestionsDto,
+    @CurrentUser() user: AuthedUser,
+  ) {
+    return this.bulkGeneration.submitBulkGeneration(
+      dto.subjectId,
+      dto.topicId,
+      dto.difficulty,
+      dto.count,
+      user.userId,
+      user.organizationId ?? null,
+    );
   }
 
   @ApiOperation({ summary: "Search and filter the bank" })
@@ -81,5 +122,17 @@ export class QuestionBankController {
   @Post(":questionId/retire")
   retire(@Param("questionId") questionId: string) {
     return this.bank.retire(questionId);
+  }
+
+  @ApiOperation({ summary: "Approve a generated question for student use" })
+  @Post(":questionId/approve")
+  approve(@Param("questionId") questionId: string, @CurrentUser() user: AuthedUser) {
+    return this.bank.approve(questionId, user.userId);
+  }
+
+  @ApiOperation({ summary: "Reject a generated question so it never reaches students" })
+  @Post(":questionId/reject")
+  reject(@Param("questionId") questionId: string, @CurrentUser() user: AuthedUser) {
+    return this.bank.reject(questionId, user.userId);
   }
 }

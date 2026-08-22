@@ -59,10 +59,15 @@ import { EnvironmentsModule } from "./environments/environments.module";
 import { PathsModule } from "./paths/paths.module";
 import { ProjectsModule } from "./projects/projects.module";
 import { PortfolioModule } from "./portfolio/portfolio.module";
+import { AiModule } from "./ai/ai.module";
 import { CodingModule } from "./coding/coding.module";
 import { SkillsModule } from "./skills/skills.module";
 import { CredentialsModule } from "./credentials/credentials.module";
 import { ProjectReviewModule } from "./project-review/project-review.module";
+import { PageBuilderModule } from "./page-builder/page-builder.module";
+import { ReportingModule } from "./reporting/reporting.module";
+import { CareersModule } from "./careers/careers.module";
+import { EnterpriseModule } from "./enterprise/enterprise.module";
 
 @Module({
   imports: [
@@ -125,6 +130,11 @@ import { ProjectReviewModule } from "./project-review/project-review.module";
     CredentialsModule,
     EnvironmentsModule,
     ProjectReviewModule,
+    AiModule,
+    PageBuilderModule,
+    ReportingModule,
+    CareersModule,
+    EnterpriseModule,
   ],
   controllers: [AppController],
   providers: [

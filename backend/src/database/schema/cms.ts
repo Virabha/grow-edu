@@ -9,7 +9,7 @@ import {
   unique,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { blogPostStatusEnum } from "./enums";
+import { blogPostStatusEnum, pageStatusEnum } from "./enums";
 import { organizationId } from "./organizations";
 
 // =============================================
@@ -215,7 +215,13 @@ export const blogPosts = pgTable(
     status: blogPostStatusEnum("status").notNull().default("DRAFT"),
     tags: jsonb("tags").$type<string[]>().default([]),
     viewCount: integer("view_count").notNull().default(0),
+    scheduledAt: timestamp("scheduled_at"),
     publishedAt: timestamp("published_at"),
+    metaTitle: text("meta_title"),
+    metaDescription: text("meta_description"),
+    canonicalUrl: text("canonical_url"),
+    ogImageUrl: text("og_image_url"),
+    structuredData: jsonb("structured_data").$type<Record<string, unknown>>(),
     isDeleted: boolean("is_deleted").notNull().default(false),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -254,5 +260,36 @@ export const certificateTemplates = pgTable(
       table.organizationId,
       table.scope,
     ),
+  }),
+);
+
+export type PageBlock = {
+  kind: string;
+  displayOrder: number;
+  visible: boolean;
+  config: Record<string, unknown>;
+};
+
+export const landingPages = pgTable(
+  "landing_pages",
+  {
+    organizationId: organizationId(),
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    slug: text("slug").notNull(),
+    title: text("title").notNull(),
+    status: pageStatusEnum("status").notNull().default("DRAFT"),
+    blocks: jsonb("blocks").$type<PageBlock[]>().notNull().default([]),
+    metaTitle: text("meta_title"),
+    metaDescription: text("meta_description"),
+    canonicalUrl: text("canonical_url"),
+    ogImageUrl: text("og_image_url"),
+    structuredData: jsonb("structured_data").$type<Record<string, unknown>>(),
+    publishedAt: timestamp("published_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    slugKey: uniqueIndex("landing_pages_slug_key").on(table.organizationId, table.slug),
+    statusIdx: index("landing_pages_status_idx").on(table.status),
   }),
 );

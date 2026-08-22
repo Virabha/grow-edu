@@ -62,10 +62,12 @@ export class RecordingService implements OnModuleInit {
     let attached = 0;
 
     for (const session of sessions) {
-      const found = await this.pollFor(session);
+      const batchId = session.batchId;
+      if (!batchId) continue;
+      const found = await this.pollFor({ ...session, batchId } as typeof batchSessions.$inferSelect & { batchId: string });
 
       if (found) {
-        await this.attachRecording(session.batchId, session.sessionId, {
+        await this.attachRecording(batchId, session.sessionId, {
           videoId: found.videoId,
           thumbnailUrl: found.thumbnailUrl ?? undefined,
           durationSeconds: found.durationSeconds ?? undefined,
@@ -91,7 +93,7 @@ export class RecordingService implements OnModuleInit {
     return { polled: sessions.length, attached };
   }
 
-  private async pollFor(session: typeof batchSessions.$inferSelect) {
+  private async pollFor(session: typeof batchSessions.$inferSelect & { batchId: string }) {
     try {
       return await this.provider.findRecording({
         sessionId: session.sessionId,

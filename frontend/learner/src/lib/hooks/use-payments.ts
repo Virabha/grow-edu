@@ -13,50 +13,12 @@ export interface QRPaymentSettings {
   instructions: string | null;
 }
 
-interface CreatePaymentParams {
-  courseId?: string;
-  sectionId?: string;
-  itemType: "COURSE" | "SECTION";
-  couponCode?: string;
-}
-
 export interface CreateManualQRResponse {
   paymentId: string;
   amount: number;
   currency: string;
   status: string;
   qrSettings: QRPaymentSettings;
-}
-
-export function useCreatePayment() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (params: CreatePaymentParams) =>
-      apiClient
-        .post<CreateManualQRResponse>("/payments", params)
-        .then((r) => r.data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["enrollments"] });
-    },
-  });
-}
-
-interface FreeEnrollParams {
-  courseId?: string;
-  sectionId?: string;
-  itemType: "COURSE" | "SECTION";
-  couponCode?: string;
-}
-
-export function useFreeEnroll() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (params: FreeEnrollParams) =>
-      apiClient.post("/payments/enroll-free", params).then((r) => r.data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["enrollments"] });
-    },
-  });
 }
 
 interface UploadProofParams {

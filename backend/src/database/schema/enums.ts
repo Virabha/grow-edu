@@ -5,18 +5,7 @@ export const userRoleEnum = pgEnum("user_role", [
   "INSTRUCTOR",
   "CORPORATE_ADMIN",
   "PLATFORM_ADMIN",
-]);
-
-export const courseStatusEnum = pgEnum("course_status", [
-  "DRAFT",
-  "PUBLISHED",
-  "ARCHIVED",
-]);
-
-export const enrollmentStatusEnum = pgEnum("enrollment_status", [
-  "ACTIVE",
-  "COMPLETED",
-  "REVOKED",
+  "PARENT",
 ]);
 
 export const paymentStatusEnum = pgEnum("payment_status", [
@@ -35,42 +24,27 @@ export const paymentGatewayEnum = pgEnum("payment_gateway", [
   "FREE",
 ]);
 
-export const courseLevelEnum = pgEnum("course_level", [
-  "BEGINNER",
-  "INTERMEDIATE",
-  "ADVANCED",
-  "ALL_LEVELS",
+export const lessonTypeEnum = pgEnum("lesson_type", [
+  "VIDEO",
+  "TEXT",
+  "QUIZ",
+  "DOCUMENT",
+  "AUDIO",
+  "RICH",
+  "LIVE_SESSION",
 ]);
-
-export const lessonTypeEnum = pgEnum("lesson_type", ["VIDEO", "TEXT", "QUIZ"]);
 
 export const lessonStatusEnum = pgEnum("lesson_status", [
   "DRAFT",
   "PENDING_APPROVAL",
   "PROCESSING",
+  "SCHEDULED",
   "READY",
 ]);
 
-export const sectionPriceTypeEnum = pgEnum("section_price_type", [
-  "INCLUDED",
-  "INDIVIDUAL",
-  "BOTH",
-]);
-
-export const courseReviewStatusEnum = pgEnum("course_review_status", [
-  "DRAFT",
-  "PENDING_REVIEW",
-  "CHANGES_REQUESTED",
-  "APPROVED",
-  "REJECTED",
-]);
-
-export const itemTypeEnum = pgEnum("item_type", ["COURSE", "SECTION", "BATCH"]);
-
-export const accessSourceEnum = pgEnum("access_source", [
-  "SECTION_PURCHASE",
-  "COURSE_PURCHASE",
-  "ADMIN_GRANT",
+export const itemTypeEnum = pgEnum("item_type", [
+  "BATCH",
+  "CORPORATE_CONTRACT",
 ]);
 
 export const emailTokenTypeEnum = pgEnum("email_token_type", [
@@ -85,23 +59,6 @@ export const videoEncodingJobStatusEnum = pgEnum("video_encoding_job_status", [
   "FAILED",
 ]);
 
-// Coupon discount type enum
-export const discountTypeEnum = pgEnum("discount_type", [
-  "PERCENTAGE",
-  "FIXED_AMOUNT",
-]);
-
-// Coupon usage status enum (for reservation/consumption lifecycle)
-export const couponUsageStatusEnum = pgEnum("coupon_usage_status", [
-  "RESERVED",
-  "CONSUMED",
-  "CANCELLED",
-]);
-
-export const teacherApplicationStatusEnum = pgEnum(
-  "teacher_application_status",
-  ["PENDING", "APPROVED", "REJECTED"],
-);
 
 export const applicationStatusEnum = pgEnum("application_status", [
   "NEW",
@@ -111,11 +68,6 @@ export const applicationStatusEnum = pgEnum("application_status", [
   "REJECTED",
 ]);
 
-export const bookStatusEnum = pgEnum("book_status", [
-  "DRAFT",
-  "PUBLISHED",
-  "ARCHIVED",
-]);
 
 export const batchStatusEnum = pgEnum("batch_status", [
   "DRAFT",
@@ -123,6 +75,26 @@ export const batchStatusEnum = pgEnum("batch_status", [
   "ONGOING",
   "COMPLETED",
   "ARCHIVED",
+]);
+
+export const batchDeliveryModeEnum = pgEnum("batch_delivery_mode", [
+  "LIVE",
+  "RECORDED",
+  "HYBRID",
+]);
+
+export const batchInstructorRoleEnum = pgEnum("batch_instructor_role", [
+  "LEAD",
+  "SUBJECT",
+  "ASSISTANT",
+  "MENTOR",
+]);
+
+export const batchEnrollmentSourceEnum = pgEnum("batch_enrollment_source", [
+  "SELF_PURCHASE",
+  "ADMIN_GRANT",
+  "CORPORATE_SEAT",
+  "FREE",
 ]);
 
 export const batchEnrollmentStatusEnum = pgEnum("batch_enrollment_status", [
@@ -134,6 +106,7 @@ export const batchEnrollmentStatusEnum = pgEnum("batch_enrollment_status", [
 export const batchSessionTypeEnum = pgEnum("batch_session_type", [
   "LIVE",
   "RECORDING",
+  "ONE_TO_ONE",
 ]);
 
 export const batchLiveProviderEnum = pgEnum("batch_live_provider", [
@@ -163,6 +136,12 @@ export const batchDoubtStatusEnum = pgEnum("batch_doubt_status", [
   "CLOSED",
 ]);
 
+export const batchDoubtAnchorTypeEnum = pgEnum("batch_doubt_anchor_type", [
+  "BATCH",
+  "LESSON",
+  "QUESTION",
+]);
+
 export const batchQuizQuestionTypeEnum = pgEnum("batch_quiz_question_type", [
   "MCQ_SINGLE",
   "MCQ_MULTI",
@@ -185,15 +164,16 @@ export const notificationTypeEnum = pgEnum("notification_type", [
   "BATCH_CERTIFICATE",
   "PAYMENT_APPROVED",
   "PAYMENT_REJECTED",
+  "WEEKLY_REPORT_CARD",
+  "PARENT_LINK_REQUEST",
+  "BADGE_AWARDED",
+  "DAILY_REVIEW_DUE",
+  "CODE_VERDICT",
+  "PROJECT_MILESTONE_REVIEWED",
+  "PATH_CERTIFICATE",
   "GENERIC",
 ]);
 
-export const payoutStatusEnum = pgEnum("payout_status", [
-  "PENDING",
-  "APPROVED",
-  "REJECTED",
-  "PAID",
-]);
 
 export const badgeCriteriaEnum = pgEnum("badge_criteria_type", [
   "RATING",
@@ -202,22 +182,15 @@ export const badgeCriteriaEnum = pgEnum("badge_criteria_type", [
   "MANUAL",
 ]);
 
-export const currencyPositionEnum = pgEnum("currency_symbol_position", [
-  "before",
-  "after",
-]);
-
-export const studentReviewStatusEnum = pgEnum("student_review_status", [
-  "PENDING",
-  "PUBLISHED",
-  "REJECTED",
-]);
 
 export const blogPostStatusEnum = pgEnum("blog_post_status", [
   "DRAFT",
+  "SCHEDULED",
   "PUBLISHED",
   "ARCHIVED",
 ]);
+
+export const pageStatusEnum = pgEnum("page_status", ["DRAFT", "PUBLISHED"]);
 
 export const refundStatusEnum = pgEnum("refund_status", [
   "NONE",
@@ -226,11 +199,31 @@ export const refundStatusEnum = pgEnum("refund_status", [
   "DECLINED",
 ]);
 
-export const enrollmentSourceEnum = pgEnum("enrollment_source", [
-  "SELF_PURCHASE",
-  "ADMIN_GRANT",
-  "COMPANY_ASSIGNMENT",
-  "FREE_COURSE",
+export const batchWaitlistStatusEnum = pgEnum("batch_waitlist_status", [
+  "WAITING",
+  "PROMOTED",
+  "WITHDRAWN",
+]);
+
+export const broadcastAudienceEnum = pgEnum("broadcast_audience", [
+  "BATCH",
+  "CORPORATE",
+  "SUB_GROUP",
+  "SEGMENT",
+]);
+
+export const invoiceKindEnum = pgEnum("invoice_kind", [
+  "INVOICE",
+  "CREDIT_NOTE",
+]);
+
+export const corporateContractStatusEnum = pgEnum("corporate_contract_status", [
+  "DRAFT",
+  "AWAITING_PAYMENT",
+  "ACTIVE",
+  "EXPIRING",
+  "EXPIRED",
+  "CANCELLED",
 ]);
 
 export const assignmentSubmissionTypeEnum = pgEnum(
@@ -242,3 +235,319 @@ export const assignmentSubmissionStatusEnum = pgEnum(
   "assignment_submission_status",
   ["SUBMITTED", "GRADED", "RETURNED"],
 );
+
+export const assessmentTaxonomyKindEnum = pgEnum("assessment_taxonomy_kind", [
+  "SUBJECT",
+  "TOPIC",
+  "SUB_TOPIC",
+]);
+
+export const assessmentQuestionTypeEnum = pgEnum("assessment_question_type", [
+  "SINGLE_CORRECT",
+  "MULTIPLE_CORRECT",
+  "NUMERIC",
+  "WRITTEN",
+  "IMAGE_UPLOAD",
+]);
+
+export const assessmentPartialCreditRuleEnum = pgEnum(
+  "assessment_partial_credit_rule",
+  ["ALL_OR_NOTHING", "PROPORTIONAL"],
+);
+
+export const assessmentToleranceKindEnum = pgEnum(
+  "assessment_tolerance_kind",
+  ["ABSOLUTE", "RELATIVE"],
+);
+
+export const assessmentAttemptStatusEnum = pgEnum("assessment_attempt_status", [
+  "IN_PROGRESS",
+  "AWAITING_GRADING",
+  "GRADED",
+  "EXPIRED",
+]);
+
+export const assessmentAnswerStatusEnum = pgEnum("assessment_answer_status", [
+  "AUTO_SCORED",
+  "PENDING_GRADING",
+  "GRADED",
+]);
+
+export const assessmentRegradeStatusEnum = pgEnum(
+  "assessment_regrade_status",
+  ["OPEN", "UPHELD", "CHANGED"],
+);
+
+export const assessmentImportStatusEnum = pgEnum("assessment_import_status", [
+  "PARSED",
+  "COMMITTING",
+  "COMMITTED",
+  "FAILED",
+]);
+
+export const assessmentPracticeKindEnum = pgEnum("assessment_practice_kind", [
+  "DAILY",
+  "TOPIC",
+]);
+
+export const assessmentAnomalyKindEnum = pgEnum("assessment_anomaly_kind", [
+  "TIMING_OUTLIER",
+  "IDENTICAL_SEQUENCE",
+  "SUBMISSION_PATTERN",
+]);
+
+export const mediaRenditionKindEnum = pgEnum("media_rendition_kind", [
+  "VIDEO",
+  "AUDIO",
+]);
+
+export const lessonTranscriptStatusEnum = pgEnum("lesson_transcript_status", [
+  "PENDING",
+  "PROCESSING",
+  "READY",
+  "FAILED",
+]);
+
+export const batchVisibilityEnum = pgEnum("batch_visibility", [
+  "PUBLIC",
+  "CORPORATE_ONLY",
+]);
+
+export const documentAnnotationStateEnum = pgEnum("document_annotation_state", [
+  "ANCHORED",
+  "ORPHANED",
+]);
+
+export const reviewItemSourceEnum = pgEnum("review_item_source", [
+  "ERROR_NOTEBOOK",
+  "BOOKMARKED_QUESTION",
+]);
+
+export const reviewOutcomeEnum = pgEnum("review_outcome", ["CORRECT", "WRONG"]);
+
+export const reviewQueueEntryKindEnum = pgEnum("review_queue_entry_kind", [
+  "REVIEW",
+  "PRACTICE",
+]);
+
+export const communityAuthorKindEnum = pgEnum("community_author_kind", [
+  "STUDENT",
+  "INSTRUCTOR",
+  "ADMIN",
+]);
+
+export const contentReportTargetEnum = pgEnum("content_report_target", [
+  "FEED_POST",
+  "GROUP_MESSAGE",
+]);
+
+export const contentReportStatusEnum = pgEnum("content_report_status", [
+  "OPEN",
+  "RESOLVED",
+  "DISMISSED",
+]);
+
+export const identityProviderEnum = pgEnum("identity_provider", [
+  "PASSWORD",
+  "PHONE",
+  "GOOGLE",
+]);
+
+export const parentLinkStatusEnum = pgEnum("parent_link_status", [
+  "PENDING",
+  "ACTIVE",
+  "REVOKED",
+]);
+
+export const searchDocumentKindEnum = pgEnum("search_document_kind", [
+  "BATCH",
+  "INSTRUCTOR",
+]);
+
+export const curriculumItemKindEnum = pgEnum("curriculum_item_kind", [
+  "LESSON",
+  "TEST",
+]);
+
+export const codingProblemKindEnum = pgEnum("coding_problem_kind", [
+  "ALGORITHMIC",
+  "FRONTEND",
+]);
+
+export const codingProblemStatusEnum = pgEnum("coding_problem_status", [
+  "DRAFT",
+  "VALIDATED",
+  "PUBLISHED",
+  "RETIRED",
+]);
+
+export const codingCaseVisibilityEnum = pgEnum("coding_case_visibility", [
+  "VISIBLE",
+  "HIDDEN",
+]);
+
+export const codingRunKindEnum = pgEnum("coding_run_kind", [
+  "SAMPLE_RUN",
+  "JUDGE_SUBMISSION",
+  "REFERENCE_VALIDATION",
+]);
+
+export const codingRunStatusEnum = pgEnum("coding_run_status", [
+  "PENDING",
+  "RUNNING",
+  "COMPLETE",
+]);
+
+export const codingVerdictEnum = pgEnum("coding_verdict", [
+  "ACCEPTED",
+  "WRONG_ANSWER",
+  "TIME_LIMIT_EXCEEDED",
+  "MEMORY_LIMIT_EXCEEDED",
+  "RUNTIME_ERROR",
+  "COMPILATION_ERROR",
+  "INTERNAL_ERROR",
+]);
+
+export const devEnvironmentStatusEnum = pgEnum("dev_environment_status", [
+  "PROVISIONING",
+  "RUNNING",
+  "HIBERNATED",
+  "RECLAIMED",
+  "FAILED",
+]);
+
+export const projectMilestoneStateEnum = pgEnum("project_milestone_state", [
+  "LOCKED",
+  "OPEN",
+  "SUBMITTED",
+  "RETURNED",
+  "PASSED",
+]);
+
+export const projectCheckStatusEnum = pgEnum("project_check_status", [
+  "PENDING",
+  "PASSED",
+  "FAILED",
+  "HARNESS_ERROR",
+]);
+
+export const projectSimilaritySourceEnum = pgEnum("project_similarity_source", [
+  "COHORT",
+  "PUBLIC",
+]);
+
+export const pathStageKindEnum = pgEnum("path_stage_kind", [
+  "BATCH",
+  "PROBLEM_SET",
+  "PROJECT",
+]);
+
+export const pathEnrolmentStatusEnum = pgEnum("path_enrolment_status", [
+  "ACTIVE",
+  "COMPLETED",
+  "REVOKED",
+]);
+
+export const pathStageStateEnum = pgEnum("path_stage_state", [
+  "LOCKED",
+  "OPEN",
+  "COMPLETE",
+]);
+
+export const skillSubjectKindEnum = pgEnum("skill_subject_kind", [
+  "PROBLEM",
+  "PROJECT",
+  "STAGE",
+]);
+
+export const portfolioItemKindEnum = pgEnum("portfolio_item_kind", [
+  "PROJECT",
+  "SKILL",
+  "CERTIFICATE",
+]);
+
+export const aiCallOutcomeEnum = pgEnum("ai_call_outcome", [
+  "SUCCEEDED",
+  "FAILED",
+  "REJECTED",
+]);
+
+export const aiBatchStatusEnum = pgEnum("ai_batch_status", [
+  "SUBMITTED",
+  "COMPLETE",
+  "FAILED",
+]);
+
+export const aiBatchItemStateEnum = pgEnum("ai_batch_item_state", [
+  "PENDING",
+  "SUCCEEDED",
+  "FAILED",
+  "RECONCILED",
+]);
+
+export const ssoProviderTypeEnum = pgEnum("sso_provider_type", [
+  "OIDC",
+  "SAML",
+]);
+
+export const questionReviewStatusEnum = pgEnum("question_review_status", [
+  "UNREVIEWED",
+  "APPROVED",
+  "REJECTED",
+]);
+
+export const lessonSummaryStatusEnum = pgEnum("lesson_summary_status", [
+  "PENDING",
+  "READY",
+  "FAILED",
+]);
+
+export const funnelEventKindEnum = pgEnum("funnel_event_kind", [
+  "PAGE_VIEW",
+  "CATALOGUE_VIEW",
+  "CHECKOUT_START",
+  "CHECKOUT_COMPLETE",
+]);
+
+export const mockInterviewStatusEnum = pgEnum("mock_interview_status", [
+  "SCHEDULED",
+  "COMPLETED",
+  "CANCELLED",
+]);
+
+export const jobOpeningStatusEnum = pgEnum("job_opening_status", [
+  "OPEN",
+  "CLOSED",
+]);
+
+export const aiDoubtAnswerStatusEnum = pgEnum("ai_doubt_answer_status", [
+  "PENDING",
+  "ANSWERED",
+  "FAILED",
+  "REJECTED",
+  "ESCALATED",
+]);
+
+export const aiDoubtDraftStatusEnum = pgEnum("ai_doubt_draft_status", [
+  "PENDING",
+  "COMMITTED",
+  "DISCARDED",
+]);
+
+export const aiCodeReviewStatusEnum = pgEnum("ai_code_review_status", [
+  "PENDING",
+  "READY",
+  "FAILED",
+]);
+
+export const aiProjectFeedbackStatusEnum = pgEnum("ai_project_feedback_status", [
+  "PENDING",
+  "READY",
+  "FAILED",
+  "DISCARDED",
+]);
+
+export const aiStudyPlanStatusEnum = pgEnum("ai_study_plan_status", [
+  "ACTIVE",
+  "SUPERSEDED",
+]);

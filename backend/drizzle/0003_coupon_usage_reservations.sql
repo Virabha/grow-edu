@@ -9,7 +9,11 @@
 -- =============================================
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'coupon_usage_status') THEN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_type t
+        JOIN pg_namespace n ON n.oid = t.typnamespace
+        WHERE t.typname = 'coupon_usage_status' AND n.nspname = current_schema()
+    ) THEN
         CREATE TYPE coupon_usage_status AS ENUM ('RESERVED', 'CONSUMED', 'CANCELLED');
     END IF;
 END $$;

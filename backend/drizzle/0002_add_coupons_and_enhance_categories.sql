@@ -10,7 +10,11 @@
 -- =============================================
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'discount_type') THEN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_type t
+        JOIN pg_namespace n ON n.oid = t.typnamespace
+        WHERE t.typname = 'discount_type' AND n.nspname = current_schema()
+    ) THEN
         CREATE TYPE discount_type AS ENUM ('PERCENTAGE', 'FIXED_AMOUNT');
     END IF;
 END $$;

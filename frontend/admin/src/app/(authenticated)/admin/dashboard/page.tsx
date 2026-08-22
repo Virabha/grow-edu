@@ -8,23 +8,20 @@ import {
   useRevenueStats,
   useEnrollmentTrend,
   useRevenueTrend,
-  useTopCourses,
+  useTopBatches,
 } from "@/features/analytics/hooks/use-analytics";
 import { StatsCardSkeleton } from "@/components/cards/stats-card-skeleton";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Users,
-  BookOpen,
+  GraduationCap,
   UserCheck,
   IndianRupee,
   Download,
   ArrowUpRight,
-  Tag,
   CreditCard,
-  FileText,
   Layers,
   Shield,
-  Library,
   Building2,
   Layout,
 } from "lucide-react";
@@ -35,15 +32,12 @@ import { useAuthStore } from "@/lib/store/auth-store";
 
 const quickLinks = [
   { label: "Users", href: "/admin/users", icon: Users },
-  { label: "Courses", href: "/admin/courses", icon: BookOpen },
+  { label: "Batches", href: "/admin/batches", icon: GraduationCap },
   { label: "Categories", href: "/admin/categories", icon: Layers },
-  { label: "Books", href: "/admin/books", icon: Library },
-  { label: "Coupons", href: "/admin/coupons", icon: Tag },
   { label: "Payments", href: "/admin/payments", icon: CreditCard },
   { label: "Companies", href: "/admin/companies", icon: Building2 },
   { label: "Moderation", href: "/admin/moderation", icon: Shield },
   { label: "Landing page", href: "/admin/landing", icon: Layout },
-  { label: "Instructor apps", href: "/admin/teacher-applications", icon: FileText },
 ];
 
 function formatINR(n: number): string {
@@ -72,7 +66,7 @@ export default function AdminDashboardPage() {
     enabled: true,
     filters: { period: "day", days: 30 },
   });
-  const { data: topCourses } = useTopCourses({
+  const { data: topBatches } = useTopBatches({
     enabled: true,
     filters: { limit: 5 },
   });
@@ -104,7 +98,7 @@ export default function AdminDashboardPage() {
   const onExport = () => {
     const data = [
       { Metric: "Total Users", Value: stats?.totalUsers ?? 0 },
-      { Metric: "Total Courses", Value: stats?.totalCourses ?? 0 },
+      { Metric: "Total Batches", Value: stats?.totalBatches ?? 0 },
       { Metric: "Total Enrollments", Value: totalEnrollments },
       { Metric: "Revenue", Value: `₹${totalRevenue}` },
     ];
@@ -175,10 +169,10 @@ export default function AdminDashboardPage() {
                 icon={Users}
               />
               <StatCard
-                title="Total courses"
-                description="Published & draft"
-                value={formatCompact(stats.totalCourses ?? 0)}
-                icon={BookOpen}
+                title="Total batches"
+                description="Active & draft"
+                value={formatCompact(stats.totalBatches ?? 0)}
+                icon={GraduationCap}
               />
               <StatCard
                 title="Enrolments"
@@ -279,25 +273,19 @@ export default function AdminDashboardPage() {
           </div>
         </section>
 
-        {/* ── 03 · Top courses ───────────────────────────────────── */}
+        {/* ── 03 · Top batches ───────────────────────────────────── */}
         <section>
           <header className="mb-3 flex items-center gap-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
             <span className="font-display text-sm italic text-primary">03</span>
             <span className="inline-block h-px w-8 bg-border" />
-            Top performing courses
+            Top performing batches
           </header>
           <div className="rounded-2xl border border-border bg-card">
-            {Array.isArray(topCourses) && topCourses.length > 0 ? (
+            {Array.isArray(topBatches) && topBatches.length > 0 ? (
               <ul className="divide-y divide-border/70">
-                {(
-                  topCourses as {
-                    courseId: string;
-                    courseTitle: string;
-                    enrollments: number;
-                  }[]
-                ).map((c, i) => (
+                {topBatches.map((b, i) => (
                   <li
-                    key={c.courseId}
+                    key={b.batchId}
                     className="flex items-center justify-between gap-4 px-5 py-4 transition-colors hover:bg-muted/30"
                   >
                     <div className="flex min-w-0 items-center gap-4">
@@ -306,17 +294,17 @@ export default function AdminDashboardPage() {
                       </span>
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium text-foreground">
-                          {c.courseTitle}
+                          {b.batchTitle}
                         </p>
                         <p className="text-[11px] uppercase tracking-widest text-muted-foreground">
-                          {c.enrollments} enrolment{c.enrollments === 1 ? "" : "s"}
+                          {b.enrollments} enrolment{b.enrollments === 1 ? "" : "s"}
                         </p>
                       </div>
                     </div>
                     <Link
-                      href={`/admin/courses`}
+                      href={`/admin/batches/${b.batchId}`}
                       className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border text-foreground transition-all hover:border-primary hover:bg-primary hover:text-primary-foreground"
-                      aria-label={`Open ${c.courseTitle}`}
+                      aria-label={`Open ${b.batchTitle}`}
                     >
                       <ArrowUpRight className="size-4" />
                     </Link>
@@ -331,18 +319,18 @@ export default function AdminDashboardPage() {
               </div>
             ) : (
               <div className="px-5 py-10 text-center">
-                <BookOpen className="mx-auto size-8 text-muted-foreground/40" />
+                <GraduationCap className="mx-auto size-8 text-muted-foreground/40" />
                 <p className="font-display mt-3 text-lg font-medium text-foreground">
-                  No courses yet.
+                  No batches yet.
                 </p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Once instructors publish, top performers will rank here.
+                  Once batches go live, top performers will rank here.
                 </p>
                 <Link
-                  href="/admin/courses"
+                  href="/admin/batches"
                   className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-foreground underline-offset-4 hover:text-primary hover:underline"
                 >
-                  Go to courses
+                  Go to batches
                   <ArrowUpRight className="size-3.5" />
                 </Link>
               </div>

@@ -45,6 +45,10 @@ export class AppConfigService {
     return this.configService.get("JWT_EXPIRES_IN", { infer: true });
   }
 
+  get maxDevicesPerUser(): number {
+    return this.configService.get("AUTH_MAX_DEVICES_PER_USER", { infer: true });
+  }
+
   // Bunny Storage
   get bunnyStorageZoneName(): string | undefined {
     return this.configService.get("BUNNY_STORAGE_ZONE_NAME", { infer: true });
@@ -81,6 +85,18 @@ export class AppConfigService {
 
   get webhookSecret(): string | undefined {
     return this.configService.get("WEBHOOK_SECRET", { infer: true });
+  }
+
+  get vapidPublicKey(): string | undefined {
+    return this.configService.get("VAPID_PUBLIC_KEY", { infer: true });
+  }
+
+  get vapidPrivateKey(): string | undefined {
+    return this.configService.get("VAPID_PRIVATE_KEY", { infer: true });
+  }
+
+  get vapidSubject(): string | undefined {
+    return this.configService.get("VAPID_SUBJECT", { infer: true });
   }
 
   get razorpayKeyId(): string | undefined {

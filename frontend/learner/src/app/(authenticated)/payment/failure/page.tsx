@@ -29,7 +29,7 @@ export default function PaymentFailurePage() {
 
         <div className="mt-7 flex flex-col gap-2 sm:flex-row sm:justify-center">
           <Button
-            onClick={() => router.push("/courses")}
+            onClick={() => router.push("/batches")}
             className="gap-2 rounded-full"
           >
             <BookOpen className="size-4" />
@@ -37,7 +37,7 @@ export default function PaymentFailurePage() {
           </Button>
           <Button
             variant="outline"
-            onClick={() => router.push("/my-courses")}
+            onClick={() => router.push("/my-batches")}
             className="gap-2 rounded-full"
           >
             <ArrowLeft className="size-4" />

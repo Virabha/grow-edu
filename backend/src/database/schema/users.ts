@@ -6,12 +6,13 @@ import {
   integer,
   jsonb,
   index,
+  unique,
 } from "drizzle-orm/pg-core";
 import {
   userRoleEnum,
   emailTokenTypeEnum,
-  teacherApplicationStatusEnum,
 } from "./enums";
+import { organizationId } from "./organizations";
 
 export const users = pgTable(
   "users",
@@ -36,12 +37,16 @@ export const users = pgTable(
     postalCode: text("postal_code"),
     social: jsonb("social").$type<Record<string, string>>().default({}),
     companyId: text("company_id"),
+    suspendedAt: timestamp("suspended_at"),
+    suspensionReason: text("suspension_reason"),
+    suspendedBy: text("suspended_by"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (table) => ({
     emailIdx: index("users_email_idx").on(table.email),
     roleIdx: index("users_role_idx").on(table.role),
+    suspendedIdx: index("users_suspended_at_idx").on(table.suspendedAt),
   })
 );
 
@@ -68,10 +73,11 @@ export const emailTokens = pgTable(
 export const instructorProfiles = pgTable(
   "instructor_profiles",
   {
+    organizationId: organizationId(),
     profileId: text("profile_id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
-    userId: text("user_id").notNull().unique(),
+    userId: text("user_id").notNull(),
     bio: text("bio"),
     expertise: jsonb("expertise").$type<string[]>(),
     experience: text("experience"),
@@ -86,31 +92,10 @@ export const instructorProfiles = pgTable(
     userIdIdx: index("instructor_profiles_user_id_idx").on(table.userId),
     displayOrderIdx: index("instructor_profiles_display_order_idx").on(table.displayOrder),
     isActiveIdx: index("instructor_profiles_is_active_idx").on(table.isActive),
-  })
-);
-
-export const teacherApplications = pgTable(
-  "teacher_applications",
-  {
-    applicationId: text("application_id")
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
-    fullName: text("full_name").notNull(),
-    email: text("email").notNull(),
-    phone: text("phone"),
-    experienceYears: integer("experience_years"),
-    skills: jsonb("skills").$type<string[]>(),
-    categories: jsonb("categories").$type<string[]>(),
-    cvUrl: text("cv_url"),
-    whyJoin: text("why_join"),
-    status: teacherApplicationStatusEnum("status").notNull().default("PENDING"),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
-  },
-  (table) => ({
-    statusIdx: index("teacher_applications_status_idx").on(table.status),
-    emailIdx: index("teacher_applications_email_idx").on(table.email),
-    createdAtIdx: index("teacher_applications_created_at_idx").on(table.createdAt),
+    userPerOrg: unique("instructor_profiles_organization_user_unique").on(
+      table.organizationId,
+      table.userId
+    ),
   })
 );
 
@@ -124,10 +109,11 @@ export const teacherApplications = pgTable(
 export const instructorMeetingCredentials = pgTable(
   "instructor_meeting_credentials",
   {
+    organizationId: organizationId(),
     credentialId: text("credential_id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
-    userId: text("user_id").notNull().unique(),
+    userId: text("user_id").notNull(),
     zoomClientId: text("zoom_client_id"),
     zoomClientSecret: text("zoom_client_secret"),
     jitsiAppId: text("jitsi_app_id"),
@@ -137,6 +123,9 @@ export const instructorMeetingCredentials = pgTable(
   },
   (table) => ({
     userIdx: index("instructor_meeting_credentials_user_idx").on(table.userId),
+    userPerOrg: unique(
+      "instructor_meeting_credentials_organization_user_unique"
+    ).on(table.organizationId, table.userId),
   }),
 );
 
@@ -160,5 +149,47 @@ export const userDevices = pgTable(
       table.userId,
       table.lastSeenAt,
     ),
+  }),
+);
+
+export const userSecondFactors = pgTable(
+  "user_second_factors",
+  {
+    organizationId: organizationId(),
+    secondFactorId: text("second_factor_id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id").notNull(),
+    secret: text("secret").notNull(),
+    confirmedAt: timestamp("confirmed_at"),
+    lastUsedAt: timestamp("last_used_at"),
+    lastUsedCode: text("last_used_code"),
+    recoveryCodes: jsonb("recovery_codes").$type<string[]>().notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    onePerUser: unique("user_second_factors_user_unique").on(table.userId),
+  }),
+);
+
+export const secondFactorChallenges = pgTable(
+  "second_factor_challenges",
+  {
+    organizationId: organizationId(),
+    challengeId: text("challenge_id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id").notNull(),
+    tokenHash: text("token_hash").notNull(),
+    expiresAt: timestamp("expires_at").notNull(),
+    consumedAt: timestamp("consumed_at"),
+    userAgent: text("user_agent"),
+    ipAddress: text("ip_address"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    tokenIdx: index("second_factor_challenges_token_idx").on(table.tokenHash),
+    userIdx: index("second_factor_challenges_user_idx").on(table.userId),
   }),
 );

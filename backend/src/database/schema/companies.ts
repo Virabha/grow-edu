@@ -4,10 +4,12 @@ import {
   timestamp,
   index,
 } from "drizzle-orm/pg-core";
+import { organizationId } from "./organizations";
 
 export const companies = pgTable(
   "companies",
   {
+    organizationId: organizationId(),
     companyId: text("company_id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),

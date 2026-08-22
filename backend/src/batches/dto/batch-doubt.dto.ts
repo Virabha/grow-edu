@@ -1,6 +1,7 @@
 import { ApiProperty, PartialType } from "@nestjs/swagger";
 import {
   IsArray,
+  IsBoolean,
   IsEnum,
   IsOptional,
   IsString,
@@ -22,6 +23,28 @@ export class CreateBatchDoubtDto {
   @IsString()
   @IsOptional()
   subjectId?: string;
+
+  @ApiProperty({
+    required: false,
+    enum: ["BATCH", "LESSON", "QUESTION"],
+    default: "BATCH",
+  })
+  @IsEnum(["BATCH", "LESSON", "QUESTION"])
+  @IsOptional()
+  anchorType?: "BATCH" | "LESSON" | "QUESTION";
+
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
+  anchorId?: string;
+
+  @ApiProperty({
+    required: false,
+    description: "Allow my name to be shown if this answer is published to the batch",
+  })
+  @IsBoolean()
+  @IsOptional()
+  consentToAttribution?: boolean;
 
   @ApiProperty({ type: [String], required: false })
   @IsArray()

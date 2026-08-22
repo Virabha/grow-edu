@@ -1,4 +1,5 @@
 import { NotFoundException } from '@nestjs/common';
+import { AccountSuspensionService } from '../auth/account-suspension.service';
 import { DeviceRevocationService } from '../auth/device-revocation.service';
 import { Test } from '@nestjs/testing';
 
@@ -6,8 +7,10 @@ import { DATABASE_CONNECTION } from '../database/database.module';
 import { UsersService } from './users.service';
 import { EmailService } from '../email/email.service';
 import { FilesService } from '../files/files.service';
+import { AuditLogService } from '../audit/audit-log.service';
 
 const emailServiceMock = { sendRoleChangeEmail: jest.fn() };
+const auditLogServiceMock = { record: jest.fn().mockResolvedValue(undefined) };
 const filesServiceMock = {
   getDownloadUrl: jest.fn((k: string) => `https://cdn.example.com/${k}`),
   extractKey: jest.fn((v: string) => v),
@@ -18,11 +21,13 @@ async function buildService(db: object) {
   const moduleRef = await Test.createTestingModule({
     providers: [
       { provide: DeviceRevocationService, useValue: { isRevoked: async () => false, forget: () => undefined } },
+      { provide: AccountSuspensionService, useValue: { isSuspended: async () => false, forget: () => undefined } },
       
       UsersService,
       { provide: DATABASE_CONNECTION, useValue: db },
       { provide: EmailService, useValue: emailServiceMock },
       { provide: FilesService, useValue: filesServiceMock },
+      { provide: AuditLogService, useValue: auditLogServiceMock },
     ],
   }).compile();
 
@@ -157,6 +162,9 @@ describe('UsersService › revokeOtherDevices — returns correct count', () => 
           where: jest.fn().mockResolvedValue([]),
         }),
       }),
+      delete: jest.fn().mockReturnValue({
+        where: jest.fn().mockResolvedValue([]),
+      }),
     };
 
     const service = await buildService(dbMock);
@@ -164,6 +172,7 @@ describe('UsersService › revokeOtherDevices — returns correct count', () => 
     const result = await service.revokeOtherDevices('user-1', 'dev-current');
 
     expect(result.removed).toBe(3);
+    expect(dbMock.delete).toHaveBeenCalled();
     expect(result.message).toMatch(/signed out/i);
   });
 

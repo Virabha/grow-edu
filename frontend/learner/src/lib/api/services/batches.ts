@@ -7,6 +7,8 @@ export type BatchStatus =
   | "COMPLETED"
   | "ARCHIVED";
 
+export type BatchDeliveryMode = "LIVE" | "RECORDED" | "HYBRID";
+
 export type BatchSessionType = "LIVE" | "RECORDING";
 
 export type BatchLiveProvider =
@@ -34,7 +36,8 @@ export interface Batch {
   capacity: number | null;
   startDate: string;
   endDate: string;
-  teacherIds: string[];
+  deliveryMode: BatchDeliveryMode;
+  teachers?: BatchTeacher[];
   categoryId: string | null;
   status: BatchStatus;
   createdAt: string;
@@ -56,6 +59,7 @@ export interface BatchTeacher {
   lastName: string | null;
   email: string;
   profileImage: string | null;
+  role: "LEAD" | "SUBJECT" | "ASSISTANT";
 }
 
 export interface BatchDetail extends Batch {
@@ -123,6 +127,8 @@ export interface BatchesListParams {
   status?: BatchStatus;
   targetExam?: string;
   categoryId?: string;
+  deliveryMode?: BatchDeliveryMode;
+  instructorId?: string;
   page?: number;
   limit?: number;
 }

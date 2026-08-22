@@ -1,44 +1,22 @@
 "use client";
 import { motion } from "framer-motion";
-import { BookOpen, CheckCircle, Clock, Users } from "lucide-react";
+import { GraduationCap, Users } from "lucide-react";
 
 import { PageLayout } from "@/components/layout/page-layout";
 import { StatCard } from "@/components/ui/stat-card";
-import { SimpleBarChart } from "@/components/ui/simple-chart";
 import { StatsCardSkeleton } from "@/components/cards/stats-card-skeleton";
 
 import { useUsers } from "@/features/users/hooks/use-users";
-import { useEnrollments } from "@/features/enrollments/hooks/use-enrollments";
-import type { Enrollment } from "@/features/enrollments/types";
 import { useAuthStore } from "@/lib/store/auth-store";
 
 export default function CorporateDashboardPage() {
   const { user } = useAuthStore();
-  // The API scopes a corporate admin to their own company from their own
-  // record, so no companyId is sent — it is not an accepted query parameter
-  // and the request is rejected outright if present. limit is capped at 100.
   const { data: usersData, isLoading: usersLoading } = useUsers({
     enabled: true,
     filters: { limit: 100 },
   });
-  const { data: enrollmentsData, isLoading: enrollmentsLoading } = useEnrollments({
-    enabled: true,
-    filters: { companyId: user?.companyId ?? undefined, limit: 100 },
-  });
 
   const users = usersData?.data ?? [];
-  const enrollments = enrollmentsData?.data ?? [];
-  const active = enrollments.filter((e: Enrollment) => e.status === "ACTIVE").length;
-  const completed = enrollments.filter(
-    (e: Enrollment) => e.status === "COMPLETED",
-  ).length;
-  const courseCount = new Set(enrollments.map((e) => e.courseId)).size;
-
-  const breakdown = [
-    { label: "Active", value: active, color: "bg-primary" },
-    { label: "Completed", value: completed, color: "bg-foreground" },
-  ];
-
   const firstName = user?.firstName || "Admin";
 
   return (
@@ -64,7 +42,7 @@ export default function CorporateDashboardPage() {
             </h2>
             <p className="mt-3 max-w-md text-sm leading-relaxed text-background/80">
               {users.length > 0
-                ? `${users.length} team member${users.length === 1 ? "" : "s"} · ${enrollments.length} enrolment${enrollments.length === 1 ? "" : "s"}`
+                ? `${users.length} team member${users.length === 1 ? "" : "s"} in your organisation.`
                 : "No team members yet — invite your first learner to get started."}
             </p>
           </div>
@@ -76,38 +54,24 @@ export default function CorporateDashboardPage() {
             <span className="inline-block h-px w-8 bg-border" />
             Your team
           </header>
-          {usersLoading || enrollmentsLoading ? (
-            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-              <StatsCardSkeleton />
-              <StatsCardSkeleton />
+          {usersLoading ? (
+            <div className="grid gap-3 md:grid-cols-2">
               <StatsCardSkeleton />
               <StatsCardSkeleton />
             </div>
           ) : (
-            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-3 md:grid-cols-2">
               <StatCard
                 title="Team members"
-                description="In your company"
+                description="In your organisation"
                 value={users.length}
                 icon={Users}
               />
               <StatCard
-                title="Active enrolments"
-                description="In progress"
-                value={active}
-                icon={Clock}
-              />
-              <StatCard
-                title="Completed"
-                description="Finished by your team"
-                value={completed}
-                icon={CheckCircle}
-              />
-              <StatCard
-                title="Courses assigned"
-                description="Unique courses"
-                value={courseCount}
-                icon={BookOpen}
+                title="Batches available"
+                description="Open for enrolment"
+                value="—"
+                icon={GraduationCap}
               />
             </div>
           )}
@@ -117,10 +81,12 @@ export default function CorporateDashboardPage() {
           <header className="mb-3 flex items-center gap-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
             <span className="font-display text-sm italic text-primary">02</span>
             <span className="inline-block h-px w-8 bg-border" />
-            Enrolment breakdown
+            Enrolments
           </header>
           <div className="rounded-2xl border border-border bg-card p-5">
-            <SimpleBarChart data={breakdown} height={120} noCard />
+            <p className="text-sm text-muted-foreground">
+              Enrolment details are managed per-batch. Navigate to a batch to view or manage your team&apos;s access.
+            </p>
           </div>
         </section>
       </div>

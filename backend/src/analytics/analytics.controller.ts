@@ -1,7 +1,7 @@
 import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { AnalyticsService } from './analytics.service';
-import { TrendFilterDto, TopCoursesFilterDto } from './dto/analytics.dto';
+import { TrendFilterDto, TopBatchesFilterDto } from './dto/analytics.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -51,16 +51,16 @@ export class AnalyticsController {
     });
   }
 
-  @ApiOperation({ summary: 'Get course performance metrics' })
-  @ApiResponse({ status: 200, description: 'Course performance data' })
+  @ApiOperation({ summary: 'Get batch performance metrics' })
+  @ApiResponse({ status: 200, description: 'Batch performance data' })
   @UseGuards(RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN, UserRole.INSTRUCTOR)
-  @Get('courses/:courseId')
-  async getCoursePerformance(
-    @Param('courseId') courseId: string,
+  @Get('batches/:batchId')
+  async getBatchPerformance(
+    @Param('batchId') batchId: string,
     @CurrentUser() user: { userId: string; role: string },
   ) {
-    return this.analyticsService.getCoursePerformance(courseId, user.userId, user.role);
+    return this.analyticsService.getBatchPerformance(batchId, user.userId, user.role);
   }
 
   @ApiOperation({ summary: 'Get platform statistics' })
@@ -122,16 +122,16 @@ export class AnalyticsController {
     });
   }
 
-  @ApiOperation({ summary: 'Get top courses' })
-  @ApiResponse({ status: 200, description: 'Top courses data' })
+  @ApiOperation({ summary: 'Get top batches' })
+  @ApiResponse({ status: 200, description: 'Top batches data' })
   @UseGuards(RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN, UserRole.INSTRUCTOR)
-  @Get('top-courses')
-  async getTopCourses(
-    @Query() query: TopCoursesFilterDto,
+  @Get('top-batches')
+  async getTopBatches(
+    @Query() query: TopBatchesFilterDto,
     @CurrentUser() user?: { role: string },
   ) {
-    return this.analyticsService.getTopCourses(user?.role || '', {
+    return this.analyticsService.getTopBatches(user?.role || '', {
       limit: query.limit ? Number(query.limit) : undefined,
       startDate: query.startDate ? new Date(query.startDate) : undefined,
       endDate: query.endDate ? new Date(query.endDate) : undefined,

@@ -1,45 +1,52 @@
 import {
+  ConflictException,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
-} from "@nestjs/common";
-import { Inject } from "@nestjs/common";
-import { eq } from "drizzle-orm";
-import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { DATABASE_CONNECTION } from "../database/database.module";
-import * as schema from "../database/schema";
-import { AppConfigService } from "../config";
-import { EmailService } from "../email/email.service";
-import * as crypto from "crypto";
+} from '@nestjs/common';
+import { and, eq } from 'drizzle-orm';
+import { CLOCK, Clock } from '../common/clock';
+import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import * as crypto from 'crypto';
+import { DATABASE_CONNECTION } from '../database/database.module';
+import * as schema from '../database/schema';
+import { AppConfigService } from '../config';
+import { EmailService } from '../email/email.service';
+import { BUNNY_CLIENT, BunnyClient } from './bunny-client';
+
+type RenditionKind = 'VIDEO' | 'AUDIO';
 
 @Injectable()
 export class VideoEncodingService {
   private readonly logger = new Logger(VideoEncodingService.name);
-  private readonly bunnyStreamBaseUrl = "https://video.bunnycdn.com";
 
   constructor(
     @Inject(DATABASE_CONNECTION)
     private readonly db: PostgresJsDatabase<typeof schema>,
-    private configService: AppConfigService,
-    private emailService: EmailService,
+    @Inject(BUNNY_CLIENT) private readonly bunny: BunnyClient,
+    private readonly config: AppConfigService,
+    private readonly emailService: EmailService,
+    @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
   private get libraryId(): string {
-    const id = this.configService.bunnyStreamLibraryId;
-    if (!id) throw new Error("BUNNY_STREAM_LIBRARY_ID is not configured");
+    const id = this.config.bunnyStreamLibraryId;
+    if (!id) throw new Error('BUNNY_STREAM_LIBRARY_ID is not configured');
     return id;
   }
 
   private get apiKey(): string {
-    const key = this.configService.bunnyStreamApiKey;
-    if (!key) throw new Error("BUNNY_STREAM_API_KEY is not configured");
+    const key = this.config.bunnyStreamApiKey;
+    if (!key) throw new Error('BUNNY_STREAM_API_KEY is not configured');
     return key;
   }
 
   async createVideo(
     lessonId: string,
-    courseId: string,
+    batchId: string,
     title: string,
+    renditionKind: RenditionKind = 'VIDEO',
   ): Promise<{
     videoId: string;
     tusUploadUrl: string;
@@ -53,65 +60,60 @@ export class VideoEncodingService {
     const lesson = await this.db.query.lessons.findFirst({
       where: eq(schema.lessons.lessonId, lessonId),
     });
-
     if (!lesson) {
       throw new NotFoundException(`Lesson with ID ${lessonId} not found`);
     }
 
-    // 1. Create video in Bunny Stream library
-    const createResponse = await fetch(
-      `${this.bunnyStreamBaseUrl}/library/${this.libraryId}/videos`,
-      {
-        method: "POST",
-        headers: {
-          AccessKey: this.apiKey,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ title }),
-      },
-    );
-
-    if (!createResponse.ok) {
-      const body = await createResponse.text();
-      throw new Error(
-        `Failed to create Bunny Stream video (${createResponse.status}): ${body}`,
+    const existing = await this.db
+      .select({ jobId: schema.videoEncodingJobs.jobId })
+      .from(schema.videoEncodingJobs)
+      .where(
+        and(
+          eq(schema.videoEncodingJobs.lessonId, lessonId),
+          eq(schema.videoEncodingJobs.renditionKind, renditionKind),
+        ),
+      )
+      .limit(1);
+    if (existing.length > 0) {
+      throw new ConflictException(
+        `A ${renditionKind} encoding job already exists for lesson ${lessonId}`,
       );
     }
 
-    const videoData = (await createResponse.json()) as { guid: string };
+    const videoData = await this.bunny.createVideo(this.libraryId, title);
     const videoId = videoData.guid;
 
-    // 2. Generate TUS auth signature
-    const expirationTime = Math.floor(Date.now() / 1000) + 3600; // 1 hour
-    const signaturePayload =
-      this.libraryId + this.apiKey + expirationTime + videoId;
+    const expirationTime = Math.floor(this.clock.now().getTime() / 1000) + 3600;
+    const signaturePayload = this.libraryId + this.apiKey + expirationTime + videoId;
     const signature = crypto
-      .createHash("sha256")
+      .createHash('sha256')
       .update(signaturePayload)
-      .digest("hex");
+      .digest('hex');
 
-    // 3. Save to database
     await this.db.insert(schema.videoEncodingJobs).values({
       jobId: videoId,
       lessonId,
-      courseId,
-      status: "PROCESSING",
+      batchId,
+      renditionKind,
+      status: 'PROCESSING',
       inputPath: `tus://${videoId}`,
       outputPath: videoId,
     });
 
-    await this.db
-      .update(schema.lessons)
-      .set({ status: "PROCESSING", updatedAt: new Date() })
-      .where(eq(schema.lessons.lessonId, lessonId));
+    if (renditionKind === 'VIDEO') {
+      await this.db
+        .update(schema.lessons)
+        .set({ status: 'PROCESSING', updatedAt: this.clock.now() })
+        .where(eq(schema.lessons.lessonId, lessonId));
+    }
 
     this.logger.log(
-      `Created Bunny Stream video ${videoId} for lesson ${lessonId}`,
+      `Created Bunny Stream ${renditionKind} video ${videoId} for lesson ${lessonId}`,
     );
 
     return {
       videoId,
-      tusUploadUrl: `https://video.bunnycdn.com/tusupload`,
+      tusUploadUrl: 'https://video.bunnycdn.com/tusupload',
       tusAuth: {
         AuthorizationSignature: signature,
         AuthorizationExpire: expirationTime,
@@ -126,41 +128,19 @@ export class VideoEncodingService {
     progress?: number;
     errorMessage?: string;
   }> {
-    const response = await fetch(
-      `${this.bunnyStreamBaseUrl}/library/${this.libraryId}/videos/${videoId}`,
-      {
-        headers: {
-          AccessKey: this.apiKey,
-        },
-      },
-    );
+    const data = await this.bunny.getVideoStatus(this.libraryId, videoId);
 
-    if (!response.ok) {
-      if (response.status === 404) {
-        throw new NotFoundException(`Video ${videoId} not found`);
-      }
-      throw new Error(`Failed to get video status: ${response.status}`);
-    }
-
-    const data = (await response.json()) as {
-      status: number;
-      encodeProgress: number;
-    };
-
-    // Bunny Stream status codes:
-    // 0 = Created, 1 = Uploaded, 2 = Processing, 3 = Transcoding
-    // 4 = Finished, 5 = Error, 6 = Upload Failed
     let status: string;
     switch (data.status) {
       case 4:
-        status = "COMPLETED";
+        status = 'COMPLETED';
         break;
       case 5:
       case 6:
-        status = "FAILED";
+        status = 'FAILED';
         break;
       default:
-        status = "PROCESSING";
+        status = 'PROCESSING';
     }
 
     return {
@@ -168,25 +148,89 @@ export class VideoEncodingService {
       progress: data.encodeProgress,
       errorMessage:
         data.status === 5
-          ? "Video encoding failed"
+          ? 'Video encoding failed'
           : data.status === 6
-            ? "Video upload failed"
+            ? 'Video upload failed'
             : undefined,
     };
   }
 
-  // ── Data-access helpers (used by the controller via delegation) ──────────
-
-  async getLessonWithCourse(lessonId: string) {
+  async getLessonWithBatch(lessonId: string) {
     const lesson = await this.db.query.lessons.findFirst({
       where: eq(schema.lessons.lessonId, lessonId),
       with: {
-        section: {
-          with: { course: true },
+        subject: {
+          with: { batch: true },
         },
       },
     });
     return lesson ?? null;
+  }
+
+  async isBatchInstructor(batchId: string, userId: string): Promise<boolean> {
+    const [row] = await this.db
+      .select({ batchId: schema.batchInstructors.batchId })
+      .from(schema.batchInstructors)
+      .where(
+        and(
+          eq(schema.batchInstructors.batchId, batchId),
+          eq(schema.batchInstructors.instructorId, userId),
+        ),
+      )
+      .limit(1);
+    return row !== undefined;
+  }
+
+  private async notifyOwner(
+    batchId: string,
+    lesson: { lessonId: string; title: string },
+    outcome: 'COMPLETED' | 'FAILED',
+  ): Promise<void> {
+    const [batch] = await this.db
+      .select()
+      .from(schema.batches)
+      .where(eq(schema.batches.batchId, batchId))
+      .limit(1);
+    if (!batch) return;
+
+    const [lead] = await this.db
+      .select({ instructorId: schema.batchInstructors.instructorId })
+      .from(schema.batchInstructors)
+      .where(eq(schema.batchInstructors.batchId, batchId))
+      .orderBy(schema.batchInstructors.role)
+      .limit(1);
+
+    const [recipient] = await this.db
+      .select()
+      .from(schema.users)
+      .where(eq(schema.users.userId, lead?.instructorId ?? batch.createdBy))
+      .limit(1);
+    if (!recipient) return;
+
+    try {
+      if (outcome === 'COMPLETED') {
+        await this.emailService.sendVideoEncodingCompleteEmail({
+          firstName: recipient.firstName,
+          email: recipient.email,
+          lessonTitle: lesson.title,
+          courseTitle: batch.title,
+          courseSlug: batch.slug,
+          lessonId: lesson.lessonId,
+        });
+      } else {
+        await this.emailService.sendVideoEncodingFailedEmail({
+          firstName: recipient.firstName,
+          email: recipient.email,
+          lessonTitle: lesson.title,
+          courseTitle: batch.title,
+          courseSlug: batch.slug,
+          lessonId: lesson.lessonId,
+          errorMessage: 'Encoding failed',
+        });
+      }
+    } catch (error) {
+      this.logger.error(`Failed to send encoding ${outcome} email: ${error}`);
+    }
   }
 
   async getEncodingJobByJobId(jobId: string) {
@@ -200,10 +244,10 @@ export class VideoEncodingService {
 
   async getAllVideoLessonsDebugInfo() {
     const allLessons = await this.db.query.lessons.findMany({
-      where: eq(schema.lessons.type, "VIDEO"),
+      where: eq(schema.lessons.type, 'VIDEO'),
       with: {
-        section: {
-          with: { course: true },
+        subject: {
+          with: { batch: true },
         },
       },
     });
@@ -216,33 +260,33 @@ export class VideoEncodingService {
 
       let status: string;
       if (!encodingJob) {
-        status = "NO_ENCODING_JOB";
-      } else if (encodingJob.status === "PROCESSING") {
-        status = "ENCODING_IN_PROGRESS";
-      } else if (encodingJob.status === "FAILED") {
-        status = "ENCODING_FAILED";
-      } else if (encodingJob.status === "COMPLETED") {
-        status = "READY";
+        status = 'NO_ENCODING_JOB';
+      } else if (encodingJob.status === 'PROCESSING') {
+        status = 'ENCODING_IN_PROGRESS';
+      } else if (encodingJob.status === 'FAILED') {
+        status = 'ENCODING_FAILED';
+      } else if (encodingJob.status === 'COMPLETED') {
+        status = 'READY';
       } else {
-        status = "UNKNOWN";
+        status = 'UNKNOWN';
       }
 
       return {
         lessonId: lesson.lessonId,
         lessonTitle: lesson.title,
-        courseTitle: lesson.section.course.title,
+        batchTitle: lesson.subject.batch.title,
         lessonStatus: lesson.status,
         encodingStatus: status,
         videoId: encodingJob?.outputPath ?? null,
         needsReEncoding:
-          status === "NO_ENCODING_JOB" || status === "ENCODING_FAILED",
+          status === 'NO_ENCODING_JOB' || status === 'ENCODING_FAILED',
       };
     });
 
     const needsReEncoding = results.filter((r) => r.needsReEncoding);
-    const ready = results.filter((r) => r.encodingStatus === "READY");
+    const ready = results.filter((r) => r.encodingStatus === 'READY');
     const inProgress = results.filter(
-      (r) => r.encodingStatus === "ENCODING_IN_PROGRESS",
+      (r) => r.encodingStatus === 'ENCODING_IN_PROGRESS',
     );
 
     return {
@@ -261,28 +305,32 @@ export class VideoEncodingService {
     const [encodingJob] = await this.db
       .select()
       .from(schema.videoEncodingJobs)
-      .where(eq(schema.videoEncodingJobs.lessonId, lessonId))
+      .where(
+        and(
+          eq(schema.videoEncodingJobs.lessonId, lessonId),
+          eq(schema.videoEncodingJobs.renditionKind, 'VIDEO'),
+        ),
+      )
       .limit(1);
 
-    let bunnyStatus: Awaited<ReturnType<typeof this.getJobStatus>> | null =
-      null;
+    let bunnyStatus: Awaited<ReturnType<typeof this.getJobStatus>> | null = null;
     if (encodingJob) {
       try {
         bunnyStatus = await this.getJobStatus(encodingJob.jobId);
-      } catch {
-        // Ignore — video may not exist in Bunny yet
+      } catch (_err) {
+        this.logger.warn(`Could not fetch Bunny status for job ${encodingJob.jobId}`);
       }
     }
 
     const diagnosis = !encodingJob
-      ? "No encoding job found - video may not have been uploaded"
-      : encodingJob.status === "PROCESSING"
-        ? "Encoding is still in progress - wait for it to complete"
-        : encodingJob.status === "FAILED"
+      ? 'No encoding job found - video may not have been uploaded'
+      : encodingJob.status === 'PROCESSING'
+        ? 'Encoding is still in progress - wait for it to complete'
+        : encodingJob.status === 'FAILED'
           ? `Encoding failed: ${encodingJob.errorMessage}`
-          : encodingJob.status === "COMPLETED"
-            ? "Encoding completed - video should be playable via Bunny Stream"
-            : "Unknown state";
+          : encodingJob.status === 'COMPLETED'
+            ? 'Encoding completed - video should be playable via Bunny Stream'
+            : 'Unknown state';
 
     return {
       encodingJob: encodingJob
@@ -301,11 +349,9 @@ export class VideoEncodingService {
     };
   }
 
-  // ── Job lifecycle ─────────────────────────────────────────────────────────
-
   async handleJobCompletion(
     jobId: string,
-    status: "COMPLETED" | "FAILED",
+    status: 'COMPLETED' | 'FAILED',
     errorMessage?: string,
   ): Promise<void> {
     const [job] = await this.db
@@ -321,26 +367,20 @@ export class VideoEncodingService {
 
     const updateData: Partial<typeof schema.videoEncodingJobs.$inferInsert> = {
       status,
-      updatedAt: new Date(),
-      completedAt: new Date(),
+      updatedAt: this.clock.now(),
+      completedAt: this.clock.now(),
     };
 
-    if (status === "COMPLETED") {
-      // outputPath already stores the Bunny Stream video GUID (set at creation)
-      // Fetch duration from Bunny API
+    if (status === 'COMPLETED') {
+      let duration: number | undefined;
       try {
-        const response = await fetch(
-          `${this.bunnyStreamBaseUrl}/library/${this.libraryId}/videos/${jobId}`,
-          { headers: { AccessKey: this.apiKey } },
-        );
-        if (response.ok) {
-          const data = (await response.json()) as { length: number };
-          if (data.length) {
-            updateData.duration = Math.floor(data.length);
-          }
+        const data = await this.bunny.getVideoStatus(this.libraryId, jobId);
+        if (data.length) {
+          duration = Math.floor(data.length);
+          updateData.duration = duration;
         }
-      } catch {
-        // Duration fetch is best-effort
+      } catch (_err) {
+        this.logger.warn(`Could not fetch duration from Bunny for job ${jobId}`);
       }
 
       const [lesson] = await this.db
@@ -350,91 +390,46 @@ export class VideoEncodingService {
         .limit(1);
 
       if (lesson) {
-        await this.db
-          .update(schema.lessons)
-          .set({
-            status: "READY",
-            duration: updateData.duration || null,
-            updatedAt: new Date(),
-          })
-          .where(eq(schema.lessons.lessonId, job.lessonId));
-
-        const [course] = await this.db
-          .select()
-          .from(schema.courses)
-          .where(eq(schema.courses.courseId, job.courseId))
-          .limit(1);
-
-        if (course) {
-          const [instructor] = await this.db
-            .select()
-            .from(schema.users)
-            .where(eq(schema.users.userId, course.instructorId))
-            .limit(1);
-
-          if (instructor) {
-            try {
-              await this.emailService.sendVideoEncodingCompleteEmail({
-                firstName: instructor.firstName,
-                email: instructor.email,
-                lessonTitle: lesson.title,
-                courseTitle: course.title,
-                courseSlug: course.slug,
-                lessonId: lesson.lessonId,
-              });
-            } catch (error) {
-              this.logger.error(
-                `Failed to send encoding complete email: ${error}`,
-              );
-            }
-          }
+        if (job.renditionKind === 'AUDIO') {
+          const audioUrl = job.outputPath
+            ? `https://iframe.mediadelivery.net/embed/${this.libraryId}/${job.outputPath}`
+            : null;
+          await this.db
+            .update(schema.lessons)
+            .set({
+              audioUrl,
+              audioDuration: duration ?? null,
+              updatedAt: this.clock.now(),
+            })
+            .where(eq(schema.lessons.lessonId, job.lessonId));
+        } else {
+          await this.db
+            .update(schema.lessons)
+            .set({
+              status: 'READY',
+              duration: duration ?? null,
+              updatedAt: this.clock.now(),
+            })
+            .where(eq(schema.lessons.lessonId, job.lessonId));
+          await this.notifyOwner(job.batchId, lesson, 'COMPLETED');
         }
       }
-    } else if (status === "FAILED") {
-      updateData.errorMessage = errorMessage || "Encoding failed";
+    } else if (status === 'FAILED') {
+      updateData.errorMessage = errorMessage ?? 'Encoding failed';
 
-      const [lesson] = await this.db
-        .select()
-        .from(schema.lessons)
-        .where(eq(schema.lessons.lessonId, job.lessonId))
-        .limit(1);
-
-      if (lesson) {
-        await this.db
-          .update(schema.lessons)
-          .set({ status: "DRAFT", updatedAt: new Date() })
-          .where(eq(schema.lessons.lessonId, job.lessonId));
-
-        const [course] = await this.db
+      if (job.renditionKind === 'VIDEO') {
+        const [lesson] = await this.db
           .select()
-          .from(schema.courses)
-          .where(eq(schema.courses.courseId, job.courseId))
+          .from(schema.lessons)
+          .where(eq(schema.lessons.lessonId, job.lessonId))
           .limit(1);
 
-        if (course) {
-          const [instructor] = await this.db
-            .select()
-            .from(schema.users)
-            .where(eq(schema.users.userId, course.instructorId))
-            .limit(1);
-
-          if (instructor) {
-            try {
-              await this.emailService.sendVideoEncodingFailedEmail({
-                firstName: instructor.firstName,
-                email: instructor.email,
-                lessonTitle: lesson.title,
-                courseTitle: course.title,
-                courseSlug: course.slug,
-                lessonId: lesson.lessonId,
-                errorMessage: updateData.errorMessage || "Unknown error",
-              });
-            } catch (error) {
-              this.logger.error(
-                `Failed to send encoding failed email: ${error}`,
-              );
-            }
-          }
+        if (lesson) {
+          await this.db
+            .update(schema.lessons)
+            .set({ status: 'DRAFT', updatedAt: this.clock.now() })
+            .where(eq(schema.lessons.lessonId, job.lessonId));
+          await this.notifyOwner(job.batchId, lesson, 'FAILED');
         }
       }
     }

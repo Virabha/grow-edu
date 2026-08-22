@@ -472,6 +472,233 @@ export const GROUPS: Record<string, GroupDefinition> = {
       text: '#0f172a',
     },
   },
+  doubts: {
+    meta: {
+      title: 'Doubts',
+      description:
+        'How long a student should wait for an answer before a doubt is flagged as overdue.',
+    },
+    fields: [
+      {
+        key: 'responseTargetHours',
+        label: 'Response Target (hours)',
+        type: 'number',
+        placeholder: '24',
+        help: 'A doubt waiting longer than this appears as overdue in the instructor inbox.',
+      },
+    ],
+    defaults: {
+      responseTargetHours: 24,
+    },
+  },
+
+  liveSession: {
+    meta: {
+      title: 'Live Session',
+      description: 'Settings for live class sessions, including the reminder lead time sent to students.',
+    },
+    fields: [
+      {
+        key: 'reminderLeadMinutes',
+        label: 'Reminder Lead Time (minutes)',
+        type: 'number',
+        placeholder: '15',
+        help: 'How many minutes before a live class starts to send the enrolled-student reminder.',
+      },
+    ],
+    defaults: {
+      reminderLeadMinutes: 15,
+    },
+  },
+
+  completion: {
+    meta: {
+      title: 'Lesson Completion',
+      description:
+        'The threshold at which each lesson type counts as complete. Each type completes by its own rule.',
+    },
+    fields: [
+      { key: 'videoWatchedPercent', label: 'Video Watched (%)', type: 'number', help: 'Percentage of a video that must be watched before it counts as complete.' },
+      { key: 'audioListenedPercent', label: 'Audio Listened (%)', type: 'number', help: 'Percentage of an audio rendition that must be listened to.' },
+      { key: 'documentPagesPercent', label: 'Document Pages Viewed (%)', type: 'number', help: 'Percentage of a document’s pages that must be viewed.' },
+      { key: 'richBlocksPercent', label: 'Rich Lesson Blocks Seen (%)', type: 'number' },
+      { key: 'liveSessionMinAttendanceSeconds', label: 'Live Session Attendance (seconds)', type: 'number', help: 'Recorded attendance duration required before a live session counts as complete.' },
+    ],
+    defaults: {
+      videoWatchedPercent: 90,
+      audioListenedPercent: 90,
+      documentPagesPercent: 80,
+      richBlocksPercent: 100,
+      liveSessionMinAttendanceSeconds: 300,
+    },
+  },
+
+  studyHabits: {
+    meta: {
+      title: 'Study Habits',
+      description:
+        'How study time is measured and what a student must do for a day to count towards their streak.',
+    },
+    fields: [
+      { key: 'inactivityCutoffSeconds', label: 'Inactivity Cutoff (seconds)', type: 'number', help: 'A gap longer than this between activity events does not accrue study time.' },
+      { key: 'defaultDailyGoalMinutes', label: 'Default Daily Goal (minutes)', type: 'number', help: 'The daily goal a student starts with. Each student may edit their own.' },
+      { key: 'dailyReviewSize', label: 'Daily Review Queue Size', type: 'number' },
+      { key: 'badgeStudyMinutesTotal', label: 'Badge — Total Study Minutes', type: 'number' },
+      { key: 'badgeStreakDays', label: 'Badge — Streak Days', type: 'number' },
+      { key: 'badgeLessonsCompleted', label: 'Badge — Lessons Completed', type: 'number' },
+      { key: 'badgeReviewsCompleted', label: 'Badge — Reviews Completed', type: 'number' },
+    ],
+    defaults: {
+      inactivityCutoffSeconds: 300,
+      defaultDailyGoalMinutes: 30,
+      dailyReviewSize: 20,
+      badgeStudyMinutesTotal: 600,
+      badgeStreakDays: 7,
+      badgeLessonsCompleted: 25,
+      badgeReviewsCompleted: 100,
+    },
+  },
+
+  community: {
+    meta: {
+      title: 'Community',
+      description:
+        'Bounds on the batch feed and peer study groups. There is no direct messaging anywhere on the platform.',
+    },
+    fields: [
+      { key: 'studyGroupMemberCap', label: 'Study Group Size Cap', type: 'number', help: 'The largest a peer study group may become.' },
+      { key: 'studyGroupsPerBatch', label: 'Study Groups Per Batch', type: 'number' },
+      { key: 'feedPostMaxLength', label: 'Feed Post Maximum Length', type: 'number' },
+    ],
+    defaults: {
+      studyGroupMemberCap: 8,
+      studyGroupsPerBatch: 20,
+      feedPostMaxLength: 2000,
+    },
+  },
+
+  discovery: {
+    meta: {
+      title: 'Catalogue & Onboarding',
+      description:
+        'The goals a student may choose from and how the catalogue and low-bandwidth mode behave.',
+    },
+    fields: [
+      { key: 'goalOptions', label: 'Goal Options', type: 'textarea', help: 'One goal per line, written as key|Label. These are what a student picks from at sign-up.' },
+      { key: 'cataloguePageSize', label: 'Catalogue Page Size', type: 'number' },
+      { key: 'lowBandwidthImageKilobytes', label: 'Low-Bandwidth Image Threshold (KB)', type: 'number', help: 'Images larger than this are suppressed when a student turns low-bandwidth mode on.' },
+      { key: 'diagnosticQuestionCount', label: 'Diagnostic Test Questions', type: 'number' },
+      { key: 'diagnosticTests', label: 'Diagnostic Test Per Goal', type: 'textarea', help: 'One per line, written as goalKey|testId. Generate the test itself from the question bank by criteria first.' },
+      { key: 'diagnosticLevels', label: 'Diagnostic Level Bands', type: 'textarea', help: 'One per line, written as levelKey|minimumPercent|what it means. Lowest band first.' },
+    ],
+    defaults: {
+      goalOptions: 'JEE|JEE\nNEET|NEET\nUPSC|UPSC\nCAT|CAT\nFOUNDATION|School Foundation',
+      cataloguePageSize: 20,
+      lowBandwidthImageKilobytes: 100,
+      diagnosticQuestionCount: 15,
+      diagnosticTests: '',
+      diagnosticLevels:
+        'FOUNDATION|0|Start with the fundamentals before attempting exam-level questions.\nINTERMEDIATE|40|You have the basics. Focus on problem-solving speed and accuracy.\nADVANCED|70|You are exam-ready. Concentrate on the hardest questions and mock tests.',
+    },
+  },
+
+  signIn: {
+    meta: {
+      title: 'Consumer Sign-In',
+      description:
+        'One-time codes for phone sign-in. Every unrated code request has a direct monetary cost.',
+    },
+    fields: [
+      { key: 'otpLength', label: 'One-Time Code Length', type: 'number' },
+      { key: 'otpTtlSeconds', label: 'One-Time Code Lifetime (seconds)', type: 'number' },
+      { key: 'otpMaxAttempts', label: 'Maximum Verification Attempts', type: 'number' },
+    ],
+    defaults: {
+      otpLength: 6,
+      otpTtlSeconds: 300,
+      otpMaxAttempts: 5,
+    },
+  },
+
+  execution: {
+    meta: {
+      title: 'Code Execution',
+      description:
+        'Bounds on running and judging submitted code. Every run has a direct monetary cost, so these are limits rather than preferences.',
+    },
+    fields: [
+      { key: 'sampleRunsPerMinute', label: 'Sample Runs Per Minute', type: 'number', help: 'How many times a student may run against the visible cases in a minute.' },
+      { key: 'sampleRunsPerDay', label: 'Sample Runs Per Day', type: 'number' },
+      { key: 'submissionsPerMinute', label: 'Submissions Per Minute', type: 'number' },
+      { key: 'submissionsPerDay', label: 'Submissions Per Day', type: 'number' },
+      { key: 'defaultTimeLimitMs', label: 'Default Time Limit (ms)', type: 'number' },
+      { key: 'defaultMemoryLimitMb', label: 'Default Memory Limit (MB)', type: 'number' },
+      { key: 'supportedLanguages', label: 'Supported Languages', type: 'textarea', help: 'One per line, written as key|Label. A problem may support any subset of these.' },
+    ],
+    defaults: {
+      sampleRunsPerMinute: 10,
+      sampleRunsPerDay: 300,
+      submissionsPerMinute: 5,
+      submissionsPerDay: 100,
+      defaultTimeLimitMs: 2000,
+      defaultMemoryLimitMb: 256,
+      supportedLanguages: 'python|Python 3\njavascript|JavaScript\ntypescript|TypeScript\njava|Java\ncpp|C++\ngo|Go',
+    },
+  },
+
+  environments: {
+    meta: {
+      title: 'Development Environments',
+      description:
+        'The most expensive item on the platform. Idle reclamation and concurrency ceilings are what keep it affordable.',
+    },
+    fields: [
+      { key: 'maxConcurrentPerStudent', label: 'Concurrent Environments Per Student', type: 'number' },
+      { key: 'idleHibernateMinutes', label: 'Hibernate After Idle (minutes)', type: 'number' },
+      { key: 'dormantReclaimHours', label: 'Reclaim After Dormant (hours)', type: 'number' },
+      { key: 'cpuLimit', label: 'CPU Limit Per Environment', type: 'number' },
+      { key: 'memoryLimitMb', label: 'Memory Limit Per Environment (MB)', type: 'number' },
+      { key: 'egressAllowList', label: 'Allowed Egress Destinations', type: 'textarea', help: 'One host per line. An environment is never provisioned without a policy.' },
+    ],
+    defaults: {
+      maxConcurrentPerStudent: 1,
+      idleHibernateMinutes: 30,
+      dormantReclaimHours: 168,
+      cpuLimit: 2,
+      memoryLimitMb: 4096,
+      egressAllowList: 'registry.npmjs.org\npypi.org\nfiles.pythonhosted.org\ngithub.com\nproxy.golang.org',
+    },
+  },
+
+  projectReview: {
+    meta: {
+      title: 'Project Review',
+      description:
+        'Automated checks and similarity screening. A similarity flag is an input to a human decision and never an accusation.',
+    },
+    fields: [
+      { key: 'similarityFlagThreshold', label: 'Similarity Flag Threshold (%)', type: 'number', help: 'Below this score a comparison is not surfaced to staff at all.' },
+      { key: 'checkTimeoutSeconds', label: 'Automated Check Timeout (seconds)', type: 'number' },
+      { key: 'maxResubmissionCycles', label: 'Maximum Resubmission Cycles', type: 'number' },
+    ],
+    defaults: {
+      similarityFlagThreshold: 70,
+      checkTimeoutSeconds: 600,
+      maxResubmissionCycles: 5,
+    },
+  },
 };
+
+export const DOUBTS_SETTINGS_GROUP = 'doubts';
+export const DEFAULT_DOUBT_RESPONSE_TARGET_HOURS = 24;
+
+export const COMPLETION_SETTINGS_GROUP = 'completion';
+export const STUDY_HABITS_SETTINGS_GROUP = 'studyHabits';
+export const COMMUNITY_SETTINGS_GROUP = 'community';
+export const DISCOVERY_SETTINGS_GROUP = 'discovery';
+export const SIGN_IN_SETTINGS_GROUP = 'signIn';
+export const EXECUTION_SETTINGS_GROUP = 'execution';
+export const ENVIRONMENTS_SETTINGS_GROUP = 'environments';
+export const PROJECT_REVIEW_SETTINGS_GROUP = 'projectReview';
 
 export const KNOWN_GROUPS = new Set(Object.keys(GROUPS));

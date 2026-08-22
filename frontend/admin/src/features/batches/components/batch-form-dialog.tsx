@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -37,17 +37,12 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import {
-  AsyncMultiSelect,
-  type AsyncMultiSelectOption,
-} from "@/components/ui/async-multi-select";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { FieldPath } from "react-hook-form";
 import { useCreateBatch, useUpdateBatch } from "../hooks/use-batches";
-import { usersApi } from "@/features/users/api/users.api";
-import type { Batch, BatchStatus, BatchDetail } from "../types";
+import type { Batch, BatchStatus, BatchDeliveryMode } from "../types";
 import { getApiError } from "@/lib/api/errors";
 
 const schema = z
@@ -67,7 +62,9 @@ const schema = z
     startDate: z.string().min(1, "Start date is required"),
     endDate: z.string().min(1, "End date is required"),
     categoryId: z.string().optional(),
-    teacherIds: z.array(z.string()).default([]),
+    deliveryMode: z
+      .enum(["LIVE", "RECORDED", "HYBRID"])
+      .default("LIVE"),
     status: z
       .enum(["DRAFT", "UPCOMING", "ONGOING", "COMPLETED", "ARCHIVED"])
       .default("DRAFT"),
@@ -95,7 +92,7 @@ const defaults: Values = {
   startDate: "",
   endDate: "",
   categoryId: "",
-  teacherIds: [],
+  deliveryMode: "LIVE",
   status: "DRAFT",
 };
 
@@ -181,25 +178,21 @@ function batchToValues(b: Batch): Values {
     startDate: toDateInput(b.startDate),
     shortDescription: b.shortDescription ?? "",
     compareAtPrice: b.compareAtPrice ?? undefined,
-    teacherIds: b.teacherIds ?? [],
+    deliveryMode: b.deliveryMode ?? "LIVE",
   };
 }
 
 export function BatchFormDialog(props: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  batch?: (Batch & Partial<Pick<BatchDetail, "teachers">>) | null;
+  batch?: Batch | null;
 }) {
   const { open, onOpenChange, batch } = props;
   const isEditing = !!batch;
   const create = useCreateBatch();
   const update = useUpdateBatch();
-  // Tracks original value so unchanged thumbnails are omitted from the PATCH (preserves storage key).
   const [thumbnailInitial, setThumbnailInitial] = useState<string | null>(null);
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
-  const [teacherOptions, setTeacherOptions] = useState<AsyncMultiSelectOption[]>(
-    [],
-  );
 
   const form = useForm<Values>({
     resolver: zodResolver(schema),
@@ -235,7 +228,7 @@ export function BatchFormDialog(props: {
         startDate: new Date(values.startDate).toISOString(),
         endDate: new Date(values.endDate).toISOString(),
         categoryId: values.categoryId?.trim() || undefined,
-        teacherIds: values.teacherIds,
+        deliveryMode: values.deliveryMode as BatchDeliveryMode,
         status: values.status as BatchStatus,
       };
 
@@ -262,47 +255,12 @@ export function BatchFormDialog(props: {
       form.reset(batchToValues(batch));
       setThumbnailPreview(batch.thumbnail);
       setThumbnailInitial(batch.thumbnail ?? "");
-
-      const resolvedTeachers = batch.teachers?.length
-        ? batch.teachers
-        : [];
-      if (resolvedTeachers.length > 0) {
-        setTeacherOptions(
-          resolvedTeachers.map((t) => ({
-            value: t.userId,
-            label:
-              [t.firstName, t.lastName].filter(Boolean).join(" ") || t.email,
-            secondary: t.email,
-          })),
-        );
-      } else {
-        setTeacherOptions([]);
-      }
     } else {
       form.reset(defaults);
       setThumbnailPreview(null);
       setThumbnailInitial(null);
-      setTeacherOptions([]);
     }
   }, [open, batch, form]);
-
-  const loadInstructors = useCallback(
-    async (query: string): Promise<AsyncMultiSelectOption[]> => {
-      const res = await usersApi.getAll({
-        search: query || undefined,
-        role: "INSTRUCTOR",
-        limit: 20,
-        page: 1,
-      });
-      return res.data.map((u) => ({
-        value: u.id,
-        label:
-          [u.firstName, u.lastName].filter(Boolean).join(" ") || u.email,
-        secondary: u.email,
-      }));
-    },
-    [],
-  );
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -572,51 +530,54 @@ export function BatchFormDialog(props: {
                   )}
                 />
               </div>
-              <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className={LABEL_CLS}>Status</FormLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <FormControl>
-                        <SelectTrigger className="h-8 text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="DRAFT">Draft</SelectItem>
-                        <SelectItem value="UPCOMING">Upcoming</SelectItem>
-                        <SelectItem value="ONGOING">Ongoing</SelectItem>
-                        <SelectItem value="COMPLETED">Completed</SelectItem>
-                        <SelectItem value="ARCHIVED">Archived</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="teacherIds"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className={LABEL_CLS}>Instructors</FormLabel>
-                    <AsyncMultiSelect
-                      value={teacherOptions}
-                      onChange={(next) => {
-                        setTeacherOptions(next);
-                        field.onChange(next.map((o) => o.value));
-                      }}
-                      loadOptions={loadInstructors}
-                      placeholder="Assign instructors…"
-                      searchPlaceholder="Search by name or email"
-                      emptyMessage="No instructors match"
-                    />
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid grid-cols-2 gap-3">
+                <FormField
+                  control={form.control}
+                  name="deliveryMode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className={LABEL_CLS}>Delivery mode</FormLabel>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="LIVE">Live</SelectItem>
+                          <SelectItem value="RECORDED">Recorded</SelectItem>
+                          <SelectItem value="HYBRID">Live + recorded</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className={LABEL_CLS}>Status</FormLabel>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="DRAFT">Draft</SelectItem>
+                          <SelectItem value="UPCOMING">Upcoming</SelectItem>
+                          <SelectItem value="ONGOING">Ongoing</SelectItem>
+                          <SelectItem value="COMPLETED">Completed</SelectItem>
+                          <SelectItem value="ARCHIVED">Archived</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
               <div className="flex justify-end gap-2 pt-4">
                 <Button
                   type="button"

@@ -257,13 +257,10 @@ export function PaymentDetailSheet({
                   </Section>
                 )}
 
-                {(payment.course || payment.section) && (
+                {(payment.batch || payment.itemType) && (
                   <Section title="Item">
-                    {payment.course && (
-                      <Row label="Course" value={payment.course.title} />
-                    )}
-                    {payment.section && (
-                      <Row label="Section" value={payment.section.title} />
+                    {payment.batch && (
+                      <Row label="Batch" value={payment.batch.title} />
                     )}
                     {payment.itemType && (
                       <Row label="Type" value={payment.itemType} />
@@ -383,7 +380,7 @@ export function PaymentDetailSheet({
           {payment && (
             <div className="rounded-xl border border-border bg-muted/30 p-3 text-sm">
               <p className="font-display text-base font-medium text-foreground">
-                {payment.course?.title || payment.section?.title || "Course"}
+                {payment.batch?.title || "Batch"}
               </p>
               <p className="mt-0.5 text-xs text-muted-foreground">
                 {payment.user?.email} · ₹{Number(payment.amount).toFixed(2)} ·{" "}

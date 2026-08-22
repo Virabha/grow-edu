@@ -18,6 +18,7 @@ import {
   ApiResponse,
   ApiTags,
 } from "@nestjs/swagger";
+import { Authenticated } from '../auth/decorators/authenticated.decorator';
 
 interface MulterFile {
   fieldname: string;
@@ -33,6 +34,7 @@ interface MulterFile {
 export class StorageController {
   constructor(private readonly storageService: StorageService) {}
 
+  @Authenticated()
   @ApiOperation({ summary: "Get upload key for storage" })
   @ApiResponse({ status: 200, description: "Upload key generated" })
   @UseGuards(JwtAuthGuard)
@@ -48,11 +50,11 @@ export class StorageController {
 
     let key: string;
     if (body.contentType?.startsWith("video/") || body.type === "lesson") {
-      const cId = body.courseId || "uncategorized";
+      const bId = body.batchId || "uncategorized";
       const lId = body.lessonId || "general";
-      key = `videos/${user.userId}/${cId}/${lId}/${timestamp}-${random}.${extension}`;
-    } else if (body.courseId && body.type === "course") {
-      key = `images/course/${user.userId}/${body.courseId}/${timestamp}-${random}.${extension}`;
+      key = `videos/${user.userId}/${bId}/${lId}/${timestamp}-${random}.${extension}`;
+    } else if (body.batchId && body.type === "batch") {
+      key = `images/batch/${user.userId}/${body.batchId}/${timestamp}-${random}.${extension}`;
     } else if (body.type === "payment-proofs") {
       key = `payment-proofs/${user.userId}/${timestamp}-${random}.${extension}`;
     } else if (body.type === "documents") {
@@ -67,6 +69,7 @@ export class StorageController {
     };
   }
 
+  @Authenticated()
   @Post("upload")
   @UseInterceptors(FileInterceptor("file"))
   @UseGuards(JwtAuthGuard)

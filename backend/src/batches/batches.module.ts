@@ -1,16 +1,66 @@
 import { Module } from "@nestjs/common";
-import { BatchesController } from "./batches.controller";
-import { BatchesService } from "./batches.service";
-import { CertificateService } from "./certificate.service";
-import { BatchManagerGuard } from "./guards/batch-manager.guard";
-import { DatabaseModule } from "../database/database.module";
-import { FilesModule } from "../files/files.module";
-import { CdnModule } from "../cdn/cdn.module";
+
 import { AppCacheModule } from "../cache/cache.module";
-import { EmailModule } from "../email/email.module";
-import { PaymentModule } from "../payment/payment.module";
-import { CouponsModule } from "../coupons/coupons.module";
+import { CdnModule } from "../cdn/cdn.module";
 import { CertificateTemplateModule } from "../certificate-template/certificate-template.module";
+import { DatabaseModule } from "../database/database.module";
+import { EmailModule } from "../email/email.module";
+import { FilesModule } from "../files/files.module";
+import { PaymentModule } from "../payment/payment.module";
+import { BatchAccessService } from "./access/batch-access.service";
+import { BatchCapacityService } from "./access/batch-capacity.service";
+import { BatchAssessmentController } from "./assessment/batch-assessment.controller";
+import { BatchAssessmentService } from "./assessment/batch-assessment.service";
+import { BatchMediaService } from "./batch-media.service";
+import { BatchCatalogueController } from "./catalogue/batch-catalogue.controller";
+import { BatchCatalogueService } from "./catalogue/batch-catalogue.service";
+import { CurriculumService } from "./catalogue/curriculum.service";
+import { RichLessonService } from "./catalogue/rich-lesson.service";
+import { CertificateController } from "./certificates/certificate.controller";
+import { CertificateIssuanceService } from "./certificates/certificate-issuance.service";
+import { CertificateService } from "./certificates/certificate.service";
+import { CertificateVerificationController } from "./certificates/certificate-verification.controller";
+import { CompletionCriteriaController } from "./certificates/completion-criteria.controller";
+import { CompletionCriteriaService } from "./certificates/completion-criteria.service";
+import { BatchEngagementController } from "./engagement/batch-engagement.controller";
+import { BatchEngagementService } from "./engagement/batch-engagement.service";
+import { DoubtAnswerController, AiDoubtReportController } from "./engagement/doubt-answer.controller";
+import { DoubtAnswerService } from "./engagement/doubt-answer.service";
+import { DoubtGroundingService } from "./engagement/doubt-grounding.service";
+import { DoubtInboxController } from "./engagement/doubt-inbox.controller";
+import { DoubtInboxService } from "./engagement/doubt-inbox.service";
+import { BatchEnrolmentController } from "./enrolment/batch-enrolment.controller";
+import { BatchEnrolmentService } from "./enrolment/batch-enrolment.service";
+import { ContinueLearningService } from "./enrolment/continue-learning.service";
+import { LessonProgressService } from "./enrolment/lesson-progress.service";
+import { TransferService } from "./enrolment/transfer.service";
+import { WaitlistController } from "./enrolment/waitlist.controller";
+import { WaitlistService } from "./enrolment/waitlist.service";
+import { BatchLifecycleService } from "./lifecycle/batch-lifecycle.service";
+import { ApprovalsController } from "./lifecycle/approvals.controller";
+import { ApprovalsService } from "./lifecycle/approvals.service";
+import { PublicationService } from "./lifecycle/publication.service";
+import { CloneBatchController } from "./lifecycle/clone-batch.controller";
+import { CloneBatchService } from "./lifecycle/clone-batch.service";
+import { BatchReportingController } from "./reporting/batch-reporting.controller";
+import { BatchReportingService } from "./reporting/batch-reporting.service";
+import { StudentFeedbackController } from "./reporting/student-feedback.controller";
+import { StudentFeedbackService } from "./reporting/student-feedback.service";
+import { ReportScheduleService } from "./reporting/report-schedule.service";
+import { CorporateReportController } from "./reporting/corporate-report.controller";
+import { CorporateReportService } from "./reporting/corporate-report.service";
+import { ExportJobService } from "./reporting/export-job.service";
+import { RecurrenceController } from "./scheduling/recurrence.controller";
+import { RecurrenceService } from "./scheduling/recurrence.service";
+import { BatchSchedulingController } from "./scheduling/batch-scheduling.controller";
+import { BatchSchedulingService } from "./scheduling/batch-scheduling.service";
+import {
+  NoRecordingProvider,
+  RECORDING_PROVIDER,
+} from "./scheduling/recording-provider";
+import { RecordingService } from "./scheduling/recording.service";
+import { ReminderService } from "./scheduling/reminder.service";
+import { TimetableService } from "./scheduling/timetable.service";
 
 @Module({
   imports: [
@@ -20,11 +70,69 @@ import { CertificateTemplateModule } from "../certificate-template/certificate-t
     AppCacheModule,
     EmailModule,
     PaymentModule,
-    CouponsModule,
     CertificateTemplateModule,
   ],
-  controllers: [BatchesController],
-  providers: [BatchesService, CertificateService, BatchManagerGuard],
-  exports: [BatchesService, CertificateService],
+  controllers: [
+    BatchEnrolmentController,
+    WaitlistController,
+    ApprovalsController,
+    BatchReportingController,
+    StudentFeedbackController,
+    BatchSchedulingController,
+    RecurrenceController,
+    BatchAssessmentController,
+    BatchEngagementController,
+    DoubtAnswerController,
+    AiDoubtReportController,
+    DoubtInboxController,
+    CertificateController,
+    CertificateVerificationController,
+    CompletionCriteriaController,
+    BatchCatalogueController,
+    CloneBatchController,
+    CorporateReportController,
+  ],
+  providers: [
+    BatchAccessService,
+    BatchCapacityService,
+    BatchMediaService,
+    BatchCatalogueService,
+    RichLessonService,
+    CurriculumService,
+    BatchEnrolmentService,
+    LessonProgressService,
+    ContinueLearningService,
+    WaitlistService,
+    TransferService,
+    BatchLifecycleService,
+    ApprovalsService,
+    PublicationService,
+    BatchSchedulingService,
+    RecordingService,
+    { provide: RECORDING_PROVIDER, useClass: NoRecordingProvider },
+    ReminderService,
+    TimetableService,
+    RecurrenceService,
+    BatchAssessmentService,
+    BatchEngagementService,
+    DoubtGroundingService,
+    DoubtAnswerService,
+    DoubtInboxService,
+    BatchReportingService,
+    StudentFeedbackService,
+    ReportScheduleService,
+    CertificateService,
+    CertificateIssuanceService,
+    CompletionCriteriaService,
+    CloneBatchService,
+    CorporateReportService,
+    ExportJobService,
+  ],
+  exports: [
+    BatchAccessService,
+    BatchEnrolmentService,
+    LessonProgressService,
+    CertificateService,
+  ],
 })
 export class BatchesModule {}

@@ -32,7 +32,7 @@ export class TrendFilterDto {
   endDate?: string;
 }
 
-export class TopCoursesFilterDto {
+export class TopBatchesFilterDto {
   @ApiPropertyOptional({ default: 10, minimum: 1, maximum: 100, type: Number })
   @IsOptional()
   @Transform(({ value }) => {

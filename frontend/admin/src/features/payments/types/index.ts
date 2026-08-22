@@ -1,9 +1,9 @@
 export type PaymentGateway = 'RAZORPAY' | 'MANUAL_QR' | 'FREE';
 
 export interface CreatePaymentDto {
-    itemType: 'COURSE' | 'SECTION';
-    courseId?: string;
-    sectionId?: string;
+    itemType: 'BATCH' | 'CORPORATE_CONTRACT';
+    batchId?: string;
+    corporateContractId?: string;
     couponCode?: string;
 }
 

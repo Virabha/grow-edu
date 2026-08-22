@@ -5,14 +5,24 @@ import {
   boolean,
   integer,
   index,
+  jsonb,
+  unique,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { notificationTypeEnum, videoEncodingJobStatusEnum } from "./enums";
+import {
+  broadcastAudienceEnum,
+  mediaRenditionKindEnum,
+  notificationTypeEnum,
+  videoEncodingJobStatusEnum,
+} from "./enums";
+import { organizationId } from "./organizations";
 
 // ─── Notifications ──────────────────────────────────────────────────────────
 
 export const notifications = pgTable(
   "notifications",
   {
+    organizationId: organizationId(),
     notificationId: text("notification_id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
@@ -23,59 +33,44 @@ export const notifications = pgTable(
     link: text("link"),
     batchId: text("batch_id"),
     read: boolean("read").notNull().default(false),
+    dedupeKey: text("dedupe_key"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => ({
     userIdx: index("notifications_user_idx").on(table.userId),
     userReadIdx: index("notifications_user_read_idx").on(table.userId, table.read),
     createdAtIdx: index("notifications_created_at_idx").on(table.createdAt),
+    dedupeKeyIdx: uniqueIndex("notifications_dedupe_key_idx").on(table.dedupeKey),
   })
 );
 
-export const contactSubmissions = pgTable(
-  "contact_submissions",
+export const notificationTemplates = pgTable(
+  "notification_templates",
   {
-    id: text("id")
+    organizationId: organizationId(),
+    templateId: text("template_id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
-    name: text("name").notNull(),
-    email: text("email").notNull(),
-    mobile: text("mobile"),
+    type: notificationTypeEnum("type").notNull().unique(),
     subject: text("subject").notNull(),
-    courseInterested: text("course_interested"),
-    role: text("role"),
-    message: text("message").notNull(),
-    documentUrl: text("document_url"),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
+    body: text("body").notNull(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (table) => ({
-    emailIdx: index("contact_submissions_email_idx").on(table.email),
-    createdAtIdx: index("contact_submissions_created_at_idx").on(table.createdAt),
-  })
-);
-
-export const newsletterSubscribers = pgTable(
-  "newsletter_subscribers",
-  {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
-    email: text("email").notNull().unique(),
-    subscribedAt: timestamp("subscribed_at").notNull().defaultNow(),
-    isActive: boolean("is_active").notNull().default(true),
-  },
-  (table) => ({
-    emailIdx: index("newsletter_subscribers_email_idx").on(table.email),
-    isActiveIdx: index("newsletter_subscribers_is_active_idx").on(table.isActive),
+    typeIdx: index("notification_templates_type_idx").on(table.type),
   })
 );
 
 export const videoEncodingJobs = pgTable(
   "video_encoding_jobs",
   {
+    organizationId: organizationId(),
     jobId: text("job_id").primaryKey(),
     lessonId: text("lesson_id").notNull(),
-    courseId: text("course_id").notNull(),
+    batchId: text("batch_id").notNull(),
+    renditionKind: mediaRenditionKindEnum("rendition_kind")
+      .notNull()
+      .default("VIDEO"),
     status: videoEncodingJobStatusEnum("status").notNull().default("PENDING"),
     inputPath: text("input_path").notNull(),
     outputPath: text("output_path"),
@@ -87,7 +82,90 @@ export const videoEncodingJobs = pgTable(
   },
   (table) => ({
     lessonIdx: index("video_encoding_jobs_lesson_idx").on(table.lessonId),
-    courseIdx: index("video_encoding_jobs_course_idx").on(table.courseId),
+    batchIdx: index("video_encoding_jobs_batch_idx").on(table.batchId),
     statusIdx: index("video_encoding_jobs_status_idx").on(table.status),
+    oneRenditionPerLesson: unique("video_encoding_jobs_lesson_rendition_unique").on(
+      table.lessonId,
+      table.renditionKind,
+    ),
   })
+);
+
+export const broadcasts = pgTable(
+  "broadcasts",
+  {
+    organizationId: organizationId(),
+    broadcastId: text("broadcast_id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    audienceType: broadcastAudienceEnum("audience_type").notNull(),
+    audienceId: text("audience_id"),
+    segment: jsonb("segment").$type<Record<string, string>>(),
+    title: text("title").notNull(),
+    body: text("body").notNull(),
+    link: text("link"),
+    recipientCount: integer("recipient_count").notNull().default(0),
+    recipientIds: jsonb("recipient_ids").$type<string[]>().notNull(),
+    sentBy: text("sent_by").notNull(),
+    sentAt: timestamp("sent_at").notNull(),
+  },
+  (table) => ({
+    sentAtIdx: index("broadcasts_sent_at_idx").on(table.sentAt),
+    audienceIdx: index("broadcasts_audience_idx").on(
+      table.audienceType,
+      table.audienceId,
+    ),
+  }),
+);
+
+export const studentFeedback = pgTable(
+  "student_feedback",
+  {
+    organizationId: organizationId(),
+    feedbackId: text("feedback_id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    batchId: text("batch_id").notNull(),
+    userId: text("user_id").notNull(),
+    authorId: text("author_id").notNull(),
+    body: text("body").notNull(),
+    isDeleted: boolean("is_deleted").notNull().default(false),
+    createdAt: timestamp("created_at").notNull(),
+    updatedAt: timestamp("updated_at").notNull(),
+  },
+  (table) => ({
+    subjectIdx: index("student_feedback_subject_idx").on(
+      table.batchId,
+      table.userId,
+      table.createdAt,
+    ),
+    authorIdx: index("student_feedback_author_idx").on(table.authorId),
+  }),
+);
+
+export const pushSubscriptions = pgTable(
+  "push_subscriptions",
+  {
+    organizationId: organizationId(),
+    subscriptionId: text("subscription_id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id").notNull(),
+    deviceId: text("device_id"),
+    endpoint: text("endpoint").notNull(),
+    p256dh: text("p256dh").notNull(),
+    auth: text("auth").notNull(),
+    userAgent: text("user_agent"),
+    failureCount: integer("failure_count").notNull().default(0),
+    prunedAt: timestamp("pruned_at"),
+    lastUsedAt: timestamp("last_used_at"),
+    createdAt: timestamp("created_at").notNull(),
+  },
+  (table) => ({
+    endpointPerUser: uniqueIndex("push_subscriptions_endpoint_idx").on(
+      table.endpoint,
+    ),
+    userIdx: index("push_subscriptions_user_idx").on(table.userId),
+    deviceIdx: uniqueIndex("push_subscriptions_device_idx").on(table.deviceId),
+  }),
 );

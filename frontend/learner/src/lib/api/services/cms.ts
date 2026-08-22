@@ -60,6 +60,26 @@ export interface Instructor {
   displayOrder: number;
 }
 
+export interface Service {
+  serviceId: string;
+  title: string;
+  slug: string;
+  description: string | null;
+  imageUrl: string | null;
+  screenshots: string[] | null;
+  iconName: string | null;
+  formSchema: unknown;
+  displayOrder: number;
+  isActive: boolean;
+}
+
+export interface ServiceApplicationInput {
+  formData: Record<string, unknown>;
+  applicantName?: string;
+  applicantEmail?: string;
+  applicantPhone?: string;
+}
+
 export const cmsApi = {
   getInstructors: () =>
     apiClient.get<Instructor[]>("/cms/instructors").then((r) => r.data),
@@ -69,4 +89,13 @@ export const cmsApi = {
     apiClient.get<WhyChooseUs[]>("/cms/why-choose-us").then((r) => r.data),
   getAllSiteSettings: () =>
     apiClient.get<SiteSettings>("/cms/site-settings").then((r) => r.data),
+  getServiceBySlug: (slug: string) =>
+    apiClient.get<Service>(`/cms/services/slug/${slug}`).then((r) => r.data),
+  submitServiceApplication: (
+    serviceId: string,
+    input: ServiceApplicationInput,
+  ) =>
+    apiClient
+      .post(`/cms/services/${serviceId}/applications`, input)
+      .then((r) => r.data),
 };

@@ -12,15 +12,14 @@ import {
   BookOpen,
 } from "lucide-react";
 import { motion } from "framer-motion";
-import { useCourses } from "@/lib/hooks/use-courses";
+import { useBatches } from "@/lib/hooks/use-batches";
 import { useCategories } from "@/lib/hooks/use-categories";
 import { cn } from "@/lib/utils";
 
-const levelLabels: Record<string, string> = {
-  BEGINNER: "Beginner",
-  INTERMEDIATE: "Intermediate",
-  ADVANCED: "Advanced",
-  ALL_LEVELS: "All levels",
+const deliveryLabels: Record<string, string> = {
+  LIVE: "Live",
+  RECORDED: "Recorded",
+  HYBRID: "Live + recorded",
 };
 
 function formatPrice(price: string): string {
@@ -43,18 +42,17 @@ export function CoursesCarousel() {
   const autoplayRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const { data: categoriesData = [] } = useCategories();
-  const { data: coursesResponse, isLoading } = useCourses(
+  const { data: batchesResponse, isLoading } = useBatches(
     {
       categoryId: activeCategoryId ?? undefined,
       limit: 12,
-      status: "PUBLISHED",
     },
     true,
   );
 
   const courses = useMemo(
-    () => coursesResponse?.data ?? [],
-    [coursesResponse?.data],
+    () => batchesResponse?.data ?? [],
+    [batchesResponse?.data],
   );
   const categoryFilters = useMemo(
     () => [
@@ -125,7 +123,7 @@ export function CoursesCarousel() {
             </h2>
           </div>
           <Link
-            href="/courses"
+            href="/batches"
             className="group inline-flex shrink-0 items-center gap-2 self-start border-b border-foreground pb-1 text-sm font-medium text-foreground transition-colors hover:border-primary hover:text-primary sm:self-end"
           >
             See all courses
@@ -168,19 +166,17 @@ export function CoursesCarousel() {
             <div className="overflow-hidden" ref={emblaRef}>
               <div className="flex gap-5">
                 {courses.map((course) => {
-                  const instructorName = course.instructor
-                    ? [course.instructor.firstName, course.instructor.lastName]
-                        .filter(Boolean)
-                        .join(" ")
+                  const lead = course.teachers?.[0];
+                  const instructorName = lead
+                    ? [lead.firstName, lead.lastName].filter(Boolean).join(" ")
                     : "Instructor";
-                  const level = (course.level ?? "ALL_LEVELS") as string;
                   return (
                     <div
-                      key={course.courseId}
+                      key={course.batchId}
                       className="min-w-0 shrink-0 basis-full sm:basis-1/2 lg:basis-1/3"
                     >
                       <Link
-                        href={`/courses/${course.slug}`}
+                        href={`/batches/${course.slug}`}
                         className="group flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-[0_24px_50px_-20px_rgba(28,25,23,0.2)]"
                       >
                         <div className="relative aspect-[5/3] overflow-hidden bg-muted">
@@ -200,7 +196,7 @@ export function CoursesCarousel() {
                           )}
                           <div className="absolute inset-x-0 bottom-0 flex items-center justify-between px-4 py-3">
                             <span className="rounded-full bg-background/85 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-foreground backdrop-blur-md">
-                              {levelLabels[level] ?? "All levels"}
+                              {deliveryLabels[course.deliveryMode] ?? "Live"}
                             </span>
                             <span className="flex items-center gap-1 rounded-full bg-foreground/75 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur-md">
                               <Star className="size-3 fill-amber-300 text-amber-300" />
@@ -210,7 +206,7 @@ export function CoursesCarousel() {
                         </div>
                         <div className="flex flex-1 flex-col px-5 pb-5 pt-4">
                           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">
-                            {course.category?.name ?? "Course"}
+                            {course.targetExam ?? "Batch"}
                           </p>
                           <h3 className="font-display mt-1.5 line-clamp-2 text-lg font-medium leading-snug text-foreground transition-colors group-hover:text-primary sm:text-xl">
                             {course.title}
@@ -225,13 +221,12 @@ export function CoursesCarousel() {
                           <div className="mt-auto flex items-baseline justify-between gap-3 border-t border-border/70 pt-4">
                             <div className="flex items-baseline gap-2">
                               <span className="font-display text-xl font-medium text-foreground">
-                                {formatPrice(course.price)}
+                                {formatPrice(String(course.price))}
                               </span>
-                              {course.compareAtPrice &&
-                                parseFloat(course.compareAtPrice) >
-                                  parseFloat(course.price) && (
+                              {course.compareAtPrice !== null &&
+                                course.compareAtPrice > course.price && (
                                   <span className="text-xs text-muted-foreground line-through">
-                                    {formatPrice(course.compareAtPrice)}
+                                    {formatPrice(String(course.compareAtPrice))}
                                   </span>
                                 )}
                             </div>

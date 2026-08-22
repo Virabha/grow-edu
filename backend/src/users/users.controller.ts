@@ -10,16 +10,21 @@ import {
   Query,
   UseGuards,
   ForbiddenException,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { FilterUsersDto } from './dto/filter-users.dto';
+import { SuspendUserDto } from './dto/suspend-user.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { Authenticated } from '../auth/decorators/authenticated.decorator';
+import { SelfOrAdmin } from '../auth/decorators/self-or-admin.decorator';
 
 @ApiTags('users')
 @Controller('users')
@@ -51,6 +56,7 @@ export class UsersController {
     );
   }
 
+  @Authenticated()
   @ApiOperation({ summary: 'Get own profile' })
   @ApiResponse({ status: 200, description: 'Current user profile' })
   @Get('me')
@@ -58,6 +64,7 @@ export class UsersController {
     return this.usersService.getMe(user.userId);
   }
 
+  @Authenticated()
   @ApiOperation({ summary: 'Update own profile' })
   @ApiResponse({ status: 200, description: 'Updated profile' })
   @Patch('me')
@@ -81,6 +88,7 @@ export class UsersController {
     return this.usersService.updateMe(user.userId, dto);
   }
 
+  @Authenticated()
   @ApiOperation({ summary: 'Change own password' })
   @ApiResponse({ status: 200, description: 'Password changed' })
   @Post('me/password')
@@ -91,6 +99,7 @@ export class UsersController {
     return this.usersService.changePassword(user.userId, dto.currentPassword, dto.newPassword);
   }
 
+  @Authenticated()
   @ApiOperation({ summary: 'Change own email' })
   @ApiResponse({ status: 200, description: 'Email changed' })
   @Post('me/email')
@@ -101,6 +110,7 @@ export class UsersController {
     return this.usersService.changeEmail(user.userId, dto.email);
   }
 
+  @Authenticated()
   @ApiOperation({ summary: 'List active devices' })
   @ApiResponse({ status: 200, description: 'Device list' })
   @Get('me/devices')
@@ -108,6 +118,7 @@ export class UsersController {
     return this.usersService.listDevices(user.userId, user.deviceId);
   }
 
+  @Authenticated()
   @ApiOperation({ summary: 'Sign out a device' })
   @ApiResponse({ status: 200 })
   @ApiResponse({ status: 404, description: 'Device not found' })
@@ -119,6 +130,7 @@ export class UsersController {
     return this.usersService.revokeDevice(user.userId, deviceId);
   }
 
+  @Authenticated()
   @ApiOperation({ summary: 'Sign out all other devices' })
   @ApiResponse({ status: 200 })
   @Post('me/devices/logout-others')
@@ -126,6 +138,7 @@ export class UsersController {
     return this.usersService.revokeOtherDevices(user.userId, user.deviceId);
   }
 
+  @SelfOrAdmin()
   @ApiOperation({ summary: 'Get user by ID' })
   @ApiResponse({ status: 200, description: 'User details' })
   @ApiResponse({ status: 404, description: 'User not found' })
@@ -137,6 +150,7 @@ export class UsersController {
     return this.usersService.findOne(userId);
   }
 
+  @SelfOrAdmin()
   @ApiOperation({ summary: 'Update user' })
   @ApiResponse({ status: 200, description: 'User updated successfully' })
   @ApiResponse({ status: 403, description: 'Forbidden' })
@@ -147,6 +161,32 @@ export class UsersController {
     @CurrentUser() user: { userId: string; role: string },
   ) {
     return this.usersService.update(userId, dto, user.userId, user.role);
+  }
+
+  @ApiOperation({ summary: 'Suspend a user account' })
+  @ApiResponse({ status: 200, description: 'Account suspended' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.PLATFORM_ADMIN)
+  @Post(':userId/suspend')
+  @HttpCode(HttpStatus.OK)
+  async suspend(
+    @Param('userId') userId: string,
+    @Body() dto: SuspendUserDto,
+    @CurrentUser() user: { userId: string },
+  ) {
+    return this.usersService.suspend(userId, dto.reason, user.userId);
+  }
+
+  @ApiOperation({ summary: 'Reinstate a suspended user account' })
+  @ApiResponse({ status: 200, description: 'Account reinstated' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.PLATFORM_ADMIN)
+  @Post(':userId/reinstate')
+  @HttpCode(HttpStatus.OK)
+  async reinstate(@Param('userId') userId: string) {
+    return this.usersService.reinstate(userId);
   }
 
   @ApiOperation({ summary: 'Delete user' })

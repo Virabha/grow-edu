@@ -8,22 +8,21 @@ import {
   UseGuards,
   HttpCode,
   Query,
-  Headers,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles, UserRole } from '../auth/decorators/roles.decorator';
 import { PaymentService } from './payment.service';
-import { CreatePaymentDto } from './dto/create-payment.dto';
-import { EnrollFreeDto } from './dto/enroll-free.dto';
 import { UploadProofDto } from './dto/upload-proof.dto';
 import { ReviewPaymentDto } from './dto/review-payment.dto';
+import { RejectPaymentDto } from './dto/reject-payment.dto';
 import { UpdateQRSettingsDto } from './dto/qr-settings.dto';
 import { FilterPaymentsDto } from './dto/filter-payments.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Public } from '../auth/decorators/public.decorator';
+import { Authenticated } from '../auth/decorators/authenticated.decorator';
 
 @ApiTags('payments')
 @Controller('payments')
@@ -37,38 +36,7 @@ export class PaymentController {
     return this.paymentService.getQRSettings();
   }
 
-  @ApiOperation({ summary: 'Enroll in a free course/section' })
-  @ApiResponse({ status: 201, description: 'Enrolled successfully' })
-  @Post('enroll-free')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  async enrollFree(
-    @Body() dto: EnrollFreeDto,
-    @CurrentUser() user: { userId: string },
-  ) {
-    return this.paymentService.enrollFree({ userId: user.userId, ...dto });
-  }
-
-  @ApiOperation({ summary: 'Create a manual-QR payment (returns QR/bank details)' })
-  @ApiResponse({ status: 201, description: 'Payment created — awaiting proof upload' })
-  @Post()
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  async createPayment(
-    @Body() dto: CreatePaymentDto,
-    @CurrentUser() user: { userId: string },
-    @Headers('x-idempotency-key') idempotencyKey?: string,
-  ) {
-    return this.paymentService.createManualQRPayment({
-      userId: user.userId,
-      itemType: dto.itemType,
-      courseId: dto.courseId,
-      sectionId: dto.sectionId,
-      couponCode: dto.couponCode,
-      idempotencyKey: idempotencyKey || undefined,
-    });
-  }
-
+  @Authenticated()
   @ApiOperation({ summary: 'Upload payment proof (screenshot URL)' })
   @ApiResponse({ status: 200, description: 'Proof uploaded; awaiting admin review' })
   @Post(':paymentId/upload-proof')
@@ -88,6 +56,7 @@ export class PaymentController {
     });
   }
 
+  @Authenticated()
   @ApiOperation({ summary: 'Get my payment (learner)' })
   @Get('my/:paymentId')
   @UseGuards(JwtAuthGuard)
@@ -152,14 +121,10 @@ export class PaymentController {
   @ApiBearerAuth()
   async reject(
     @Param('paymentId') paymentId: string,
-    @Body() dto: ReviewPaymentDto,
+    @Body() dto: RejectPaymentDto,
     @CurrentUser() user: { userId: string },
   ) {
-    return this.paymentService.rejectPayment(
-      paymentId,
-      user.userId,
-      dto.notes || 'Rejected by admin',
-    );
+    return this.paymentService.rejectPayment(paymentId, user.userId, dto.reason);
   }
 
   @ApiOperation({ summary: 'Update QR/bank settings (admin)' })

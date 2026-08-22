@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useInstructors } from "@/lib/hooks/use-cms";
-import { useCourses } from "@/lib/hooks/use-courses";
+import { useBatches } from "@/lib/hooks/use-batches";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
@@ -47,11 +47,11 @@ export default function InstructorDetailPage() {
   const { data: instructors, isLoading: loadingInstructors } = useInstructors();
   const instructor = instructors?.find((i) => i.userId === userId);
 
-  const { data: coursesData } = useCourses(
-    { instructorId: userId, limit: 20, status: "PUBLISHED" },
+  const { data: batchesData } = useBatches(
+    { instructorId: userId, limit: 20 },
     !!userId
   );
-  const courses = coursesData?.data ?? [];
+  const courses = batchesData?.data ?? [];
 
   if (loadingInstructors) {
     return (
@@ -229,21 +229,21 @@ export default function InstructorDetailPage() {
                   Courses by {instructor.name}
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {courses.length} course{courses.length !== 1 && "s"} available
+                  {courses.length} batch{courses.length !== 1 && "es"} available
                 </p>
               </motion.div>
 
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {courses.map((course, i) => (
                   <motion.div
-                    key={course.courseId}
+                    key={course.batchId}
                     initial={{ opacity: 0, y: 16 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.35, delay: i * 0.05 }}
                   >
                     <Link
-                      href={`/courses/${course.slug}`}
+                      href={`/batches/${course.slug}`}
                       className="group flex h-full flex-col overflow-hidden rounded-xl border border-border/60 bg-white/60 backdrop-blur-sm transition-all hover:border-primary/40 hover:shadow-md"
                     >
                       <div className="relative h-32 overflow-hidden bg-gradient-to-br from-primary/20 to-violet-500/10 sm:h-36">
@@ -259,17 +259,17 @@ export default function InstructorDetailPage() {
                             <BookOpen className="size-10 text-primary/30" />
                           </div>
                         )}
-                        {course.level && (
+                        {course.targetExam && (
                           <span className="absolute bottom-2 right-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
-                            {course.level}
+                            {course.targetExam}
                           </span>
                         )}
                       </div>
 
                       <div className="flex flex-1 flex-col p-3 sm:p-4">
-                        {course.category && (
+                        {course.language && (
                           <span className="mb-1.5 w-fit rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground sm:text-xs">
-                            {course.category.name}
+                            {course.language}
                           </span>
                         )}
                         <h3 className="line-clamp-2 text-sm font-bold leading-snug transition-colors group-hover:text-primary">
@@ -278,11 +278,11 @@ export default function InstructorDetailPage() {
 
                         <div className="mt-auto flex items-center justify-between border-t border-border pt-2.5 mt-2.5">
                           <span className="text-sm font-bold text-foreground">
-                            ₹{parseFloat(course.price).toFixed(0)}
+                            ₹{course.price.toFixed(0)}
                           </span>
-                          {course.compareAtPrice && (
+                          {course.compareAtPrice !== null && (
                             <span className="text-[11px] text-muted-foreground line-through">
-                              ₹{parseFloat(course.compareAtPrice).toFixed(0)}
+                              ₹{course.compareAtPrice.toFixed(0)}
                             </span>
                           )}
                         </div>
@@ -308,10 +308,10 @@ export default function InstructorDetailPage() {
                 Ready to learn from {instructor.name}?
               </h2>
               <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-                Explore their courses and start learning today.
+                Explore their batches and start learning today.
               </p>
               <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
-                <Link href="/courses">
+                <Link href="/batches">
                   <Button size="lg">Browse All Courses</Button>
                 </Link>
                 <Link href="/instructors">

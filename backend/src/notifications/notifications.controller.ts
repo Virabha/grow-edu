@@ -10,11 +10,15 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { Throttle } from "@nestjs/throttler";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
-import { NotificationsService } from "./notifications.service";
+import { NotificationsService, NotificationType } from "./notifications.service";
 import { IsArray, IsString } from "class-validator";
 import { FilterNotificationsDto } from "./dto/filter-notifications.dto";
+import { Authenticated } from "../auth/decorators/authenticated.decorator";
+import { Roles, UserRole } from "../auth/decorators/roles.decorator";
+import { SendBulkNotificationDto } from "./dto/send-bulk-notification.dto";
 
 class MarkReadDto {
   @IsArray()
@@ -34,6 +38,7 @@ interface AuthedUser {
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 
+  @Authenticated()
   @ApiOperation({ summary: "List my notifications" })
   @Get()
   async list(
@@ -46,6 +51,7 @@ export class NotificationsController {
     });
   }
 
+  @Authenticated()
   @ApiOperation({ summary: "Get unread count" })
   @Get("unread-count")
   async unreadCount(@CurrentUser() user: AuthedUser) {
@@ -53,24 +59,43 @@ export class NotificationsController {
     return { count };
   }
 
+  @Authenticated()
   @ApiOperation({ summary: "Mark notifications as read" })
   @Patch("read")
   async markRead(@Body() dto: MarkReadDto, @CurrentUser() user: AuthedUser) {
     return this.notificationsService.markRead(user.userId, dto.notificationIds);
   }
 
+  @Authenticated()
   @ApiOperation({ summary: "Mark all as read" })
   @Post("mark-all-read")
   async markAllRead(@CurrentUser() user: AuthedUser) {
     return this.notificationsService.markAllRead(user.userId);
   }
 
+  @Authenticated()
   @ApiOperation({ summary: "Delete a notification" })
   @Delete(":notificationId")
   async remove(
     @Param("notificationId") notificationId: string,
-    @CurrentUser() user: AuthedUser
+    @CurrentUser() user: AuthedUser,
   ) {
     return this.notificationsService.delete(user.userId, notificationId);
+  }
+
+  @Roles(UserRole.PLATFORM_ADMIN)
+  @ApiOperation({ summary: "Send a notification to multiple users (queued)" })
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
+  @Post("send-bulk")
+  async sendBulk(@Body() dto: SendBulkNotificationDto) {
+    await this.notificationsService.queuedFanout(
+      dto.userIds,
+      dto.type as NotificationType,
+      dto.vars ?? {},
+      dto.link,
+      undefined,
+      dto.fanoutId,
+    );
+    return { queued: true };
   }
 }

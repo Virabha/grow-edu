@@ -1,4 +1,5 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { AccountSuspensionService } from '../auth/account-suspension.service';
 import { DeviceRevocationService } from '../auth/device-revocation.service';
 import { Test } from '@nestjs/testing';
 import { VideoEncodingController } from './video-encoding.controller';
@@ -13,10 +14,11 @@ const OTHER_ID = 'user-other';
 const ADMIN_ID = 'user-admin';
 const LESSON_ID = 'lesson-1';
 const JOB_ID = 'job-1';
-const COURSE_ID = 'course-1';
+const BATCH_ID = 'batch-1';
 
 type VideoServiceMock = {
-  getLessonWithCourse: jest.Mock;
+  getLessonWithBatch: jest.Mock;
+  isBatchInstructor: jest.Mock;
   getEncodingJobByJobId: jest.Mock;
   getLessonEncodingInfo: jest.Mock;
   getAllVideoLessonsDebugInfo: jest.Mock;
@@ -25,18 +27,13 @@ type VideoServiceMock = {
   handleJobCompletion: jest.Mock;
 };
 
-function makeFakeLesson(instructorId: string) {
+function makeFakeLesson() {
   return {
     lessonId: LESSON_ID,
     title: 'Test Lesson',
     status: 'PUBLISHED',
     type: 'VIDEO',
-    section: {
-      course: {
-        courseId: COURSE_ID,
-        instructorId,
-      },
-    },
+    subject: { batchId: BATCH_ID },
   };
 }
 
@@ -60,7 +57,8 @@ async function buildMocks(): Promise<{
   mockService: VideoServiceMock;
 }> {
   const mockService: VideoServiceMock = {
-    getLessonWithCourse: jest.fn(),
+    getLessonWithBatch: jest.fn(),
+    isBatchInstructor: jest.fn().mockResolvedValue(false),
     getEncodingJobByJobId: jest.fn(),
     getLessonEncodingInfo: jest.fn().mockResolvedValue(NO_ENCODING_INFO),
     getAllVideoLessonsDebugInfo: jest.fn(),
@@ -76,6 +74,7 @@ async function buildMocks(): Promise<{
     controllers: [VideoEncodingController],
     providers: [
       { provide: DeviceRevocationService, useValue: { isRevoked: async () => false, forget: () => undefined } },
+      { provide: AccountSuspensionService, useValue: { isSuspended: async () => false, forget: () => undefined } },
       
       { provide: VideoEncodingService, useValue: mockService },
       { provide: AppConfigService, useValue: mockConfig },
@@ -98,8 +97,9 @@ describe('VideoEncodingController › loadLessonForUser (via debugLesson)', () =
     ({ controller, mockService } = await buildMocks());
   });
 
-  it('allows an instructor who owns the course', async () => {
-    mockService.getLessonWithCourse.mockResolvedValue(makeFakeLesson(OWNER_ID));
+  it('allows an instructor assigned to the batch', async () => {
+    mockService.getLessonWithBatch.mockResolvedValue(makeFakeLesson());
+    mockService.isBatchInstructor.mockResolvedValue(true);
 
     const result = await controller.debugLesson(LESSON_ID, {
       userId: OWNER_ID,
@@ -110,9 +110,9 @@ describe('VideoEncodingController › loadLessonForUser (via debugLesson)', () =
     expect(result.lessonId).toBe(LESSON_ID);
   });
 
-  it('throws ForbiddenException when an instructor does NOT own the course', async () => {
-    // Lesson belongs to OWNER_ID, but caller is OTHER_ID
-    mockService.getLessonWithCourse.mockResolvedValue(makeFakeLesson(OWNER_ID));
+  it('throws ForbiddenException when an instructor is not on the batch', async () => {
+    mockService.getLessonWithBatch.mockResolvedValue(makeFakeLesson());
+    mockService.isBatchInstructor.mockResolvedValue(false);
 
     await expect(
       controller.debugLesson(LESSON_ID, { userId: OTHER_ID, role: UserRole.INSTRUCTOR }),
@@ -120,16 +120,15 @@ describe('VideoEncodingController › loadLessonForUser (via debugLesson)', () =
   });
 
   it('throws NotFoundException when the lesson does not exist', async () => {
-    mockService.getLessonWithCourse.mockResolvedValue(null);
+    mockService.getLessonWithBatch.mockResolvedValue(null);
 
     await expect(
       controller.debugLesson(LESSON_ID, { userId: OWNER_ID, role: UserRole.INSTRUCTOR }),
     ).rejects.toThrow(NotFoundException);
   });
 
-  it('allows a PLATFORM_ADMIN regardless of course ownership', async () => {
-    // Lesson belongs to OWNER_ID, caller is ADMIN_ID with PLATFORM_ADMIN role
-    mockService.getLessonWithCourse.mockResolvedValue(makeFakeLesson(OWNER_ID));
+  it('allows a PLATFORM_ADMIN regardless of batch assignment', async () => {
+    mockService.getLessonWithBatch.mockResolvedValue(makeFakeLesson());
 
     const result = await controller.debugLesson(LESSON_ID, {
       userId: ADMIN_ID,
@@ -160,11 +159,11 @@ describe('VideoEncodingController › getJobStatus', () => {
   });
 
   it('authorises before calling the encoding service — ForbiddenException, service not called', async () => {
-    const fakeJob = { jobId: JOB_ID, lessonId: LESSON_ID, courseId: COURSE_ID };
+    const fakeJob = { jobId: JOB_ID, lessonId: LESSON_ID, batchId: BATCH_ID };
 
-    // Job found; lesson belongs to OWNER_ID, but caller is OTHER_ID
     mockService.getEncodingJobByJobId.mockResolvedValue(fakeJob);
-    mockService.getLessonWithCourse.mockResolvedValue(makeFakeLesson(OWNER_ID));
+    mockService.getLessonWithBatch.mockResolvedValue(makeFakeLesson());
+    mockService.isBatchInstructor.mockResolvedValue(false);
 
     await expect(
       controller.getJobStatus(JOB_ID, { userId: OTHER_ID, role: UserRole.INSTRUCTOR }),

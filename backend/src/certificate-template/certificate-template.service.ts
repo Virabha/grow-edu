@@ -63,7 +63,7 @@ export class CertificateTemplateService {
         accentColour: dto.accentColour,
       })
       .onConflictDoUpdate({
-        target: certificateTemplates.scope,
+        target: [certificateTemplates.organizationId, certificateTemplates.scope],
         set: {
           backgroundUrl: dto.backgroundUrl,
           signatureUrl: dto.signatureUrl,

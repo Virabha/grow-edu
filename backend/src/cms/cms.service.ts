@@ -750,7 +750,7 @@ export class CmsService {
         updatedAt: new Date(),
       })
       .onConflictDoUpdate({
-        target: siteSettings.key,
+        target: [siteSettings.organizationId, siteSettings.key],
         set: {
           value: dto.value as Record<string, unknown>,
           updatedAt: new Date(),

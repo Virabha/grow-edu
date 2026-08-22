@@ -17,6 +17,7 @@
  */
 
 import { NotFoundException } from '@nestjs/common';
+import { AccountSuspensionService } from '../auth/account-suspension.service';
 import { DeviceRevocationService } from '../auth/device-revocation.service';
 import { Test } from '@nestjs/testing';
 import { plainToInstance } from 'class-transformer';
@@ -89,6 +90,7 @@ describe('BrandsService › findAll — pagination envelope', () => {
     const moduleRef = await Test.createTestingModule({
       providers: [
       { provide: DeviceRevocationService, useValue: { isRevoked: async () => false, forget: () => undefined } },
+      { provide: AccountSuspensionService, useValue: { isSuspended: async () => false, forget: () => undefined } },
       
         BrandsService,
         { provide: DATABASE_CONNECTION, useValue: dbMock },
@@ -153,6 +155,7 @@ describe('BrandsController › findOne — 404 on missing row', () => {
       controllers: [BrandsController],
       providers: [
       { provide: DeviceRevocationService, useValue: { isRevoked: async () => false, forget: () => undefined } },
+      { provide: AccountSuspensionService, useValue: { isSuspended: async () => false, forget: () => undefined } },
       { provide: BrandsService, useValue: serviceMock }],
     }).compile();
 

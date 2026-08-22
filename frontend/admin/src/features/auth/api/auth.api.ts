@@ -1,4 +1,13 @@
-import { LoginDto, RegisterDto, LoginResponse, RegisterResponse, ForgotPasswordDto, ResetPasswordDto } from '../types';
+import {
+    LoginDto,
+    RegisterDto,
+    LoginResponse,
+    RegisterResponse,
+    ForgotPasswordDto,
+    ResetPasswordDto,
+    AuthSuccess,
+    SecondFactorCompleteDto,
+} from '../types';
 import { parseJsonResponse, parseErrorResponse } from '@/lib/types/api';
 
 import { env } from '@/lib/env';
@@ -21,6 +30,32 @@ export const authApi = {
             throw new Error(error.message || error.error || 'Login failed');
         }
         return parseJsonResponse<LoginResponse>(response);
+    },
+    async completeLogin(dto: SecondFactorCompleteDto): Promise<AuthSuccess> {
+        const response = await fetch(`${getAuthBaseUrl()}/auth/login/second-factor`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(dto),
+        });
+        if (!response.ok) {
+            const error = await parseErrorResponse(response);
+            throw new Error(error.message || error.error || 'Code not accepted');
+        }
+        return parseJsonResponse<AuthSuccess>(response);
+    },
+    async confirmSetup(dto: SecondFactorCompleteDto): Promise<AuthSuccess> {
+        const response = await fetch(`${getAuthBaseUrl()}/auth/login/second-factor/confirm`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(dto),
+        });
+        if (!response.ok) {
+            const error = await parseErrorResponse(response);
+            throw new Error(error.message || error.error || 'Code not accepted');
+        }
+        return parseJsonResponse<AuthSuccess>(response);
     },
     async register(dto: RegisterDto): Promise<RegisterResponse> {
         const response = await fetch(`${getAuthBaseUrl()}/auth/register`, {

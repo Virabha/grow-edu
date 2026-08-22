@@ -2,13 +2,18 @@ import {
   ConflictException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
+  OnModuleInit,
+  UnprocessableEntityException,
 } from '@nestjs/common';
-import { SQL, and, count, desc, eq, ilike, sql } from 'drizzle-orm';
+import { SQL, and, count, desc, eq, ilike, lte, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { DATABASE_CONNECTION } from '../database/database.module';
 import * as schema from '../database/schema';
 import { blogCategories, blogPosts } from '../database/schema';
+import { CLOCK, Clock } from '../common/clock';
+import { JOB_QUEUE, JobQueue, registerAndRepeat } from '../jobs/job-queue';
 import { CreateBlogCategoryDto } from './dto/create-blog-category.dto';
 import { UpdateBlogCategoryDto } from './dto/update-blog-category.dto';
 import { ListBlogCategoriesDto } from './dto/list-blog-categories.dto';
@@ -19,6 +24,8 @@ import { PublicListBlogPostsDto } from './dto/public-list-blog-posts.dto';
 
 const MAX_LIMIT = 100;
 const DEFAULT_LIMIT = 20;
+const SCHEDULE_POLL_MS = 60_000;
+const JOB_BLOG_PUBLISH_SCHEDULED = 'blog.schedule.publish';
 
 type Db = PostgresJsDatabase<typeof schema>;
 
@@ -34,9 +41,61 @@ function paginationMeta(page: number, limit: number, total: number) {
   return { page, limit, total, totalPages: Math.ceil(total / limit) };
 }
 
+function validateStructuredData(data: Record<string, unknown>): void {
+  if (!data['@context'] || !data['@type']) {
+    throw new UnprocessableEntityException(
+      'Structured data must include @context and @type',
+    );
+  }
+  const context = data['@context'];
+  if (typeof context !== 'string' && typeof context !== 'object') {
+    throw new UnprocessableEntityException('@context must be a string or object');
+  }
+  const type = data['@type'];
+  if (typeof type !== 'string' && !Array.isArray(type)) {
+    throw new UnprocessableEntityException('@type must be a string or array');
+  }
+}
+
 @Injectable()
-export class BlogService {
-  constructor(@Inject(DATABASE_CONNECTION) private readonly db: Db) {}
+export class BlogService implements OnModuleInit {
+  private readonly logger = new Logger(BlogService.name);
+
+  constructor(
+    @Inject(DATABASE_CONNECTION) private readonly db: Db,
+    @Inject(CLOCK) private readonly clock: Clock,
+    @Inject(JOB_QUEUE) private readonly queue: JobQueue,
+  ) {}
+
+  onModuleInit() {
+    registerAndRepeat(
+      this.queue,
+      JOB_BLOG_PUBLISH_SCHEDULED,
+      () => this.publishDueScheduledPosts(),
+      SCHEDULE_POLL_MS,
+      (err) => this.logger.error('Failed to schedule blog publish job', err),
+    );
+  }
+
+  private async publishDueScheduledPosts(): Promise<void> {
+    const now = this.clock.now();
+    const rows = await this.db
+      .select({ id: blogPosts.id })
+      .from(blogPosts)
+      .where(
+        and(
+          eq(blogPosts.status, 'SCHEDULED'),
+          eq(blogPosts.isDeleted, false),
+          lte(blogPosts.scheduledAt, now),
+        ),
+      );
+    for (const { id } of rows) {
+      await this.db
+        .update(blogPosts)
+        .set({ status: 'PUBLISHED', publishedAt: now, updatedAt: now })
+        .where(eq(blogPosts.id, id));
+    }
+  }
 
   private async iterateSlug(
     base: string,
@@ -195,7 +254,7 @@ export class BlogService {
         ...(dto.slug !== undefined && { slug: slugify(dto.slug) }),
         ...(dto.displayOrder !== undefined && { displayOrder: dto.displayOrder }),
         ...(dto.isActive !== undefined && { isActive: dto.isActive }),
-        updatedAt: new Date(),
+        updatedAt: this.clock.now(),
       })
       .where(eq(blogCategories.id, id))
       .returning();
@@ -218,7 +277,7 @@ export class BlogService {
 
     await this.db
       .update(blogCategories)
-      .set({ isDeleted: true, updatedAt: new Date() })
+      .set({ isDeleted: true, updatedAt: this.clock.now() })
       .where(eq(blogCategories.id, id));
 
     return { deleted: true, id };
@@ -250,6 +309,7 @@ export class BlogService {
           authorName: blogPosts.authorName,
           status: blogPosts.status,
           views: blogPosts.viewCount,
+          scheduledAt: blogPosts.scheduledAt,
           publishedAt: blogPosts.publishedAt,
           createdAt: blogPosts.createdAt,
           updatedAt: blogPosts.updatedAt,
@@ -270,6 +330,8 @@ export class BlogService {
   }
 
   async createPost(dto: CreateBlogPostDto) {
+    if (dto.structuredData) validateStructuredData(dto.structuredData);
+
     const base = dto.slug ? slugify(dto.slug) : slugify(dto.title);
 
     if (dto.slug) {
@@ -285,8 +347,11 @@ export class BlogService {
 
     const slug = dto.slug ? base : await this.uniqueSlugForPost(base);
 
-    const publishedAt =
-      dto.status === 'PUBLISHED' ? new Date() : null;
+    const now = this.clock.now();
+    const status = dto.status ?? 'DRAFT';
+    const publishedAt = status === 'PUBLISHED' ? now : null;
+    const scheduledAt =
+      status === 'SCHEDULED' && dto.scheduledAt ? new Date(dto.scheduledAt) : null;
 
     const [row] = await this.db
       .insert(blogPosts)
@@ -298,9 +363,15 @@ export class BlogService {
         content: dto.content,
         coverImageUrl: dto.coverImageUrl ?? null,
         authorName: dto.authorName ?? null,
-        status: dto.status ?? 'DRAFT',
+        status,
         tags: dto.tags ?? [],
+        scheduledAt,
         publishedAt,
+        metaTitle: dto.metaTitle ?? null,
+        metaDescription: dto.metaDescription ?? null,
+        canonicalUrl: dto.canonicalUrl ?? null,
+        ogImageUrl: dto.ogImageUrl ?? null,
+        structuredData: dto.structuredData ?? null,
       })
       .returning();
     return row;
@@ -322,7 +393,13 @@ export class BlogService {
         status: blogPosts.status,
         tags: blogPosts.tags,
         views: blogPosts.viewCount,
+        scheduledAt: blogPosts.scheduledAt,
         publishedAt: blogPosts.publishedAt,
+        metaTitle: blogPosts.metaTitle,
+        metaDescription: blogPosts.metaDescription,
+        canonicalUrl: blogPosts.canonicalUrl,
+        ogImageUrl: blogPosts.ogImageUrl,
+        structuredData: blogPosts.structuredData,
         isDeleted: blogPosts.isDeleted,
         createdAt: blogPosts.createdAt,
         updatedAt: blogPosts.updatedAt,
@@ -336,6 +413,8 @@ export class BlogService {
   }
 
   async updatePost(id: string, dto: UpdateBlogPostDto) {
+    if (dto.structuredData) validateStructuredData(dto.structuredData);
+
     const existing = await this.loadPost(id);
 
     if (dto.slug !== undefined) {
@@ -352,7 +431,17 @@ export class BlogService {
       }
     }
 
+    const now = this.clock.now();
     const goingLive = dto.status === 'PUBLISHED' && existing.publishedAt === null;
+
+    const scheduledAt =
+      dto.status === 'SCHEDULED' && dto.scheduledAt
+        ? new Date(dto.scheduledAt)
+        : dto.status === 'SCHEDULED'
+          ? existing.scheduledAt
+          : dto.status !== undefined
+            ? null
+            : undefined;
 
     const [updated] = await this.db
       .update(blogPosts)
@@ -366,19 +455,72 @@ export class BlogService {
         ...(dto.status !== undefined && { status: dto.status }),
         ...(dto.categoryId !== undefined && { categoryId: dto.categoryId }),
         ...(dto.tags !== undefined && { tags: dto.tags }),
-        ...(goingLive && { publishedAt: new Date() }),
-        updatedAt: new Date(),
+        ...(dto.metaTitle !== undefined && { metaTitle: dto.metaTitle }),
+        ...(dto.metaDescription !== undefined && { metaDescription: dto.metaDescription }),
+        ...(dto.canonicalUrl !== undefined && { canonicalUrl: dto.canonicalUrl }),
+        ...(dto.ogImageUrl !== undefined && { ogImageUrl: dto.ogImageUrl }),
+        ...(dto.structuredData !== undefined && { structuredData: dto.structuredData }),
+        ...(scheduledAt !== undefined && { scheduledAt }),
+        ...(goingLive && { publishedAt: now }),
+        updatedAt: now,
       })
       .where(eq(blogPosts.id, id))
       .returning();
     return updated;
   }
 
+  async publishPost(id: string) {
+    const existing = await this.loadPost(id);
+    if (existing.status === 'PUBLISHED') return this.getPost(id);
+    const now = this.clock.now();
+    await this.db
+      .update(blogPosts)
+      .set({
+        status: 'PUBLISHED',
+        publishedAt: now,
+        scheduledAt: null,
+        updatedAt: now,
+      })
+      .where(eq(blogPosts.id, id));
+    return this.getPost(id);
+  }
+
+  async unpublishPost(id: string) {
+    const existing = await this.loadPost(id);
+    if (existing.status === 'DRAFT') return this.getPost(id);
+    const now = this.clock.now();
+    await this.db
+      .update(blogPosts)
+      .set({
+        status: 'DRAFT',
+        publishedAt: null,
+        scheduledAt: null,
+        updatedAt: now,
+      })
+      .where(eq(blogPosts.id, id));
+    return this.getPost(id);
+  }
+
+  async schedulePost(id: string, scheduledAt: Date) {
+    await this.loadPost(id);
+    const now = this.clock.now();
+    await this.db
+      .update(blogPosts)
+      .set({
+        status: 'SCHEDULED',
+        scheduledAt,
+        publishedAt: null,
+        updatedAt: now,
+      })
+      .where(eq(blogPosts.id, id));
+    return this.getPost(id);
+  }
+
   async deletePost(id: string) {
     await this.loadPost(id);
     await this.db
       .update(blogPosts)
-      .set({ isDeleted: true, updatedAt: new Date() })
+      .set({ isDeleted: true, updatedAt: this.clock.now() })
       .where(eq(blogPosts.id, id));
     return { deleted: true, id };
   }
@@ -452,11 +594,17 @@ export class BlogService {
         content: blogPosts.content,
         coverImageUrl: blogPosts.coverImageUrl,
         authorName: blogPosts.authorName,
+        status: blogPosts.status,
         tags: blogPosts.tags,
         views: blogPosts.viewCount,
         publishedAt: blogPosts.publishedAt,
         categoryId: blogPosts.categoryId,
         categoryName: blogCategories.name,
+        metaTitle: blogPosts.metaTitle,
+        metaDescription: blogPosts.metaDescription,
+        canonicalUrl: blogPosts.canonicalUrl,
+        ogImageUrl: blogPosts.ogImageUrl,
+        structuredData: blogPosts.structuredData,
       })
       .from(blogPosts)
       .leftJoin(blogCategories, eq(blogPosts.categoryId, blogCategories.id))
@@ -476,6 +624,16 @@ export class BlogService {
       .set({ viewCount: sql`${blogPosts.viewCount} + 1` })
       .where(eq(blogPosts.id, row.id));
 
-    return { ...row, views: row.views + 1 };
+    return {
+      ...row,
+      views: row.views + 1,
+      meta: {
+        title: row.metaTitle ?? row.title,
+        description: row.metaDescription ?? row.excerpt ?? null,
+        canonicalUrl: row.canonicalUrl ?? null,
+        ogImageUrl: row.ogImageUrl ?? row.coverImageUrl ?? null,
+        structuredData: row.structuredData ?? null,
+      },
+    };
   }
 }

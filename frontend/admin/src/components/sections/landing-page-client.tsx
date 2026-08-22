@@ -4,7 +4,7 @@ import { Footer } from "@/components/layout/footer";
 import { Hero } from "@/components/sections/hero";
 import { TrustStats } from "@/components/sections/trust-stats";
 import { CTA } from "@/components/sections/cta";
-import { useCourses } from "@/features/courses/hooks/use-courses";
+import { useBatches } from "@/features/batches/hooks/use-batches";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -24,24 +24,21 @@ const TOPIC_TABS = [
     { id: "aws", label: "Amazon AWS", keywords: ["aws", "cloud"] },
 ];
 export function LandingPageClient() {
-    const { data: featuredCourses, isLoading: coursesLoading } = useCourses({
-        enabled: true,
-        filters: {
-            status: "PUBLISHED",
-            limit: 6,
-        },
-    });
+    const { data: featuredBatches, isLoading: batchesLoading } = useBatches(
+        { status: "ONGOING", limit: 6 },
+        true,
+    );
     const [activeTopicId, setActiveTopicId] = useState(TOPIC_TABS[0]?.id ?? "ai");
     const activeTopic = TOPIC_TABS.find((t) => t.id === activeTopicId) ?? TOPIC_TABS[0];
-    const topicCourses = useMemo(() => {
-        const list = featuredCourses?.data ?? [];
+    const topicBatches = useMemo(() => {
+        const list = featuredBatches?.data ?? [];
         const keywords = (activeTopic?.keywords ?? []).map((k) => k.toLowerCase());
-        const matches = list.filter((course) => {
-            const haystack = `${course.title ?? ""} ${course.description ?? ""} ${course.category?.name ?? ""}`.toLowerCase();
+        const matches = list.filter((batch) => {
+            const haystack = `${batch.title ?? ""} ${batch.description ?? ""} ${batch.targetExam ?? ""}`.toLowerCase();
             return keywords.some((k) => haystack.includes(k));
         });
         return (matches.length > 0 ? matches : list).slice(0, 8);
-    }, [activeTopic?.keywords, featuredCourses?.data]);
+    }, [activeTopic?.keywords, featuredBatches?.data]);
     return (<main className="min-h-screen bg-background text-foreground transition-colors duration-300">
       <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-md">
         Skip to main content
@@ -51,8 +48,7 @@ export function LandingPageClient() {
         <Hero />
         <TrustStats />
 
-        
-        <section id="courses" className="py-10" aria-labelledby="skills-to-transform-heading">
+        <section id="batches" className="py-10" aria-labelledby="skills-to-transform-heading">
           <div className="container mx-auto px-4">
             <header className="max-w-4xl">
               <h2 id="skills-to-transform-heading" className="text-3xl font-bold">
@@ -78,24 +74,24 @@ export function LandingPageClient() {
 
               <div className="mt-6">
                 <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
-                  {coursesLoading ? (<div className="w-full">
-                      <p className="text-muted-foreground">Loading courses…</p>
-                    </div>) : topicCourses.length === 0 ? (<div className="w-full">
-                      <p className="text-muted-foreground">No courses available yet. Check back soon!</p>
-                    </div>) : (topicCourses.map((course) => (<div key={course.courseId} className="min-w-[280px] max-w-[280px]">
-                        <Link href={`/learner/courses/${course.courseId}`} aria-label={`View ${course.title}`} className="group block">
+                  {batchesLoading ? (<div className="w-full">
+                      <p className="text-muted-foreground">Loading batches…</p>
+                    </div>) : topicBatches.length === 0 ? (<div className="w-full">
+                      <p className="text-muted-foreground">No batches available yet. Check back soon!</p>
+                    </div>) : (topicBatches.map((batch) => (<div key={batch.batchId} className="min-w-[280px] max-w-[280px]">
+                        <Link href={`/learner/batches/${batch.batchId}`} aria-label={`View ${batch.title}`} className="group block">
                           <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-muted">
-                            {course.thumbnail ? (<Image src={course.thumbnail} alt={`${course.title} course thumbnail`} fill className="object-cover transition-transform duration-300 group-hover:scale-105" sizes="280px"/>) : null}
+                            {batch.thumbnail ? (<Image src={batch.thumbnail} alt={`${batch.title} thumbnail`} fill className="object-cover transition-transform duration-300 group-hover:scale-105" sizes="280px"/>) : null}
                           </div>
                           <div className="mt-3 space-y-1">
                             <h3 className="text-sm font-semibold leading-snug line-clamp-2 group-hover:underline">
-                              {course.title}
+                              {batch.title}
                             </h3>
                             <p className="text-xs text-muted-foreground line-clamp-2">
-                              {course.description}
+                              {batch.shortDescription ?? batch.description}
                             </p>
                             <div className="text-sm font-semibold">
-                              ₹{parseFloat(course.price).toFixed(2)}
+                              ₹{Number(batch.price).toFixed(2)}
                             </div>
                           </div>
                         </Link>
@@ -103,8 +99,8 @@ export function LandingPageClient() {
                 </div>
 
                 <div className="mt-6">
-                  <Link href="/learner/courses" className="text-sm font-semibold text-primary hover:underline">
-                    Show all {activeTopic?.label ?? "selected"} courses →
+                  <Link href="/learner/batches" className="text-sm font-semibold text-primary hover:underline">
+                    Show all {activeTopic?.label ?? "selected"} batches →
                   </Link>
                 </div>
               </div>
@@ -112,7 +108,6 @@ export function LandingPageClient() {
           </div>
         </section>
 
-        
         <section id="why-grotutor" className="py-10" aria-labelledby="why-grotutor-heading">
           <div className="container mx-auto px-4">
             <motion.header initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }} className="text-center mb-8 max-w-3xl mx-auto">
@@ -121,7 +116,7 @@ export function LandingPageClient() {
               </h2>
               <p className="text-muted-foreground">
                 grotutor is a premium, outcomes-driven learning ecosystem that
-                blends academic rigor with practical application. Every course is
+                blends academic rigor with practical application. Every batch is
                 designed to deliver skills you can use immediately.
               </p>
             </motion.header>
@@ -130,7 +125,7 @@ export function LandingPageClient() {
               {[
             {
                 icon: <Users className="h-5 w-5"/>,
-                title: "Expert Led Courses",
+                title: "Expert Led Batches",
                 description: "Learn from experienced industry professionals and academic specialists.",
             },
             {
@@ -141,7 +136,7 @@ export function LandingPageClient() {
             {
                 icon: <BriefcaseBusiness className="h-5 w-5"/>,
                 title: "Real World Skills",
-                description: "Courses focused on practical, job-relevant outcomes.",
+                description: "Batches focused on practical, job-relevant outcomes.",
             },
             {
                 icon: <Award className="h-5 w-5"/>,
@@ -161,7 +156,6 @@ export function LandingPageClient() {
           </div>
         </section>
 
-        
         <section id="categories" className="py-10 bg-muted/50" aria-labelledby="categories-heading">
           <div className="container mx-auto px-4">
             <motion.header initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }} className="text-center mb-8 max-w-3xl mx-auto">
@@ -169,7 +163,7 @@ export function LandingPageClient() {
                 Explore Learning Categories
               </h2>
               <p className="text-muted-foreground">
-                Discover courses across high-demand domains. New categories and
+                Discover batches across high-demand domains. New categories and
                 programs are added regularly.
               </p>
             </motion.header>
@@ -238,14 +232,13 @@ export function LandingPageClient() {
             </div>
 
             <div className="text-center mt-10">
-              <Link href="/learner/courses" aria-label="Explore all categories">
+              <Link href="/learner/batches" aria-label="Explore all categories">
                 <Button variant="outline">Explore All Categories</Button>
               </Link>
             </div>
           </div>
         </section>
 
-        
         <section className="py-10" aria-labelledby="designed-for-results-heading">
           <div className="container mx-auto px-4">
             <motion.header initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }} className="text-center mb-8 max-w-3xl mx-auto">
@@ -263,7 +256,7 @@ export function LandingPageClient() {
                   {[
             {
                 title: "Personalised Learning Paths",
-                description: "Choose courses aligned with your goals and experience level.",
+                description: "Choose batches aligned with your goals and experience level.",
             },
             {
                 title: "Interactive Learning Experience",
@@ -275,7 +268,7 @@ export function LandingPageClient() {
             },
             {
                 title: "Mobile Ready and On Demand",
-                description: "Access your courses anytime, anywhere.",
+                description: "Access your batches anytime, anywhere.",
             },
         ].map((item) => (<li key={item.title} className="flex gap-3">
                       <span className="mt-1 inline-flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -301,7 +294,6 @@ export function LandingPageClient() {
           </div>
         </section>
 
-        
         <section className="py-18 sm:py-14 relative" aria-labelledby="plans-heading">
           <div className="absolute inset-0 -z-10 bg-gradient-to-b from-transparent via-muted/20 to-transparent" aria-hidden="true"/>
           <div className="container mx-auto px-4">
@@ -325,7 +317,7 @@ export function LandingPageClient() {
                 price: "From $X / month per user",
                 note: "Billed annually. Cancel anytime.",
                 bullets: [
-                    "Access to top courses",
+                    "Access to top batches",
                     "Certification prep",
                     "Goal-focused recommendations",
                     "AI-powered coaching",
@@ -340,13 +332,13 @@ export function LandingPageClient() {
                 cta: "Request a demo",
                 price: "Contact sales for pricing",
                 bullets: [
-                    "Access to course library",
+                    "Access to batch library",
                     "Certification prep",
                     "Goal-focused recommendations",
                     "AI-powered coaching",
                     "Advanced analytics and insights",
                     "Dedicated customer success team",
-                    "International course collection",
+                    "International batch collection",
                     "Customisable content",
                 ],
             },
@@ -359,11 +351,11 @@ export function LandingPageClient() {
                 blocks: [
                     {
                         title: "AI Readiness Collection",
-                        description: "Build organisation-wide AI fluency fast with curated courses and guided learning.",
+                        description: "Build organisation-wide AI fluency fast with curated batches and guided learning.",
                     },
                     {
                         title: "AI Growth Collection",
-                        description: "Scale AI and technical expertise with specialised courses and role-based learning paths.",
+                        description: "Scale AI and technical expertise with specialised batches and role-based learning paths.",
                     },
                 ],
             },
@@ -412,7 +404,6 @@ export function LandingPageClient() {
           </div>
         </section>
 
-        
         <section className="py-10 bg-muted/50" aria-labelledby="popular-skills-heading">
           <div className="container mx-auto px-4">
             <h2 id="popular-skills-heading" className="text-3xl font-bold">
@@ -426,14 +417,14 @@ export function LandingPageClient() {
                   <p className="text-lg font-semibold">Trending skills</p>
                 </div>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Explore courses across in-demand skills and career pathways.
+                  Explore batches across in-demand skills and career pathways.
                 </p>
                 <div className="mt-4 space-y-3">
-                  <Link href="/learner/courses" className="inline-block text-sm font-semibold text-primary hover:underline">
+                  <Link href="/learner/batches" className="inline-block text-sm font-semibold text-primary hover:underline">
                     See trending skills →
                   </Link>
                   <div>
-                    <Link href="/learner/courses">
+                    <Link href="/learner/batches">
                       <Button variant="outline" className="w-full">
                         Show all trending skills
                       </Button>
@@ -465,7 +456,7 @@ export function LandingPageClient() {
                       <p className="text-lg font-semibold">{col.title}</p>
                     </div>
                     <div className="mt-3 space-y-3">
-                      {col.items.map((item) => (<Link key={item} href="/learner/courses" className="block text-sm font-semibold text-primary hover:underline">
+                      {col.items.map((item) => (<Link key={item} href="/learner/batches" className="block text-sm font-semibold text-primary hover:underline">
                           {item} →
                         </Link>))}
                     </div>
@@ -475,7 +466,6 @@ export function LandingPageClient() {
           </div>
         </section>
 
-        
         <section id="how-it-works" className="py-10" aria-labelledby="how-it-works-heading">
           <div className="container mx-auto px-4">
             <motion.header initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }} className="text-center mb-8 max-w-3xl mx-auto">
@@ -489,8 +479,8 @@ export function LandingPageClient() {
               {[
             {
                 step: "1",
-                title: "Browse Courses",
-                description: "Explore categories and select a course.",
+                title: "Browse Batches",
+                description: "Explore categories and select a batch.",
             },
             {
                 step: "2",
@@ -500,7 +490,7 @@ export function LandingPageClient() {
             {
                 step: "3",
                 title: "Earn Your Certificate",
-                description: "Complete the course and showcase your achievement.",
+                description: "Complete the batch and showcase your achievement.",
             },
         ].map((item) => (<li key={item.step} className="relative">
                   <div className="flex items-start gap-4">
@@ -523,7 +513,6 @@ export function LandingPageClient() {
           </div>
         </section>
 
-        
         <section className="py-10 bg-muted/50" aria-labelledby="who-we-serve-heading">
           <div className="container mx-auto px-4">
             <motion.header initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }} className="text-center mb-8 max-w-3xl mx-auto">

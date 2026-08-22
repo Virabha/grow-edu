@@ -97,15 +97,13 @@ jobs:
       - run: npx tsc --noEmit
       # Lint must not carry --fix: a step that rewrites files can never fail.
       - run: pnpm lint
-      # 154 tests, including the tenancy host/permissions/context/contracts
-      # suites that used to live in packages/.
       - run: pnpm test
 
-  # Row-level security cannot be verified by unit tests — PostgreSQL enforces
-  # it, not application code. This applies the schema and then proves one tenant
-  # cannot read another's rows.
-  tenancy:
-    name: tenancy · migration + isolation proof
+  # The unit suite stubs the database, so nothing in it proves a query, a
+  # migration or an authorization check actually works. This job boots the real
+  # application against a real Postgres and asserts over HTTP.
+  integration:
+    name: backend · integration (real Postgres)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -124,6 +122,7 @@ jobs:
           --health-retries 5
     env:
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/groedu_test
+      JWT_SECRET: ci-only-secret-not-used-anywhere-else
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -134,14 +133,14 @@ jobs:
           cache: pnpm
           cache-dependency-path: backend/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
-      - run: pnpm db:migrate:tenancy
-      - name: Re-run to prove idempotency
-        run: pnpm db:migrate:tenancy
-      # The check that matters. "RLS is enabled" is not "isolation works" — on
-      # Neon the config was correct and isolation was absent, because the
-      # connecting role had BYPASSRLS. CI's `postgres` superuser bypasses it
-      # too, so this also proves the SET LOCAL ROLE actually fires.
-      - run: pnpm db:verify:isolation
+      # The baseline is committed. If it has drifted from the Drizzle schema the
+      # tests would build a schema the application does not expect, so prove it
+      # regenerates byte-identical before trusting it.
+      - name: Baseline matches the schema
+        run: |
+          pnpm db:baseline
+          git diff --exit-code drizzle-baseline/
+      - run: pnpm test:int
 
   frontends:
     name: ${{ matrix.app }} · typecheck + lint

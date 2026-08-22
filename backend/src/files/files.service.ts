@@ -9,7 +9,7 @@ export class FilesService {
   async uploadFile(
     file: Buffer,
     contentType: string,
-    folder: string = "courses",
+    folder: string = "batches",
   ): Promise<{ url: string; key: string }> {
     const fileExtension = contentType.split("/")[1] || "bin";
     const key = `${folder}/${uuidv4()}.${fileExtension}`;

@@ -1,12 +1,14 @@
 import { relations } from "drizzle-orm";
 import { users, emailTokens, instructorProfiles } from "./users";
 import { companies } from "./companies";
-import { categories, courses, courseSections, lessons, quizQuestions } from "./catalog";
-import { enrollments, courseProgress, lessonProgress, sectionAccess } from "./learning";
-import { payments, coupons, couponCategories, couponCourses, couponUsages } from "./commerce";
+import { categories } from "./catalog";
+import { payments } from "./commerce";
 import {
   batches,
+  batchInstructors,
   batchSubjects,
+  lessons,
+  lessonProgress,
   batchEnrollments,
   batchSessions,
   batchAnnouncements,
@@ -19,22 +21,19 @@ import {
   batchQuizAttempts,
   batchCertificates,
 } from "./batches";
-import { books, bookPurchases, services, serviceApplications } from "./store";
+import { services, serviceApplications } from "./store";
 import { notifications, videoEncodingJobs } from "./system";
 
-// Relations
 export const usersRelations = relations(users, ({ one, many }) => ({
   company: one(companies, {
     fields: [users.companyId],
     references: [companies.companyId],
   }),
-  enrollments: many(enrollments),
-  createdCourses: many(courses),
+  enrollments: many(batchEnrollments),
+  taughtBatches: many(batchInstructors),
   payments: many(payments),
-  progress: many(courseProgress),
-  sectionAccess: many(sectionAccess),
+  progress: many(lessonProgress),
   emailTokens: many(emailTokens),
-  couponUsages: many(couponUsages),
   instructorProfile: one(instructorProfiles),
 }));
 
@@ -54,7 +53,6 @@ export const emailTokensRelations = relations(emailTokens, ({ one }) => ({
 
 export const companiesRelations = relations(companies, ({ many }) => ({
   admins: many(users),
-  enrollments: many(enrollments),
 }));
 
 export const categoriesRelations = relations(categories, ({ one, many }) => ({
@@ -64,100 +62,7 @@ export const categoriesRelations = relations(categories, ({ one, many }) => ({
     relationName: "categoryChildren",
   }),
   children: many(categories, { relationName: "categoryChildren" }),
-  courses: many(courses),
-  couponCategories: many(couponCategories),
-}));
-
-export const coursesRelations = relations(courses, ({ one, many }) => ({
-  category: one(categories, {
-    fields: [courses.categoryId],
-    references: [categories.categoryId],
-  }),
-  instructor: one(users, {
-    fields: [courses.instructorId],
-    references: [users.userId],
-  }),
-  sections: many(courseSections),
-  enrollments: many(enrollments),
-  progress: many(courseProgress),
-  sectionAccess: many(sectionAccess),
-  payments: many(payments),
-  encodingJobs: many(videoEncodingJobs),
-  couponCourses: many(couponCourses),
-}));
-
-export const courseSectionsRelations = relations(
-  courseSections,
-  ({ one, many }) => ({
-    course: one(courses, {
-      fields: [courseSections.courseId],
-      references: [courses.courseId],
-    }),
-    lessons: many(lessons),
-    sectionAccess: many(sectionAccess),
-  })
-);
-
-export const lessonsRelations = relations(lessons, ({ one, many }) => ({
-  section: one(courseSections, {
-    fields: [lessons.sectionId],
-    references: [courseSections.sectionId],
-  }),
-  progress: many(lessonProgress),
-  questions: many(quizQuestions),
-  encodingJobs: many(videoEncodingJobs),
-}));
-
-export const quizQuestionsRelations = relations(quizQuestions, ({ one }) => ({
-  lesson: one(lessons, {
-    fields: [quizQuestions.lessonId],
-    references: [lessons.lessonId],
-  }),
-}));
-
-export const enrollmentsRelations = relations(enrollments, ({ one }) => ({
-  user: one(users, {
-    fields: [enrollments.userId],
-    references: [users.userId],
-  }),
-  course: one(courses, {
-    fields: [enrollments.courseId],
-    references: [courses.courseId],
-  }),
-  company: one(companies, {
-    fields: [enrollments.companyId],
-    references: [companies.companyId],
-  }),
-  payment: one(payments, {
-    fields: [enrollments.enrollmentId],
-    references: [payments.enrollmentId],
-  }),
-}));
-
-export const courseProgressRelations = relations(
-  courseProgress,
-  ({ one, many }) => ({
-    user: one(users, {
-      fields: [courseProgress.userId],
-      references: [users.userId],
-    }),
-    course: one(courses, {
-      fields: [courseProgress.courseId],
-      references: [courses.courseId],
-    }),
-    lessonProgress: many(lessonProgress),
-  })
-);
-
-export const lessonProgressRelations = relations(lessonProgress, ({ one }) => ({
-  progress: one(courseProgress, {
-    fields: [lessonProgress.progressId],
-    references: [courseProgress.courseProgressId],
-  }),
-  lesson: one(lessons, {
-    fields: [lessonProgress.lessonId],
-    references: [lessons.lessonId],
-  }),
+  batches: many(batches),
 }));
 
 export const paymentsRelations = relations(payments, ({ one }) => ({
@@ -165,40 +70,9 @@ export const paymentsRelations = relations(payments, ({ one }) => ({
     fields: [payments.userId],
     references: [users.userId],
   }),
-  enrollment: one(enrollments, {
-    fields: [payments.enrollmentId],
-    references: [enrollments.enrollmentId],
-  }),
-  course: one(courses, {
-    fields: [payments.courseId],
-    references: [courses.courseId],
-  }),
-  section: one(courseSections, {
-    fields: [payments.sectionId],
-    references: [courseSections.sectionId],
-  }),
-  coupon: one(coupons, {
-    fields: [payments.couponId],
-    references: [coupons.couponId],
-  }),
-}));
-
-export const sectionAccessRelations = relations(sectionAccess, ({ one }) => ({
-  user: one(users, {
-    fields: [sectionAccess.userId],
-    references: [users.userId],
-  }),
-  course: one(courses, {
-    fields: [sectionAccess.courseId],
-    references: [courses.courseId],
-  }),
-  section: one(courseSections, {
-    fields: [sectionAccess.sectionId],
-    references: [courseSections.sectionId],
-  }),
-  payment: one(payments, {
-    fields: [sectionAccess.paymentId],
-    references: [payments.paymentId],
+  batch: one(batches, {
+    fields: [payments.batchId],
+    references: [batches.batchId],
   }),
 }));
 
@@ -207,80 +81,9 @@ export const videoEncodingJobsRelations = relations(videoEncodingJobs, ({ one })
     fields: [videoEncodingJobs.lessonId],
     references: [lessons.lessonId],
   }),
-  course: one(courses, {
-    fields: [videoEncodingJobs.courseId],
-    references: [courses.courseId],
-  }),
-}));
-
-// =============================================
-// COUPON SYSTEM RELATIONS
-// =============================================
-
-export const couponsRelations = relations(coupons, ({ many }) => ({
-  categories: many(couponCategories),
-  courses: many(couponCourses),
-  usages: many(couponUsages),
-  payments: many(payments),
-}));
-
-export const couponCategoriesRelations = relations(couponCategories, ({ one }) => ({
-  coupon: one(coupons, {
-    fields: [couponCategories.couponId],
-    references: [coupons.couponId],
-  }),
-  category: one(categories, {
-    fields: [couponCategories.categoryId],
-    references: [categories.categoryId],
-  }),
-}));
-
-export const couponCoursesRelations = relations(couponCourses, ({ one }) => ({
-  coupon: one(coupons, {
-    fields: [couponCourses.couponId],
-    references: [coupons.couponId],
-  }),
-  course: one(courses, {
-    fields: [couponCourses.courseId],
-    references: [courses.courseId],
-  }),
-}));
-
-export const couponUsagesRelations = relations(couponUsages, ({ one }) => ({
-  coupon: one(coupons, {
-    fields: [couponUsages.couponId],
-    references: [coupons.couponId],
-  }),
-  user: one(users, {
-    fields: [couponUsages.userId],
-    references: [users.userId],
-  }),
-  payment: one(payments, {
-    fields: [couponUsages.paymentId],
-    references: [payments.paymentId],
-  }),
-  course: one(courses, {
-    fields: [couponUsages.courseId],
-    references: [courses.courseId],
-  }),
-}));
-
-export const booksRelations = relations(books, ({ one, many }) => ({
-  category: one(categories, {
-    fields: [books.categoryId],
-    references: [categories.categoryId],
-  }),
-  purchases: many(bookPurchases),
-}));
-
-export const bookPurchasesRelations = relations(bookPurchases, ({ one }) => ({
-  user: one(users, {
-    fields: [bookPurchases.userId],
-    references: [users.userId],
-  }),
-  book: one(books, {
-    fields: [bookPurchases.bookId],
-    references: [books.bookId],
+  batch: one(batches, {
+    fields: [videoEncodingJobs.batchId],
+    references: [batches.batchId],
   }),
 }));
 
@@ -297,6 +100,7 @@ export const serviceApplicationsRelations = relations(serviceApplications, ({ on
 
 export const batchesRelations = relations(batches, ({ many, one }) => ({
   subjects: many(batchSubjects),
+  instructors: many(batchInstructors),
   enrollments: many(batchEnrollments),
   sessions: many(batchSessions),
   announcements: many(batchAnnouncements),
@@ -310,12 +114,48 @@ export const batchesRelations = relations(batches, ({ many, one }) => ({
   }),
 }));
 
+export const batchInstructorsRelations = relations(batchInstructors, ({ one }) => ({
+  batch: one(batches, {
+    fields: [batchInstructors.batchId],
+    references: [batches.batchId],
+  }),
+  instructor: one(users, {
+    fields: [batchInstructors.instructorId],
+    references: [users.userId],
+  }),
+}));
+
 export const batchSubjectsRelations = relations(batchSubjects, ({ one, many }) => ({
   batch: one(batches, {
     fields: [batchSubjects.batchId],
     references: [batches.batchId],
   }),
   sessions: many(batchSessions),
+  lessons: many(lessons),
+}));
+
+export const lessonsRelations = relations(lessons, ({ one, many }) => ({
+  subject: one(batchSubjects, {
+    fields: [lessons.subjectId],
+    references: [batchSubjects.subjectId],
+  }),
+  progress: many(lessonProgress),
+  encodingJobs: many(videoEncodingJobs),
+}));
+
+export const lessonProgressRelations = relations(lessonProgress, ({ one }) => ({
+  user: one(users, {
+    fields: [lessonProgress.userId],
+    references: [users.userId],
+  }),
+  lesson: one(lessons, {
+    fields: [lessonProgress.lessonId],
+    references: [lessons.lessonId],
+  }),
+  batch: one(batches, {
+    fields: [lessonProgress.batchId],
+    references: [batches.batchId],
+  }),
 }));
 
 export const batchEnrollmentsRelations = relations(batchEnrollments, ({ one }) => ({

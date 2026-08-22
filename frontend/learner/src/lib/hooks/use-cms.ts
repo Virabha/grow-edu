@@ -1,7 +1,7 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { cmsApi } from "@/lib/api/services/cms";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { cmsApi, type ServiceApplicationInput } from "@/lib/api/services/cms";
 import { queryKeys } from "@/lib/query-keys";
 
 export function useBanners(enabled = true) {
@@ -41,5 +41,23 @@ export function useSiteSettings(enabled = true) {
     queryKey: queryKeys.cms.siteSettings(),
     queryFn: cmsApi.getAllSiteSettings,
     enabled,
+  });
+}
+
+export function useService(slug: string, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.cms.service(slug),
+    queryFn: () => cmsApi.getServiceBySlug(slug),
+    enabled,
+    retry: false,
+  });
+}
+
+export function useSubmitServiceApplication(serviceId: string | undefined) {
+  return useMutation({
+    mutationFn: (input: ServiceApplicationInput) => {
+      if (!serviceId) throw new Error("Applications are not open yet");
+      return cmsApi.submitServiceApplication(serviceId, input);
+    },
   });
 }

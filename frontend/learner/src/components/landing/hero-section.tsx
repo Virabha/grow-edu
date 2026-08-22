@@ -129,7 +129,7 @@ export function HeroSection() {
                 className="group h-12 gap-2 rounded-full bg-foreground px-7 font-medium text-background shadow-lg shadow-foreground/20 transition-all hover:bg-foreground/90"
                 asChild
               >
-                <Link href="/courses">
+                <Link href="/batches">
                   Explore the catalogue
                   <ArrowUpRight className="size-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
                 </Link>

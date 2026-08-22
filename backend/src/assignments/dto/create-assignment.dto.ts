@@ -20,7 +20,7 @@ export class CreateAssignmentDto {
   @ApiProperty()
   @IsString()
   @MinLength(1)
-  courseId: string;
+  batchId: string;
 
   @ApiProperty({ required: false })
   @IsString()

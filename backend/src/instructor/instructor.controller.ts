@@ -5,12 +5,12 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles, UserRole } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { FilterInstructorCoursesDto } from './dto/filter-instructor-courses.dto';
+import { FilterInstructorBatchesDto } from './dto/filter-instructor-batches.dto';
 
 @ApiTags('instructor')
 @Controller('instructor')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.INSTRUCTOR, UserRole.PLATFORM_ADMIN, UserRole.LEARNER)
+@Roles(UserRole.INSTRUCTOR, UserRole.PLATFORM_ADMIN)
 @ApiBearerAuth()
 export class InstructorController {
   constructor(private readonly instructorService: InstructorService) {}
@@ -22,13 +22,13 @@ export class InstructorController {
     return this.instructorService.getDashboardStats(user.userId);
   }
 
-  @ApiOperation({ summary: 'Get instructor courses with details' })
-  @ApiResponse({ status: 200, description: 'List of courses' })
-  @Get('courses')
-  async getInstructorCourses(
+  @ApiOperation({ summary: 'Get the batches I am assigned to' })
+  @ApiResponse({ status: 200, description: 'List of batches' })
+  @Get('batches')
+  async getInstructorBatches(
     @CurrentUser() user: { userId: string },
-    @Query() query: FilterInstructorCoursesDto,
+    @Query() query: FilterInstructorBatchesDto,
   ) {
-    return this.instructorService.getInstructorCourses(user.userId, query.page, query.limit);
+    return this.instructorService.getInstructorBatches(user.userId, query.page, query.limit);
   }
 }

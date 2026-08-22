@@ -8,12 +8,23 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { PerEmailThrottlerGuard } from './guards/per-email-throttler.guard';
+import { SecondFactorChallengeDto } from './dto/second-factor.dto';
+import {
+  SecondFactorService,
+  SECOND_FACTOR_REQUIRED,
+  SECOND_FACTOR_SETUP_REQUIRED,
+  requiresSecondFactor,
+} from './second-factor.service';
 
 @ApiTags('auth')
 @Controller('auth')
 @Public()
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(
+    private authService: AuthService,
+    private readonly secondFactor: SecondFactorService,
+  ) {}
 
   @ApiOperation({ summary: 'User login' })
   @ApiBody({ type: LoginDto })
@@ -26,8 +37,86 @@ export class AuthController {
   async login(@Request() req: { user: UserPayload; headers: Record<string, string>; ip?: string }) {
     const ua = req.headers['user-agent'] ?? null;
     const ip = req.ip ?? null;
-    const deviceId = await this.authService.upsertDevice(req.user.id, ua, ip);
+
+    const enrolled = await this.secondFactor.isActiveFor(req.user.id);
+    const mustPresent = requiresSecondFactor(req.user.role);
+
+    if (enrolled) {
+      const challengeToken = await this.secondFactor.issueChallenge(
+        req.user.id,
+        ua,
+        ip,
+      );
+      return {
+        secondFactorRequired: true,
+        code: SECOND_FACTOR_REQUIRED,
+        challengeToken,
+      };
+    }
+
+    if (mustPresent) {
+      const setup = await this.secondFactor.begin(req.user.id, req.user.email);
+      return {
+        secondFactorRequired: true,
+        code: SECOND_FACTOR_SETUP_REQUIRED,
+        message:
+          'Staff accounts need a second factor. Add this to your authenticator, then confirm it.',
+        setup,
+        setupToken: await this.secondFactor.issueChallenge(req.user.id, ua, ip),
+      };
+    }
+
+    const deviceId = await this.authService.upsertDevice(req.user, ua, ip);
     return this.authService.login(req.user, deviceId);
+  }
+
+  @ApiOperation({ summary: 'Complete sign-in with a second factor' })
+  @ApiResponse({ status: 200, description: 'Sign-in complete' })
+  @ApiResponse({ status: 401, description: 'Code not accepted' })
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
+  @Post('login/second-factor')
+  @HttpCode(HttpStatus.OK)
+  async completeLogin(
+    @Body() dto: SecondFactorChallengeDto,
+    @Request() req: { headers: Record<string, string>; ip?: string },
+  ) {
+    const userId = await this.secondFactor.redeemChallenge(
+      dto.challengeToken,
+      dto.code,
+    );
+    const user = await this.authService.payloadFor(userId);
+    const deviceId = await this.authService.upsertDevice(
+      user,
+      req.headers['user-agent'] ?? null,
+      req.ip ?? null,
+    );
+    return this.authService.login(user, deviceId);
+  }
+
+  @ApiOperation({ summary: 'Confirm a second factor during first sign-in' })
+  @ApiResponse({ status: 200, description: 'Second factor confirmed' })
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
+  @Post('login/second-factor/confirm')
+  @HttpCode(HttpStatus.OK)
+  async confirmDuringLogin(
+    @Body() dto: SecondFactorChallengeDto,
+    @Request() req: { headers: Record<string, string>; ip?: string },
+  ) {
+    const pending = await this.secondFactor.userForChallenge(
+      dto.challengeToken,
+    );
+    await this.secondFactor.confirm(pending, dto.code);
+    const userId = await this.secondFactor.redeemChallenge(
+      dto.challengeToken,
+      dto.code,
+    );
+    const user = await this.authService.payloadFor(userId);
+    const deviceId = await this.authService.upsertDevice(
+      user,
+      req.headers['user-agent'] ?? null,
+      req.ip ?? null,
+    );
+    return this.authService.login(user, deviceId);
   }
 
   @ApiOperation({ summary: 'User registration' })
@@ -45,6 +134,7 @@ export class AuthController {
   @ApiBody({ type: ForgotPasswordDto })
   @ApiResponse({ status: 200, description: 'Password reset email sent' })
   @Throttle({ default: { ttl: 60_000 * 60, limit: 5 } })
+  @UseGuards(PerEmailThrottlerGuard)
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
   async forgotPassword(@Body() dto: ForgotPasswordDto) {

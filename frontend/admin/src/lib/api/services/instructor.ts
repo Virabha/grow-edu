@@ -1,23 +1,24 @@
 import { apiClient } from "@/lib/api/client";
-interface InstructorCourse {
-    courseId: string;
+interface InstructorBatch {
+    batchId: string;
     title: string;
     slug: string;
     status: string;
-    price: string;
+    price: number;
     currency: string;
     thumbnail?: string;
     enrollmentCount?: number;
+    myRole?: string;
     createdAt: string;
 }
 export interface InstructorStats {
-    totalCourses: number;
+    totalBatches: number;
     totalStudents: number;
     totalRevenue: number;
-    recentCourses: InstructorCourse[];
+    recentBatches: InstructorBatch[];
 }
-export interface InstructorCoursesResponse {
-    data: InstructorCourse[];
+export interface InstructorBatchesResponse {
+    data: InstructorBatch[];
     meta: {
         total: number;
         page: number;
@@ -30,8 +31,8 @@ export const instructorService = {
         const { data } = await apiClient.get<InstructorStats>("/instructor/stats");
         return data;
     },
-    getCourses: async (page = 1, limit = 10): Promise<InstructorCoursesResponse> => {
-        const { data } = await apiClient.get<InstructorCoursesResponse>("/instructor/courses", {
+    getBatches: async (page = 1, limit = 10): Promise<InstructorBatchesResponse> => {
+        const { data } = await apiClient.get<InstructorBatchesResponse>("/instructor/batches", {
             params: { page, limit }
         });
         return data;

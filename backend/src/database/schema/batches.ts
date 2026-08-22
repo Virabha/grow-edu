@@ -11,26 +11,36 @@ import {
 } from "drizzle-orm/pg-core";
 import {
   batchStatusEnum,
+  batchDeliveryModeEnum,
+  batchInstructorRoleEnum,
   batchEnrollmentStatusEnum,
+  batchWaitlistStatusEnum,
+  batchEnrollmentSourceEnum,
   batchSessionTypeEnum,
   batchLiveProviderEnum,
   batchSessionStatusEnum,
   batchResourceTypeEnum,
   batchDoubtStatusEnum,
+  batchDoubtAnchorTypeEnum,
   batchQuizQuestionTypeEnum,
   batchQuizAttemptStatusEnum,
+  lessonTypeEnum,
+  lessonStatusEnum,
+  batchVisibilityEnum,
 } from "./enums";
+import { organizationId } from "./organizations";
 
 // ─── Batches (PW-style cohorts) ──────────────────────────────────────────────
 
 export const batches = pgTable(
   "batches",
   {
+    organizationId: organizationId(),
     batchId: text("batch_id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
     title: text("title").notNull(),
-    slug: text("slug").notNull().unique(),
+    slug: text("slug").notNull(),
     description: text("description"),
     shortDescription: text("short_description"),
     targetExam: text("target_exam"),
@@ -43,9 +53,14 @@ export const batches = pgTable(
     capacity: integer("capacity"),
     startDate: timestamp("start_date").notNull(),
     endDate: timestamp("end_date").notNull(),
-    teacherIds: jsonb("teacher_ids").$type<string[]>().notNull().default([]),
+    deliveryMode: batchDeliveryModeEnum("delivery_mode")
+      .notNull()
+      .default("LIVE"),
     categoryId: text("category_id"),
     status: batchStatusEnum("status").notNull().default("DRAFT"),
+    visibility: batchVisibilityEnum("visibility").notNull().default("PUBLIC"),
+    goalKey: text("goal_key"),
+    levelKey: text("level_key"),
     isDeleted: boolean("is_deleted").notNull().default(false),
     createdBy: text("created_by").notNull(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -54,14 +69,45 @@ export const batches = pgTable(
   },
   (table) => ({
     slugIdx: index("batches_slug_idx").on(table.slug),
+    slugPerOrg: unique("batches_organization_slug_unique").on(
+      table.organizationId,
+      table.slug
+    ),
     statusIdx: index("batches_status_idx").on(table.status),
     startDateIdx: index("batches_start_date_idx").on(table.startDate),
+    deliveryModeIdx: index("batches_delivery_mode_idx").on(table.deliveryMode),
+  })
+);
+
+export const batchInstructors = pgTable(
+  "batch_instructors",
+  {
+    organizationId: organizationId(),
+    batchInstructorId: text("batch_instructor_id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    batchId: text("batch_id").notNull(),
+    instructorId: text("instructor_id").notNull(),
+    role: batchInstructorRoleEnum("role").notNull().default("SUBJECT"),
+    assignedBy: text("assigned_by"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    batchIdx: index("batch_instructors_batch_idx").on(table.batchId),
+    instructorIdx: index("batch_instructors_instructor_idx").on(
+      table.instructorId
+    ),
+    uniqueBatchInstructor: unique("batch_instructors_batch_instructor_unique").on(
+      table.batchId,
+      table.instructorId
+    ),
   })
 );
 
 export const batchSubjects = pgTable(
   "batch_subjects",
   {
+    organizationId: organizationId(),
     subjectId: text("subject_id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
@@ -78,15 +124,124 @@ export const batchSubjects = pgTable(
   })
 );
 
+export const lessons = pgTable(
+  "lessons",
+  {
+    organizationId: organizationId(),
+    lessonId: text("lesson_id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    subjectId: text("subject_id").notNull(),
+    title: text("title").notNull(),
+    description: text("description"),
+    type: lessonTypeEnum("type").notNull().default("VIDEO"),
+    videoUrl: text("video_url"),
+    textContent: text("text_content"),
+    resources: jsonb("resources").$type<{ label: string; url: string }[]>(),
+    duration: integer("duration"),
+    audioUrl: text("audio_url"),
+    audioDuration: integer("audio_duration"),
+    documentFileKey: text("document_file_key"),
+    documentPageCount: integer("document_page_count"),
+    documentVersion: integer("document_version").notNull().default(1),
+    sessionId: text("session_id"),
+    resourceId: text("resource_id"),
+    quizId: text("quiz_id"),
+    isFreePreview: boolean("is_free_preview").notNull().default(false),
+    status: lessonStatusEnum("status").notNull().default("DRAFT"),
+    order: integer("order").notNull(),
+    createdBy: text("created_by"),
+    submittedAt: timestamp("submitted_at"),
+    reviewedBy: text("reviewed_by"),
+    reviewedAt: timestamp("reviewed_at"),
+    reviewNotes: text("review_notes"),
+    publishAt: timestamp("publish_at"),
+    isDeleted: boolean("is_deleted").notNull().default(false),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    subjectIdx: index("lessons_subject_idx").on(table.subjectId),
+    pendingIdx: index("lessons_pending_idx").on(table.status, table.submittedAt),
+    subjectOrderIdx: index("lessons_subject_order_idx").on(
+      table.subjectId,
+      table.order
+    ),
+  })
+);
+
+export const subjectLessons = pgTable(
+  "subject_lessons",
+  {
+    organizationId: organizationId(),
+    placementId: text("placement_id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    subjectId: text("subject_id").notNull(),
+    lessonId: text("lesson_id").notNull(),
+    order: integer("order").notNull(),
+    unlockAt: timestamp("unlock_at"),
+    unlockAfterDays: integer("unlock_after_days"),
+    isDeleted: boolean("is_deleted").notNull().default(false),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    lessonPerSubject: unique("subject_lessons_subject_lesson_unique").on(
+      table.subjectId,
+      table.lessonId
+    ),
+    subjectOrderIdx: index("subject_lessons_subject_order_idx").on(
+      table.subjectId,
+      table.order
+    ),
+    lessonIdx: index("subject_lessons_lesson_idx").on(table.lessonId),
+  })
+);
+
+export const lessonProgress = pgTable(
+  "lesson_progress",
+  {
+    organizationId: organizationId(),
+    lessonProgressId: text("lesson_progress_id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id").notNull(),
+    lessonId: text("lesson_id").notNull(),
+    batchId: text("batch_id").notNull(),
+    completed: boolean("completed").notNull().default(false),
+    completedAt: timestamp("completed_at"),
+    timeSpent: integer("time_spent").notNull().default(0),
+    lastPosition: integer("last_position"),
+    positionRecordedAt: timestamp("position_recorded_at"),
+    watchedSeconds: integer("watched_seconds").notNull().default(0),
+    listenedSeconds: integer("listened_seconds").notNull().default(0),
+    pagesViewed: integer("pages_viewed").notNull().default(0),
+    lastAccessed: timestamp("last_accessed").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    userLessonUnique: unique("lesson_progress_user_lesson_unique").on(
+      table.userId,
+      table.lessonId
+    ),
+    userBatchIdx: index("lesson_progress_user_batch_idx").on(
+      table.userId,
+      table.batchId
+    ),
+  })
+);
+
 export const batchEnrollments = pgTable(
   "batch_enrollments",
   {
+    organizationId: organizationId(),
     enrollmentId: text("enrollment_id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
     batchId: text("batch_id").notNull(),
     userId: text("user_id").notNull(),
     status: batchEnrollmentStatusEnum("status").notNull().default("ACTIVE"),
+    source: batchEnrollmentSourceEnum("source").notNull().default("ADMIN_GRANT"),
     accessStartsAt: timestamp("access_starts_at").notNull().defaultNow(),
     accessEndsAt: timestamp("access_ends_at"),
     grantedBy: text("granted_by"),
@@ -104,19 +259,48 @@ export const batchEnrollments = pgTable(
   })
 );
 
-export const batchSessions = pgTable(
-  "batch_sessions",
+export const batchWaitlist = pgTable(
+  "batch_waitlist",
   {
-    sessionId: text("session_id")
+    organizationId: organizationId(),
+    waitlistId: text("waitlist_id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
     batchId: text("batch_id").notNull(),
+    userId: text("user_id").notNull(),
+    status: batchWaitlistStatusEnum("status").notNull().default("WAITING"),
+    joinedAt: timestamp("joined_at").notNull(),
+    resolvedAt: timestamp("resolved_at"),
+    paymentId: text("payment_id"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    onePlacePerBatch: unique("batch_waitlist_batch_user_unique").on(
+      table.batchId,
+      table.userId
+    ),
+    queueIdx: index("batch_waitlist_queue_idx").on(
+      table.batchId,
+      table.status,
+      table.joinedAt
+    ),
+    userIdx: index("batch_waitlist_user_idx").on(table.userId),
+  })
+);
+
+export const batchSessions = pgTable(
+  "batch_sessions",
+  {
+    organizationId: organizationId(),
+    sessionId: text("session_id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    batchId: text("batch_id"),
     subjectId: text("subject_id"),
     teacherId: text("teacher_id"),
     title: text("title").notNull(),
     description: text("description"),
     type: batchSessionTypeEnum("type").notNull(),
-    // For LIVE sessions
     liveProvider: batchLiveProviderEnum("live_provider"),
     joinUrl: text("join_url"),
     meetingId: text("meeting_id"),
@@ -126,11 +310,12 @@ export const batchSessions = pgTable(
     actualStartAt: timestamp("actual_start_at"),
     actualEndAt: timestamp("actual_end_at"),
     status: batchSessionStatusEnum("status").notNull().default("SCHEDULED"),
-    // For RECORDING sessions (or live → archived)
     recordingVideoId: text("recording_video_id"),
     recordingDurationSeconds: integer("recording_duration_seconds"),
     recordingThumbnail: text("recording_thumbnail"),
     resources: jsonb("resources").$type<{ label: string; url: string }[]>(),
+    seriesId: text("series_id"),
+    occurrenceIndex: integer("occurrence_index"),
     isDeleted: boolean("is_deleted").notNull().default(false),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -142,12 +327,47 @@ export const batchSessions = pgTable(
       table.scheduledStartAt
     ),
     typeIdx: index("batch_sessions_type_idx").on(table.type),
+    seriesIdx: index("batch_sessions_series_idx").on(table.seriesId),
+    uniqueSeriesOccurrence: unique("batch_sessions_series_occurrence_unique").on(
+      table.seriesId,
+      table.occurrenceIndex
+    ),
+  })
+);
+
+export const batchRecurrenceSeries = pgTable(
+  "batch_recurrence_series",
+  {
+    organizationId: organizationId(),
+    seriesId: text("series_id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    batchId: text("batch_id").notNull(),
+    title: text("title").notNull(),
+    subjectId: text("subject_id"),
+    teacherId: text("teacher_id"),
+    liveProvider: batchLiveProviderEnum("live_provider"),
+    joinUrl: text("join_url"),
+    daysOfWeek: integer("days_of_week").array().notNull(),
+    startTimeUtc: text("start_time_utc").notNull(),
+    durationMinutes: integer("duration_minutes").notNull(),
+    windowStartAt: timestamp("window_start_at").notNull(),
+    windowEndAt: timestamp("window_end_at"),
+    lookAheadDays: integer("look_ahead_days").notNull().default(28),
+    isDeleted: boolean("is_deleted").notNull().default(false),
+    createdBy: text("created_by").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    batchIdx: index("batch_recurrence_series_batch_idx").on(table.batchId),
   })
 );
 
 export const batchAnnouncements = pgTable(
   "batch_announcements",
   {
+    organizationId: organizationId(),
     announcementId: text("announcement_id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
@@ -171,6 +391,7 @@ export const batchAnnouncements = pgTable(
 export const batchResources = pgTable(
   "batch_resources",
   {
+    organizationId: organizationId(),
     resourceId: text("resource_id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
@@ -182,8 +403,10 @@ export const batchResources = pgTable(
     fileKey: text("file_key").notNull(),
     fileSize: integer("file_size"),
     pageCount: integer("page_count"),
-    dayNumber: integer("day_number"), // For DPP: day 1, 2, 3…
-    publishAt: timestamp("publish_at"), // Optional scheduled publish
+    dayNumber: integer("day_number"),
+    lessonId: text("lesson_id"),
+    publishAt: timestamp("publish_at"),
+    isDownloadable: boolean("is_downloadable").notNull().default(false),
     uploadedBy: text("uploaded_by").notNull(),
     isDeleted: boolean("is_deleted").notNull().default(false),
     createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -201,17 +424,29 @@ export const batchResources = pgTable(
 export const batchDoubts = pgTable(
   "batch_doubts",
   {
+    organizationId: organizationId(),
     doubtId: text("doubt_id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
     batchId: text("batch_id").notNull(),
     subjectId: text("subject_id"),
+    anchorType: batchDoubtAnchorTypeEnum("anchor_type").notNull().default("BATCH"),
+    anchorId: text("anchor_id"),
     askedBy: text("asked_by").notNull(),
+    assignedTo: text("assigned_to"),
+    assignedAt: timestamp("assigned_at"),
+    assignedBy: text("assigned_by"),
     title: text("title").notNull(),
     body: text("body").notNull(),
     attachments: jsonb("attachments").$type<string[]>().default([]),
     status: batchDoubtStatusEnum("status").notNull().default("OPEN"),
     replyCount: integer("reply_count").notNull().default(0),
+    consentToAttribution: boolean("consent_to_attribution")
+      .notNull()
+      .default(false),
+    promotedReplyId: text("promoted_reply_id"),
+    promotedAt: timestamp("promoted_at"),
+    promotedBy: text("promoted_by"),
     isDeleted: boolean("is_deleted").notNull().default(false),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -220,12 +455,22 @@ export const batchDoubts = pgTable(
     batchIdx: index("batch_doubts_batch_idx").on(table.batchId),
     statusIdx: index("batch_doubts_status_idx").on(table.status),
     askedByIdx: index("batch_doubts_asked_by_idx").on(table.askedBy),
+    assignedIdx: index("batch_doubts_assigned_idx").on(
+      table.assignedTo,
+      table.status,
+    ),
+    promotedIdx: index("batch_doubts_promoted_idx").on(
+      table.batchId,
+      table.promotedAt,
+    ),
+    anchorIdx: index("batch_doubts_anchor_idx").on(table.anchorType, table.anchorId),
   })
 );
 
 export const batchDoubtReplies = pgTable(
   "batch_doubt_replies",
   {
+    organizationId: organizationId(),
     replyId: text("reply_id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
@@ -248,6 +493,7 @@ export const batchDoubtReplies = pgTable(
 export const batchAttendance = pgTable(
   "batch_attendance",
   {
+    organizationId: organizationId(),
     attendanceId: text("attendance_id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
@@ -256,6 +502,9 @@ export const batchAttendance = pgTable(
     userId: text("user_id").notNull(),
     joinedAt: timestamp("joined_at").notNull().defaultNow(),
     durationSeconds: integer("duration_seconds"),
+    source: text("source").notNull().default("SELF_REPORTED"),
+    correctedBy: text("corrected_by"),
+    correctedAt: timestamp("corrected_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => ({
@@ -273,6 +522,7 @@ export const batchAttendance = pgTable(
 export const batchQuizzes = pgTable(
   "batch_quizzes",
   {
+    organizationId: organizationId(),
     quizId: text("quiz_id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
@@ -293,6 +543,7 @@ export const batchQuizzes = pgTable(
       .default("40"),
     showLeaderboard: boolean("show_leaderboard").notNull().default(true),
     showSolutions: boolean("show_solutions").notNull().default(true),
+    version: integer("version").notNull().default(1),
     opensAt: timestamp("opens_at"),
     closesAt: timestamp("closes_at"),
     publishedAt: timestamp("published_at"),
@@ -315,6 +566,7 @@ export type QuizCorrectAnswer =
 export const batchQuizQuestions = pgTable(
   "batch_quiz_questions",
   {
+    organizationId: organizationId(),
     questionId: text("question_id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
@@ -341,11 +593,14 @@ export const batchQuizQuestions = pgTable(
 export const batchQuizAttempts = pgTable(
   "batch_quiz_attempts",
   {
+    organizationId: organizationId(),
     attemptId: text("attempt_id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
     quizId: text("quiz_id").notNull(),
     userId: text("user_id").notNull(),
+    quizVersion: integer("quiz_version").notNull().default(1),
+    attemptNo: integer("attempt_no").notNull().default(1),
     status: batchQuizAttemptStatusEnum("status")
       .notNull()
       .default("IN_PROGRESS"),
@@ -371,6 +626,11 @@ export const batchQuizAttempts = pgTable(
       table.quizId,
       table.userId
     ),
+    attemptNoUnique: unique("batch_quiz_attempts_quiz_user_attempt_unique").on(
+      table.quizId,
+      table.userId,
+      table.attemptNo
+    ),
   })
 );
 
@@ -379,19 +639,31 @@ export const batchQuizAttempts = pgTable(
 export const batchCertificates = pgTable(
   "batch_certificates",
   {
+    organizationId: organizationId(),
     certificateId: text("certificate_id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
     batchId: text("batch_id").notNull(),
     userId: text("user_id").notNull(),
-    certificateNumber: text("certificate_number").notNull().unique(),
+    certificateNumber: text("certificate_number").notNull(),
+    verificationCode: text("verification_code")
+      .notNull()
+      .$defaultFn(() => crypto.randomUUID().replace(/-/g, "")),
     issuedAt: timestamp("issued_at").notNull().defaultNow(),
     revokedAt: timestamp("revoked_at"),
+    revokedBy: text("revoked_by"),
+    revocationReason: text("revocation_reason"),
     metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
   },
   (table) => ({
     batchIdx: index("batch_certificates_batch_idx").on(table.batchId),
     userIdx: index("batch_certificates_user_idx").on(table.userId),
+    verificationCodeUnique: unique("batch_certificates_verification_unique").on(
+      table.verificationCode,
+    ),
+    certificateNumberPerOrg: unique(
+      "batch_certificates_organization_number_unique"
+    ).on(table.organizationId, table.certificateNumber),
     uniqueBatchUser: unique("batch_certificates_batch_user_unique").on(
       table.batchId,
       table.userId

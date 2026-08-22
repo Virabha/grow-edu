@@ -1,5 +1,6 @@
 import { ApiProperty, PartialType } from "@nestjs/swagger";
 import {
+  IsBoolean,
   IsDateString,
   IsEnum,
   IsInt,
@@ -56,6 +57,11 @@ export class CreateBatchResourceDto {
   @IsDateString()
   @IsOptional()
   publishAt?: string;
+
+  @ApiProperty({ required: false })
+  @IsBoolean()
+  @IsOptional()
+  isDownloadable?: boolean;
 }
 
 export class UpdateBatchResourceDto extends PartialType(CreateBatchResourceDto) {}

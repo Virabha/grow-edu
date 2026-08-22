@@ -2,7 +2,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
 import { axiosGet } from "@/lib/api/client";
-import { DateFilters, TrendFilters, TopCoursesFilters, EnrollmentStats, RevenueStats, PlatformStats, TopCourse, CoursePerformance, TrendDataPoint, } from "@/lib/api/services/analytics";
+import { DateFilters, TrendFilters, TopBatchesFilters, EnrollmentStats, RevenueStats, PlatformStats, TopBatch, BatchPerformance, TrendDataPoint, } from "@/lib/api/services/analytics";
 interface UseEnrollmentStatsParams {
     enabled?: boolean;
     filters?: DateFilters;
@@ -45,20 +45,20 @@ export function useRevenueStats({ enabled, filters }: UseRevenueStatsParams = {}
         queryKey: queryKeys.analytics.revenueStats(filters),
     });
 }
-interface UseCoursePerformanceParams {
+interface UseBatchPerformanceParams {
     enabled?: boolean;
-    courseId?: string;
+    batchId?: string;
 }
-export function useCoursePerformance({ enabled, courseId }: UseCoursePerformanceParams = {}) {
-    const fetchCoursePerformance = async (): Promise<CoursePerformance> => {
-        const res = await axiosGet<CoursePerformance>(`analytics/courses/${courseId}`);
+export function useBatchPerformance({ enabled, batchId }: UseBatchPerformanceParams = {}) {
+    const fetchBatchPerformance = async (): Promise<BatchPerformance> => {
+        const res = await axiosGet<BatchPerformance>(`analytics/batches/${batchId}`);
         return res.data;
     };
     return useQuery({
         staleTime: Infinity,
-        queryFn: fetchCoursePerformance,
-        enabled: !!courseId && enabled !== false,
-        queryKey: queryKeys.analytics.coursePerformance(courseId),
+        queryFn: fetchBatchPerformance,
+        enabled: !!batchId && enabled !== false,
+        queryKey: queryKeys.analytics.batchPerformance(batchId),
     });
 }
 interface UsePlatformStatsParams {
@@ -126,12 +126,12 @@ export function useRevenueTrend({ enabled, filters }: UseRevenueTrendParams = {}
         queryKey: queryKeys.analytics.revenueTrend(filters),
     });
 }
-interface UseTopCoursesParams {
+interface UseTopBatchesParams {
     enabled?: boolean;
-    filters?: TopCoursesFilters;
+    filters?: TopBatchesFilters;
 }
-export function useTopCourses({ enabled, filters }: UseTopCoursesParams = {}) {
-    const fetchTopCourses = async (): Promise<TopCourse[]> => {
+export function useTopBatches({ enabled, filters }: UseTopBatchesParams = {}) {
+    const fetchTopBatches = async (): Promise<TopBatch[]> => {
         const params: Record<string, string | number> = {};
         if (filters?.limit)
             params.limit = filters.limit;
@@ -139,13 +139,13 @@ export function useTopCourses({ enabled, filters }: UseTopCoursesParams = {}) {
             params.startDate = filters.startDate;
         if (filters?.endDate)
             params.endDate = filters.endDate;
-        const res = await axiosGet<TopCourse[]>("analytics/top-courses", params);
+        const res = await axiosGet<TopBatch[]>("analytics/top-batches", params);
         return res.data;
     };
     return useQuery({
         staleTime: Infinity,
-        queryFn: fetchTopCourses,
+        queryFn: fetchTopBatches,
         enabled: enabled !== false,
-        queryKey: queryKeys.analytics.topCourses(filters),
+        queryKey: queryKeys.analytics.topBatches(filters),
     });
 }

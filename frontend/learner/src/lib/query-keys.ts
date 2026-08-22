@@ -1,5 +1,3 @@
-import type { CoursesParams } from "@/lib/api/services/courses";
-import type { BooksParams } from "@/lib/api/services/books";
 import type { BatchesListParams, BatchSessionType } from "@/lib/api/services/batches";
 
 export const queryKeys = {
@@ -9,19 +7,11 @@ export const queryKeys = {
     whyChooseUs: () => ["cms", "whyChooseUs"] as const,
     instructors: () => ["cms", "instructors"] as const,
     siteSettings: () => ["cms", "siteSettings"] as const,
+    service: (slug: string) => ["cms", "service", slug] as const,
   },
   categories: {
     all: () => ["categories"] as const,
     bySlug: (slug: string) => ["categories", "slug", slug] as const,
-  },
-  courses: {
-    list: (params?: CoursesParams) => ["courses", "list", params] as const,
-    byId: (id: string) => ["courses", "detail", id] as const,
-    bySlug: (slug: string) => ["courses", "slug", slug] as const,
-  },
-  enrollments: {
-    list: (params?: Record<string, unknown>) =>
-      ["enrollments", params] as const,
   },
   profile: {
     me: () => ["profile"] as const,
@@ -34,11 +24,6 @@ export const queryKeys = {
     list: (params?: Record<string, unknown>) => ["orders", params] as const,
     byId: (id: string) => ["orders", "detail", id] as const,
   },
-  reviews: {
-    mine: (params?: Record<string, unknown>) =>
-      ["reviews", "mine", params] as const,
-    reviewable: () => ["reviews", "reviewable"] as const,
-  },
   quizAttempts: {
     list: (params?: Record<string, unknown>) =>
       ["quiz-attempts", params] as const,
@@ -46,12 +31,6 @@ export const queryKeys = {
   },
   payments: {
     create: () => ["payments", "create"] as const,
-  },
-  books: {
-    list: (params?: BooksParams) => ["books", "list", params] as const,
-    byId: (id: string) => ["books", "detail", id] as const,
-    bySlug: (slug: string) => ["books", "slug", slug] as const,
-    purchases: () => ["books", "purchases"] as const,
   },
   batches: {
     list: (params?: BatchesListParams) => ["batches", "list", params] as const,

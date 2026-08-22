@@ -1,427 +1,322 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod/v3";
+import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { useForm, type FieldPath } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation } from "@tanstack/react-query";
-import { z } from "zod/v3";
-import {
-  Users,
-  Clock,
-  IndianRupee,
-  Wrench,
-  FileCheck,
-  UserPlus,
-  BookOpen,
-  Rocket,
-  Send,
-  X,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useCategories } from "@/lib/hooks/use-categories";
-import { teacherApplicationsApi } from "@/lib/api/services/teacher-applications";
 import { toast } from "sonner";
+import {
+  ArrowUpRight,
+  BookOpen,
+  CheckCircle2,
+  Clock,
+  Loader2,
+  Users,
+  Wallet,
+} from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useService, useSubmitServiceApplication } from "@/lib/hooks/use-cms";
 import { getApiError } from "@/lib/api/errors";
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 20 },
-  show: (i = 0) => ({
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.45, delay: i * 0.08 },
-  }),
-};
+const SERVICE_SLUG = "become-teacher";
 
-const benefits = [
-  { icon: Users, title: "Reach 50,000+ Students", desc: "Get instant access to our growing community of motivated learners across India looking to upskill.", color: "#a07028" },
-  { icon: Clock, title: "Flexible Schedule", desc: "Teach on your own time. Create recorded courses or host live sessions — you decide when and how.", color: "#f97316" },
-  { icon: IndianRupee, title: "Earn Competitive Revenue", desc: "Earn up to 70% revenue share on every enrollment. Get paid monthly with transparent earnings dashboards.", color: "#10b981" },
-  { icon: Wrench, title: "World-Class Tools", desc: "Access our studio-grade recording tools, analytics dashboard, student management, and marketing support.", color: "#ec4899" },
+const applicationSchema = z.object({
+  fullName: z.string().trim().min(2, "Name must be at least 2 characters"),
+  email: z.string().min(1, "Email is required").email("Enter a valid email"),
+  phone: z.string().trim().optional(),
+  subject: z.string().trim().min(2, "Tell us what you teach"),
+  experience: z.string().trim().min(1, "Tell us how long you have taught"),
+  about: z
+    .string()
+    .trim()
+    .min(40, "A few sentences help us understand your teaching"),
+});
+
+type ApplicationFormValues = z.infer<typeof applicationSchema>;
+
+const reasons = [
+  {
+    icon: Users,
+    title: "Teach at scale",
+    body: "One batch reaches hundreds of students preparing for the same exam, not a room of twelve.",
+  },
+  {
+    icon: Wallet,
+    title: "Paid per batch",
+    body: "Compensation is agreed per batch before it starts, so you know what a cohort is worth to you.",
+  },
+  {
+    icon: Clock,
+    title: "Structured schedule",
+    body: "Timetables, recordings and doubt sessions are managed by the platform, not by you.",
+  },
+  {
+    icon: BookOpen,
+    title: "Content support",
+    body: "Question banks, practice sets and assessment tooling already exist. You bring the teaching.",
+  },
 ];
 
 const steps = [
-  { icon: UserPlus, step: "01", title: "Apply & Get Approved", desc: "Fill out the application form below. Our team reviews your profile, expertise, and teaching experience within 48 hours." },
-  { icon: BookOpen, step: "02", title: "Create Your Course", desc: "Use our intuitive course builder to upload videos, create quizzes, add resources, and structure your curriculum." },
-  { icon: FileCheck, step: "03", title: "Quality Review", desc: "Our content team reviews your course for quality, accuracy, and production standards before publishing." },
-  { icon: Rocket, step: "04", title: "Go Live & Earn", desc: "Your course goes live on grotutor. Start reaching students, track analytics, and earn revenue from day one." },
+  "Tell us what you teach and where you have taught before",
+  "A short conversation with the academic team",
+  "A recorded demonstration lesson on a topic you choose",
+  "Onboarding, then your first batch",
 ];
 
-const teacherSchema = z.object({
-  fullName: z.string().trim().min(2, "Name must be at least 2 characters"),
-  email: z.string().min(1, "Email is required").email("Please enter a valid email address"),
-  phone: z.string().optional(),
-  experienceYears: z
-    .string()
-    .optional()
-    .refine(
-      (v) =>
-        v === undefined ||
-        v === "" ||
-        (Number.isFinite(Number(v)) && Number(v) >= 0 && Number.isInteger(Number(v))),
-      "Enter a whole number, 0 or greater",
-    ),
-  whyJoin: z.string().optional(),
-});
-
-type TeacherFormData = z.infer<typeof teacherSchema>;
-
-const inputClass =
-  "w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-primary/50 focus:ring-2 focus:ring-primary/15";
-
 export default function BecomeTeacherPage() {
+  const { data: service, isLoading } = useService(SERVICE_SLUG);
+  const submit = useSubmitServiceApplication(service?.serviceId);
+
+  const [submitted, setSubmitted] = useState<ApplicationFormValues | null>(null);
+
+  const applicationsOpen = Boolean(service?.serviceId);
+
   const {
     register,
-    handleSubmit: rhfHandleSubmit,
-    setError,
+    handleSubmit,
     formState: { errors },
-    reset,
-  } = useForm<TeacherFormData>({
-    resolver: zodResolver(teacherSchema),
-    defaultValues: { fullName: "", email: "", phone: "", experienceYears: "", whyJoin: "" },
-  });
-
-  const [skills, setSkills] = useState<string[]>([]);
-  const [skillInput, setSkillInput] = useState("");
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [cvUrl, setCvUrl] = useState("");
-  const [submitted, setSubmitted] = useState(false);
-
-  const uploadCv = useMutation({
-    mutationFn: (file: File) => teacherApplicationsApi.uploadCv(file),
-  });
-  const submitApplication = useMutation({
-    mutationFn: teacherApplicationsApi.submit,
-  });
-  const uploading = uploadCv.isPending;
-  const submitting = submitApplication.isPending;
-
-  const { data: categories = [] } = useCategories();
-
-  const addSkill = useCallback(() => {
-    const s = skillInput.trim();
-    if (s && !skills.includes(s)) {
-      setSkills((prev) => [...prev, s]);
-      setSkillInput("");
-    }
-  }, [skillInput, skills]);
-
-  const removeSkill = useCallback((skill: string) => {
-    setSkills((prev) => prev.filter((x) => x !== skill));
-  }, []);
-
-  const toggleCategory = useCallback((categoryId: string) => {
-    setSelectedCategories((prev) =>
-      prev.includes(categoryId)
-        ? prev.filter((id) => id !== categoryId)
-        : [...prev, categoryId]
-    );
-  }, []);
-
-  const handleCvChange = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      const allowed = [
-        "application/pdf",
-        "image/jpeg",
-        "image/png",
-        "image/webp",
-      ];
-      if (!allowed.includes(file.type)) {
-        toast.error("Invalid file type. Use PDF, JPEG, PNG, or WebP.");
-        return;
-      }
-      try {
-        const { url } = await uploadCv.mutateAsync(file);
-        setCvUrl(url);
-      } catch (err) {
-        toast.error(getApiError(err, "CV upload failed.").message);
-      }
+  } = useForm<ApplicationFormValues>({
+    resolver: zodResolver(applicationSchema),
+    defaultValues: {
+      fullName: "",
+      email: "",
+      phone: "",
+      subject: "",
+      experience: "",
+      about: "",
     },
-    [uploadCv],
-  );
+  });
 
-  const onSubmit = async (data: TeacherFormData) => {
+  const onSubmit = async (data: ApplicationFormValues) => {
     try {
-      await submitApplication.mutateAsync({
-        fullName: data.fullName.trim(),
-        email: data.email.trim(),
-        phone: data.phone?.trim() || undefined,
-        experienceYears: data.experienceYears
-          ? Number(data.experienceYears)
-          : undefined,
-        skills: skills.length ? skills : undefined,
-        categories: selectedCategories.length ? selectedCategories : undefined,
-        cvUrl: cvUrl || undefined,
-        whyJoin: data.whyJoin?.trim() || undefined,
+      await submit.mutateAsync({
+        applicantName: data.fullName,
+        applicantEmail: data.email,
+        applicantPhone: data.phone || undefined,
+        formData: {
+          subject: data.subject,
+          experience: data.experience,
+          about: data.about,
+        },
       });
-      setSubmitted(true);
-      reset();
-      setSkills([]);
-      setSelectedCategories([]);
-      setCvUrl("");
-      toast.success("Application submitted successfully.");
+      setSubmitted(data);
+      toast.success("Application received. We will be in touch.");
     } catch (err) {
-      const apiError = getApiError(err, "Submission failed. Please try again.");
-      toast.error(apiError.message);
-      for (const [field, message] of Object.entries(apiError.fieldErrors)) {
-        setError(field as FieldPath<TeacherFormData>, { message });
-      }
+      toast.error(
+        getApiError(err, "Could not send your application. Please try again.")
+          .message,
+      );
     }
   };
 
-  if (submitted) {
-    return (
-      <main className="container mx-auto px-4 py-10 text-center">
-        <h1 className="text-2xl font-bold text-foreground">Application submitted</h1>
-        <p className="mt-2 text-muted-foreground">
-          Thank you! We&apos;ll get back to you within 48 hours.
-        </p>
-        <Button asChild className="mt-6">
-          <Link href="/">Back to Home</Link>
-        </Button>
-      </main>
-    );
-  }
-
   return (
     <main className="bg-background">
-        <section className="border-b border-border bg-card py-16 md:py-20">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <motion.div initial="hidden" animate="show" variants={fadeUp} className="mx-auto max-w-2xl text-center">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                — For mentors —
-              </p>
-              <h1 className="font-display mt-4 text-4xl font-medium leading-[1.05] tracking-tight text-foreground sm:text-5xl md:text-6xl">
-                Become an{" "}
-                <em className="text-primary">instructor.</em>
-              </h1>
-              <p className="mt-5 text-base leading-relaxed text-muted-foreground">
-                Share your craft with learners across India. We handle the
-                platform — you focus on teaching what you know best.
-              </p>
-            </motion.div>
-          </div>
-        </section>
-
-        <section className="py-16 md:py-20">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={fadeUp} className="mb-10 text-center">
-              <div className="inline-flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                <span className="font-display text-base italic text-primary">01</span>
-                <span className="inline-block h-px w-8 bg-border" />
-                Why teach with us
-              </div>
-              <h2 className="font-display mt-4 text-3xl font-medium leading-tight tracking-tight text-foreground sm:text-4xl">
-                Built for serious educators.
-              </h2>
-            </motion.div>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {benefits.map((b, i) => (
-                <motion.div
-                  key={b.title}
-                  custom={i}
-                  initial="hidden"
-                  whileInView="show"
-                  viewport={{ once: true }}
-                  variants={fadeUp}
-                  className="rounded-2xl border border-border bg-card p-5 transition-all hover:shadow-md hover:border-primary/30"
-                >
-                  <div className="mb-3 flex size-10 items-center justify-center rounded-xl" style={{ background: `${b.color}15` }}>
-                    <b.icon className="size-5" style={{ color: b.color }} />
-                  </div>
-                  <h3 className="font-display text-base font-medium text-foreground">{b.title}</h3>
-                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{b.desc}</p>
-                </motion.div>
-              ))}
+      <section className="relative overflow-hidden border-b border-border bg-foreground py-16 text-background md:py-20">
+        <Image
+          src="/images/landing/classroom-2.jpg"
+          alt=""
+          fill
+          className="object-cover opacity-30"
+          sizes="100vw"
+          priority
+        />
+        <div className="absolute inset-0 bg-gradient-to-br from-foreground/85 via-foreground/70 to-foreground/45" />
+        <div className="absolute inset-0 bg-primary/15 mix-blend-multiply" />
+        <div className="relative container mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="max-w-2xl"
+          >
+            <p className="text-sm font-medium uppercase tracking-wide text-background/70">
+              Teach with us
+            </p>
+            <h1 className="mt-3 text-3xl font-semibold md:text-5xl">
+              {service?.title ?? "Become an instructor"}
+            </h1>
+            <p className="mt-4 text-base text-background/80 md:text-lg">
+              {service?.description ??
+                "We are looking for teachers who can hold a cohort's attention for two hours and leave them able to solve the problem themselves."}
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Button asChild size="lg">
+                <Link href="#apply">
+                  Apply to teach
+                  <ArrowUpRight className="ml-1 h-4 w-4" />
+                </Link>
+              </Button>
+              <Button asChild size="lg" variant="outline">
+                <Link href="/instructors">Meet the faculty</Link>
+              </Button>
             </div>
-          </div>
-        </section>
+          </motion.div>
+        </div>
+      </section>
 
-        <section className="bg-muted/40 py-16 md:py-20">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={fadeUp} className="mb-10 text-center">
-              <div className="inline-flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                <span className="font-display text-base italic text-primary">02</span>
-                <span className="inline-block h-px w-8 bg-border" />
-                The process
-              </div>
-              <h2 className="font-display mt-4 text-3xl font-medium leading-tight tracking-tight text-foreground sm:text-4xl">
-                From application to live course.
-              </h2>
-            </motion.div>
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-              {steps.map((s, i) => (
-                <motion.div
-                  key={s.step}
-                  custom={i}
-                  initial="hidden"
-                  whileInView="show"
-                  viewport={{ once: true }}
-                  variants={fadeUp}
-                  className="relative rounded-2xl border border-border bg-card p-5"
-                >
-                  <span className="absolute right-4 top-3 text-3xl font-black text-primary/10">{s.step}</span>
-                  <div className="mb-3 flex size-10 items-center justify-center rounded-xl bg-primary/10">
-                    <s.icon className="size-5 text-primary" />
-                  </div>
-                  <h3 className="font-display text-base font-medium text-foreground">{s.title}</h3>
-                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{s.desc}</p>
-                </motion.div>
-              ))}
+      <section className="container mx-auto px-4 py-16 sm:px-6 lg:px-8">
+        <h2 className="text-2xl font-semibold md:text-3xl">
+          Why teach on groEdu
+        </h2>
+        <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {reasons.map((reason) => (
+            <div
+              key={reason.title}
+              className="rounded-lg border border-border bg-card p-6"
+            >
+              <reason.icon className="h-6 w-6 text-primary" />
+              <h3 className="mt-4 font-medium">{reason.title}</h3>
+              <p className="mt-2 text-sm text-muted-foreground">{reason.body}</p>
             </div>
-          </div>
-        </section>
+          ))}
+        </div>
+      </section>
 
-        <section className="py-16 md:py-20" id="apply">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={fadeUp} className="mx-auto max-w-xl">
-              <div className="mb-10 text-center">
-                <div className="inline-flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                  <span className="font-display text-base italic text-primary">03</span>
-                  <span className="inline-block h-px w-8 bg-border" />
-                  Apply
-                </div>
-                <h2 className="font-display mt-4 text-3xl font-medium leading-tight tracking-tight text-foreground sm:text-4xl">
-                  Start your teaching journey.
-                </h2>
-                <p className="mt-3 text-sm text-muted-foreground">We&apos;ll get back to you within 48 hours.</p>
-              </div>
+      <section className="border-y border-border bg-muted/40 py-16">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-2xl font-semibold md:text-3xl">
+            How the process works
+          </h2>
+          <ol className="mt-8 grid gap-6 md:grid-cols-4">
+            {steps.map((step, index) => (
+              <li key={step} className="rounded-lg bg-background p-6">
+                <span className="text-sm font-semibold text-primary">
+                  Step {index + 1}
+                </span>
+                <p className="mt-2 text-sm text-muted-foreground">{step}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
 
-              <form onSubmit={rhfHandleSubmit(onSubmit)} className="space-y-4 rounded-2xl border border-border bg-card p-6">
-                <div>
-                  <label htmlFor="fullName" className="mb-1 block text-sm font-medium text-foreground">
-                    Full Name <span className="text-destructive">*</span>
-                  </label>
-                  <input
-                    id="fullName"
-                    {...register("fullName")}
-                    placeholder="Enter your full name"
-                    className={inputClass}
-                  />
-                  {errors.fullName && (
-                    <p className="mt-1 text-xs text-destructive">{errors.fullName.message}</p>
-                  )}
-                </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <label htmlFor="email" className="mb-1 block text-sm font-medium text-foreground">
-                      Email <span className="text-destructive">*</span>
-                    </label>
-                    <input
-                      id="email"
-                      {...register("email")}
-                      placeholder="you@example.com"
-                      className={inputClass}
-                    />
-                    {errors.email && (
-                      <p className="mt-1 text-xs text-destructive">{errors.email.message}</p>
+      <section id="apply" className="container mx-auto px-4 py-16 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-2xl">
+          <h2 className="text-2xl font-semibold md:text-3xl">Apply to teach</h2>
+
+          {submitted ? (
+            <div className="mt-8 rounded-lg border border-border bg-card p-8 text-center">
+              <CheckCircle2 className="mx-auto h-10 w-10 text-primary" />
+              <h3 className="mt-4 text-lg font-medium">Application received</h3>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Thank you, {submitted.fullName}. The academic team reviews every
+                application and will contact you at {submitted.email}.
+              </p>
+              <Button asChild className="mt-6" variant="outline">
+                <Link href="/">Back to home</Link>
+              </Button>
+            </div>
+          ) : (
+            <>
+              {!isLoading && !applicationsOpen && (
+                <p className="mt-4 rounded-md border border-border bg-muted/50 p-4 text-sm text-muted-foreground">
+                  Applications are not open at the moment. Write to us and we
+                  will let you know when the next intake begins.
+                </p>
+              )}
+
+              <form
+                onSubmit={handleSubmit(onSubmit)}
+                className="mt-8 space-y-5"
+                noValidate
+              >
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="fullName">Full name</Label>
+                    <Input id="fullName" {...register("fullName")} />
+                    {errors.fullName && (
+                      <p className="text-sm text-destructive">
+                        {errors.fullName.message}
+                      </p>
                     )}
                   </div>
-                  <div>
-                    <label htmlFor="phone" className="mb-1 block text-sm font-medium text-foreground">Phone</label>
-                    <input
-                      id="phone"
-                      {...register("phone")}
-                      placeholder="+91-XXXXXXXXXX"
-                      className={inputClass}
-                    />
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input id="email" type="email" {...register("email")} />
+                    {errors.email && (
+                      <p className="text-sm text-destructive">
+                        {errors.email.message}
+                      </p>
+                    )}
                   </div>
                 </div>
-                <div>
-                  <label htmlFor="experienceYears" className="mb-1 block text-sm font-medium text-foreground">Years of Experience</label>
-                  <input
-                    id="experienceYears"
-                    type="number"
-                    min={0}
-                    {...register("experienceYears")}
-                    placeholder="e.g. 5"
-                    className={inputClass}
+
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Phone (optional)</Label>
+                    <Input id="phone" {...register("phone")} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="subject">Subject you teach</Label>
+                    <Input
+                      id="subject"
+                      placeholder="Physics, Organic Chemistry, Data Structures"
+                      {...register("subject")}
+                    />
+                    {errors.subject && (
+                      <p className="text-sm text-destructive">
+                        {errors.subject.message}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="experience">Years of teaching experience</Label>
+                  <Input
+                    id="experience"
+                    placeholder="4 years, JEE Physics"
+                    {...register("experience")}
                   />
-                  {errors.experienceYears && (
-                    <p className="mt-1 text-xs text-destructive">{errors.experienceYears.message}</p>
+                  {errors.experience && (
+                    <p className="text-sm text-destructive">
+                      {errors.experience.message}
+                    </p>
                   )}
                 </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-foreground">Skills</label>
-                  <div className="flex flex-wrap gap-2">
-                    {skills.map((s) => (
-                      <span
-                        key={s}
-                        className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary"
-                      >
-                        {s}
-                        <button type="button" onClick={() => removeSkill(s)} className="hover:opacity-80" aria-label="Remove">
-                          <X className="size-3" />
-                        </button>
-                      </span>
-                    ))}
-                    <div className="flex gap-1">
-                      <input
-                        type="text"
-                        value={skillInput}
-                        onChange={(e) => setSkillInput(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addSkill())}
-                        placeholder="Add skill"
-                        className="w-28 rounded-lg border border-input bg-background px-2 py-1 text-sm outline-none focus:border-primary/50"
-                      />
-                      <Button type="button" variant="outline" size="sm" onClick={addSkill}>Add</Button>
-                    </div>
-                  </div>
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-foreground">Categories you want to teach</label>
-                  <div className="flex flex-wrap gap-2">
-                    {categories.map((cat) => (
-                      <button
-                        key={cat.categoryId}
-                        type="button"
-                        onClick={() => toggleCategory(cat.categoryId)}
-                        className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                          selectedCategories.includes(cat.categoryId)
-                            ? "border-primary bg-primary text-primary-foreground"
-                            : "border-border bg-muted/50 text-muted-foreground hover:border-primary/50 hover:text-primary"
-                        }`}
-                      >
-                        {cat.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-foreground">CV / Resume</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="file"
-                      accept=".pdf,image/jpeg,image/png,image/webp"
-                      onChange={handleCvChange}
-                      disabled={uploading}
-                      className="text-sm text-muted-foreground file:mr-2 file:rounded-lg file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-sm file:text-primary-foreground file:hover:bg-primary/90"
-                    />
-                    {uploading && <span className="text-xs text-muted-foreground">Uploading...</span>}
-                    {cvUrl && !uploading && <span className="text-xs text-green-600">Uploaded</span>}
-                  </div>
-                </div>
-                <div>
-                  <label htmlFor="whyJoin" className="mb-1 block text-sm font-medium text-foreground">Why do you want to join?</label>
-                  <textarea
-                    id="whyJoin"
-                    {...register("whyJoin")}
-                    rows={4}
-                    placeholder="Tell us why you want to teach on grotutor..."
-                    className="w-full resize-none rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-primary/50 focus:ring-2 focus:ring-primary/15"
+
+                <div className="space-y-2">
+                  <Label htmlFor="about">Tell us about your teaching</Label>
+                  <Textarea
+                    id="about"
+                    rows={5}
+                    placeholder="Where have you taught, what results have your students seen, and how do you approach a topic students usually find hard?"
+                    {...register("about")}
                   />
+                  {errors.about && (
+                    <p className="text-sm text-destructive">
+                      {errors.about.message}
+                    </p>
+                  )}
                 </div>
-                <Button type="submit" className="w-full gap-2" disabled={submitting || uploading}>
-                  <Send className="size-4" />
-                  {submitting ? "Submitting..." : "Submit Application"}
+
+                <Button
+                  type="submit"
+                  size="lg"
+                  disabled={submit.isPending || !applicationsOpen}
+                >
+                  {submit.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    "Send application"
+                  )}
                 </Button>
               </form>
-            </motion.div>
-          </div>
-        </section>
+            </>
+          )}
+        </div>
+      </section>
     </main>
   );
 }

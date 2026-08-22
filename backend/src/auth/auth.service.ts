@@ -1,8 +1,15 @@
-import { Injectable, ConflictException, BadRequestException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  BadRequestException,
+  ForbiddenException,
+  UnauthorizedException,
+  Logger,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Inject } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, count, eq, isNull } from 'drizzle-orm';
 import { userDevices, users } from '../database/schema';
 import { DATABASE_CONNECTION } from '../database/database.module';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
@@ -11,6 +18,8 @@ import { RegisterDto } from './dto/register.dto';
 import { EmailService } from '../email/email.service';
 import { TokenService } from './token.service';
 import { AppConfigService } from '../config';
+import { IdentityService } from './identity.service';
+import { GoalService } from '../discovery/goal.service';
 
 export interface UserPayload {
   id: string;
@@ -38,6 +47,9 @@ const userPublicColumns = {
   emailVerified: users.emailVerified,
 };
 
+export const DEVICE_LIMIT_REACHED = 'DEVICE_LIMIT_REACHED';
+export const ACCOUNT_SUSPENDED = 'ACCOUNT_SUSPENDED';
+
 // Pre-computed bcrypt hash used to keep forgot-password response time
 // constant whether the email exists or not (prevents enumeration).
 const DUMMY_PASSWORD_HASH =
@@ -54,6 +66,8 @@ export class AuthService {
     private emailService: EmailService,
     private tokenService: TokenService,
     private configService: AppConfigService,
+    private readonly identityService: IdentityService,
+    private readonly goalService: GoalService,
   ) {}
 
   async validateUser(email: string, password: string): Promise<UserPayload | null> {
@@ -66,6 +80,8 @@ export class AuthService {
         lastName: users.lastName,
         companyId: users.companyId,
         password: users.password,
+        suspendedAt: users.suspendedAt,
+        suspensionReason: users.suspensionReason,
       })
       .from(users)
       .where(eq(users.email, email))
@@ -78,6 +94,16 @@ export class AuthService {
     const isPasswordValid = await this.comparePassword(password, user.password);
     if (!isPasswordValid) {
       return null;
+    }
+
+    if (user.suspendedAt) {
+      throw new ForbiddenException({
+        code: ACCOUNT_SUSPENDED,
+        message:
+          'This account has been suspended. Contact support to have it reviewed.',
+        reason: user.suspensionReason,
+        suspendedAt: user.suspendedAt.toISOString(),
+      });
     }
 
     return {
@@ -101,6 +127,13 @@ export class AuthService {
       throw new ConflictException('User with this email already exists');
     }
 
+    if (dto.goalKey) {
+      const options = await this.goalService.getGoalOptions();
+      if (!options.some((option) => option.key === dto.goalKey)) {
+        throw new BadRequestException('That is not a goal you can choose');
+      }
+    }
+
     const hashedPassword = await this.hashPassword(dto.password);
 
     const [newUser] = await this.db
@@ -120,6 +153,12 @@ export class AuthService {
         firstName: users.firstName,
         lastName: users.lastName,
       });
+
+    await this.identityService.linkIdentity(newUser.userId, 'PASSWORD', newUser.email);
+
+    if (dto.goalKey) {
+      await this.goalService.setGoal(newUser.userId, dto.goalKey);
+    }
 
     try {
       const verificationToken = await this.tokenService.generateToken(
@@ -147,6 +186,45 @@ export class AuthService {
     };
   }
 
+  async payloadFor(userId: string): Promise<UserPayload> {
+    const [user] = await this.db
+      .select({
+        userId: users.userId,
+        email: users.email,
+        role: users.role,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        companyId: users.companyId,
+        suspendedAt: users.suspendedAt,
+        suspensionReason: users.suspensionReason,
+      })
+      .from(users)
+      .where(eq(users.userId, userId))
+      .limit(1);
+
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+    if (user.suspendedAt) {
+      throw new ForbiddenException({
+        code: ACCOUNT_SUSPENDED,
+        message:
+          'This account has been suspended. Contact support to have it reviewed.',
+        reason: user.suspensionReason,
+        suspendedAt: user.suspendedAt.toISOString(),
+      });
+    }
+
+    return {
+      id: user.userId,
+      email: user.email,
+      role: user.role,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      companyId: user.companyId ?? null,
+    };
+  }
+
   async login(user: UserPayload, deviceId: string): Promise<{ access_token: string; user: UserPayload }> {
     const payload = { email: user.email, sub: user.id, role: user.role, deviceId };
     return {
@@ -162,7 +240,12 @@ export class AuthService {
     };
   }
 
-  async upsertDevice(userId: string, userAgent: string | null, ipAddress: string | null): Promise<string> {
+  async upsertDevice(
+    user: UserPayload,
+    userAgent: string | null,
+    ipAddress: string | null,
+  ): Promise<string> {
+    const userId = user.id;
     const conditions = [
       eq(userDevices.userId, userId),
       isNull(userDevices.revokedAt),
@@ -184,6 +267,8 @@ export class AuthService {
       return existing.deviceId;
     }
 
+    await this.assertDeviceSlotAvailable(user);
+
     const label = userAgent ? this.extractBrowserLabel(userAgent) : null;
 
     const [created] = await this.db
@@ -192,6 +277,30 @@ export class AuthService {
       .returning({ deviceId: userDevices.deviceId });
 
     return created.deviceId;
+  }
+
+  private async assertDeviceSlotAvailable(user: UserPayload): Promise<void> {
+    if (user.role !== 'LEARNER') return;
+
+    const limit = this.configService.maxDevicesPerUser;
+    const [{ active }] = await this.db
+      .select({ active: count() })
+      .from(userDevices)
+      .where(
+        and(eq(userDevices.userId, user.id), isNull(userDevices.revokedAt)),
+      );
+
+    if (active < limit) return;
+
+    throw new ForbiddenException({
+      code: DEVICE_LIMIT_REACHED,
+      message:
+        `This account is already signed in on ${limit} ${
+          limit === 1 ? 'device' : 'devices'
+        }. ` +
+        `Sign out of one of them from Settings, then sign in again.`,
+      limit,
+    });
   }
 
   private extractBrowserLabel(ua: string): string {

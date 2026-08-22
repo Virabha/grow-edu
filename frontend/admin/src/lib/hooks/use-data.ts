@@ -1,10 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../query-keys';
-import { axiosGet, axiosPost, axiosPut, axiosDelete } from '../api/client';
+import { axiosGet, axiosPost, axiosDelete } from '../api/client';
 import { Category } from '../api/services/categories';
-import { CourseProgress, UpdateProgressDto } from '../api/services/progress';
 import { CartItem, AddToCartDto } from '../api/services/cart';
-import { Enrollment, CreateEnrollmentDto } from '../api/services/enrollments';
 import { storageApi } from '../api/services/storage';
 interface UseCategoriesParams {
     enabled?: boolean;
@@ -53,39 +51,6 @@ export function useCategoryBySlug({ enabled, slug }: UseCategoryBySlugParams = {
         queryKey: queryKeys.categories.bySlug(slug),
     });
 }
-interface UseCourseProgressParams {
-    enabled?: boolean;
-    courseId?: string;
-}
-export function useCourseProgress({ enabled, courseId }: UseCourseProgressParams = {}) {
-    const fetchCourseProgress = async (): Promise<CourseProgress> => {
-        const res = await axiosGet<CourseProgress>(`progress/courses/${courseId}`);
-        return res.data;
-    };
-    return useQuery({
-        staleTime: Infinity,
-        queryFn: fetchCourseProgress,
-        enabled: !!courseId && enabled !== false,
-        queryKey: queryKeys.progress.courseProgress(courseId),
-    });
-}
-export const useUpdateProgress = () => {
-    const queryClient = useQueryClient();
-    const fetchUpdateProgressMutationFunction = async ({ courseId, dto, }: {
-        courseId: string;
-        dto: UpdateProgressDto;
-    }): Promise<CourseProgress> => {
-        const res = await axiosPut<CourseProgress>(`progress/courses/${courseId}`, dto);
-        return res.data;
-    };
-    return useMutation({
-        mutationKey: ["updateProgress"],
-        mutationFn: fetchUpdateProgressMutationFunction,
-        onSuccess: (data, variables) => {
-            queryClient.setQueryData(queryKeys.progress.courseProgress(variables.courseId), data);
-        },
-    });
-};
 interface UseCartParams {
     enabled?: boolean;
 }
@@ -147,94 +112,12 @@ export const useClearCart = () => {
         },
     });
 };
-interface EnrollmentFilters {
-    userId?: string;
-    courseId?: string;
-    companyId?: string;
-    status?: string;
-    page?: number;
-    limit?: number;
-}
-interface PaginationInfo {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages?: number;
-}
-interface UseEnrollmentsParams {
-    enabled?: boolean;
-    filters?: EnrollmentFilters;
-}
-export function useEnrollments({ enabled, filters }: UseEnrollmentsParams = {}) {
-    const fetchEnrollments = async (): Promise<{
-        data: Enrollment[];
-        pagination: PaginationInfo;
-    }> => {
-        const params: Record<string, string | number> = {};
-        if (filters?.userId)
-            params.userId = filters.userId;
-        if (filters?.courseId)
-            params.courseId = filters.courseId;
-        if (filters?.companyId)
-            params.companyId = filters.companyId;
-        if (filters?.status)
-            params.status = filters.status;
-        if (filters?.page)
-            params.page = filters.page;
-        if (filters?.limit)
-            params.limit = filters.limit;
-        const res = await axiosGet<{
-            data: Enrollment[];
-            pagination: PaginationInfo;
-        }>("enrollments", params);
-        return res.data;
-    };
-    return useQuery({
-        staleTime: Infinity,
-        queryFn: fetchEnrollments,
-        enabled: enabled !== false,
-        queryKey: queryKeys.enrollments.list(filters),
-    });
-}
-interface UseEnrollmentParams {
-    enabled?: boolean;
-    id?: string;
-}
-export function useEnrollment({ enabled, id }: UseEnrollmentParams = {}) {
-    const fetchEnrollment = async (): Promise<Enrollment> => {
-        const res = await axiosGet<Enrollment>(`enrollments/${id}`);
-        return res.data;
-    };
-    return useQuery({
-        staleTime: Infinity,
-        queryFn: fetchEnrollment,
-        enabled: !!id && enabled !== false,
-        queryKey: queryKeys.enrollments.detail(id),
-    });
-}
-export const useCreateEnrollment = () => {
-    const queryClient = useQueryClient();
-    const fetchCreateEnrollmentMutationFunction = async (data: CreateEnrollmentDto): Promise<Enrollment> => {
-        const res = await axiosPost<Enrollment>("enrollments", data);
-        return res.data;
-    };
-    return useMutation({
-        mutationKey: ["createEnrollment"],
-        mutationFn: fetchCreateEnrollmentMutationFunction,
-        onSuccess: () => {
-            queryClient.invalidateQueries({
-                queryKey: queryKeys.enrollments.all(),
-            });
-        },
-    });
-};
 export function useGetUploadKey() {
     return useMutation({
-        mutationFn: ({ type, fileName, courseId }: {
-            type: 'course' | 'profile' | 'lesson';
+        mutationFn: ({ type, fileName }: {
+            type: 'batch' | 'profile' | 'lesson';
             fileName?: string;
-            courseId?: string;
-        }) => storageApi.getUploadKey(type, fileName, courseId),
+        }) => storageApi.getUploadKey(type, fileName),
     });
 }
 export function useUploadFile() {

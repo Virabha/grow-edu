@@ -18,6 +18,7 @@ import { ListOrdersDto } from './dto/list-orders.dto';
 import { AdminListOrdersDto } from './dto/admin-list-orders.dto';
 import { RequestRefundDto } from './dto/request-refund.dto';
 import { ResolveRefundDto } from './dto/resolve-refund.dto';
+import { Authenticated } from '../auth/decorators/authenticated.decorator';
 
 @ApiTags('orders')
 @Controller()
@@ -26,6 +27,7 @@ import { ResolveRefundDto } from './dto/resolve-refund.dto';
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
+  @Authenticated()
   @ApiOperation({ summary: "List the caller's own orders, newest first" })
   @ApiResponse({ status: 200 })
   @Get('orders')
@@ -36,6 +38,7 @@ export class OrdersController {
     return this.ordersService.listOrders(user.userId, dto);
   }
 
+  @Authenticated()
   @ApiOperation({ summary: "Get one of the caller's orders (404 for another user's order)" })
   @ApiResponse({ status: 200 })
   @ApiResponse({ status: 404 })
@@ -47,6 +50,7 @@ export class OrdersController {
     return this.ordersService.getOrder(orderId, user.userId);
   }
 
+  @Authenticated()
   @ApiOperation({ summary: 'Request a refund for a completed order' })
   @ApiResponse({ status: 200 })
   @ApiResponse({ status: 400 })

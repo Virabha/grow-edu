@@ -9,7 +9,11 @@
 -- =============================================
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'teacher_application_status') THEN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_type t
+        JOIN pg_namespace n ON n.oid = t.typnamespace
+        WHERE t.typname = 'teacher_application_status' AND n.nspname = current_schema()
+    ) THEN
         CREATE TYPE teacher_application_status AS ENUM ('PENDING', 'APPROVED', 'REJECTED');
     END IF;
 END $$;

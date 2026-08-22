@@ -23,6 +23,12 @@ export const configSchema = z
       .min(8, "JWT_SECRET must be at least 8 characters"),
     JWT_EXPIRES_IN: z.string().default("7d"),
 
+    AUTH_MAX_DEVICES_PER_USER: z
+      .string()
+      .transform(Number)
+      .pipe(z.number().int().min(1))
+      .default("3"),
+
     // Bunny.net Storage
     BUNNY_STORAGE_ZONE_NAME: z.string().min(1).optional(),
     BUNNY_STORAGE_API_KEY: z.string().min(1).optional(),
@@ -48,6 +54,9 @@ export const configSchema = z
 
     REDIS_URL: z.string().url().optional(),
     PEXELS_API_KEY: z.string().optional(),
+    VAPID_PUBLIC_KEY: z.string().optional(),
+    VAPID_PRIVATE_KEY: z.string().optional(),
+    VAPID_SUBJECT: z.string().optional(),
   })
   .superRefine((data, ctx) => {
     if (data.NODE_ENV === "production") {

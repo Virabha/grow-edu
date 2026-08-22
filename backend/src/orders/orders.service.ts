@@ -6,35 +6,31 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { and, count, desc, eq, ilike, inArray, or, sql } from 'drizzle-orm';
+import { and, count, desc, eq, ilike, inArray, ne, or, sql } from 'drizzle-orm';
 import { DATABASE_CONNECTION } from '../database/database.module';
 import * as schema from '../database/schema';
 import { ListOrdersDto } from './dto/list-orders.dto';
 import { AdminListOrdersDto } from './dto/admin-list-orders.dto';
 import { RequestRefundDto } from './dto/request-refund.dto';
 import { ResolveRefundDto } from './dto/resolve-refund.dto';
-
-interface BatchMeta {
-  batchId: string;
-}
-
-function isBatchMeta(v: unknown): v is BatchMeta {
-  return (
-    typeof v === 'object' &&
-    v !== null &&
-    'batchId' in v &&
-    typeof (v as Record<string, unknown>).batchId === 'string'
-  );
-}
+import { AuditLogService } from '../audit/audit-log.service';
+import { CLOCK, Clock } from '../common/clock';
+import { InvoicesService } from '../invoices/invoices.service';
+import { Transaction } from '../database/transaction';
 
 export type RefundStatus = 'NONE' | 'REQUESTED' | 'APPROVED' | 'DECLINED';
 
+const EXCLUDE_CORPORATE_INVOICES = ne(
+  schema.payments.itemType,
+  'CORPORATE_CONTRACT',
+);
+
 export interface OrderItem {
   itemId: string;
-  courseId: string;
+  batchId: string;
   title: string;
   thumbnail: string;
-  itemType: 'COURSE' | 'SECTION' | 'BATCH';
+  itemType: 'BATCH';
   unitPrice: number;
 }
 
@@ -44,13 +40,13 @@ export interface OrderDto {
   items: OrderItem[];
   subtotal: number;
   discount: number;
-  couponCode: string | null;
   tax: number;
   total: number;
   currency: string;
   gateway: string;
   status: string;
   refundStatus: RefundStatus;
+  refundedAmount: number;
   refundReason: string | null;
   transactionId: string | null;
   placedAt: string;
@@ -70,6 +66,8 @@ export interface PaginationMeta {
   total: number;
   totalPages: number;
 }
+
+const REFUND_EPSILON = 1e-9;
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 20;
@@ -109,18 +107,17 @@ function buildDisplayName(
 type PaymentCore = {
   paymentId: string;
   invoiceNo: string | null | undefined;
-  courseId: string | null;
-  sectionId: string | null;
-  itemType: 'COURSE' | 'SECTION' | 'BATCH';
+  batchId: string | null;
+  itemType: 'BATCH' | 'CORPORATE_CONTRACT';
   amount: string;
   originalAmount: string | null;
   discountAmount: string | null;
   taxAmount: string | null;
-  couponId: string | null;
   currency: string;
   gateway: 'RAZORPAY' | 'MANUAL_QR' | 'PHONEPE' | 'FREE';
   status: 'PENDING' | 'PROOF_UPLOADED' | 'COMPLETED' | 'FAILED' | 'REJECTED' | 'REFUNDED';
   refundStatus: 'NONE' | 'REQUESTED' | 'APPROVED' | 'DECLINED';
+  refundedAmount: string | null | undefined;
   refundReason: string | null;
   transactionId: string | null;
   payerName: string | null;
@@ -134,7 +131,7 @@ type PaymentCore = {
 
 type ItemRow = Pick<
   PaymentCore,
-  'paymentId' | 'courseId' | 'sectionId' | 'itemType' | 'amount' | 'metadata'
+  'paymentId' | 'batchId' | 'itemType' | 'amount' | 'metadata'
 >;
 
 @Injectable()
@@ -142,60 +139,23 @@ export class OrdersService {
   constructor(
     @Inject(DATABASE_CONNECTION)
     private readonly db: PostgresJsDatabase<typeof schema>,
+    @Inject(CLOCK) private readonly clock: Clock,
+    private readonly auditLog: AuditLogService,
+    private readonly invoices: InvoicesService,
   ) {}
 
   private async resolveItemMap(rows: readonly ItemRow[]): Promise<Map<string, OrderItem>> {
-    const unique = <T>(arr: T[]): T[] => [...new Set(arr)];
+    const batchIds = [
+      ...new Set(
+        rows
+          .filter((r) => r.batchId !== null)
+          .map((r) => r.batchId as string),
+      ),
+    ];
 
-    const courseIds = unique(
-      rows
-        .filter((r) => r.itemType === 'COURSE' && r.courseId !== null)
-        .map((r) => r.courseId as string),
-    );
-    const sectionIds = unique(
-      rows
-        .filter((r) => r.itemType === 'SECTION' && r.sectionId !== null)
-        .map((r) => r.sectionId as string),
-    );
-    const batchIds = unique(
-      rows
-        .filter((r) => r.itemType === 'BATCH')
-        .flatMap((r) => (isBatchMeta(r.metadata) ? [r.metadata.batchId] : [])),
-    );
-
-    const [courseRows, sectionRows, batchRows] = await Promise.all([
-      courseIds.length > 0
-        ? this.db
-            .select({
-              courseId: schema.courses.courseId,
-              title: schema.courses.title,
-              thumbnail: schema.courses.thumbnail,
-            })
-            .from(schema.courses)
-            .where(inArray(schema.courses.courseId, courseIds))
-        : ([] as { courseId: string; title: string; thumbnail: string | null }[]),
-      sectionIds.length > 0
-        ? this.db
-            .select({
-              sectionId: schema.courseSections.sectionId,
-              title: schema.courseSections.title,
-              courseId: schema.courseSections.courseId,
-              thumbnail: schema.courses.thumbnail,
-            })
-            .from(schema.courseSections)
-            .innerJoin(
-              schema.courses,
-              eq(schema.courseSections.courseId, schema.courses.courseId),
-            )
-            .where(inArray(schema.courseSections.sectionId, sectionIds))
-        : ([] as {
-            sectionId: string;
-            title: string;
-            courseId: string;
-            thumbnail: string | null;
-          }[]),
+    const batchRows =
       batchIds.length > 0
-        ? this.db
+        ? await this.db
             .select({
               batchId: schema.batches.batchId,
               title: schema.batches.title,
@@ -203,73 +163,33 @@ export class OrdersService {
             })
             .from(schema.batches)
             .where(inArray(schema.batches.batchId, batchIds))
-        : ([] as { batchId: string; title: string; thumbnail: string | null }[]),
-    ]);
+        : [];
 
-    const byCourseId = new Map(courseRows.map((r) => [r.courseId, r]));
-    const bySectionId = new Map(sectionRows.map((r) => [r.sectionId, r]));
     const byBatchId = new Map(batchRows.map((r) => [r.batchId, r]));
 
     const itemMap = new Map<string, OrderItem>();
     for (const row of rows) {
       const unitPrice = parseFloat(row.amount);
+      const batchId = row.batchId ?? row.paymentId;
+      const batch = row.batchId ? byBatchId.get(row.batchId) : undefined;
+      const snapshotTitle =
+        typeof row.metadata === 'object' &&
+        row.metadata !== null &&
+        typeof (row.metadata as { batchTitle?: unknown }).batchTitle === 'string'
+          ? (row.metadata as { batchTitle: string }).batchTitle
+          : null;
 
-      if (row.itemType === 'COURSE' && row.courseId !== null) {
-        const c = byCourseId.get(row.courseId);
-        itemMap.set(row.paymentId, {
-          itemId: row.courseId,
-          courseId: row.courseId,
-          title: c?.title ?? 'Unknown course',
-          thumbnail: c?.thumbnail ?? '',
-          itemType: 'COURSE',
-          unitPrice,
-        });
-      } else if (row.itemType === 'SECTION' && row.sectionId !== null) {
-        const s = bySectionId.get(row.sectionId);
-        itemMap.set(row.paymentId, {
-          itemId: row.sectionId,
-          courseId: s?.courseId ?? row.sectionId,
-          title: s?.title ?? 'Unknown section',
-          thumbnail: s?.thumbnail ?? '',
-          itemType: 'SECTION',
-          unitPrice,
-        });
-      } else if (row.itemType === 'BATCH' && isBatchMeta(row.metadata)) {
-        const batchId = row.metadata.batchId;
-        const b = byBatchId.get(batchId);
-        itemMap.set(row.paymentId, {
-          itemId: batchId,
-          courseId: batchId,
-          title: b?.title ?? 'Unknown batch',
-          thumbnail: b?.thumbnail ?? '',
-          itemType: 'BATCH',
-          unitPrice,
-        });
-      } else {
-        itemMap.set(row.paymentId, {
-          itemId: row.courseId ?? row.sectionId ?? row.paymentId,
-          courseId: row.courseId ?? row.paymentId,
-          title: 'Unknown item',
-          thumbnail: '',
-          itemType: 'COURSE',
-          unitPrice,
-        });
-      }
+      itemMap.set(row.paymentId, {
+        itemId: batchId,
+        batchId,
+        title: batch?.title ?? snapshotTitle ?? 'Unknown batch',
+        thumbnail: batch?.thumbnail ?? '',
+        itemType: 'BATCH',
+        unitPrice,
+      });
     }
 
     return itemMap;
-  }
-
-  private async resolveCouponCodes(couponIds: string[]): Promise<Map<string, string>> {
-    if (couponIds.length === 0) return new Map();
-    const rows = await this.db
-      .select({
-        couponId: schema.coupons.couponId,
-        couponCode: schema.coupons.couponCode,
-      })
-      .from(schema.coupons)
-      .where(inArray(schema.coupons.couponId, couponIds));
-    return new Map(rows.map((r) => [r.couponId, r.couponCode]));
   }
 
   private async resolveUserNames(userIds: string[]): Promise<Map<string, string>> {
@@ -303,7 +223,6 @@ export class OrdersService {
     item: OrderItem | undefined,
     userEmail: string,
     userName: string,
-    couponCode: string | null,
     adminNameMap: Map<string, string>,
   ): OrderDto {
     const reviewedBy = p.reviewedBy ?? null;
@@ -314,13 +233,13 @@ export class OrdersService {
       items: item ? [item] : [],
       subtotal: parseFloat(p.originalAmount ?? p.amount),
       discount: parseFloat(p.discountAmount ?? '0'),
-      couponCode,
       tax: parseFloat(p.taxAmount ?? '0'),
       total: parseFloat(p.amount),
       currency: p.currency,
       gateway: p.gateway,
       status: p.status,
       refundStatus: p.refundStatus,
+      refundedAmount: parseFloat(p.refundedAmount ?? '0'),
       refundReason: p.refundReason,
       transactionId: p.transactionId,
       placedAt: p.createdAt.toISOString(),
@@ -355,31 +274,34 @@ export class OrdersService {
       ? or(
           ilike(schema.payments.paymentId, `%${term}%`),
           ilike(schema.payments.invoiceNo, `%${term}%`),
-          ilike(schema.courses.title, `%${term}%`),
-          ilike(schema.courseSections.title, `%${term}%`),
+          ilike(schema.batches.title, `%${term}%`),
           sql`${schema.payments.metadata}->>'batchTitle' ilike ${'%' + term + '%'}`,
         )
       : undefined;
 
-    const where = and(eq(schema.payments.userId, userId), statusFilter, searchFilter);
+    const where = and(
+      eq(schema.payments.userId, userId),
+      EXCLUDE_CORPORATE_INVOICES,
+      statusFilter,
+      searchFilter,
+    );
 
     const [paymentRows, countRows, userRows] = await Promise.all([
       this.db
         .select({
           paymentId: schema.payments.paymentId,
           invoiceNo: schema.payments.invoiceNo,
-          courseId: schema.payments.courseId,
-          sectionId: schema.payments.sectionId,
+          batchId: schema.payments.batchId,
           itemType: schema.payments.itemType,
           amount: schema.payments.amount,
           originalAmount: schema.payments.originalAmount,
           discountAmount: schema.payments.discountAmount,
           taxAmount: schema.payments.taxAmount,
-          couponId: schema.payments.couponId,
           currency: schema.payments.currency,
           gateway: schema.payments.gateway,
           status: schema.payments.status,
           refundStatus: schema.payments.refundStatus,
+          refundedAmount: schema.payments.refundedAmount,
           refundReason: schema.payments.refundReason,
           transactionId: schema.payments.transactionId,
           payerName: schema.payments.payerName,
@@ -391,11 +313,7 @@ export class OrdersService {
           metadata: schema.payments.metadata,
         })
         .from(schema.payments)
-        .leftJoin(schema.courses, eq(schema.payments.courseId, schema.courses.courseId))
-        .leftJoin(
-          schema.courseSections,
-          eq(schema.payments.sectionId, schema.courseSections.sectionId),
-        )
+        .leftJoin(schema.batches, eq(schema.payments.batchId, schema.batches.batchId))
         .where(where)
         .orderBy(desc(schema.payments.createdAt))
         .limit(limit)
@@ -403,11 +321,7 @@ export class OrdersService {
       this.db
         .select({ total: count() })
         .from(schema.payments)
-        .leftJoin(schema.courses, eq(schema.payments.courseId, schema.courses.courseId))
-        .leftJoin(
-          schema.courseSections,
-          eq(schema.payments.sectionId, schema.courseSections.sectionId),
-        )
+        .leftJoin(schema.batches, eq(schema.payments.batchId, schema.batches.batchId))
         .where(where),
       this.db
         .select({
@@ -428,15 +342,8 @@ export class OrdersService {
       userEmail,
     );
 
-    const [itemMap, couponCodeMap, adminNameMap] = await Promise.all([
+    const [itemMap, adminNameMap] = await Promise.all([
       this.resolveItemMap(paymentRows),
-      this.resolveCouponCodes(
-        [
-          ...new Set(
-            paymentRows.map((p) => p.couponId).filter((id): id is string => id !== null),
-          ),
-        ],
-      ),
       this.resolveUserNames(this.collectAdminIds(paymentRows)),
     ]);
 
@@ -446,7 +353,6 @@ export class OrdersService {
         itemMap.get(p.paymentId),
         userEmail,
         userName,
-        p.couponId ? (couponCodeMap.get(p.couponId) ?? null) : null,
         adminNameMap,
       ),
     );
@@ -482,11 +388,8 @@ export class OrdersService {
       userEmail,
     );
 
-    const [itemMap, couponCodeMap, adminNameMap] = await Promise.all([
+    const [itemMap, adminNameMap] = await Promise.all([
       this.resolveItemMap([payment]),
-      payment.couponId
-        ? this.resolveCouponCodes([payment.couponId])
-        : Promise.resolve(new Map<string, string>()),
       this.resolveUserNames(this.collectAdminIds([payment])),
     ]);
 
@@ -495,7 +398,6 @@ export class OrdersService {
       itemMap.get(payment.paymentId),
       userEmail,
       userName,
-      payment.couponId ? (couponCodeMap.get(payment.couponId) ?? null) : null,
       adminNameMap,
     );
   }
@@ -513,9 +415,17 @@ export class OrdersService {
       throw new BadRequestException('Only completed orders can be refunded.');
     }
 
-    if (payment.refundStatus === 'REQUESTED' || payment.refundStatus === 'APPROVED') {
+    if (payment.refundStatus === 'REQUESTED') {
       throw new ConflictException(
-        `A refund request is already ${payment.refundStatus.toLowerCase()} for this order.`,
+        'A refund request is already requested for this order.',
+      );
+    }
+
+    const unrefunded =
+      parseFloat(payment.amount) - parseFloat(payment.refundedAmount ?? '0');
+    if (payment.refundStatus === 'APPROVED' && unrefunded <= REFUND_EPSILON) {
+      throw new ConflictException(
+        'This order has already been refunded in full.',
       );
     }
 
@@ -546,19 +456,13 @@ export class OrdersService {
       userEmail,
     );
 
-    const [itemMap, couponCodeMap] = await Promise.all([
-      this.resolveItemMap([updated]),
-      updated.couponId
-        ? this.resolveCouponCodes([updated.couponId])
-        : Promise.resolve(new Map<string, string>()),
-    ]);
+    const itemMap = await this.resolveItemMap([updated]);
 
     return this.toOrderDto(
       updated,
       itemMap.get(updated.paymentId),
       userEmail,
       userName,
-      updated.couponId ? (couponCodeMap.get(updated.couponId) ?? null) : null,
       new Map(),
     );
   }
@@ -584,25 +488,24 @@ export class OrdersService {
         )
       : undefined;
 
-    const where = and(statusFilter, searchFilter);
+    const where = and(EXCLUDE_CORPORATE_INVOICES, statusFilter, searchFilter);
 
     const [paymentRows, countRows] = await Promise.all([
       this.db
         .select({
           paymentId: schema.payments.paymentId,
           invoiceNo: schema.payments.invoiceNo,
-          courseId: schema.payments.courseId,
-          sectionId: schema.payments.sectionId,
+          batchId: schema.payments.batchId,
           itemType: schema.payments.itemType,
           amount: schema.payments.amount,
           originalAmount: schema.payments.originalAmount,
           discountAmount: schema.payments.discountAmount,
           taxAmount: schema.payments.taxAmount,
-          couponId: schema.payments.couponId,
           currency: schema.payments.currency,
           gateway: schema.payments.gateway,
           status: schema.payments.status,
           refundStatus: schema.payments.refundStatus,
+          refundedAmount: schema.payments.refundedAmount,
           refundReason: schema.payments.refundReason,
           transactionId: schema.payments.transactionId,
           payerName: schema.payments.payerName,
@@ -631,15 +534,8 @@ export class OrdersService {
 
     const totalCount = countRows[0]?.total ?? 0;
 
-    const [itemMap, couponCodeMap, adminNameMap] = await Promise.all([
+    const [itemMap, adminNameMap] = await Promise.all([
       this.resolveItemMap(paymentRows),
-      this.resolveCouponCodes(
-        [
-          ...new Set(
-            paymentRows.map((p) => p.couponId).filter((id): id is string => id !== null),
-          ),
-        ],
-      ),
       this.resolveUserNames(this.collectAdminIds(paymentRows)),
     ]);
 
@@ -650,7 +546,6 @@ export class OrdersService {
         itemMap.get(p.paymentId),
         p.userEmail,
         userName,
-        p.couponId ? (couponCodeMap.get(p.couponId) ?? null) : null,
         adminNameMap,
       );
     });
@@ -666,18 +561,17 @@ export class OrdersService {
       .select({
         paymentId: schema.payments.paymentId,
         invoiceNo: schema.payments.invoiceNo,
-        courseId: schema.payments.courseId,
-        sectionId: schema.payments.sectionId,
+        batchId: schema.payments.batchId,
         itemType: schema.payments.itemType,
         amount: schema.payments.amount,
         originalAmount: schema.payments.originalAmount,
         discountAmount: schema.payments.discountAmount,
         taxAmount: schema.payments.taxAmount,
-        couponId: schema.payments.couponId,
         currency: schema.payments.currency,
         gateway: schema.payments.gateway,
         status: schema.payments.status,
         refundStatus: schema.payments.refundStatus,
+        refundedAmount: schema.payments.refundedAmount,
         refundReason: schema.payments.refundReason,
         transactionId: schema.payments.transactionId,
         payerName: schema.payments.payerName,
@@ -697,11 +591,8 @@ export class OrdersService {
 
     if (!row) throw new NotFoundException('Order not found.');
 
-    const [itemMap, couponCodeMap, adminNameMap] = await Promise.all([
+    const [itemMap, adminNameMap] = await Promise.all([
       this.resolveItemMap([row]),
-      row.couponId
-        ? this.resolveCouponCodes([row.couponId])
-        : Promise.resolve(new Map<string, string>()),
       this.resolveUserNames(this.collectAdminIds([row])),
     ]);
 
@@ -711,7 +602,6 @@ export class OrdersService {
       itemMap.get(row.paymentId),
       row.userEmail,
       userName,
-      row.couponId ? (couponCodeMap.get(row.couponId) ?? null) : null,
       adminNameMap,
     );
   }
@@ -734,21 +624,9 @@ export class OrdersService {
       );
     }
 
-    const now = new Date();
+    const now = this.clock.now();
 
-    if (dto.status === 'APPROVED') {
-      await this.revokeAccess(payment);
-      await this.db
-        .update(schema.payments)
-        .set({
-          refundStatus: 'APPROVED',
-          refundResolvedAt: now,
-          refundResolvedBy: adminId,
-          status: 'REFUNDED',
-          updatedAt: now,
-        })
-        .where(eq(schema.payments.paymentId, orderId));
-    } else {
+    if (dto.status === 'DECLINED') {
       await this.db
         .update(schema.payments)
         .set({
@@ -758,51 +636,102 @@ export class OrdersService {
           updatedAt: now,
         })
         .where(eq(schema.payments.paymentId, orderId));
+
+      await this.auditLog.record({
+        action: 'order.refund.decline',
+        targetType: 'payment',
+        targetId: orderId,
+        before: { refundStatus: payment.refundStatus },
+        after: { refundStatus: 'DECLINED', note: dto.note ?? null },
+      });
+
+      return this.adminGetOrder(orderId);
     }
+
+    const alreadyRefunded = parseFloat(payment.refundedAmount ?? '0');
+    const remaining = parseFloat(payment.amount) - alreadyRefunded;
+    const amount = dto.amount ?? remaining;
+
+    if (amount <= 0) {
+      throw new BadRequestException('A refund must be for a positive amount.');
+    }
+    if (amount > remaining + REFUND_EPSILON) {
+      throw new ConflictException(
+        `Only ${remaining.toFixed(2)} is left to refund on this order.`,
+      );
+    }
+
+    const isFull = amount >= remaining - REFUND_EPSILON;
+    const revoke = dto.revokeAccess ?? isFull;
+    const refundedTotal = alreadyRefunded + amount;
+
+    const revokedBatchIds = await this.db.transaction(async (tx) => {
+      await tx
+        .update(schema.payments)
+        .set({
+          refundStatus: 'APPROVED',
+          refundResolvedAt: now,
+          refundResolvedBy: adminId,
+          refundedAmount: refundedTotal.toFixed(2),
+          status: isFull ? 'REFUNDED' : payment.status,
+          updatedAt: now,
+        })
+        .where(eq(schema.payments.paymentId, orderId));
+
+      const revoked = revoke ? await this.revokeAccess(tx, payment) : [];
+
+      await this.invoices.creditForPayment(
+        tx,
+        orderId,
+        {
+          reason: dto.note ?? payment.refundReason ?? 'Refund',
+          amount,
+        },
+        adminId,
+      );
+
+      return revoked;
+    });
+
+    await this.auditLog.record({
+      action: 'order.refund.approve',
+      targetType: 'payment',
+      targetId: orderId,
+      before: {
+        refundStatus: payment.refundStatus,
+        refundedAmount: alreadyRefunded,
+        status: payment.status,
+      },
+      after: {
+        refundStatus: 'APPROVED',
+        amount,
+        refundedAmount: refundedTotal,
+        isFullRefund: isFull,
+        accessRevoked: revoke,
+        revokedBatchIds,
+        status: isFull ? 'REFUNDED' : payment.status,
+      },
+    });
 
     return this.adminGetOrder(orderId);
   }
 
-  private async revokeAccess(payment: typeof schema.payments.$inferSelect): Promise<void> {
-    const { userId, itemType, courseId, sectionId, metadata } = payment;
-
-    if (itemType === 'COURSE' && courseId) {
-      await this.db
-        .update(schema.enrollments)
-        .set({ status: 'REVOKED' })
-        .where(
-          and(
-            eq(schema.enrollments.userId, userId),
-            eq(schema.enrollments.courseId, courseId),
-            inArray(schema.enrollments.status, ['ACTIVE', 'COMPLETED']),
-          ),
-        );
-      return;
-    }
-
-    if (itemType === 'SECTION' && sectionId) {
-      await this.db
-        .delete(schema.sectionAccess)
-        .where(
-          and(
-            eq(schema.sectionAccess.userId, userId),
-            eq(schema.sectionAccess.sectionId, sectionId),
-          ),
-        );
-      return;
-    }
-
-    if (itemType === 'BATCH' && isBatchMeta(metadata)) {
-      await this.db
-        .update(schema.batchEnrollments)
-        .set({ status: 'REVOKED' })
-        .where(
-          and(
-            eq(schema.batchEnrollments.userId, userId),
-            eq(schema.batchEnrollments.paymentId, payment.paymentId),
-            eq(schema.batchEnrollments.status, 'ACTIVE'),
-          ),
-        );
-    }
+  private async revokeAccess(
+    tx: Transaction,
+    payment: typeof schema.payments.$inferSelect,
+  ): Promise<string[]> {
+    if (payment.itemType !== 'BATCH' || payment.batchId === null) return [];
+    const revoked = await tx
+      .update(schema.batchEnrollments)
+      .set({ status: 'REVOKED', updatedAt: this.clock.now() })
+      .where(
+        and(
+          eq(schema.batchEnrollments.userId, payment.userId),
+          eq(schema.batchEnrollments.paymentId, payment.paymentId),
+          eq(schema.batchEnrollments.status, 'ACTIVE'),
+        ),
+      )
+      .returning({ batchId: schema.batchEnrollments.batchId });
+    return revoked.map((r) => r.batchId);
   }
 }

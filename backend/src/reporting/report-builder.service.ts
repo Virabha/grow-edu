@@ -20,7 +20,7 @@ import {
   measureExpression,
 } from "./report-palette";
 
-const MAX_ROWS = 1000;
+export const REPORT_MAX_ROWS = "REPORT_MAX_ROWS";
 
 export interface ReportDefinition {
   dimensions: string[];
@@ -39,6 +39,7 @@ export class ReportBuilderService {
   constructor(
     @Inject(DATABASE_CONNECTION)
     private readonly db: PostgresJsDatabase<typeof schema>,
+    @Inject(REPORT_MAX_ROWS) private readonly maxRows: number,
   ) {}
 
   palette() {
@@ -124,7 +125,7 @@ export class ReportBuilderService {
       base = base.groupBy(...groupByExprs);
     }
 
-    base = base.limit(MAX_ROWS);
+    base = base.limit(this.maxRows);
 
     return base;
   }

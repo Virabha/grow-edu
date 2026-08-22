@@ -11,7 +11,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 
 import { Roles, UserRole } from "../auth/decorators/roles.decorator";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
-import { SaveReportDto, ShareReportDto } from "./dto/reporting.dto";
+import { SaveReportDto, ScheduleReportDto, ShareReportDto } from "./dto/reporting.dto";
 import { SavedReportsService } from "./saved-reports.service";
 
 interface AuthedUser {
@@ -53,6 +53,31 @@ export class SavedReportsController {
   @Post(":reportId/run")
   run(@Param("reportId") reportId: string, @CurrentUser() user: AuthedUser) {
     return this.saved.run(reportId, { userId: user.userId, role: user.role });
+  }
+
+  @Roles(UserRole.PLATFORM_ADMIN, UserRole.CORPORATE_ADMIN)
+  @ApiOperation({ summary: "Export a saved report (same rows as interactive run)" })
+  @Get(":reportId/export")
+  export(@Param("reportId") reportId: string, @CurrentUser() user: AuthedUser) {
+    return this.saved.export(reportId, { userId: user.userId, role: user.role });
+  }
+
+  @Roles(UserRole.PLATFORM_ADMIN, UserRole.CORPORATE_ADMIN)
+  @ApiOperation({ summary: "Schedule a saved report to run on a cadence" })
+  @Post(":reportId/schedule")
+  scheduleReport(
+    @Param("reportId") reportId: string,
+    @Body() dto: ScheduleReportDto,
+    @CurrentUser() user: AuthedUser,
+  ) {
+    return this.saved.schedule(reportId, { userId: user.userId, role: user.role }, dto.cadence);
+  }
+
+  @Roles(UserRole.PLATFORM_ADMIN, UserRole.CORPORATE_ADMIN)
+  @ApiOperation({ summary: "Get the schedule for a saved report" })
+  @Get(":reportId/schedule")
+  getSchedule(@Param("reportId") reportId: string, @CurrentUser() user: AuthedUser) {
+    return this.saved.getSchedule(reportId, { userId: user.userId, role: user.role });
   }
 
   @Roles(UserRole.PLATFORM_ADMIN, UserRole.CORPORATE_ADMIN)

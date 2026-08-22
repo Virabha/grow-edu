@@ -17,7 +17,7 @@ import {
 import { DOUBT_DRAIN_JOB } from '../src/batches/engagement/doubt-answer.service';
 import { InlineJobQueue } from '../src/jobs/inline-job-queue';
 import { JOB_QUEUE } from '../src/jobs/job-queue';
-import { aiDoubtAnswers, aiDoubtDrafts, batchDoubts } from '../src/database/schema';
+import { aiDoubtAnswers, aiDoubtDrafts, batchDoubts, notifications } from '../src/database/schema';
 import { eq } from 'drizzle-orm';
 
 describe('ai-escalation: escalation, drafts and unhelpful report', () => {
@@ -178,6 +178,51 @@ describe('ai-escalation: escalation, drafts and unhelpful report', () => {
         .post(`/batches/${batchId}/doubts/${doubtId}/escalate`)
         .set(...authHeader(app, student))
         .expect(400);
+    });
+
+    it('student is told a human has been reached after escalation', async () => {
+      const doubtId = await createAnsweredDoubt();
+
+      await request(app.getHttpServer())
+        .post(`/batches/${batchId}/doubts/${doubtId}/escalate`)
+        .set(...authHeader(app, student))
+        .expect(201);
+
+      const studentNotifs = await database.db
+        .select()
+        .from(notifications)
+        .where(eq(notifications.userId, student.userId));
+
+      const humanNotif = studentNotifs.find(
+        (n) => n.type === 'BATCH_DOUBT_REPLY' && n.title.includes('instructor'),
+      );
+      expect(humanNotif).toBeDefined();
+    });
+
+    it('an escalated doubt cannot be answered automatically a second time', async () => {
+      const doubtId = await createAnsweredDoubt();
+
+      provider.calls = [];
+
+      await request(app.getHttpServer())
+        .post(`/batches/${batchId}/doubts/${doubtId}/escalate`)
+        .set(...authHeader(app, student))
+        .expect(201);
+
+      await queue.enqueue(DOUBT_DRAIN_JOB, undefined);
+
+      const allAnswers = await database.db
+        .select()
+        .from(aiDoubtAnswers)
+        .where(eq(aiDoubtAnswers.doubtId, doubtId));
+
+      expect(allAnswers).toHaveLength(1);
+      expect(allAnswers[0].status).toBe('ESCALATED');
+
+      const answerFeatureCalls = provider.calls.filter(
+        (c) => c.feature === 'doubt.answer',
+      );
+      expect(answerFeatureCalls).toHaveLength(0);
     });
   });
 
@@ -388,6 +433,100 @@ describe('ai-escalation: escalation, drafts and unhelpful report', () => {
         .expect(200);
 
       expect(response.body).toEqual([]);
+    });
+
+    it('report includes topicId grouping field', async () => {
+      const doubtId = await createAnsweredDoubt();
+
+      await request(app.getHttpServer())
+        .post(`/batches/${batchId}/doubts/${doubtId}/escalate`)
+        .set(...authHeader(app, student))
+        .expect(201);
+
+      const response = await request(app.getHttpServer())
+        .get('/ai/doubts/unhelpful')
+        .set(...authHeader(app, admin))
+        .expect(200);
+
+      expect(response.body[0]).toHaveProperty('topicId');
+      expect(response.body[0]).toHaveProperty('subjectId');
+      expect(response.body[0]).toHaveProperty('batchId');
+    });
+
+    it('report distinguishes unhelpful answers from failed ones with category field', async () => {
+      const doubtId = await createAnsweredDoubt();
+
+      await request(app.getHttpServer())
+        .post(`/batches/${batchId}/doubts/${doubtId}/escalate`)
+        .set(...authHeader(app, student))
+        .expect(201);
+
+      provider.failNext = true;
+      await request(app.getHttpServer())
+        .post(`/batches/${batchId}/doubts`)
+        .set(...authHeader(app, student))
+        .send({ title: 'Failed doubt', body: 'Provider will fail for this one' })
+        .expect(201);
+      await queue.enqueue(DOUBT_DRAIN_JOB, undefined);
+
+      const response = await request(app.getHttpServer())
+        .get('/ai/doubts/unhelpful')
+        .set(...authHeader(app, admin))
+        .expect(200);
+
+      const unhelpfulItem = response.body.find(
+        (item: { doubtId: string }) => item.doubtId === doubtId,
+      );
+      const failedItem = response.body.find(
+        (item: { category: string }) => item.category === 'FAILED',
+      );
+
+      expect(unhelpfulItem.category).toBe('UNHELPFUL');
+      expect(failedItem).toBeDefined();
+    });
+
+    it('instructor can read the unhelpful report for their own batches', async () => {
+      const doubtId = await createAnsweredDoubt();
+
+      await request(app.getHttpServer())
+        .post(`/batches/${batchId}/doubts/${doubtId}/escalate`)
+        .set(...authHeader(app, student))
+        .expect(201);
+
+      const response = await request(app.getHttpServer())
+        .get('/ai/doubts/unhelpful/mine')
+        .set(...authHeader(app, instructor))
+        .expect(200);
+
+      expect(response.body).toBeInstanceOf(Array);
+      expect(response.body.length).toBe(1);
+      expect(response.body[0].doubtId).toBe(doubtId);
+      expect(response.body[0].batchId).toBe(batchId);
+    });
+
+    it('instructor cannot see unhelpful doubts from another instructor batches', async () => {
+      const doubtId = await createAnsweredDoubt();
+
+      await request(app.getHttpServer())
+        .post(`/batches/${batchId}/doubts/${doubtId}/escalate`)
+        .set(...authHeader(app, student))
+        .expect(201);
+
+      const otherInstructor = await createUser(database, 'INSTRUCTOR');
+
+      const response = await request(app.getHttpServer())
+        .get('/ai/doubts/unhelpful/mine')
+        .set(...authHeader(app, otherInstructor))
+        .expect(200);
+
+      expect(response.body).toEqual([]);
+    });
+
+    it('student cannot access the instructor unhelpful report', async () => {
+      await request(app.getHttpServer())
+        .get('/ai/doubts/unhelpful/mine')
+        .set(...authHeader(app, student))
+        .expect(403);
     });
   });
 });

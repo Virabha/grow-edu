@@ -249,6 +249,25 @@ describe('ai code review', () => {
     expect(res.body.approach).toContain('[redacted]');
   });
 
+  it('review runs only after a judged verdict exists — skips a run that has not been judged', async () => {
+    const queued = await request(app.getHttpServer())
+      .post(`/coding/problems/${problemId}/submit`)
+      .set(...authHeader(app, student))
+      .send({ language: 'python', sourceCode: 'def solve(): pass' })
+      .expect(201);
+
+    const callsBefore = modelProvider.calls.length;
+    await queue.enqueue(AI_CODE_REVIEW_DRAIN, undefined);
+    expect(modelProvider.calls.length).toBe(callsBefore);
+
+    const res = await request(app.getHttpServer())
+      .get(`/coding/runs/${queued.body.runId as string}/ai-review`)
+      .set(...authHeader(app, student))
+      .expect(200);
+
+    expect(res.body.status).toBe('PENDING');
+  });
+
   it('does not run review twice for the same run', async () => {
     modelProvider.structuredFor = () => ({
       approach: 'Good.',

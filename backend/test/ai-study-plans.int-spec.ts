@@ -6,6 +6,7 @@ import { MODEL_PROVIDER } from '../src/ai/model-provider';
 import { STUDY_PLAN_REGEN_JOB } from '../src/ai/study-plan.service';
 import {
   aiStudyPlans,
+  assessmentTests,
   assessmentWeakTopics,
   reviewItems,
   studentProfiles,
@@ -284,6 +285,31 @@ describe('ai study plans (ticket 22)', () => {
 
     expect(provider.calls).toHaveLength(1);
     expect(provider.calls[0].feature).toBe('study-plan');
+  });
+
+  it('upcoming test date shifts plan — upcomingTestCount reflected in plan inputs', async () => {
+    const batchId = await createBatch(database, admin.userId);
+    await enrol(database, batchId, student.userId);
+
+    const now = clock.now();
+    await database.db.insert(assessmentTests).values({
+      batchId,
+      title: 'Upcoming Mock Test',
+      opensAt: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000),
+      isDeleted: false,
+      createdBy: admin.userId,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await queue.enqueue(STUDY_PLAN_REGEN_JOB, undefined);
+
+    const [plan] = await database.db
+      .select()
+      .from(aiStudyPlans)
+      .where(eq(aiStudyPlans.userId, student.userId));
+
+    expect(plan.inputs.upcomingTestCount).toBeGreaterThan(0);
   });
 
   it('student cannot access another student plan', async () => {

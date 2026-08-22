@@ -17,7 +17,7 @@ import {
 import { DOUBT_DRAIN_JOB } from '../src/batches/engagement/doubt-answer.service';
 import { InlineJobQueue } from '../src/jobs/inline-job-queue';
 import { JOB_QUEUE } from '../src/jobs/job-queue';
-import { aiDoubtAnswers, lessonTranscripts, lessonTranscriptSegments } from '../src/database/schema';
+import { aiDoubtAnswers, lessonTranscripts, lessonTranscriptSegments, batches, batchSubjects, lessons, subjectLessons } from '../src/database/schema';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 
@@ -211,5 +211,75 @@ describe('ai-grounding: retrieval scoping', () => {
 
     expect(aiAnswer[0].status).toBe('FAILED');
     expect(provider.calls.length).toBe(0);
+  });
+
+  it('content belonging to another organisation is never retrieved — adversarial org isolation', async () => {
+    const DECOY = 'adversarial-org-leakage-unique-signal-xyzqrst';
+    const evilOrgId = randomUUID();
+
+    const evilBatchId = randomUUID();
+    await database.db.insert(batches).values({
+      batchId: evilBatchId,
+      organizationId: evilOrgId,
+      title: 'Evil Org Batch',
+      slug: `evil-batch-${randomUUID().slice(0, 8)}`,
+      price: '0',
+      startDate: new Date('2026-09-01T00:00:00.000Z'),
+      endDate: new Date('2027-06-30T00:00:00.000Z'),
+      status: 'ONGOING' as never,
+      createdBy: admin.userId,
+    });
+
+    const evilSubjectId = randomUUID();
+    await database.db.insert(batchSubjects).values({
+      organizationId: evilOrgId,
+      subjectId: evilSubjectId,
+      batchId: evilBatchId,
+      name: 'Evil Subject',
+    });
+
+    const evilLessonId = randomUUID();
+    await database.db.insert(lessons).values({
+      organizationId: evilOrgId,
+      lessonId: evilLessonId,
+      subjectId: evilSubjectId,
+      title: 'Evil Lesson',
+      type: 'TEXT' as never,
+      status: 'READY' as never,
+      order: 1,
+      textContent: DECOY,
+    });
+
+    await database.db.insert(subjectLessons).values({
+      organizationId: evilOrgId,
+      subjectId: evilSubjectId,
+      lessonId: evilLessonId,
+      order: 1,
+    });
+
+    const legitLessonId = await createLesson(database, subjectA, {
+      title: 'Legitimate lesson',
+      textContent: 'Normal course material about the topic.',
+      status: 'READY',
+    });
+
+    provider.structuredFor = () => ({
+      answer: 'A sufficient answer from legitimate course content for this student question.',
+      citations: [{ lessonId: legitLessonId, title: 'Legitimate lesson' }],
+    });
+
+    await request(app.getHttpServer())
+      .post(`/batches/${batchA}/doubts`)
+      .set(...authHeader(app, student))
+      .send({ title: DECOY, body: 'Please explain this adversarial topic in detail.' })
+      .expect(201);
+
+    await queue.enqueue(DOUBT_DRAIN_JOB, undefined);
+
+    expect(provider.calls.length).toBeGreaterThan(0);
+    const call = provider.calls[0];
+    expect(call.cachedPrefix).not.toContain(DECOY);
+    expect(call.cachedPrefix).not.toContain(evilLessonId);
+    expect(call.cachedPrefix).not.toContain(evilOrgId);
   });
 });

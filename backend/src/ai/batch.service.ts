@@ -38,11 +38,13 @@ export interface ReconciledItem {
 }
 
 export type BatchReconciler = (item: ReconciledItem) => Promise<void>;
+export type BatchCompletionCallback = (requestedBy: string | null) => Promise<void>;
 
 @Injectable()
 export class AiBatchService implements OnModuleInit {
   private readonly logger = new Logger(AiBatchService.name);
   private readonly reconcilers = new Map<string, BatchReconciler>();
+  private readonly completionCallbacks = new Map<string, BatchCompletionCallback>();
 
   constructor(
     @Inject(DATABASE_CONNECTION)
@@ -65,6 +67,10 @@ export class AiBatchService implements OnModuleInit {
 
   registerReconciler(feature: string, reconciler: BatchReconciler): void {
     this.reconcilers.set(feature, reconciler);
+  }
+
+  registerCompletionCallback(feature: string, callback: BatchCompletionCallback): void {
+    this.completionCallbacks.set(feature, callback);
   }
 
   async submit(submission: BatchSubmission): Promise<string> {
@@ -133,7 +139,7 @@ export class AiBatchService implements OnModuleInit {
     for (const batch of open) {
       if (!batch.providerReference) continue;
       try {
-        await this.reconcileBatch(batch.batchId, batch.providerReference, batch.feature, batch.model, batch.organizationId);
+        await this.reconcileBatch(batch.batchId, batch.providerReference, batch.feature, batch.model, batch.organizationId, batch.requestedBy);
       } catch (error) {
         this.logger.error(
           `Could not reconcile batch ${batch.batchId}: ${String(error)}`,
@@ -148,6 +154,7 @@ export class AiBatchService implements OnModuleInit {
     feature: string,
     model: string,
     organizationId: string,
+    requestedBy: string | null,
   ): Promise<void> {
     const poll = await this.provider.pollBatch(providerReference);
     if (!poll.complete) return;
@@ -217,6 +224,17 @@ export class AiBatchService implements OnModuleInit {
         .update(aiBatches)
         .set({ status: "COMPLETE", completedAt: this.clock.now() })
         .where(eq(aiBatches.batchId, batchId));
+
+      const completionCb = this.completionCallbacks.get(feature);
+      if (completionCb) {
+        try {
+          await completionCb(requestedBy);
+        } catch (error) {
+          this.logger.error(
+            `Completion callback for ${feature} failed: ${String(error)}`,
+          );
+        }
+      }
     }
   }
 }

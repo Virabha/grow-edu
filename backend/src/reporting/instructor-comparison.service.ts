@@ -36,26 +36,31 @@ export class InstructorComparisonService {
     requestingUserId: string;
     requestingRole: string;
   }): Promise<InstructorStat[]> {
-    const batchConditions = [];
+    const batchDateConditions = [];
     if (options.fromDate) {
-      batchConditions.push(gte(batches.startDate, new Date(options.fromDate)));
+      batchDateConditions.push(gte(batches.startDate, new Date(options.fromDate)));
     }
     if (options.toDate) {
-      batchConditions.push(lte(batches.endDate, new Date(options.toDate)));
+      batchDateConditions.push(lte(batches.endDate, new Date(options.toDate)));
     }
+
+    const batchJoinCondition =
+      batchDateConditions.length > 0
+        ? and(eq(batchInstructors.batchId, batches.batchId), ...batchDateConditions)
+        : eq(batchInstructors.batchId, batches.batchId);
 
     const instructorRows = await this.db
       .select({
-        instructorId: batchInstructors.instructorId,
+        instructorId: users.userId,
         firstName: users.firstName,
         lastName: users.lastName,
-        batchCount: sql<number>`count(distinct ${batchInstructors.batchId})::int`,
+        batchCount: sql<number>`count(distinct ${batches.batchId})::int`,
       })
-      .from(batchInstructors)
-      .innerJoin(users, eq(batchInstructors.instructorId, users.userId))
-      .innerJoin(batches, eq(batchInstructors.batchId, batches.batchId))
-      .where(batchConditions.length > 0 ? and(...batchConditions) : undefined)
-      .groupBy(batchInstructors.instructorId, users.firstName, users.lastName);
+      .from(users)
+      .leftJoin(batchInstructors, eq(batchInstructors.instructorId, users.userId))
+      .leftJoin(batches, batchJoinCondition)
+      .where(eq(users.role, "INSTRUCTOR" as never))
+      .groupBy(users.userId, users.firstName, users.lastName);
 
     if (instructorRows.length === 0) return [];
 
@@ -88,7 +93,7 @@ export class InstructorComparisonService {
             instructorIds.map((id) => sql`${id}`),
             sql`, `,
           )}])`,
-          ...(batchConditions.length > 0 ? batchConditions : []),
+          ...(batchDateConditions.length > 0 ? batchDateConditions : []),
         ),
       )
       .groupBy(batchInstructors.instructorId);
@@ -111,7 +116,7 @@ export class InstructorComparisonService {
             instructorIds.map((id) => sql`${id}`),
             sql`, `,
           )}])`,
-          ...(batchConditions.length > 0 ? batchConditions : []),
+          ...(batchDateConditions.length > 0 ? batchDateConditions : []),
         ),
       )
       .groupBy(batchInstructors.instructorId);
@@ -138,7 +143,7 @@ export class InstructorComparisonService {
             instructorIds.map((id) => sql`${id}`),
             sql`, `,
           )}])`,
-          ...(batchConditions.length > 0 ? batchConditions : []),
+          ...(batchDateConditions.length > 0 ? batchDateConditions : []),
         ),
       )
       .groupBy(batchInstructors.instructorId);

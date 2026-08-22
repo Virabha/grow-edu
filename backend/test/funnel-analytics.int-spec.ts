@@ -1,12 +1,14 @@
 import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
+import { eq } from 'drizzle-orm';
 
 import { InlineJobQueue } from '../src/jobs/inline-job-queue';
 import { JOB_QUEUE } from '../src/jobs/job-queue';
 import { createTestApp, authHeader, TestActor } from './support/test-app';
 import { createTestDatabase, truncateAll, TestDatabase } from './support/test-database';
 import { TestClock } from './support/test-clock';
-import { createUser } from './support/factories';
+import { createUser, createCompany, createCorporateAdmin } from './support/factories';
+import { funnelEvents, users } from '../src/database/schema';
 
 describe('funnel-analytics', () => {
   let database: TestDatabase;
@@ -165,6 +167,43 @@ describe('funnel-analytics', () => {
         .get('/reports/funnel')
         .set(...authHeader(app, learner))
         .expect(403);
+    });
+
+    it('corporate admin sees only events attributed to their company students', async () => {
+      const companyId = await createCompany(database);
+      const corpAdmin = await createCorporateAdmin(database, companyId);
+      const companyStudent = await createUser(database, 'LEARNER');
+      await database.db
+        .update(users)
+        .set({ companyId })
+        .where(eq(users.userId, companyStudent.userId));
+
+      await database.db.insert(funnelEvents).values({
+        kind: 'PAGE_VIEW' as never,
+        source: 'google',
+        userId: companyStudent.userId,
+        capturedAt: clock.now(),
+      });
+      await database.db.insert(funnelEvents).values({
+        kind: 'PAGE_VIEW' as never,
+        source: 'google',
+        userId: null,
+        capturedAt: clock.now(),
+      });
+
+      const adminRes = await request(app.getHttpServer())
+        .get('/reports/funnel')
+        .set(...authHeader(app, admin))
+        .expect(200);
+      const adminPageView = adminRes.body.stages.find((s: { kind: string }) => s.kind === 'PAGE_VIEW');
+      expect(adminPageView.count).toBe(2);
+
+      const corpRes = await request(app.getHttpServer())
+        .get('/reports/funnel')
+        .set(...authHeader(app, corpAdmin))
+        .expect(200);
+      const corpPageView = corpRes.body.stages.find((s: { kind: string }) => s.kind === 'PAGE_VIEW');
+      expect(corpPageView.count).toBe(1);
     });
 
     it('event pruning job removes old events', async () => {

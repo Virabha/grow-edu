@@ -8,7 +8,7 @@ import { FunnelService } from "./funnel.service";
 import { InstructorComparisonController } from "./instructor-comparison.controller";
 import { InstructorComparisonService } from "./instructor-comparison.service";
 import { ReportBuilderController } from "./report-builder.controller";
-import { ReportBuilderService } from "./report-builder.service";
+import { ReportBuilderService, REPORT_MAX_ROWS } from "./report-builder.service";
 import { RetentionController } from "./retention.controller";
 import { RetentionService } from "./retention.service";
 import { SavedReportsController } from "./saved-reports.controller";
@@ -25,6 +25,7 @@ import { SavedReportsService } from "./saved-reports.service";
     InstructorComparisonController,
   ],
   providers: [
+    { provide: REPORT_MAX_ROWS, useValue: 1000 },
     EventCaptureService,
     ReportBuilderService,
     SavedReportsService,

@@ -1,13 +1,15 @@
-import { Inject, Injectable } from "@nestjs/common";
-import { and, eq, gte, lte, sql } from "drizzle-orm";
+import { ForbiddenException, Inject, Injectable } from "@nestjs/common";
+import { and, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 import { DATABASE_CONNECTION } from "../database/database.module";
 import * as schema from "../database/schema";
-import { funnelEvents } from "../database/schema";
+import { funnelEvents, users } from "../database/schema";
 import { ViewerContext } from "./report-builder.service";
 
-type FunnelStage = "PAGE_VIEW" | "CATALOGUE_VIEW" | "CHECKOUT_START" | "CHECKOUT_COMPLETE";
+type FunnelStage =
+  "PAGE_VIEW" | "CATALOGUE_VIEW" | "CHECKOUT_START" | "CHECKOUT_COMPLETE";
+
 const FUNNEL_STAGES: FunnelStage[] = [
   "PAGE_VIEW",
   "CATALOGUE_VIEW",
@@ -38,15 +40,42 @@ export class FunnelService {
   ): Promise<FunnelResult> {
     const conditions = [];
 
-    if (options.source) {
+    if (viewer.role === "CORPORATE_ADMIN") {
+      const [adminRow] = await this.db
+        .select({ companyId: users.companyId })
+        .from(users)
+        .where(eq(users.userId, viewer.userId))
+        .limit(1);
+
+      if (!adminRow?.companyId)
+        throw new ForbiddenException("Corporate admin has no company");
+
+      const companyUsers = await this.db
+        .select({ userId: users.userId })
+        .from(users)
+        .where(eq(users.companyId, adminRow.companyId));
+
+      const companyUserIds = companyUsers.map((u) => u.userId);
+
+      if (companyUserIds.length === 0)
+        return {
+          stages: FUNNEL_STAGES.map((kind) => ({ kind, count: null })),
+          source: options.source ?? null,
+          fromDate: options.fromDate ?? null,
+          toDate: options.toDate ?? null,
+        };
+
+      conditions.push(inArray(funnelEvents.userId, companyUserIds));
+    }
+
+    if (options.source)
       conditions.push(eq(funnelEvents.source, options.source));
-    }
-    if (options.fromDate) {
+
+    if (options.fromDate)
       conditions.push(gte(funnelEvents.capturedAt, new Date(options.fromDate)));
-    }
-    if (options.toDate) {
+
+    if (options.toDate)
       conditions.push(lte(funnelEvents.capturedAt, new Date(options.toDate)));
-    }
 
     const rows = await this.db
       .select({
@@ -58,9 +87,8 @@ export class FunnelService {
       .groupBy(funnelEvents.kind);
 
     const countByKind = new Map<string, number>();
-    for (const row of rows) {
-      countByKind.set(row.kind, row.count);
-    }
+
+    for (const row of rows) countByKind.set(row.kind, row.count);
 
     const capturedKinds = new Set(rows.map((r) => r.kind));
 

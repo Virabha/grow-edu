@@ -251,4 +251,37 @@ describe('ai hints', () => {
     const payload = JSON.stringify(modelRequests);
     expect(payload).not.toContain(hiddenSentinel);
   });
+
+  it('three hint levels produce three different prompts to the model', async () => {
+    const runId = await submitAndJudge(student);
+
+    for (let i = 0; i < 3; i += 1) {
+      await request(app.getHttpServer())
+        .post(`/coding/runs/${runId}/hints`)
+        .set(...authHeader(app, student))
+        .expect(201);
+    }
+
+    expect(modelProvider.calls.length).toBe(3);
+    const prefixes = modelProvider.calls.map((c) => c.cachedPrefix);
+    expect(prefixes[0]).not.toBe(prefixes[1]);
+    expect(prefixes[1]).not.toBe(prefixes[2]);
+    expect(prefixes[0]).not.toBe(prefixes[2]);
+  });
+
+  it('hint text containing a code block is redacted by the solution guard before storage', async () => {
+    const runId = await submitAndJudge(student);
+
+    modelProvider.textFor = () =>
+      'Here is the complete working solution:\n```python\ndef solve(a, b):\n    return a + b\n```\nHope that helps!';
+
+    const res = await request(app.getHttpServer())
+      .post(`/coding/runs/${runId}/hints`)
+      .set(...authHeader(app, student))
+      .expect(201);
+
+    expect(res.body.hintText).not.toContain('def solve');
+    expect(res.body.hintText).not.toContain('```');
+    expect(res.body.hintText).toContain('[code removed by solution guard]');
+  });
 });

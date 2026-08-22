@@ -2958,6 +2958,7 @@ CREATE TABLE IF NOT EXISTS "retention_cohort_rows" (
 	"row_id" text PRIMARY KEY NOT NULL,
 	"cohort_month" text NOT NULL,
 	"source" text,
+	"company_id" text,
 	"period_offset" integer NOT NULL,
 	"active_count" integer NOT NULL,
 	"computed_at" timestamp NOT NULL

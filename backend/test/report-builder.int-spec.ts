@@ -2,6 +2,9 @@ import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
 import { eq } from 'drizzle-orm';
 
+import { InlineJobQueue } from '../src/jobs/inline-job-queue';
+import { JOB_QUEUE } from '../src/jobs/job-queue';
+import { REPORT_MAX_ROWS } from '../src/reporting/report-builder.service';
 import { createTestApp, authHeader, TestActor } from './support/test-app';
 import { createTestDatabase, truncateAll, TestDatabase } from './support/test-database';
 import { TestClock } from './support/test-clock';
@@ -17,6 +20,7 @@ import { users } from '../src/database/schema';
 describe('report-builder', () => {
   let database: TestDatabase;
   let app: INestApplication;
+  let queue: InlineJobQueue;
   const clock = new TestClock();
 
   let admin: TestActor;
@@ -29,6 +33,7 @@ describe('report-builder', () => {
   beforeAll(async () => {
     database = await createTestDatabase();
     app = await createTestApp(database, clock);
+    queue = app.get<InlineJobQueue>(JOB_QUEUE);
   });
 
   afterAll(async () => {
@@ -256,6 +261,105 @@ describe('report-builder', () => {
         .post(`/reports/saved/${saveRes.body.reportId}/run`)
         .set(...authHeader(app, corpAdmin))
         .expect(403);
+    });
+  });
+
+  describe('MAX_ROWS bound', () => {
+    it('caps result at the configured max rows', async () => {
+      const boundedApp = await createTestApp(database, clock, [
+        { token: REPORT_MAX_ROWS, value: 3 },
+      ]);
+
+      try {
+        const batchId = await createBatch(database, admin.userId);
+        const months = [
+          '2026-01-15T00:00:00Z',
+          '2026-02-15T00:00:00Z',
+          '2026-03-15T00:00:00Z',
+          '2026-04-15T00:00:00Z',
+        ];
+        for (const month of months) {
+          const student = await createUser(database, 'LEARNER');
+          await enrol(database, batchId, student.userId, {
+            source: 'SELF_PURCHASE',
+            createdAt: new Date(month),
+          });
+        }
+
+        const res = await request(boundedApp.getHttpServer())
+          .post('/reports/run')
+          .set(...authHeader(boundedApp, admin))
+          .send({ dimensions: ['enrollment.month'], measures: ['enrollment.count'] })
+          .expect(201);
+
+        expect(res.body.length).toBeLessThanOrEqual(3);
+      } finally {
+        await boundedApp.close();
+      }
+    });
+  });
+
+  describe('scheduling', () => {
+    const SCHEDULE_JOB = 'saved-reports.schedule';
+
+    it('schedule() stores a schedule and the job runs it without failures', async () => {
+      const saveRes = await request(app.getHttpServer())
+        .post('/reports/saved')
+        .set(...authHeader(app, admin))
+        .send({ title: 'Scheduled', dimensions: [], measures: ['enrollment.count'] })
+        .expect(201);
+
+      const reportId = saveRes.body.reportId;
+
+      const schedRes = await request(app.getHttpServer())
+        .post(`/reports/saved/${reportId}/schedule`)
+        .set(...authHeader(app, admin))
+        .send({ cadence: 'DAILY' })
+        .expect(201);
+
+      expect(schedRes.body.scheduleId).toBeDefined();
+      expect(schedRes.body.cadence).toBe('DAILY');
+
+      const failuresBefore = queue.failureCount(SCHEDULE_JOB);
+      clock.advance(25 * 60 * 60 * 1000);
+      await queue.tick();
+
+      expect(queue.failureCount(SCHEDULE_JOB)).toBe(failuresBefore);
+
+      const schedState = await request(app.getHttpServer())
+        .get(`/reports/saved/${reportId}/schedule`)
+        .set(...authHeader(app, admin))
+        .expect(200);
+
+      expect(schedState.body.lastRunAt).toBeDefined();
+    });
+  });
+
+  describe('export', () => {
+    it('export produces the same rows as interactive run for the same viewer', async () => {
+      const batchId = await createBatch(database, admin.userId);
+      const student = await createUser(database, 'LEARNER');
+      await enrol(database, batchId, student.userId, { source: 'SELF_PURCHASE' });
+
+      const saveRes = await request(app.getHttpServer())
+        .post('/reports/saved')
+        .set(...authHeader(app, admin))
+        .send({ title: 'Export Test', dimensions: ['enrollment.source'], measures: ['enrollment.count'] })
+        .expect(201);
+
+      const reportId = saveRes.body.reportId;
+
+      const runRes = await request(app.getHttpServer())
+        .post(`/reports/saved/${reportId}/run`)
+        .set(...authHeader(app, admin))
+        .expect(201);
+
+      const exportRes = await request(app.getHttpServer())
+        .get(`/reports/saved/${reportId}/export`)
+        .set(...authHeader(app, admin))
+        .expect(200);
+
+      expect(exportRes.body).toEqual(runRes.body);
     });
   });
 });

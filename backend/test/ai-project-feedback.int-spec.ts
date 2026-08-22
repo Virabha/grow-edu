@@ -273,6 +273,32 @@ describe('ai project feedback', () => {
     expect(modelProvider.calls.length).toBe(callsAfterFirst);
   });
 
+  it('committed review record carries the reviewer userId', async () => {
+    const { rubricId, criterionId } = await createRubricWithCriterion();
+    const { projectId, milestoneId } = await createProjectWithMilestone(rubricId);
+    const submissionId = await enrolAndSubmit(projectId, milestoneId);
+
+    modelProvider.structuredFor = () => ({
+      readabilitySummary: 'Code is well documented.',
+      structureSummary: 'Good structure.',
+      suggestedScores: [{ criterionId, suggestedValue: 7, rationale: 'Good.' }],
+    });
+
+    await queue.enqueue(AI_PROJECT_FEEDBACK_DRAIN, undefined);
+
+    const submitRes = await request(app.getHttpServer())
+      .post(`/project-review/submissions/${submissionId}/review`)
+      .set(...authHeader(app, admin))
+      .send({
+        outcome: 'PASSED',
+        summary: 'Well done.',
+        criteria: [{ criterionId, value: 8, comment: 'Strong effort.' }],
+      })
+      .expect(201);
+
+    expect(submitRes.body.reviewerId).toBe(admin.userId);
+  });
+
   it('automated feedback does not set a mark — AI never assigns a score', async () => {
     const { rubricId, criterionId } = await createRubricWithCriterion();
     const { projectId, milestoneId } = await createProjectWithMilestone(rubricId);

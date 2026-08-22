@@ -118,3 +118,10 @@ export class InstructorComparisonQueryDto {
   @IsDateString()
   toDate?: string;
 }
+
+const SCHEDULE_CADENCES = ["DAILY", "WEEKLY", "MONTHLY"] as const;
+
+export class ScheduleReportDto {
+  @IsIn(SCHEDULE_CADENCES)
+  cadence: string = "";
+}

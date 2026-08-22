@@ -1,12 +1,13 @@
-import { Inject, Injectable, Logger } from "@nestjs/common";
+import { ForbiddenException, Inject, Injectable, Logger } from "@nestjs/common";
 import { eq, sql } from "drizzle-orm";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 import { CLOCK, Clock } from "../common/clock";
 import { DATABASE_CONNECTION } from "../database/database.module";
 import * as schema from "../database/schema";
-import { batchEnrollments, retentionCohortRows } from "../database/schema";
+import { batchEnrollments, retentionCohortRows, users } from "../database/schema";
 import { JOB_QUEUE, JobQueue, registerAndRepeat } from "../jobs/job-queue";
+import { ViewerContext } from "./report-builder.service";
 
 const COHORT_JOB = "retention-cohorts.compute";
 const COHORT_INTERVAL_MS = 24 * 60 * 60 * 1000;
@@ -35,7 +36,24 @@ export class RetentionService {
     );
   }
 
-  async getRetention() {
+  async getRetention(viewer: ViewerContext) {
+    if (viewer.role === "CORPORATE_ADMIN") {
+      const [adminRow] = await this.db
+        .select({ companyId: users.companyId })
+        .from(users)
+        .where(eq(users.userId, viewer.userId))
+        .limit(1);
+
+      if (!adminRow?.companyId) {
+        throw new ForbiddenException("Corporate admin has no company");
+      }
+
+      return this.db
+        .select()
+        .from(retentionCohortRows)
+        .where(eq(retentionCohortRows.companyId, adminRow.companyId));
+    }
+
     return this.db.select().from(retentionCohortRows);
   }
 
@@ -46,26 +64,38 @@ export class RetentionService {
       .select({
         cohortMonth: sql<string>`to_char(date_trunc('month', ${batchEnrollments.createdAt}), 'YYYY-MM')`,
         source: batchEnrollments.source,
+        companyId: users.companyId,
         activeCount: sql<number>`count(distinct ${batchEnrollments.userId})::int`,
       })
       .from(batchEnrollments)
+      .leftJoin(users, eq(users.userId, batchEnrollments.userId))
       .where(eq(batchEnrollments.status, "ACTIVE"))
       .groupBy(
         sql`date_trunc('month', ${batchEnrollments.createdAt})`,
         batchEnrollments.source,
+        users.companyId,
       );
 
-    for (const cohort of cohorts) {
+    const newRows = cohorts.flatMap((cohort) => {
       const offset = monthDiff(cohort.cohortMonth, now);
-      if (offset < 0) continue;
+      if (offset < 0) return [];
+      return [
+        {
+          cohortMonth: cohort.cohortMonth,
+          source: cohort.source ?? null,
+          companyId: cohort.companyId ?? null,
+          periodOffset: offset,
+          activeCount: cohort.activeCount,
+          computedAt: now,
+        },
+      ];
+    });
 
-      await this.db.insert(retentionCohortRows).values({
-        cohortMonth: cohort.cohortMonth,
-        source: cohort.source ?? null,
-        periodOffset: offset,
-        activeCount: cohort.activeCount,
-        computedAt: now,
-      });
-    }
+    await this.db.transaction(async (tx) => {
+      await tx.delete(retentionCohortRows);
+      for (const row of newRows) {
+        await tx.insert(retentionCohortRows).values(row);
+      }
+    });
   }
 }

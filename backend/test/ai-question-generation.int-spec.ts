@@ -3,7 +3,7 @@ import * as request from 'supertest';
 
 import { MODEL_PROVIDER } from '../src/ai/model-provider';
 import { BATCH_RECONCILE_JOB } from '../src/ai/batch.service';
-import { assessmentQuestions } from '../src/database/schema';
+import { assessmentQuestions, notifications } from '../src/database/schema';
 import { eq } from 'drizzle-orm';
 import { JOB_QUEUE } from '../src/jobs/job-queue';
 import { InlineJobQueue } from '../src/jobs/inline-job-queue';
@@ -190,6 +190,31 @@ describe('ai question generation (tickets 14, 16)', () => {
         expect(q.subjectId).toBe(taxonomy.subjectId);
         expect(q.topicId).toBe(taxonomy.topicId);
       }
+    });
+
+    it('instructor is notified when bulk generation completes after BATCH_RECONCILE_JOB', async () => {
+      provider.structuredFor = () => singleQuestionOutput;
+
+      await request(app.getHttpServer())
+        .post('/assessment/questions/bulk-generate')
+        .set(...authHeader(app, instructor))
+        .send({
+          subjectId: taxonomy.subjectId,
+          topicId: taxonomy.topicId,
+          difficulty: 1,
+          count: 1,
+        })
+        .expect(201);
+
+      await queue.enqueue(BATCH_RECONCILE_JOB, undefined);
+
+      const rows = await database.db
+        .select()
+        .from(notifications)
+        .where(eq(notifications.userId, instructor.userId));
+
+      expect(rows.length).toBeGreaterThan(0);
+      expect(rows[0].type).toBe('GENERIC');
     });
 
     it('keeps successful questions when some batch items fail', async () => {

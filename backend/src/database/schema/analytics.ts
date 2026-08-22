@@ -79,6 +79,7 @@ export const retentionCohortRows = pgTable(
       .$defaultFn(() => crypto.randomUUID()),
     cohortMonth: text("cohort_month").notNull(),
     source: text("source"),
+    companyId: text("company_id"),
     periodOffset: integer("period_offset").notNull(),
     activeCount: integer("active_count").notNull(),
     computedAt: timestamp("computed_at").notNull(),

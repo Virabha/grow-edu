@@ -17,7 +17,7 @@ import {
 import { DOUBT_DRAIN_JOB } from '../src/batches/engagement/doubt-answer.service';
 import { InlineJobQueue } from '../src/jobs/inline-job-queue';
 import { JOB_QUEUE } from '../src/jobs/job-queue';
-import { aiDoubtAnswers } from '../src/database/schema';
+import { aiDoubtAnswers, notifications } from '../src/database/schema';
 import { eq } from 'drizzle-orm';
 
 describe('ai-doubts: answering, citation and labelling', () => {
@@ -163,6 +163,34 @@ describe('ai-doubts: answering, citation and labelling', () => {
       expect(call.volatileSuffix).toContain('A question');
       expect(call.cachedPrefix).not.toContain('A question');
     });
+
+    it('student is notified when the AI answer arrives', async () => {
+      provider.structuredFor = () => ({
+        answer: 'This is the AI answer for the question posed by the student',
+        citations: [{ lessonId, title: 'Lesson on the topic' }],
+      });
+
+      const response = await request(app.getHttpServer())
+        .post(`/batches/${batchId}/doubts`)
+        .set(...authHeader(app, student))
+        .send({ title: 'My answered question', body: 'Please explain' })
+        .expect(201);
+
+      const doubtId = response.body.doubtId;
+
+      await queue.enqueue(DOUBT_DRAIN_JOB, undefined);
+
+      const studentNotifs = await database.db
+        .select()
+        .from(notifications)
+        .where(eq(notifications.userId, student.userId));
+
+      const answerNotif = studentNotifs.find(
+        (n) => n.type === 'BATCH_DOUBT_REPLY' && n.title.includes('answered'),
+      );
+      expect(answerNotif).toBeDefined();
+      expect(answerNotif?.batchId).toBe(batchId);
+    });
   });
 
   describe('ticket 09 — citation integrity', () => {
@@ -251,6 +279,32 @@ describe('ai-doubts: answering, citation and labelling', () => {
       expect(aiAnswer[0].status).toBe('ANSWERED');
       expect(aiAnswer[0].citations[0].lessonId).toBe(lessonId);
     });
+
+    it('instructor is notified when a rejected answer routes doubt to human', async () => {
+      const fakeId = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
+      provider.structuredFor = () => ({
+        answer: 'An answer citing a lesson that does not exist',
+        citations: [{ lessonId: fakeId, title: 'Made-up lesson' }],
+      });
+
+      await request(app.getHttpServer())
+        .post(`/batches/${batchId}/doubts`)
+        .set(...authHeader(app, student))
+        .send({ title: 'Rejected question', body: 'Please explain' })
+        .expect(201);
+
+      await queue.enqueue(DOUBT_DRAIN_JOB, undefined);
+
+      const instructorNotifs = await database.db
+        .select()
+        .from(notifications)
+        .where(eq(notifications.userId, instructor.userId));
+
+      const routedNotif = instructorNotifs.find(
+        (n) => n.type === 'BATCH_DOUBT_REPLY',
+      );
+      expect(routedNotif).toBeDefined();
+    });
   });
 
   describe('ticket 10 — answer labelling', () => {
@@ -276,6 +330,7 @@ describe('ai-doubts: answering, citation and labelling', () => {
         .where(eq(aiDoubtAnswers.doubtId, doubtId))
         .limit(1);
 
+      expect(aiAnswer[0].source).toBe('AI');
       expect(aiAnswer[0].status).toBe('ANSWERED');
     });
 
@@ -334,6 +389,121 @@ describe('ai-doubts: answering, citation and labelling', () => {
         .send({ title: 'My question', body: 'Please explain', aiSource: 'INSTRUCTOR' })
         .expect(400);
     });
+
+    it('client cannot inject source marker through the reply route', async () => {
+      const response = await request(app.getHttpServer())
+        .post(`/batches/${batchId}/doubts`)
+        .set(...authHeader(app, student))
+        .send({ title: 'My question', body: 'Please explain' })
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .post(`/batches/${batchId}/doubts/${response.body.doubtId}/replies`)
+        .set(...authHeader(app, student))
+        .send({ body: 'My reply', source: 'AI' })
+        .expect(400);
+    });
+
+    it('GET doubt shows AI answer labeled source=AI distinct from instructor reply', async () => {
+      provider.structuredFor = (req) => {
+        if (req.feature === 'doubt.answer') {
+          return {
+            answer: 'Automated AI answer for the student question here',
+            citations: [{ lessonId, title: 'Lesson on the topic' }],
+          };
+        }
+        return {
+          draft: 'Draft reply from AI that instructor will commit and send',
+        };
+      };
+
+      const createResponse = await request(app.getHttpServer())
+        .post(`/batches/${batchId}/doubts`)
+        .set(...authHeader(app, student))
+        .send({ title: 'My question', body: 'Please explain' })
+        .expect(201);
+
+      const doubtId = createResponse.body.doubtId;
+
+      await queue.enqueue(DOUBT_DRAIN_JOB, undefined);
+
+      await request(app.getHttpServer())
+        .post(`/batches/${batchId}/doubts/${doubtId}/escalate`)
+        .set(...authHeader(app, student))
+        .expect(201);
+
+      await queue.enqueue(DOUBT_DRAIN_JOB, undefined);
+
+      await request(app.getHttpServer())
+        .post(`/batches/${batchId}/doubts/${doubtId}/draft/commit`)
+        .set(...authHeader(app, instructor))
+        .expect(201);
+
+      const getResponse = await request(app.getHttpServer())
+        .get(`/batches/${batchId}/doubts/${doubtId}`)
+        .set(...authHeader(app, student))
+        .expect(200);
+
+      expect(getResponse.body.aiAnswer).toBeDefined();
+      expect(getResponse.body.aiAnswer.source).toBe('AI');
+
+      expect(getResponse.body.replies).toHaveLength(1);
+      expect(getResponse.body.replies[0].authorId).toBe(instructor.userId);
+    });
+
+    it('doubt answered automatically then escalated shows both answers distinctly', async () => {
+      provider.structuredFor = (req) => {
+        if (req.feature === 'doubt.answer') {
+          return {
+            answer: 'Automated AI answer that the student found unhelpful here',
+            citations: [{ lessonId, title: 'Lesson on the topic' }],
+          };
+        }
+        return {
+          draft: 'Instructor draft reply generated after escalation',
+        };
+      };
+
+      const createResponse = await request(app.getHttpServer())
+        .post(`/batches/${batchId}/doubts`)
+        .set(...authHeader(app, student))
+        .send({ title: 'Complex question', body: 'Needs more explanation' })
+        .expect(201);
+
+      const doubtId = createResponse.body.doubtId;
+
+      await queue.enqueue(DOUBT_DRAIN_JOB, undefined);
+
+      const afterAi = await request(app.getHttpServer())
+        .get(`/batches/${batchId}/doubts/${doubtId}`)
+        .set(...authHeader(app, student))
+        .expect(200);
+
+      expect(afterAi.body.aiAnswer.source).toBe('AI');
+      expect(afterAi.body.aiAnswer.status).toBe('ANSWERED');
+      expect(afterAi.body.replies).toHaveLength(0);
+
+      await request(app.getHttpServer())
+        .post(`/batches/${batchId}/doubts/${doubtId}/escalate`)
+        .set(...authHeader(app, student))
+        .expect(201);
+
+      await queue.enqueue(DOUBT_DRAIN_JOB, undefined);
+
+      await request(app.getHttpServer())
+        .post(`/batches/${batchId}/doubts/${doubtId}/draft/commit`)
+        .set(...authHeader(app, instructor))
+        .expect(201);
+
+      const afterCommit = await request(app.getHttpServer())
+        .get(`/batches/${batchId}/doubts/${doubtId}`)
+        .set(...authHeader(app, student))
+        .expect(200);
+
+      expect(afterCommit.body.aiAnswer.source).toBe('AI');
+      expect(afterCommit.body.aiAnswer.status).toBe('ESCALATED');
+      expect(afterCommit.body.replies[0].authorId).toBe(instructor.userId);
+    });
   });
 
   describe('provider failure degradation', () => {
@@ -357,6 +527,137 @@ describe('ai-doubts: answering, citation and labelling', () => {
         .limit(1);
 
       expect(aiAnswer[0].status).toBe('FAILED');
+    });
+
+    it('student is notified when automation fails', async () => {
+      provider.failNext = true;
+
+      await request(app.getHttpServer())
+        .post(`/batches/${batchId}/doubts`)
+        .set(...authHeader(app, student))
+        .send({ title: 'Failed question', body: 'Please explain' })
+        .expect(201);
+
+      await queue.enqueue(DOUBT_DRAIN_JOB, undefined);
+
+      const studentNotifs = await database.db
+        .select()
+        .from(notifications)
+        .where(eq(notifications.userId, student.userId));
+
+      const failNotif = studentNotifs.find(
+        (n) => n.type === 'BATCH_DOUBT_REPLY' && n.title.includes('could not'),
+      );
+      expect(failNotif).toBeDefined();
+    });
+
+    it('provider timeout leaves a visible FAILED state on the doubt answer', async () => {
+      provider.failNext = true;
+
+      const response = await request(app.getHttpServer())
+        .post(`/batches/${batchId}/doubts`)
+        .set(...authHeader(app, student))
+        .send({ title: 'Timed out question', body: 'Please explain' })
+        .expect(201);
+
+      const doubtId = response.body.doubtId;
+
+      await queue.enqueue(DOUBT_DRAIN_JOB, undefined);
+
+      const getResponse = await request(app.getHttpServer())
+        .get(`/batches/${batchId}/doubts/${doubtId}`)
+        .set(...authHeader(app, student))
+        .expect(200);
+
+      expect(getResponse.body.aiAnswer).toBeDefined();
+      expect(getResponse.body.aiAnswer.status).toBe('FAILED');
+    });
+
+    it('repeated provider failure does not retry without bound', async () => {
+      provider.structuredFor = () => null;
+
+      const response = await request(app.getHttpServer())
+        .post(`/batches/${batchId}/doubts`)
+        .set(...authHeader(app, student))
+        .send({ title: 'Shape failing question', body: 'Please explain' })
+        .expect(201);
+
+      const doubtId = response.body.doubtId;
+
+      await queue.enqueue(DOUBT_DRAIN_JOB, undefined);
+      const callsAfterFirst = provider.calls.length;
+      expect(callsAfterFirst).toBe(2);
+
+      provider.calls = [];
+      await queue.enqueue(DOUBT_DRAIN_JOB, undefined);
+      expect(provider.calls.length).toBe(0);
+
+      const aiAnswer = await database.db
+        .select()
+        .from(aiDoubtAnswers)
+        .where(eq(aiDoubtAnswers.doubtId, doubtId))
+        .limit(1);
+
+      expect(aiAnswer[0].status).toBe('FAILED');
+    });
+  });
+
+  describe('ticket 05 — structured output rejection', () => {
+    it('shape-rejected response writes an aiModelCalls row with outcome REJECTED', async () => {
+      provider.structuredFor = () => null;
+
+      await request(app.getHttpServer())
+        .post(`/batches/${batchId}/doubts`)
+        .set(...authHeader(app, student))
+        .send({ title: 'Shape test', body: 'Shape rejection test question' })
+        .expect(201);
+
+      await queue.enqueue(DOUBT_DRAIN_JOB, undefined);
+
+      const { aiModelCalls } = await import('../src/database/schema');
+      const { eq: deq, and: dand } = await import('drizzle-orm');
+
+      const rejected = await database.db
+        .select()
+        .from(aiModelCalls)
+        .where(dand(
+          deq(aiModelCalls.feature, 'doubt.answer'),
+          deq(aiModelCalls.outcome, 'REJECTED'),
+        ));
+
+      expect(rejected.length).toBeGreaterThan(0);
+    });
+
+    it('exactly two attempts are recorded before giving up on shape failure', async () => {
+      provider.structuredFor = () => null;
+
+      await request(app.getHttpServer())
+        .post(`/batches/${batchId}/doubts`)
+        .set(...authHeader(app, student))
+        .send({ title: 'Two attempts test', body: 'Shape retry bounded test question' })
+        .expect(201);
+
+      await queue.enqueue(DOUBT_DRAIN_JOB, undefined);
+
+      const { aiModelCalls } = await import('../src/database/schema');
+      const { eq: deq, and: dand } = await import('drizzle-orm');
+
+      const rejectedRows = await database.db
+        .select()
+        .from(aiModelCalls)
+        .where(dand(
+          deq(aiModelCalls.feature, 'doubt.answer'),
+          deq(aiModelCalls.outcome, 'REJECTED'),
+        ));
+
+      expect(rejectedRows.length).toBe(2);
+
+      const aiAnswer = await database.db
+        .select()
+        .from(aiDoubtAnswers)
+        .limit(1);
+
+      expect(aiAnswer[0].answerText).toBeNull();
     });
   });
 });

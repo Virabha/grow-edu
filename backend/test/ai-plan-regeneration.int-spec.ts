@@ -194,6 +194,47 @@ describe('ai plan regeneration (ticket 23)', () => {
     expect(otherPlans).toHaveLength(1);
   });
 
+  it('racing ahead — zero items due when all review items are future-dated', async () => {
+    const batchId = await createBatch(database, admin.userId);
+    await enrol(database, batchId, student.userId);
+
+    const now = clock.now();
+    const { reviewItems } = await import('../src/database/schema');
+    await database.db.insert(reviewItems).values([
+      {
+        userId: student.userId,
+        questionId: 'q-future-1',
+        source: 'BOOKMARKED_QUESTION',
+        intervalDays: 3,
+        easeFactor: '2.5',
+        dueAt: new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000),
+        createdAt: now,
+        updatedAt: now,
+      },
+      {
+        userId: student.userId,
+        questionId: 'q-future-2',
+        source: 'BOOKMARKED_QUESTION',
+        intervalDays: 5,
+        easeFactor: '2.5',
+        dueAt: new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000),
+        createdAt: now,
+        updatedAt: now,
+      },
+    ]);
+
+    await queue.enqueue(STUDY_PLAN_REGEN_JOB, undefined);
+
+    const [plan] = await database.db
+      .select()
+      .from(aiStudyPlans)
+      .where(
+        and(eq(aiStudyPlans.userId, student.userId), isNull(aiStudyPlans.supersededAt)),
+      );
+
+    expect(plan.inputs.reviewItemsDue).toBe(0);
+  });
+
   it('a plan generated for a student who fell behind records more review items due', async () => {
     const batchId = await createBatch(database, admin.userId);
     await enrol(database, batchId, student.userId);

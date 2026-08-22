@@ -12,6 +12,7 @@ import {
   assessmentQuestionVersions,
   assessmentQuestions,
 } from "../../database/schema";
+import { NotificationsService } from "../../notifications/notifications.service";
 
 const FEATURE = "assessment.bulk-generation";
 
@@ -60,9 +61,22 @@ export class BulkGenerationService implements OnModuleInit {
     @Inject(CLOCK) private readonly clock: Clock,
     private readonly ai: AiService,
     private readonly batch: AiBatchService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   onModuleInit(): void {
+    this.batch.registerCompletionCallback(FEATURE, async (requestedBy) => {
+      if (!requestedBy) return;
+      await this.notifications.notify({
+        userId: requestedBy,
+        type: "GENERIC",
+        vars: {
+          title: "Bulk question generation complete",
+          body: "Your requested questions are ready for review in the question bank.",
+        },
+      });
+    });
+
     this.batch.registerReconciler(FEATURE, async (item) => {
       const context = item.context as BulkItemContext;
       const raw = item.structured as BulkGeneratedQuestion | null;

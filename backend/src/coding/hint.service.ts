@@ -24,6 +24,12 @@ const RATE_WINDOW_MS = 5 * 60 * 1000;
 const MAX_HINTS_IN_WINDOW = 3;
 const FEATURE = "coding-hint";
 const MAX_TOKENS = 512;
+const CODE_FENCE_PATTERN = /```[\s\S]*?```/g;
+const SOLUTION_GUARD_REPLACEMENT = "[code removed by solution guard]";
+
+function sanitizeHintText(raw: string): string {
+  return raw.replace(CODE_FENCE_PATTERN, SOLUTION_GUARD_REPLACEMENT);
+}
 
 const HINT_INSTRUCTIONS: Record<number, string> = {
   1: [
@@ -173,7 +179,7 @@ export class AiHintService {
         runId,
         userId: requestUserId,
         hintLevel: nextLevel,
-        hintText: outcome.value,
+        hintText: sanitizeHintText(outcome.value),
         createdAt: now,
       })
       .returning();

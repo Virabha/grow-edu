@@ -166,6 +166,9 @@ export const notificationTypeEnum = pgEnum("notification_type", [
   "PARENT_LINK_REQUEST",
   "BADGE_AWARDED",
   "DAILY_REVIEW_DUE",
+  "CODE_VERDICT",
+  "PROJECT_MILESTONE_REVIEWED",
+  "PATH_CERTIFICATE",
   "GENERIC",
 ]);
 
@@ -359,4 +362,101 @@ export const searchDocumentKindEnum = pgEnum("search_document_kind", [
 export const curriculumItemKindEnum = pgEnum("curriculum_item_kind", [
   "LESSON",
   "TEST",
+]);
+
+export const codingProblemKindEnum = pgEnum("coding_problem_kind", [
+  "ALGORITHMIC",
+  "FRONTEND",
+]);
+
+export const codingProblemStatusEnum = pgEnum("coding_problem_status", [
+  "DRAFT",
+  "VALIDATED",
+  "PUBLISHED",
+  "RETIRED",
+]);
+
+export const codingCaseVisibilityEnum = pgEnum("coding_case_visibility", [
+  "VISIBLE",
+  "HIDDEN",
+]);
+
+export const codingRunKindEnum = pgEnum("coding_run_kind", [
+  "SAMPLE_RUN",
+  "JUDGE_SUBMISSION",
+  "REFERENCE_VALIDATION",
+]);
+
+export const codingRunStatusEnum = pgEnum("coding_run_status", [
+  "PENDING",
+  "RUNNING",
+  "COMPLETE",
+]);
+
+export const codingVerdictEnum = pgEnum("coding_verdict", [
+  "ACCEPTED",
+  "WRONG_ANSWER",
+  "TIME_LIMIT_EXCEEDED",
+  "MEMORY_LIMIT_EXCEEDED",
+  "RUNTIME_ERROR",
+  "COMPILATION_ERROR",
+  "INTERNAL_ERROR",
+]);
+
+export const devEnvironmentStatusEnum = pgEnum("dev_environment_status", [
+  "PROVISIONING",
+  "RUNNING",
+  "HIBERNATED",
+  "RECLAIMED",
+  "FAILED",
+]);
+
+export const projectMilestoneStateEnum = pgEnum("project_milestone_state", [
+  "LOCKED",
+  "OPEN",
+  "SUBMITTED",
+  "RETURNED",
+  "PASSED",
+]);
+
+export const projectCheckStatusEnum = pgEnum("project_check_status", [
+  "PENDING",
+  "PASSED",
+  "FAILED",
+  "HARNESS_ERROR",
+]);
+
+export const projectSimilaritySourceEnum = pgEnum("project_similarity_source", [
+  "COHORT",
+  "PUBLIC",
+]);
+
+export const pathStageKindEnum = pgEnum("path_stage_kind", [
+  "BATCH",
+  "PROBLEM_SET",
+  "PROJECT",
+]);
+
+export const pathEnrolmentStatusEnum = pgEnum("path_enrolment_status", [
+  "ACTIVE",
+  "COMPLETED",
+  "REVOKED",
+]);
+
+export const pathStageStateEnum = pgEnum("path_stage_state", [
+  "LOCKED",
+  "OPEN",
+  "COMPLETE",
+]);
+
+export const skillSubjectKindEnum = pgEnum("skill_subject_kind", [
+  "PROBLEM",
+  "PROJECT",
+  "STAGE",
+]);
+
+export const portfolioItemKindEnum = pgEnum("portfolio_item_kind", [
+  "PROJECT",
+  "SKILL",
+  "CERTIFICATE",
 ]);

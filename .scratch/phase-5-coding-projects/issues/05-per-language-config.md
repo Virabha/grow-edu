@@ -4,10 +4,11 @@
 
 **Blocked by:** 03
 
-**Status:** ready-for-agent
+**Status:** done
+**Covered by:** test/coding-problems.int-spec.ts
 
-- [ ] A problem declares which languages it supports
-- [ ] Each supported language carries its own starter code, time limit and memory limit
-- [ ] A problem opens with the starter code for the chosen language already present
-- [ ] Submitting in an unsupported language is refused
-- [ ] Limits are passed to the execution port per language, not as one global value
+- [x] A problem declares which languages it supports
+- [x] Each supported language carries its own starter code, time limit and memory limit
+- [x] A problem opens with the starter code for the chosen language already present
+- [x] Submitting in an unsupported language is refused
+- [x] Limits are passed to the execution port per language, not as one global value

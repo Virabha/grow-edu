@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from "@nestjs/swagger";
-import { Type } from "class-transformer";
+import { Transform } from "class-transformer";
 import {
   IsArray,
   IsEnum,
@@ -48,13 +48,13 @@ export class CreateProblemDto {
   @ApiPropertyOptional({ type: [Object] })
   @IsOptional()
   @IsArray()
-  @Type(() => Object)
+  @Transform(({ obj, key }) => obj[key])
   statement?: unknown[];
 
   @ApiPropertyOptional({ type: [Object] })
   @IsOptional()
   @IsArray()
-  @Type(() => Object)
+  @Transform(({ obj, key }) => obj[key])
   constraints?: unknown[];
 }
 
@@ -156,7 +156,7 @@ export class UpsertEditorialDto {
   @ApiPropertyOptional({ type: [Object] })
   @IsOptional()
   @IsArray()
-  @Type(() => Object)
+  @Transform(({ obj, key }) => obj[key])
   body?: unknown[];
 }
 

@@ -6,10 +6,11 @@
 
 **Blocked by:** 01, 08
 
-**Status:** ready-for-agent
+**Status:** done
+**Covered by:** test/coding-execution.int-spec.ts
 
-- [ ] Every provider outcome maps to a verdict in the closed set
-- [ ] A provider timeout, error or malformed response produces an internal error
-- [ ] An internal error is never reported to a student as a wrong answer
-- [ ] An internal error does not consume the student's attempt or rate-limit budget
-- [ ] An unrecognised provider outcome produces an internal error rather than a guess
+- [x] Every provider outcome maps to a verdict in the closed set
+- [x] A provider timeout, error or malformed response produces an internal error
+- [x] An internal error is never reported to a student as a wrong answer
+- [x] An internal error does not consume the student's attempt or rate-limit budget
+- [x] An unrecognised provider outcome produces an internal error rather than a guess

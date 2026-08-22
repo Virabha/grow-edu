@@ -4,10 +4,11 @@
 
 **Blocked by:** 14
 
-**Status:** ready-for-agent
+**Status:** done
+**Covered by:** test/environments.int-spec.ts
 
-- [ ] Reconnecting returns the same workspace rather than a fresh one
-- [ ] The workspace survives hibernation and is restored on resume
-- [ ] A student reaches only their own environment
-- [ ] An environment is bound to one student and one project stage
-- [ ] Reclaiming an environment preserves the workspace
+- [x] Reconnecting returns the same workspace rather than a fresh one
+- [x] The workspace survives hibernation and is restored on resume
+- [x] A student reaches only their own environment
+- [x] An environment is bound to one student and one project stage
+- [x] Reclaiming an environment preserves the workspace

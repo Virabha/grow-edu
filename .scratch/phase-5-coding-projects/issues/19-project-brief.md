@@ -6,10 +6,11 @@
 
 **Blocked by:** None - can start immediately
 
-**Status:** ready-for-agent
+**Status:** done
+**Covered by:** test/projects.int-spec.ts
 
-- [ ] A brief carries requirements, a rubric reference and an optional starter repository
-- [ ] The rubric is a Phase 3 rubric, not a second model
-- [ ] A student sees the rubric they will be marked against before starting
-- [ ] Brief content reuses the Phase 3 content-block format
-- [ ] A project belongs to no batch directly; it is referenced by a path stage
+- [x] A brief carries requirements, a rubric reference and an optional starter repository
+- [x] The rubric is a Phase 3 rubric, not a second model
+- [x] A student sees the rubric they will be marked against before starting
+- [x] Brief content reuses the Phase 3 content-block format
+- [x] A project belongs to no batch directly; it is referenced by a path stage

@@ -7,6 +7,7 @@
 **Blocked by:** 13
 
 **Status:** needs-frontend-work
+**Note:** server-observable consequences are covered; the client-side work remains.
 
 - [ ] Student code runs in a sandboxed frame and cannot reach the host application
 - [ ] Assertions are evaluated against the rendered result, not the source text

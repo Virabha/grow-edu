@@ -6,10 +6,11 @@
 
 **Blocked by:** None - can start immediately
 
-**Status:** ready-for-agent
+**Status:** done
+**Covered by:** test/environments.int-spec.ts
 
-- [ ] Provisioning goes through one injected port; no caller reaches a provider directly
-- [ ] An environment can only be provisioned against a project stage in a path
-- [ ] Requesting one for a practice problem is refused
-- [ ] Tests drive the provider through a stub at the network boundary
-- [ ] A provisioning failure is reported as such and leaves no half-created record
+- [x] Provisioning goes through one injected port; no caller reaches a provider directly
+- [x] An environment can only be provisioned against a project stage in a path
+- [x] Requesting one for a practice problem is refused
+- [x] Tests drive the provider through a stub at the network boundary
+- [x] A provisioning failure is reported as such and leaves no half-created record

@@ -4,10 +4,11 @@
 
 **Blocked by:** 08
 
-**Status:** ready-for-agent
+**Status:** done
+**Covered by:** test/coding-execution.int-spec.ts
 
-- [ ] Every published problem carries an editorial with a model solution
-- [ ] The editorial states time and space complexity
-- [ ] It is withheld until the student has solved the problem or explicitly given up
-- [ ] Giving up is recorded and is not the same as a wrong answer
-- [ ] Editorial content reuses the Phase 3 content-block format
+- [x] Every published problem carries an editorial with a model solution
+- [x] The editorial states time and space complexity
+- [x] It is withheld until the student has solved the problem or explicitly given up
+- [x] Giving up is recorded and is not the same as a wrong answer
+- [x] Editorial content reuses the Phase 3 content-block format

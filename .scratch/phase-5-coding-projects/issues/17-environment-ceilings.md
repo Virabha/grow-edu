@@ -4,10 +4,11 @@
 
 **Blocked by:** 14
 
-**Status:** ready-for-agent
+**Status:** done
+**Covered by:** test/environments.int-spec.ts
 
-- [ ] A student cannot exceed their concurrent environment limit
-- [ ] The limit is owner-managed configuration, not a literal
-- [ ] Resource ceilings are passed to the provider on provisioning
-- [ ] Running time is measured and attributed to the student
-- [ ] Consumption is reportable per student
+- [x] A student cannot exceed their concurrent environment limit
+- [x] The limit is owner-managed configuration, not a literal
+- [x] Resource ceilings are passed to the provider on provisioning
+- [x] Running time is measured and attributed to the student
+- [x] Consumption is reportable per student

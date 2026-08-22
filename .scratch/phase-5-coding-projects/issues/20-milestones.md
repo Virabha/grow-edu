@@ -6,10 +6,11 @@
 
 **Blocked by:** 19
 
-**Status:** ready-for-agent
+**Status:** done
+**Covered by:** test/projects.int-spec.ts, test/project-review.int-spec.ts
 
-- [ ] A project carries ordered milestones
-- [ ] Only the first milestone is open initially
-- [ ] Submitting to a locked milestone is refused
-- [ ] Passing a milestone opens exactly the next one and no more
-- [ ] Returning a milestone with feedback leaves it open and the next one locked
+- [x] A project carries ordered milestones
+- [x] Only the first milestone is open initially
+- [x] Submitting to a locked milestone is refused
+- [x] Passing a milestone opens exactly the next one and no more
+- [x] Returning a milestone with feedback leaves it open and the next one locked

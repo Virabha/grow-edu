@@ -4,10 +4,11 @@
 
 **Blocked by:** 27
 
-**Status:** ready-for-agent
+**Status:** done
+**Covered by:** test/learning-paths.int-spec.ts
 
-- [ ] The owner sees each enrolled student's position in the path
-- [ ] Stalled students are identifiable by time since last progress
-- [ ] The view is scoped to staff and refused to a student
-- [ ] A student sees their own progress and nobody else's
-- [ ] Figures are driven by the injected clock and are reproducible
+- [x] The owner sees each enrolled student's position in the path
+- [x] Stalled students are identifiable by time since last progress
+- [x] The view is scoped to staff and refused to a student
+- [x] A student sees their own progress and nobody else's
+- [x] Figures are driven by the injected clock and are reproducible

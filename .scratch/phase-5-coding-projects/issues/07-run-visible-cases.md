@@ -6,10 +6,11 @@
 
 **Blocked by:** 02, 05
 
-**Status:** ready-for-agent
+**Status:** done
+**Covered by:** test/coding-execution.int-spec.ts, test/coding-confidentiality.int-spec.ts
 
-- [ ] A run never executes inline with the HTTP request
-- [ ] The response is immediate and pending; the result attaches to that run when it arrives
-- [ ] A failing visible case reports its input, the expected output and the student's actual output
-- [ ] A run is bounded by the rate limits from ticket 02
-- [ ] A run never touches hidden cases
+- [x] A run never executes inline with the HTTP request
+- [x] The response is immediate and pending; the result attaches to that run when it arrives
+- [x] A failing visible case reports its input, the expected output and the student's actual output
+- [x] A run is bounded by the rate limits from ticket 02
+- [x] A run never touches hidden cases

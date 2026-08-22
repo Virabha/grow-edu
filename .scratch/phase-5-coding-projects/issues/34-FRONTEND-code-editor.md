@@ -7,6 +7,7 @@
 **Blocked by:** 05, 11
 
 **Status:** needs-frontend-work
+**Note:** server-observable consequences are covered; the client-side work remains.
 
 - [ ] The editor chunk is absent from the bundle of routes that do not edit code
 - [ ] A problem opens with its per-language starter code already present

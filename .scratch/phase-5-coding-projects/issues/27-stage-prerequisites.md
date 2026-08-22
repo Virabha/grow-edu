@@ -6,10 +6,11 @@
 
 **Blocked by:** 26
 
-**Status:** ready-for-agent
+**Status:** done
+**Covered by:** test/learning-paths.int-spec.ts
 
-- [ ] A stage declares its prerequisite stages
-- [ ] A stage is unreachable until its prerequisites are complete
-- [ ] The check is evaluated by the existing access module, not a second rule
-- [ ] Completing a prerequisite opens the dependent stage immediately
-- [ ] A prerequisite cycle is refused at authoring
+- [x] A stage declares its prerequisite stages
+- [x] A stage is unreachable until its prerequisites are complete
+- [x] The check is evaluated by the existing access module, not a second rule
+- [x] Completing a prerequisite opens the dependent stage immediately
+- [x] A prerequisite cycle is refused at authoring

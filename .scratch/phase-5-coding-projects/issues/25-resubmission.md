@@ -4,10 +4,11 @@
 
 **Blocked by:** 24
 
-**Status:** ready-for-agent
+**Status:** done
+**Covered by:** test/project-review.int-spec.ts
 
-- [ ] A returned milestone can be resubmitted
-- [ ] Every cycle is retained with its submission, checks and feedback
-- [ ] A passed milestone cannot be resubmitted to
-- [ ] The reviewer sees the previous cycle's feedback alongside the new submission
-- [ ] Resubmission re-runs the automated checks and screening
+- [x] A returned milestone can be resubmitted
+- [x] Every cycle is retained with its submission, checks and feedback
+- [x] A passed milestone cannot be resubmitted to
+- [x] The reviewer sees the previous cycle's feedback alongside the new submission
+- [x] Resubmission re-runs the automated checks and screening

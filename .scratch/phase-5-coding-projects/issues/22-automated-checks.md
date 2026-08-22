@@ -6,10 +6,11 @@
 
 **Blocked by:** 21
 
-**Status:** ready-for-agent
+**Status:** done
+**Covered by:** test/project-review.int-spec.ts
 
-- [ ] Checks run as a queued job, never inline with the submission request
-- [ ] Build, lint and test status are reported separately
-- [ ] Results are shown to the student and alongside the submission for the reviewer
-- [ ] A failing check never blocks submission or decides a grade
-- [ ] A check-harness fault is distinguishable from the student's code failing
+- [x] Checks run as a queued job, never inline with the submission request
+- [x] Build, lint and test status are reported separately
+- [x] Results are shown to the student and alongside the submission for the reviewer
+- [x] A failing check never blocks submission or decides a grade
+- [x] A check-harness fault is distinguishable from the student's code failing

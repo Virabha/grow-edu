@@ -6,10 +6,11 @@ The server's part is the problem, its assertions, and the recorded result.
 
 **Blocked by:** 03
 
-**Status:** ready-for-agent
+**Status:** done
+**Covered by:** test/coding-frontend-problems.int-spec.ts, test/coding-confidentiality.int-spec.ts
 
-- [ ] A front-end problem carries assertions rather than input/output test cases
-- [ ] No server execution happens for a front-end problem
-- [ ] The recorded result attaches to the student and the problem
-- [ ] "Looks right" is not a passing condition — a result records which assertions passed
-- [ ] Hidden assertions are not disclosed, consistent with ticket 09
+- [x] A front-end problem carries assertions rather than input/output test cases
+- [x] No server execution happens for a front-end problem
+- [x] The recorded result attaches to the student and the problem
+- [x] "Looks right" is not a passing condition — a result records which assertions passed
+- [x] Hidden assertions are not disclosed, consistent with ticket 09

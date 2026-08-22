@@ -6,10 +6,11 @@ Progress becomes capability rather than content consumed.
 
 **Blocked by:** 26
 
-**Status:** ready-for-agent
+**Status:** done
+**Covered by:** test/skills.int-spec.ts
 
-- [ ] The skill taxonomy is owner-managed configuration, not a hardcoded list
-- [ ] Problems, projects and stages can be tagged with the skills they demonstrate
-- [ ] A skill is credited only at its defined threshold, never before
-- [ ] A student sees which skills they have demonstrated and which remain
-- [ ] Losing access to an item does not retract a skill already demonstrated
+- [x] The skill taxonomy is owner-managed configuration, not a hardcoded list
+- [x] Problems, projects and stages can be tagged with the skills they demonstrate
+- [x] A skill is credited only at its defined threshold, never before
+- [x] A student sees which skills they have demonstrated and which remain
+- [x] Losing access to an item does not retract a skill already demonstrated

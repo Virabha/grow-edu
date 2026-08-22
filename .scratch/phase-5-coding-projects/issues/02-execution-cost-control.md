@@ -6,10 +6,11 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
+**Covered by:** test/coding-execution.int-spec.ts
 
-- [ ] Running and submitting are rate-limited per student, and the limits are owner-managed configuration
-- [ ] Exceeding a limit is refused clearly rather than silently queued
-- [ ] Every execution is recorded against the student who caused it
-- [ ] Consumption is reportable per student rather than as one opaque total
-- [ ] A student who is rate-limited on running can still see their existing results
+- [x] Running and submitting are rate-limited per student, and the limits are owner-managed configuration
+- [x] Exceeding a limit is refused clearly rather than silently queued
+- [x] Every execution is recorded against the student who caused it
+- [x] Consumption is reportable per student rather than as one opaque total
+- [x] A student who is rate-limited on running can still see their existing results

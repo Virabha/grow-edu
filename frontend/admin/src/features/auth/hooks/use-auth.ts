@@ -3,7 +3,15 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { authApi } from "../api/auth.api";
-import { LoginDto, RegisterDto, ForgotPasswordDto, ResetPasswordDto, } from "../types";
+import {
+    LoginDto,
+    RegisterDto,
+    ForgotPasswordDto,
+    ResetPasswordDto,
+    AuthSuccess,
+    SecondFactorCompleteDto,
+    User,
+} from "../types";
 import { env } from "@/lib/env";
 
 function getPostLoginDestination(role: string): string {
@@ -28,30 +36,64 @@ function getSafeRedirect(search: string, fallback: string): string {
     return fallback;
 }
 
+function applyAuthSuccess(
+    data: AuthSuccess,
+    setUser: (user: User | null) => void,
+    setToken: (token: string | null) => void,
+    invalidateQueries: () => void,
+) {
+    setToken(data.access_token);
+    setUser(data.user);
+    if (typeof window !== "undefined") {
+        localStorage.setItem("admin-auth-token", data.access_token);
+        const expires = new Date();
+        expires.setDate(expires.getDate() + 7);
+        document.cookie = `admin-auth-token=${data.access_token}; expires=${expires.toUTCString()}; path=/; SameSite=Lax; Secure`;
+    }
+    invalidateQueries();
+    const defaultDest = getPostLoginDestination(data.user.role);
+    const dest =
+        data.user.role !== "LEARNER" && typeof window !== "undefined"
+            ? getSafeRedirect(window.location.search, defaultDest)
+            : defaultDest;
+    window.location.href = dest;
+}
+
 export function useLogin() {
     const { setUser, setToken } = useAuthStore();
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: (dto: LoginDto) => authApi.login(dto),
         onSuccess: (data) => {
-            setToken(data.access_token);
-            setUser(data.user);
-            if (typeof window !== "undefined") {
-                localStorage.setItem("admin-auth-token", data.access_token);
-                const expires = new Date();
-                expires.setDate(expires.getDate() + 7);
-                document.cookie = `admin-auth-token=${data.access_token}; expires=${expires.toUTCString()}; path=/; SameSite=Lax; Secure`;
+            if (!("secondFactorRequired" in data)) {
+                applyAuthSuccess(data, setUser, setToken, () => queryClient.invalidateQueries());
             }
-            queryClient.invalidateQueries();
-            const defaultDest = getPostLoginDestination(data.user.role);
-            const dest =
-                data.user.role !== "LEARNER" && typeof window !== "undefined"
-                    ? getSafeRedirect(window.location.search, defaultDest)
-                    : defaultDest;
-            window.location.href = dest;
         },
     });
 }
+
+export function useCompleteSecondFactor() {
+    const { setUser, setToken } = useAuthStore();
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (dto: SecondFactorCompleteDto) => authApi.completeLogin(dto),
+        onSuccess: (data) => {
+            applyAuthSuccess(data, setUser, setToken, () => queryClient.invalidateQueries());
+        },
+    });
+}
+
+export function useConfirmSecondFactor() {
+    const { setUser, setToken } = useAuthStore();
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (dto: SecondFactorCompleteDto) => authApi.confirmSetup(dto),
+        onSuccess: (data) => {
+            applyAuthSuccess(data, setUser, setToken, () => queryClient.invalidateQueries());
+        },
+    });
+}
+
 export function useRegister() {
     const router = useRouter();
     return useMutation({
@@ -61,11 +103,13 @@ export function useRegister() {
         },
     });
 }
+
 export function useForgotPassword() {
     return useMutation({
         mutationFn: (dto: ForgotPasswordDto) => authApi.forgotPassword(dto),
     });
 }
+
 export function useResetPassword() {
     const router = useRouter();
     return useMutation({
@@ -75,6 +119,7 @@ export function useResetPassword() {
         },
     });
 }
+
 export function useVerifyEmail() {
     return useMutation({
         mutationFn: (token: string) => authApi.verifyEmail(token),

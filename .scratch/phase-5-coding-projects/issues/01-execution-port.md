@@ -6,10 +6,11 @@ This lands first because every other execution ticket hangs off it, and because 
 
 **Blocked by:** None - can start immediately
 
-**Status:** ready-for-agent
+**Status:** done
+**Covered by:** test/coding-execution.int-spec.ts
 
-- [ ] Execution goes through one injected port; no caller reaches a provider directly
-- [ ] The verdict set is closed: accepted, wrong answer, time limit, memory limit, runtime error, compilation error, internal error
-- [ ] An internal error is distinct from every student-caused verdict and is never reported as one
-- [ ] Tests stub the provider at the network boundary, not the service boundary
-- [ ] No provider-specific vocabulary escapes into the problem or submission model
+- [x] Execution goes through one injected port; no caller reaches a provider directly
+- [x] The verdict set is closed: accepted, wrong answer, time limit, memory limit, runtime error, compilation error, internal error
+- [x] An internal error is distinct from every student-caused verdict and is never reported as one
+- [x] Tests stub the provider at the network boundary, not the service boundary
+- [x] No provider-specific vocabulary escapes into the problem or submission model

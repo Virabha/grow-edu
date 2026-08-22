@@ -4,10 +4,11 @@
 
 **Blocked by:** 14
 
-**Status:** ready-for-agent
+**Status:** done
+**Covered by:** test/environments.int-spec.ts
 
-- [ ] An egress policy is passed to the provider on provisioning
-- [ ] The allowed destinations are owner-managed configuration
-- [ ] An environment is never provisioned without a policy
-- [ ] The policy is recorded against the environment for audit
-- [ ] Changing the policy does not require a code deployment
+- [x] An egress policy is passed to the provider on provisioning
+- [x] The allowed destinations are owner-managed configuration
+- [x] An environment is never provisioned without a policy
+- [x] The policy is recorded against the environment for audit
+- [x] Changing the policy does not require a code deployment

@@ -6,10 +6,11 @@ A broken problem reaching a cohort is expensive in support and in trust.
 
 **Blocked by:** 04, 05
 
-**Status:** ready-for-agent
+**Status:** done
+**Covered by:** test/coding-problems.int-spec.ts
 
-- [ ] Publishing is refused while any case fails the reference solution
-- [ ] Validation runs through the same execution path students use, not a shortcut
-- [ ] The instructor sees which case failed and why
-- [ ] Editing a case or the reference solution after publication re-opens the gate
-- [ ] A problem that has never been validated cannot be published
+- [x] Publishing is refused while any case fails the reference solution
+- [x] Validation runs through the same execution path students use, not a shortcut
+- [x] The instructor sees which case failed and why
+- [x] Editing a case or the reference solution after publication re-opens the gate
+- [x] A problem that has never been validated cannot be published

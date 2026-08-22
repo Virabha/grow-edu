@@ -4,10 +4,11 @@
 
 **Blocked by:** 20, 22
 
-**Status:** ready-for-agent
+**Status:** done
+**Covered by:** test/project-review.int-spec.ts
 
-- [ ] Review uses the Phase 3 grading queue rather than a second one
-- [ ] Scoring is against the Phase 3 rubric criteria
-- [ ] Automated check results and similarity results appear alongside the submission
-- [ ] A reviewer either passes the milestone or returns it with feedback
-- [ ] Media feedback goes through the existing files pipeline, not a parallel one
+- [x] Review uses the Phase 3 grading queue rather than a second one
+- [x] Scoring is against the Phase 3 rubric criteria
+- [x] Automated check results and similarity results appear alongside the submission
+- [x] A reviewer either passes the milestone or returns it with feedback
+- [x] Media feedback goes through the existing files pipeline, not a parallel one

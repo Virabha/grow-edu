@@ -6,10 +6,11 @@
 
 **Blocked by:** 21
 
-**Status:** ready-for-agent
+**Status:** done
+**Covered by:** test/project-review.int-spec.ts
 
-- [ ] Screening produces a score and the matched regions
-- [ ] A flag never blocks a submission and never changes its state
-- [ ] A student is never notified of a flag and cannot see one
-- [ ] Results are surfaced to staff for review, never acted on automatically
-- [ ] The threshold at which a flag is surfaced is owner-managed configuration
+- [x] Screening produces a score and the matched regions
+- [x] A flag never blocks a submission and never changes its state
+- [x] A student is never notified of a flag and cannot see one
+- [x] Results are surfaced to staff for review, never acted on automatically
+- [x] The threshold at which a flag is surfaced is owner-managed configuration

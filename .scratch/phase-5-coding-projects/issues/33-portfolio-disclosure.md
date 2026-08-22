@@ -4,10 +4,11 @@
 
 **Blocked by:** 32
 
-**Status:** ready-for-agent
+**Status:** done
+**Covered by:** test/portfolio.int-spec.ts
 
-- [ ] An unpublished item is unreachable by an unauthenticated request
-- [ ] No email, no batch roster, no grades and no reviewer feedback leak through the public surface
-- [ ] Publishing captures a snapshot of the reviewed work
-- [ ] Changing the repository afterwards does not alter the published snapshot
-- [ ] An unknown handle returns not-found without confirming any pattern
+- [x] An unpublished item is unreachable by an unauthenticated request
+- [x] No email, no batch roster, no grades and no reviewer feedback leak through the public surface
+- [x] Publishing captures a snapshot of the reviewed work
+- [x] Changing the repository afterwards does not alter the published snapshot
+- [x] An unknown handle returns not-found without confirming any pattern

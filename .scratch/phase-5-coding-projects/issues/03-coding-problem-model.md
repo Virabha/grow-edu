@@ -6,10 +6,11 @@
 
 **Blocked by:** None - can start immediately
 
-**Status:** ready-for-agent
+**Status:** done
+**Covered by:** test/coding-problems.int-spec.ts
 
-- [ ] A problem carries a statement, constraints and examples, and reads back unchanged
-- [ ] Problems are tagged by topic and difficulty and are reusable across paths
-- [ ] A problem belongs to no batch and no path
-- [ ] Statement content reuses the Phase 3 content-block format rather than a second one
-- [ ] A student cannot author or edit a problem
+- [x] A problem carries a statement, constraints and examples, and reads back unchanged
+- [x] Problems are tagged by topic and difficulty and are reusable across paths
+- [x] A problem belongs to no batch and no path
+- [x] Statement content reuses the Phase 3 content-block format rather than a second one
+- [x] A student cannot author or edit a problem

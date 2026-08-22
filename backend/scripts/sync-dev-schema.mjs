@@ -16,6 +16,62 @@ function tolerable(message) {
   return TOLERATED.some((fragment) => lower.includes(fragment));
 }
 
+function parseEnums(sql) {
+  const enums = new Map();
+  const pattern = /CREATE TYPE "([^"]+)" AS ENUM\(([^)]*)\);/g;
+  let match;
+  while ((match = pattern.exec(sql)) !== null) {
+    const values = [];
+    const valuePattern = /'((?:[^']|'')*)'/g;
+    let valueMatch;
+    while ((valueMatch = valuePattern.exec(match[2])) !== null) {
+      values.push(valueMatch[1].replace(/''/g, "'"));
+    }
+    enums.set(match[1], values);
+  }
+  return enums;
+}
+
+async function syncEnums(sql, baseline) {
+  const wanted = parseEnums(baseline);
+  const live = await sql`
+    select t.typname as name, e.enumlabel as label, e.enumsortorder as position
+    from pg_type t
+    join pg_enum e on e.enumtypid = t.oid
+    join pg_namespace n on n.oid = t.typnamespace
+    where n.nspname = 'public'
+    order by t.typname, e.enumsortorder
+  `;
+  const present = new Map();
+  for (const row of live) {
+    const held = present.get(row.name);
+    if (held) held.push(row.label);
+    else present.set(row.name, [row.label]);
+  }
+
+  const added = [];
+  for (const [name, values] of wanted) {
+    const existing = present.get(name);
+    if (!existing) continue;
+    let previous = null;
+    for (const value of values) {
+      if (existing.includes(value)) {
+        previous = value;
+        continue;
+      }
+      const placement = previous
+        ? `AFTER '${previous.replace(/'/g, "''")}'`
+        : `BEFORE '${existing[0].replace(/'/g, "''")}'`;
+      await sql.unsafe(
+        `ALTER TYPE "${name}" ADD VALUE IF NOT EXISTS '${value.replace(/'/g, "''")}' ${placement}`,
+      );
+      added.push(`${name}.${value}`);
+      previous = value;
+    }
+  }
+  return added;
+}
+
 function parseTableColumns(sql) {
   const tables = new Map();
   const pattern = /CREATE TABLE IF NOT EXISTS "([^"]+)" \(([\s\S]*?)\n\);/g;
@@ -58,6 +114,10 @@ async function main() {
   let applied = 0;
   let skipped = 0;
   const failures = [];
+
+  const enumValues = await syncEnums(sql, baseline);
+  console.log(`enum values added: ${enumValues.length}`);
+  for (const name of enumValues) console.log(`  + ${name}`);
 
   for (const statement of statements) {
     try {

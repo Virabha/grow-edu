@@ -6,10 +6,11 @@
 
 **Blocked by:** 27, 30 depends on Phase 4 certificate issuance
 
-**Status:** ready-for-agent
+**Status:** done
+**Covered by:** test/path-credentials.int-spec.ts
 
-- [ ] A path stage can be marked as the capstone
-- [ ] A path certificate cannot be issued without the capstone passed
-- [ ] Issuance extends the Phase 4 criteria mechanism rather than adding a second one
-- [ ] Completing every other stage without the capstone issues nothing
-- [ ] A student cannot request a path certificate into existence
+- [x] A path stage can be marked as the capstone
+- [x] A path certificate cannot be issued without the capstone passed
+- [x] Issuance extends the Phase 4 criteria mechanism rather than adding a second one
+- [x] Completing every other stage without the capstone issues nothing
+- [x] A student cannot request a path certificate into existence
